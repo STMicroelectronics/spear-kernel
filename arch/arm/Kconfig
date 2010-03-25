@@ -702,6 +702,18 @@ config ARCH_BCMRING
 	help
 	  Support for Broadcom's BCMRing platform.
 
+config PLAT_SPEAR
+	bool "ST SPEAr"
+	select ARM_AMBA
+	select ARCH_REQUIRE_GPIOLIB
+	select COMMON_CLKDEV
+	select GENERIC_CLOCKEVENTS
+	select GENERIC_GPIO
+	select GENERIC_TIME
+	select HAVE_CLK
+	help
+	  Support for ST's SPEAr platform (SPEAr3xx, SPEAr6xx and SPEAr13xx).
+
 endchoice
 
 source "arch/arm/mach-clps711x/Kconfig"
@@ -751,6 +763,7 @@ source "arch/arm/plat-s3c24xx/Kconfig"
 source "arch/arm/plat-s3c64xx/Kconfig"
 source "arch/arm/plat-s3c/Kconfig"
 source "arch/arm/plat-s5pc1xx/Kconfig"
+source "arch/arm/plat-spear/Kconfig"
 
 if ARCH_S3C2410
 source "arch/arm/mach-s3c2400/Kconfig"
