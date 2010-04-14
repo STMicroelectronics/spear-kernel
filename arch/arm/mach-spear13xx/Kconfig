@@ -1,0 +1,21 @@
+#
+# SPEAr13XX Machine configuration file
+#
+
+if ARCH_SPEAR13XX
+
+choice
+	prompt "SPEAr13XX Family"
+	default MACH_SPEAR1300
+
+config MACH_SPEAR1300
+	bool "SPEAr1300"
+	help
+	  Supports ST SPEAr1300 Machine
+
+endchoice
+
+# Adding SPEAr13XX machine specific configuration files
+source "arch/arm/mach-spear13xx/Kconfig1300"
+
+endif #ARCH_SPEAR13XX
