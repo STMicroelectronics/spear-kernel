@@ -15,8 +15,8 @@
 #define __PLAT_CLOCK_H
 
 #include <linux/list.h>
-#include <asm/clkdev.h>
 #include <linux/types.h>
+#include <asm/clkdev.h>
 
 /* clk structure flags */
 #define	ALWAYS_ENABLED		(1 << 0) /* clock always enabled */
