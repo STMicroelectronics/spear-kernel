@@ -29,7 +29,7 @@
 #define SPEAR_GPT0_CHAN1_IRQ	IRQ_GPT0_TMR1
 
 /* Add spear13xx family device structure declarations here */
-extern struct amba_device uart_device;
+extern struct amba_device spear13xx_uart_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear1300 machine device structure declarations here */

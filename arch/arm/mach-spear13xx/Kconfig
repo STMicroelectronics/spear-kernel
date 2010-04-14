@@ -1,0 +1,21 @@
+#
+# SPEAr13XX Machine configuration file
+#
+
+if ARCH_SPEAR13XX
+
+menu "SPEAr13xx Implementations"
+config BOARD_SPEAR1300_EVB
+	bool "SPEAr1300 Evaluation Board"
+	select MACH_SPEAR1300
+	help
+	  Supports ST SPEAr1300 Evaluation Board
+
+endmenu
+
+config MACH_SPEAR1300
+	bool "SPEAr1300"
+	help
+	  Supports ST SPEAr1300 Machine
+
+endif #ARCH_SPEAR13XX
