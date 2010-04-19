@@ -156,3 +156,12 @@ void __init spear6xx_map_io(void)
 	/* This will initialize clock framework */
 	clk_init();
 }
+
+static void __init spear6xx_timer_init(void)
+{
+	spear_setup_timer();
+}
+
+struct sys_timer spear6xx_timer = {
+	.init = spear6xx_timer_init,
+};

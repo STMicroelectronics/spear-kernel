@@ -61,6 +61,13 @@
 static __iomem void *gpt_base;
 static struct clk *gpt_clk;
 
+/* following defines the parent clock to be used */
+#ifdef CONFIG_ARCH_SPEAR13XX
+static char pclk_name[] = "osc1_24m_clk";
+#else
+static char pclk_name[] = "pll3_48m_clk";
+#endif
+
 static void clockevent_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *clk_event_dev);
 static int clockevent_next_event(unsigned long evt,
@@ -248,7 +255,7 @@ static void __init spear_clockevent_init(void)
 
 void __init spear_setup_timer(void)
 {
-	struct clk *pll3_clk;
+	struct clk *clk;
 
 	if (!request_mem_region(SPEAR_GPT0_BASE, SZ_1K, "gpt0")) {
 		pr_err("%s:cannot get IO addr\n", __func__);
@@ -267,13 +274,16 @@ void __init spear_setup_timer(void)
 		goto err_iomap;
 	}
 
-	pll3_clk = clk_get(NULL, "pll3_48m_clk");
-	if (!pll3_clk) {
-		pr_err("%s:couldn't get PLL3 as parent for gpt\n", __func__);
+	/* get the parent clock */
+	clk = clk_get(NULL, pclk_name);
+
+	if (!clk) {
+		pr_err("%s:couldn't get %s as parent for gpt\n",
+				__func__, pclk_name);
 		goto err_iomap;
 	}
 
-	clk_set_parent(gpt_clk, pll3_clk);
+	clk_set_parent(gpt_clk, clk);
 
 	spear_clockevent_init();
 	spear_clocksource_init();
@@ -286,7 +296,3 @@ err_iomap:
 err_mem:
 	release_mem_region(SPEAR_GPT0_BASE, SZ_1K);
 }
-
-struct sys_timer spear_sys_timer = {
-	.init = spear_setup_timer,
-};

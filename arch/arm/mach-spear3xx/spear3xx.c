@@ -523,5 +523,13 @@ struct pmx_dev pmx_plgpio_45_46_49_50 = {
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
 	.enb_on_reset = 1,
 };
+#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
 
-#endif
+static void __init spear3xx_timer_init(void)
+{
+	spear_setup_timer();
+}
+
+struct sys_timer spear3xx_timer = {
+	.init = spear3xx_timer_init,
+};

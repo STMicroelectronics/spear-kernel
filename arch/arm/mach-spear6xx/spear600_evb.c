@@ -42,10 +42,11 @@ static void __init spear600_evb_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 }
 
+
 MACHINE_START(SPEAR600, "ST-SPEAR600-EVB")
 	.boot_params	=	0x00000100,
 	.map_io		=	spear6xx_map_io,
 	.init_irq	=	spear6xx_init_irq,
-	.timer		=	&spear_sys_timer,
+	.timer		=	&spear6xx_timer,
 	.init_machine	=	spear600_evb_init,
 MACHINE_END
