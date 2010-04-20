@@ -67,6 +67,7 @@ struct pclk_sel {
  * @en_reg_bit: clk enable/disable bit
  * @ops: clk enable/disable ops - generic_clkops selected if NULL
  * @recalc: pointer to clock rate recalculate function
+ * @div_factor: division factor to parent clock. Only for recalc = follow_parent
  * @pclk: current parent clk
  * @pclk_sel: pointer to parent selection structure
  * @pclk_sel_shift: register shift for selecting parent of this clock
@@ -82,6 +83,7 @@ struct clk {
 	u8 en_reg_bit;
 	const struct clkops *ops;
 	void (*recalc) (struct clk *);
+	unsigned int div_factor;
 
 	struct clk *pclk;
 	struct pclk_sel *pclk_sel;
@@ -93,23 +95,65 @@ struct clk {
 };
 
 /* pll configuration structure */
+struct pll_clk_masks {
+	u32 mode_mask;
+	u32 mode_shift;
+
+	u32 norm_fdbk_m_mask;
+	u32 norm_fdbk_m_shift;
+	u32 dith_fdbk_m_mask;
+	u32 dith_fdbk_m_shift;
+	u32 div_p_mask;
+	u32 div_p_shift;
+	u32 div_n_mask;
+	u32 div_n_shift;
+};
+
 struct pll_clk_config {
-	unsigned int *mode_reg;
-	unsigned int *cfg_reg;
+	u32 *mode_reg;
+	u32 *cfg_reg;
+	struct pll_clk_masks *masks;
 };
 
 /* ahb and apb bus configuration structure */
-struct bus_clk_config {
-	unsigned int *reg;
-	unsigned int mask;
-	unsigned int shift;
+struct bus_clk_masks {
+	u32 mask;
+	u32 shift;
 };
 
-/*
- * Aux clk configuration structure: applicable to GPT, UART and FIRDA
- */
+struct bus_clk_config {
+	u32 *reg;
+	struct bus_clk_masks *masks;
+};
+
+/* Aux clk configuration structure: applicable to UART and FIRDA */
+struct aux_clk_masks {
+	u32 eq_sel_mask;
+	u32 eq_sel_shift;
+	u32 eq1_mask;
+	u32 eq2_mask;
+	u32 xscale_sel_mask;
+	u32 xscale_sel_shift;
+	u32 yscale_sel_mask;
+	u32 yscale_sel_shift;
+};
+
 struct aux_clk_config {
-	unsigned int *synth_reg;
+	u32 *synth_reg;
+	struct aux_clk_masks *masks;
+};
+
+/* GPT clk configuration structure */
+struct gpt_clk_masks {
+	u32 mscale_sel_mask;
+	u32 mscale_sel_shift;
+	u32 nscale_sel_mask;
+	u32 nscale_sel_shift;
+};
+
+struct gpt_clk_config {
+	u32 *synth_reg;
+	struct gpt_clk_masks *masks;
 };
 
 /* platform specific clock functions */
@@ -118,7 +162,7 @@ void recalc_root_clocks(void);
 
 /* clock recalc functions */
 void follow_parent(struct clk *clk);
-void pll1_clk_recalc(struct clk *clk);
+void pll_clk_recalc(struct clk *clk);
 void bus_clk_recalc(struct clk *clk);
 void gpt_clk_recalc(struct clk *clk);
 void aux_clk_recalc(struct clk *clk);
