@@ -9,8 +9,9 @@ Introduction
 
   The ST Microelectronics SPEAr range of ARM9/CortexA9 System-on-Chip CPUs are
   supported by the 'spear' platform of ARM Linux. Currently SPEAr300,
-  SPEAr310, SPEAr320 and SPEAr600 SOCs are supported. Support for the SPEAr13XX
-  series is in progress.
+  SPEAr310, SPEAr320, SPEAr600, SPEAr1300 and SPEAr1310 SOCs are supported.
+  SPEAr3XX and SPEAr6XX are based on ARM9 whereas SPEAr13XX is based on latest
+  ARM Cortex A9 CPUs.
 
   Hierarchy in SPEAr is as follows:
 
@@ -27,16 +28,25 @@ Introduction
 			- SPEAr600_EVB (Evaluation Board)
 	- SPEAr13XX (13XX SOC series, based on ARM CORTEXA9)
 		- SPEAr1300 (SOC)
+			- SPEAr1300_EVB (Evaluation Board)
+		- SPEAr1310 (SOC)
+			- SPEAr1310_EVB (Evaluation Board)
 
   Configuration
   -------------
 
-  A generic configuration is provided for each machine, and can be used as the
+  A generic configuration is provided for each machine family, and can be used as the
   default by
-	make spear600_defconfig
-	make spear300_defconfig
-	make spear310_defconfig
-	make spear320_defconfig
+	#make ARCH=arm spear13xx_defconfig
+	#make ARCH=arm spear3xx_defconfig
+	#make ARCH=arm spear6xx_defconfig
+
+  Compilation
+  -----------
+
+  After applying default configuration, Linux kernel for SPEAr architecture
+  can be compiled as
+	#make ARCH=arm CROSS_COMPILE=arm-linux- uImage
 
   Layout
   ------
@@ -48,13 +58,15 @@ Introduction
   Each machine series have a directory with name arch/arm/mach-spear followed by
   series name. Like mach-spear3xx, mach-spear6xx and mach-spear13xx.
 
-  Common file for machines of spear3xx family is mach-spear3xx/spear3xx.c and for
-  spear6xx is mach-spear6xx/spear6xx.c. mach-spear* also contain soc/machine
+  Common file for machines of spear3xx family is mach-spear3xx/spear3xx.c, for
+  spear6xx is mach-spear6xx/spear6xx.c and similarly for spear13xx is
+  mach-spear13xx/spear13xx.c. mach-spear* also contain soc/machine
   specific files, like spear300.c, spear310.c, spear320.c and spear600.c.
-  mach-spear* also contains board specific files for each machine type.
+  Board specific files for each machine type is also contained in mach-spear*
+  folder.
 
 
   Document Author
   ---------------
 
-  Viresh Kumar, (c) 2010 ST Microelectronics
+  Viresh Kumar, Shiraz Hashim (c) 2010 ST Microelectronics
