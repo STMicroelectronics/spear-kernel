@@ -35,12 +35,12 @@ extern struct sys_timer spear13xx_timer;
 /* Add spear1300 machine device structure declarations here */
 
 /* Add spear13xx family function declarations here */
+void __init clk_init(void);
 void __init spear_setup_timer(void);
+void __init spear1300_init(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
-void __init spear1300_init(void);
-void __init clk_init(void);
 void spear13xx_secondary_startup(void);
 
 #endif /* __MACH_GENERIC_H */

@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-spear13xx/include/mach/misc_regs.h
+ * arch/arm/mach-spear13xx/include/mach/smp.h
  *
- * Miscellaneous registers definitions for spear13xx machine family
+ * Few SMP related definitions for spear13xx machine family
  *
  * Copyright (C) 2010 ST Microelectronics
  * Shiraz Hashim <shiraz.hashim@st.com>
@@ -11,8 +11,8 @@
  * warranty of any kind, whether express or implied.
  */
 
-#ifndef ASMARM_ARCH_SMP_H
-#define ASMARM_ARCH_SMP_H
+#ifndef __MACH_SMP_H
+#define __MACH_SMP_H
 
 #include <asm/hardware/gic.h>
 

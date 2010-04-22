@@ -13,9 +13,6 @@
 #ifndef __MACH_VMALLOC_H
 #define __MACH_VMALLOC_H
 
-#include <mach/memory.h>
-
-#define VMALLOC_SIZE		(0x30000000)
-#define VMALLOC_END		(PAGE_OFFSET + VMALLOC_SIZE)
+#include <plat/vmalloc.h>
 
 #endif /* __MACH_VMALLOC_H */

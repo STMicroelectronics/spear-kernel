@@ -28,15 +28,7 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
-#if 0
-	if (mode == 's') {
-		/* software reset, Jump into ROM at address 0 */
-		cpu_reset(0);
-	} else {
-		/* hardware reset, Use on-chip reset capability */
-		sysctl_soft_reset(SPEAR13XX_SYS_CTRL_BASE);
-	}
-#endif /* TODO: */
+	/* TODO: */
 }
 
 #endif /* __MACH_SYSTEM_H */
