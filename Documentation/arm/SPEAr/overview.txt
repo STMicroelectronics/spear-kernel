@@ -9,7 +9,7 @@ Introduction
 
   The ST Microelectronics SPEAr range of ARM9/CortexA9 System-on-Chip CPUs are
   supported by the 'spear' platform of ARM Linux. Currently SPEAr300,
-  SPEAr310, SPEAr320 and SPEAr600 SOCs are supported.
+  SPEAr310, SPEAr320, SPEAr600 and SPEAr1300 SOCs are supported.
   SPEAr3XX and SPEAr6XX are based on ARM9 whereas SPEAr13XX is based on latest
   ARM Cortex A9 CPUs.
 
@@ -59,10 +59,12 @@ Introduction
   Each machine series have a directory with name arch/arm/mach-spear followed by
   series name. Like mach-spear3xx, mach-spear6xx and mach-spear13xx.
 
-  Common file for machines of spear3xx family is mach-spear3xx/spear3xx.c and for
-  spear6xx is mach-spear6xx/spear6xx.c. mach-spear* also contain soc/machine
+  Common file for machines of spear3xx family is mach-spear3xx/spear3xx.c, for
+  spear6xx is mach-spear6xx/spear6xx.c and similarly for spear13xx is
+  mach-spear13xx/spear13xx.c. mach-spear* also contain soc/machine
   specific files, like spear300.c, spear310.c, spear320.c and spear600.c.
-  mach-spear* also contains board specific files for each machine type.
+  Board specific files for each machine type is also contained in mach-spear*
+  folder.
 
 
   Document Author

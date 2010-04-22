@@ -4964,7 +4964,7 @@ W:	http://www.st.com/spear
 S:	Maintained
 F:	arch/arm/plat-spear/
 
-SPEAR13XX PLATFORM SUPPORT
+SPEAR13XX MACHINE SUPPORT
 M:	Shiraz Hashim <shiraz.hashim@st.com>
 W:	http://www.st.com/spear
 S:	Maintained
