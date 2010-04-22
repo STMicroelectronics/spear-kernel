@@ -45,4 +45,4 @@ MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	spear1300_evb_init,
-	MACHINE_END
+MACHINE_END
