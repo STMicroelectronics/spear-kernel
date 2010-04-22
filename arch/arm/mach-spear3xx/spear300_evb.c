@@ -38,6 +38,7 @@ static struct amba_device *amba_devs[] __initdata = {
 	&uart_device,
 
 	/* spear300 specific devices */
+	&clcd_device,
 	&gpio1_device,
 };
 

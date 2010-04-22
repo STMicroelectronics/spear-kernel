@@ -6,3 +6,4 @@
 obj-y	:= clock.o time.o
 
 obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o
+obj-$(CONFIG_SPEAR_CLCD)	+= clcd.o
