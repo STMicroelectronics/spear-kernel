@@ -36,12 +36,16 @@
 /* PLL related registers and bit values */
 #define PLL_CFG			(MISC_BASE + 0x210)
 	/* PLL_CFG bit values */
-	#define OSC_24M_MASK	0
-	#define OSC_25M_MASK	1
-	#define PLL_CLK_MASK	3
-	#define PLL1_CLK_SHIFT	20
-	#define PLL2_CLK_SHIFT	22
-	#define PLL3_CLK_SHIFT	24
+	#define OSC_24M_VAL			0
+	#define OSC_25M_VAL			1
+	#define PLL_CLK_MASK			3
+	#define PLL1_CLK_SHIFT			20
+	#define PLL2_CLK_SHIFT			22
+	#define PLL3_CLK_SHIFT			24
+	#define CLCD_SYNT_PLL1_DIV4_VAL		0
+	#define CLCD_SYNT_PLL2_VAL		1
+	#define CLCD_SYNT_CLK_MASK		1
+	#define CLCD_SYNT_CLK_SHIFT		31
 
 #define PLL1_CTR		(MISC_BASE + 0x214)
 #define PLL1_FRQ		(MISC_BASE + 0x218)
@@ -77,30 +81,53 @@
 
 #define PERIP_CLK_CFG		(MISC_BASE + 0x244)
 	/* PERIP_CLK_CFG bit values */
-	#define GPT_OSC24_MASK	0
-	#define GPT_APB_MASK	1
-	#define GPT_CLK_MASK	1
-	#define GPT0_CLK_SHIFT	8
-	#define GPT1_CLK_SHIFT	9
-	#define GPT2_CLK_SHIFT	12
-	#define GPT3_CLK_SHIFT	13
-	#define AUX_CLK_PLL1_MASK	1
-	#define AUX_CLK_PLL5_MASK	0
+	#define GPT_OSC24_VAL		0
+	#define GPT_APB_VAL		1
+	#define GPT_CLK_MASK		1
+	#define GPT0_CLK_SHIFT		8
+	#define GPT1_CLK_SHIFT		9
+	#define GPT2_CLK_SHIFT		12
+	#define GPT3_CLK_SHIFT		13
+	#define AUX_CLK_PLL5_VAL	0
+	#define AUX_CLK_SYNT_VAL	1
 	#define UART_CLK_MASK		1
 	#define UART_CLK_SHIFT		4
+	#define CLCD_PLL5_VAL		0
+	#define CLCD_SYNT_MASK		1
+	#define CLCD_CLK_MASK		3
+	#define CLCD_CLK_SHIFT		2
+	#define C3_CLK_MASK		1
+	#define C3_CLK_SHIFT		1
 
 #define GMAC_CLK_CFG		(MISC_BASE + 0x248)
-#define C3_CLK_SYNTH		(MISC_BASE + 0x24c)
+
+	#define GMAC_PHY_PAD_VAL		0
+	#define GMAC_PHY_PLL2_VAL		1
+	#define GMAC_PHY_OSC3_VAL		2
+	#define GMAC_PHY_INPUT_CLK_MASK		3
+	#define GMAC_PHY_INPUT_CLK_SHIFT	1
+	#define GMAC_PHY_SYNT_ENB		3
+	#define GMAC_PHY_CLK_MASK		1
+	#define GMAC_PHY_CLK_SHIFT		3
+	#define GMAC_PHY_SYNT_ENB_VAL		4
+
+#define C3_CLK_SYNT		(MISC_BASE + 0x24c)
 #define CLCD_CLK_SYNT		(MISC_BASE + 0x250)
+	/* CLCD synth reg masks */
+	#define CLCD_SYNT_ENB			31
+	#define CLCD_SYNT_DIV_FACTOR_MASK	0x1ffff
+	#define CLCD_SYNT_DIV_FACTOR_SHIFT	0
+
 #define UART_CLK_SYNT		(MISC_BASE + 0x254)
 #define GMAC_CLK_SYNT		(MISC_BASE + 0x258)
-#define MCIF_SD_CLK_SYNT	(MISC_BASE + 0x25c)
-#define MCIF_CFXD_CLK_SYNT	(MISC_BASE + 0x260)
+#define SDHCI_CLK_SYNT		(MISC_BASE + 0x25c)
+#define CFXD_CLK_SYNT		(MISC_BASE + 0x260)
 #define RAS_CLK_SYNT0		(MISC_BASE + 0x264)
 #define RAS_CLK_SYNT1		(MISC_BASE + 0x268)
 #define RAS_CLK_SYNT2		(MISC_BASE + 0x26c)
 #define RAS_CLK_SYNT3		(MISC_BASE + 0x270)
 	/* aux clk synthesizer register masks */
+	#define AUX_SYNT_ENB		31
 	#define AUX_EQ_SEL_SHIFT	30
 	#define AUX_EQ_SEL_MASK		1
 	#define AUX_EQ1_SEL		0
@@ -114,32 +141,32 @@
 	/* PERIP1_CLK_ENB register masks */
 	#define BUS_CLK_ENB		0
 	#define SYSROM_CLK_ENB		1
-	#define AORAM_CLK_ENB		2
-	#define SYSRAM_CLK_ENB		3
+	#define SYSRAM1_CLK_ENB		2
+	#define SYSRAM0_CLK_ENB		3
 	#define FSMC_CLK_ENB		4
 	#define SMI_CLK_ENB		5
-	#define SD_CLK_ENB		6
-	#define CF_XD_CLK_ENB		7
-	#define GETH_CLK_ENB		8
+	#define SDHCI_CLK_ENB		6
+	#define CFXD_CLK_ENB		7
+	#define GMAC_CLK_ENB		8
 	#define UHC0_CLK_ENB		9
 	#define UHC1_CLK_ENB		10
-	#define UDC_UPD_CLK_ENB		11
-	#define PCI0_CLK_ENB		12
-	#define PCI1_CLK_ENB		13
-	#define PCI2_CLK_ENB		14
+	#define USBD_CLK_ENB		11
+	#define PCIE0_CLK_ENB		12
+	#define PCIE1_CLK_ENB		13
+	#define PCIE2_CLK_ENB		14
 	#define UART_CLK_ENB		15
 	#define SSP_CLK_ENB		17
 	#define I2C_CLK_ENB		18
-	#define I2S_SLV_CLK_ENB		19
-	#define I2S_MST_CLK_ENB		20
+	#define I2S0_CLK_ENB		19
+	#define I2S1_CLK_ENB		20
 	#define GPT0_CLK_ENB		21
 	#define GPT1_CLK_ENB		22
-	#define GPIOA_CLK_ENB		23
-	#define GPIOB_CLK_ENB		24
+	#define GPIO0_CLK_ENB		23
+	#define GPIO1_CLK_ENB		24
 	#define DMA0_CLK_ENB		25
 	#define DMA1_CLK_ENB		26
 	#define CLCD_CLK_ENB		27
-	#define JPEGC_CLK_ENB		28
+	#define JPEG_CLK_ENB		28
 	#define C3_CLK_ENB		29
 	#define ADC_CLK_ENB		30
 	#define RTC_CLK_ENB		31
@@ -219,11 +246,11 @@
 #define THSENS_CFG		(MISC_BASE + 0x6c4)
 
 /* Compensation Configuration Registers */
-#define COMP_1V8_2V5_3V3__1_CFG		(MISC_BASE + 0x700)
-#define COMP_1V8_2V5_3V3__2_CFG		(MISC_BASE + 0x704)
-#define COMP_3V3_1_CFG			(MISC_BASE + 0x708)
-#define COMP_3V3_2_CFG			(MISC_BASE + 0x70c)
-#define COMP_DDR_CFG			(MISC_BASE + 0x710)
+#define COMP_1V8_2V5_3V3__1_CFG	(MISC_BASE + 0x700)
+#define COMP_1V8_2V5_3V3__2_CFG	(MISC_BASE + 0x704)
+#define COMP_3V3_1_CFG		(MISC_BASE + 0x708)
+#define COMP_3V3_2_CFG		(MISC_BASE + 0x70c)
+#define COMP_DDR_CFG		(MISC_BASE + 0x710)
 
 /* OTP Programming Registers */
 #define OTP_PROG_CTR		(MISC_BASE + 0x800)
