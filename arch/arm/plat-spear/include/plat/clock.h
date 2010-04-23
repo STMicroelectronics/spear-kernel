@@ -37,11 +37,13 @@ struct clkops {
  * @pclk: pointer to parent clk
  * @pclk_mask: value to be written for selecting this parent
  * @scalable: Is parent scalable (1 - YES, 0 - NO)
+ * @div_factor: div factor for pclk
  */
 struct pclk_info {
 	struct clk *pclk;
 	u8 pclk_mask;
 	u8 scalable;
+	u8 div_factor;
 };
 
 /**
@@ -67,8 +69,9 @@ struct pclk_sel {
  * @en_reg_bit: clk enable/disable bit
  * @ops: clk enable/disable ops - generic_clkops selected if NULL
  * @recalc: pointer to clock rate recalculate function
- * @div_factor: division factor to parent clock. Only for recalc = follow_parent
+ * @div_factor: division factor to parent clock. Only for clks with one parent
  * @pclk: current parent clk
+ * @pclk_info: current parent clk's pclk_info
  * @pclk_sel: pointer to parent selection structure
  * @pclk_sel_shift: register shift for selecting parent of this clock
  * @children: list for childrens or this clock
@@ -86,6 +89,7 @@ struct clk {
 	unsigned int div_factor;
 
 	struct clk *pclk;
+	struct pclk_info *pclk_info;
 	struct pclk_sel *pclk_sel;
 	unsigned int pclk_sel_shift;
 
