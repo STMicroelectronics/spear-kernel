@@ -66,8 +66,8 @@
 #define GPT2_CLK_SHIFT		11
 #define GPT3_CLK_SHIFT		12
 #define GPT_CLK_MASK		0x1
-#define AUX_CLK_PLL3_MASK	0
-#define AUX_CLK_PLL1_MASK	1
+#define AUX_CLK_PLL3_VAL	0
+#define AUX_CLK_PLL1_VAL	1
 
 #define PERIP1_CLK_ENB		((unsigned int *)(MISC_BASE + 0x02C))
 /* PERIP1_CLK_ENB register masks */

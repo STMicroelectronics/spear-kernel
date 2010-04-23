@@ -123,22 +123,28 @@ static struct aux_clk_masks aux_masks = {
 	.yscale_sel_shift = AUX_YSCALE_SHIFT,
 };
 
-/* uart configurations */
-static struct aux_clk_config uart_config = {
+/* uart synth configurations */
+static struct aux_clk_config uart_synth_config = {
 	.synth_reg = UART_CLK_SYNT,
 	.masks = &aux_masks,
+};
+
+/* uart synth clock */
+static struct clk uart_synth_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll1_clk,
+	.recalc = &aux_clk_recalc,
+	.private_data = &uart_synth_config,
 };
 
 /* uart parents */
 static struct pclk_info uart_pclk_info[] = {
 	{
-		.pclk = &pll1_clk,
-		.pclk_mask = AUX_CLK_PLL1_MASK,
-		.scalable = 1,
+		.pclk = &uart_synth_clk,
+		.pclk_val = AUX_CLK_PLL1_VAL,
 	}, {
 		.pclk = &pll3_48m_clk,
-		.pclk_mask = AUX_CLK_PLL3_MASK,
-		.scalable = 0,
+		.pclk_val = AUX_CLK_PLL3_VAL,
 	},
 };
 
@@ -156,26 +162,31 @@ static struct clk uart_clk = {
 	.en_reg_bit = UART_CLK_ENB,
 	.pclk_sel = &uart_pclk_sel,
 	.pclk_sel_shift = UART_CLK_SHIFT,
-	.recalc = &aux_clk_recalc,
-	.private_data = &uart_config,
+	.recalc = &follow_parent,
 };
 
 /* firda configurations */
-static struct aux_clk_config firda_config = {
+static struct aux_clk_config firda_synth_config = {
 	.synth_reg = FIRDA_CLK_SYNT,
 	.masks = &aux_masks,
+};
+
+/* firda synth clock */
+static struct clk firda_synth_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll1_clk,
+	.recalc = &aux_clk_recalc,
+	.private_data = &firda_synth_config,
 };
 
 /* firda parents */
 static struct pclk_info firda_pclk_info[] = {
 	{
-		.pclk = &pll1_clk,
-		.pclk_mask = AUX_CLK_PLL1_MASK,
-		.scalable = 1,
+		.pclk = &firda_synth_clk,
+		.pclk_val = AUX_CLK_PLL1_VAL,
 	}, {
 		.pclk = &pll3_48m_clk,
-		.pclk_mask = AUX_CLK_PLL3_MASK,
-		.scalable = 0,
+		.pclk_val = AUX_CLK_PLL3_VAL,
 	},
 };
 
@@ -193,29 +204,7 @@ static struct clk firda_clk = {
 	.en_reg_bit = FIRDA_CLK_ENB,
 	.pclk_sel = &firda_pclk_sel,
 	.pclk_sel_shift = FIRDA_CLK_SHIFT,
-	.recalc = &aux_clk_recalc,
-	.private_data = &firda_config,
-};
-
-/* gpt parents */
-static struct pclk_info gpt_pclk_info[] = {
-	{
-		.pclk = &pll1_clk,
-		.pclk_mask = AUX_CLK_PLL1_MASK,
-		.scalable = 1,
-	}, {
-		.pclk = &pll3_48m_clk,
-		.pclk_mask = AUX_CLK_PLL3_MASK,
-		.scalable = 0,
-	},
-};
-
-/* gpt parent select structure */
-static struct pclk_sel gpt_pclk_sel = {
-	.pclk_info = gpt_pclk_info,
-	.pclk_count = ARRAY_SIZE(gpt_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
-	.pclk_sel_mask = GPT_CLK_MASK,
+	.recalc = &follow_parent,
 };
 
 /* gpt synthesizer masks */
@@ -226,51 +215,127 @@ static struct gpt_clk_masks gpt_masks = {
 	.nscale_sel_shift = GPT_NSCALE_SHIFT,
 };
 
-/* gpt0 configurations */
-static struct gpt_clk_config gpt0_config = {
+/* gpt0 synth clk config*/
+static struct gpt_clk_config gpt0_synth_config = {
 	.synth_reg = PRSC1_CLK_CFG,
 	.masks = &gpt_masks,
+};
+
+/* gpt synth clock */
+static struct clk gpt0_synth_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll1_clk,
+	.recalc = &gpt_clk_recalc,
+	.private_data = &gpt0_synth_config,
+};
+
+/* gpt parents */
+static struct pclk_info gpt0_pclk_info[] = {
+	{
+		.pclk = &gpt0_synth_clk,
+		.pclk_val = AUX_CLK_PLL1_VAL,
+	}, {
+		.pclk = &pll3_48m_clk,
+		.pclk_val = AUX_CLK_PLL3_VAL,
+	},
+};
+
+/* gpt parent select structure */
+static struct pclk_sel gpt0_pclk_sel = {
+	.pclk_info = gpt0_pclk_info,
+	.pclk_count = ARRAY_SIZE(gpt0_pclk_info),
+	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
 /* gpt0 timer clock */
 static struct clk gpt0_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &gpt_pclk_sel,
+	.pclk_sel = &gpt0_pclk_sel,
 	.pclk_sel_shift = GPT0_CLK_SHIFT,
-	.recalc = &gpt_clk_recalc,
-	.private_data = &gpt0_config,
+	.recalc = &follow_parent,
 };
 
-/* gpt1 configurations */
-static struct gpt_clk_config gpt1_config = {
+/* gpt1 synth clk configurations */
+static struct gpt_clk_config gpt1_synth_config = {
 	.synth_reg = PRSC2_CLK_CFG,
 	.masks = &gpt_masks,
+};
+
+/* gpt1 synth clock */
+static struct clk gpt1_synth_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll1_clk,
+	.recalc = &gpt_clk_recalc,
+	.private_data = &gpt1_synth_config,
+};
+
+static struct pclk_info gpt1_pclk_info[] = {
+	{
+		.pclk = &gpt1_synth_clk,
+		.pclk_val = AUX_CLK_PLL1_VAL,
+	}, {
+		.pclk = &pll3_48m_clk,
+		.pclk_val = AUX_CLK_PLL3_VAL,
+	},
+};
+
+/* gpt parent select structure */
+static struct pclk_sel gpt1_pclk_sel = {
+	.pclk_info = gpt1_pclk_info,
+	.pclk_count = ARRAY_SIZE(gpt1_pclk_info),
+	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
 /* gpt1 timer clock */
 static struct clk gpt1_clk = {
 	.en_reg = PERIP1_CLK_ENB,
 	.en_reg_bit = GPT1_CLK_ENB,
-	.pclk_sel = &gpt_pclk_sel,
+	.pclk_sel = &gpt1_pclk_sel,
 	.pclk_sel_shift = GPT1_CLK_SHIFT,
-	.recalc = &gpt_clk_recalc,
-	.private_data = &gpt1_config,
+	.recalc = &follow_parent,
 };
 
-/* gpt2 configurations */
-static struct gpt_clk_config gpt2_config = {
+/* gpt2 synth clk configurations */
+static struct gpt_clk_config gpt2_synth_config = {
 	.synth_reg = PRSC3_CLK_CFG,
 	.masks = &gpt_masks,
+};
+
+/* gpt1 synth clock */
+static struct clk gpt2_synth_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll1_clk,
+	.recalc = &gpt_clk_recalc,
+	.private_data = &gpt2_synth_config,
+};
+
+static struct pclk_info gpt2_pclk_info[] = {
+	{
+		.pclk = &gpt2_synth_clk,
+		.pclk_val = AUX_CLK_PLL1_VAL,
+	}, {
+		.pclk = &pll3_48m_clk,
+		.pclk_val = AUX_CLK_PLL3_VAL,
+	},
+};
+
+/* gpt parent select structure */
+static struct pclk_sel gpt2_pclk_sel = {
+	.pclk_info = gpt2_pclk_info,
+	.pclk_count = ARRAY_SIZE(gpt2_pclk_info),
+	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
 /* gpt2 timer clock */
 static struct clk gpt2_clk = {
 	.en_reg = PERIP1_CLK_ENB,
 	.en_reg_bit = GPT2_CLK_ENB,
-	.pclk_sel = &gpt_pclk_sel,
+	.pclk_sel = &gpt2_pclk_sel,
 	.pclk_sel_shift = GPT2_CLK_SHIFT,
-	.recalc = &gpt_clk_recalc,
-	.private_data = &gpt2_config,
+	.recalc = &follow_parent,
 };
 
 /* clock derived from pll3 clk */
@@ -405,6 +470,11 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* clock derived from pll1 clk */
 	{ .con_id = "cpu_clk",		.clk = &cpu_clk},
 	{ .con_id = "ahb_clk",		.clk = &ahb_clk},
+	{ .con_id = "uart_synth_clk",	.clk = &uart_synth_clk},
+	{ .con_id = "firda_synth_clk",	.clk = &firda_synth_clk},
+	{ .con_id = "gpt0_synth_clk",	.clk = &gpt0_synth_clk},
+	{ .con_id = "gpt1_synth_clk",	.clk = &gpt1_synth_clk},
+	{ .con_id = "gpt2_synth_clk",	.clk = &gpt2_synth_clk},
 	{ .dev_id = "uart",		.clk = &uart_clk},
 	{ .dev_id = "firda",		.clk = &firda_clk},
 	{ .dev_id = "gpt0",		.clk = &gpt0_clk},

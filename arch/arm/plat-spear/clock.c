@@ -67,14 +67,14 @@ static struct clkops generic_clkops = {
 /* returns current programmed clocks clock info structure */
 static struct pclk_info *pclk_info_get(struct clk *clk)
 {
-	unsigned int mask, i;
+	unsigned int val, i;
 	struct pclk_info *info = NULL;
 
-	mask = (readl(clk->pclk_sel->pclk_sel_reg) >> clk->pclk_sel_shift)
+	val = (readl(clk->pclk_sel->pclk_sel_reg) >> clk->pclk_sel_shift)
 		& clk->pclk_sel->pclk_sel_mask;
 
 	for (i = 0; i < clk->pclk_sel->pclk_count; i++) {
-		if (clk->pclk_sel->pclk_info[i].pclk_mask == mask)
+		if (clk->pclk_sel->pclk_info[i].pclk_val == val)
 			info = &clk->pclk_sel->pclk_info[i];
 	}
 
@@ -94,7 +94,6 @@ static void update_clk_tree(struct clk *clk, struct pclk_info *pclk_info)
 	list_add(&clk->sibling, &pclk_info->pclk->children);
 
 	clk->pclk = pclk_info->pclk;
-	clk->pclk_info = pclk_info;
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }
 
@@ -210,7 +209,7 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	/* reflect parent change in hardware */
 	val = readl(clk->pclk_sel->pclk_sel_reg);
 	val &= ~(clk->pclk_sel->pclk_sel_mask << clk->pclk_sel_shift);
-	val |= clk->pclk_sel->pclk_info[i].pclk_mask << clk->pclk_sel_shift;
+	val |= clk->pclk_sel->pclk_info[i].pclk_val << clk->pclk_sel_shift;
 	writel(val, clk->pclk_sel->pclk_sel_reg);
 	spin_unlock_irqrestore(&clocks_lock, flags);
 
@@ -219,7 +218,6 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 
 	clk->recalc(clk);
 	propagate_rate(&clk->children);
-
 	return 0;
 }
 EXPORT_SYMBOL(clk_set_parent);
@@ -272,7 +270,6 @@ void clk_register(struct clk_lookup *cl)
 					cl->dev_id, cl->con_id);
 		} else {
 			clk->pclk = pclk_info->pclk;
-			clk->pclk_info = pclk_info;
 			list_add(&clk->sibling, &pclk_info->pclk->children);
 		}
 	}
@@ -315,53 +312,28 @@ void pll_clk_recalc(struct clk *clk)
 	unsigned long flags;
 
 	spin_lock_irqsave(&clocks_lock, flags);
+	mode = (readl(config->mode_reg) >> config->masks->mode_shift) &
+		config->masks->mode_mask;
 
-	/*
-	 * read divisor from hardware, only in two cases:
-	 * - There is only parent to clk and it requires *_clk_recalc
-	 * - There are two parents of a clock and current pclk requires
-	 *   *_clk_recalc
-	 */
-	if (!clk->pclk_info || clk->pclk_info->scalable) {
-		mode = (readl(config->mode_reg) >> config->masks->mode_shift) &
-			config->masks->mode_mask;
+	val = readl(config->cfg_reg);
+	/* calculate denominator */
+	den = (val >> config->masks->div_p_shift) & config->masks->div_p_mask;
+	den = 1 << den;
+	den *= (val >> config->masks->div_n_shift) & config->masks->div_n_mask;
 
-		val = readl(config->cfg_reg);
-		spin_unlock_irqrestore(&clocks_lock, flags);
-
-		/* calculate denominator */
-		den = (val >> config->masks->div_p_shift) &
-			config->masks->div_p_mask;
-		den = 1 << den;
-		den *= (val >> config->masks->div_n_shift) &
-			config->masks->div_n_mask;
-
-		/* calculate numerator & denominator */
-		if (!mode) {
-			/* Normal mode */
-			num *= (val >> config->masks->norm_fdbk_m_shift) &
-				config->masks->norm_fdbk_m_mask;
-		} else {
-			/* Dithered mode */
-			num *= (val >> config->masks->dith_fdbk_m_shift) &
-				config->masks->dith_fdbk_m_mask;
-			den *= 256;
-		}
-
-		spin_lock_irqsave(&clocks_lock, flags);
-		val = (((clk->pclk->rate/10000) * num) / den) * 10000;
+	/* calculate numerator & denominator */
+	if (!mode) {
+		/* Normal mode */
+		num *= (val >> config->masks->norm_fdbk_m_shift) &
+			config->masks->norm_fdbk_m_mask;
 	} else {
-		int div = 0;
-		/*
-		 * only if there are two parents and current parent requires
-		 * simple division
-		 */
-		div = (clk->pclk_info->div_factor < 1) ? 1 :
-			clk->pclk_info->div_factor;
-		val = clk->pclk->rate/div;
+		/* Dithered mode */
+		num *= (val >> config->masks->dith_fdbk_m_shift) &
+			config->masks->dith_fdbk_m_mask;
+		den *= 256;
 	}
 
-	clk->rate = val;
+	clk->rate = (((clk->pclk->rate/10000) * num) / den) * 10000;
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }
 
@@ -373,23 +345,8 @@ void bus_clk_recalc(struct clk *clk)
 	unsigned long flags;
 
 	spin_lock_irqsave(&clocks_lock, flags);
-	/*
-	 * read divisor from hardware, only in two cases:
-	 * - There is only parent to clk and it requires *_clk_recalc
-	 * - There are two parents of a clock and current pclk requires
-	 *   *_clk_recalc
-	 */
-	if (!clk->pclk_info || clk->pclk_info->scalable) {
-		div = ((readl(config->reg) >> config->masks->shift) &
-				config->masks->mask) + 1;
-	} else {
-		/*
-		 * only if there are two parents and current parent requires
-		 * simple division
-		 */
-		div = (clk->pclk_info->div_factor < 1) ? 1 :
-			clk->pclk_info->div_factor;
-	}
+	div = ((readl(config->reg) >> config->masks->shift) &
+			config->masks->mask) + 1;
 	clk->rate = (unsigned long)clk->pclk->rate / div;
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }
@@ -411,41 +368,21 @@ void aux_clk_recalc(struct clk *clk)
 	unsigned long flags;
 
 	spin_lock_irqsave(&clocks_lock, flags);
-	/*
-	 * read divisor from hardware, only in two cases:
-	 * - There is only parent to clk and it requires *_clk_recalc
-	 * - There are two parents of a clock and current pclk requires
-	 *   *_clk_recalc
-	 */
-	if (!clk->pclk_info || clk->pclk_info->scalable) {
-		val = readl(config->synth_reg);
-		spin_unlock_irqrestore(&clocks_lock, flags);
+	val = readl(config->synth_reg);
 
-		eqn = (val >> config->masks->eq_sel_shift) &
-			config->masks->eq_sel_mask;
-		if (eqn == config->masks->eq1_mask)
-			den *= 2;
+	eqn = (val >> config->masks->eq_sel_shift) &
+		config->masks->eq_sel_mask;
+	if (eqn == config->masks->eq1_mask)
+		den *= 2;
 
-		/* calculate numerator */
-		num = (val >> config->masks->xscale_sel_shift) &
-			config->masks->xscale_sel_mask;
+	/* calculate numerator */
+	num = (val >> config->masks->xscale_sel_shift) &
+		config->masks->xscale_sel_mask;
 
-		/* calculate denominator */
-		den *= (val >> config->masks->yscale_sel_shift) &
-			config->masks->yscale_sel_mask;
-
-		spin_lock_irqsave(&clocks_lock, flags);
-		val = (((clk->pclk->rate/10000) * num) / den) * 10000;
-	} else {
-		/*
-		 * only if there are two parents and current parent requires
-		 * simple division
-		 */
-		int div_factor = (clk->pclk_info->div_factor < 1) ? 1 :
-			clk->pclk_info->div_factor;
-
-		val = clk->pclk->rate/div_factor;
-	}
+	/* calculate denominator */
+	den *= (val >> config->masks->yscale_sel_shift) &
+		config->masks->yscale_sel_mask;
+	val = (((clk->pclk->rate/10000) * num) / den) * 10000;
 
 	clk->rate = val;
 	spin_unlock_irqrestore(&clocks_lock, flags);
@@ -463,31 +400,42 @@ void gpt_clk_recalc(struct clk *clk)
 	unsigned long flags;
 
 	spin_lock_irqsave(&clocks_lock, flags);
-	/*
-	 * read divisor from hardware, only in two cases:
-	 * - There is only parent to clk and it requires *_clk_recalc
-	 * - There are two parents of a clock and current pclk requires
-	 *   *_clk_recalc
-	 */
-	if (!clk->pclk_info || clk->pclk_info->scalable) {
-		val = readl(config->synth_reg);
-		spin_unlock_irqrestore(&clocks_lock, flags);
-
-		div += (val >> config->masks->mscale_sel_shift) &
-			config->masks->mscale_sel_mask;
-		div *= 1 << (((val >> config->masks->nscale_sel_shift) &
-					config->masks->nscale_sel_mask) + 1);
-		spin_lock_irqsave(&clocks_lock, flags);
-	} else {
-		/*
-		 * only if there are two parents and current parent requires
-		 * simple division
-		 */
-		div = (clk->pclk_info->div_factor < 1) ? 1 :
-			clk->pclk_info->div_factor;
-	}
+	val = readl(config->synth_reg);
+	div += (val >> config->masks->mscale_sel_shift) &
+		config->masks->mscale_sel_mask;
+	div *= 1 << (((val >> config->masks->nscale_sel_shift) &
+				config->masks->nscale_sel_mask) + 1);
 
 	clk->rate = (unsigned long)clk->pclk->rate / div;
+	spin_unlock_irqrestore(&clocks_lock, flags);
+}
+
+/*
+ * calculates current programmed rate of clcd synthesizer
+ * Fout from synthesizer can be given from below equation:
+ * Fout= Fin/2*div (division factor)
+ * div is 17 bits:-
+ *	0-13 (fractional part)
+ *	14-16 (integer part)
+ * To calculate Fout we left shift val by 14 bits and divide Fin by
+ * complete div (including fractional part) and then right shift the
+ * result by 14 places.
+ */
+void clcd_clk_recalc(struct clk *clk)
+{
+	struct clcd_clk_config *config = clk->private_data;
+	unsigned int div = 1;
+	unsigned long flags, prate;
+	unsigned int val;
+
+	spin_lock_irqsave(&clocks_lock, flags);
+	val = readl(config->synth_reg);
+	div = (val >> config->masks->div_factor_shift) &
+		config->masks->div_factor_mask;
+
+	prate = clk->pclk->rate / 1000; /* first level division, make it KHz */
+	clk->rate = ((unsigned long)prate << 14 / 2 * div) >> 14;
+	clk->rate *= 1000;
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }
 
@@ -498,15 +446,9 @@ void gpt_clk_recalc(struct clk *clk)
 void follow_parent(struct clk *clk)
 {
 	unsigned long flags;
-	unsigned int div_factor;
+	unsigned int div_factor = (clk->div_factor < 1) ? 1 : clk->div_factor;
 
 	spin_lock_irqsave(&clocks_lock, flags);
-	if (clk->pclk_info)
-		div_factor = clk->pclk_info->div_factor;
-	else
-		div_factor = clk->div_factor;
-	div_factor = (div_factor < 1) ? 1 : div_factor;
-
 	clk->rate = clk->pclk->rate/div_factor;
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }

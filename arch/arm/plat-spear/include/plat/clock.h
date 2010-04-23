@@ -35,15 +35,11 @@ struct clkops {
 /**
  * struct pclk_info - parents info
  * @pclk: pointer to parent clk
- * @pclk_mask: value to be written for selecting this parent
- * @scalable: Is parent scalable (1 - YES, 0 - NO)
- * @div_factor: div factor for pclk
+ * @pclk_val: value to be written for selecting this parent
  */
 struct pclk_info {
 	struct clk *pclk;
-	u8 pclk_mask;
-	u8 scalable;
-	u8 div_factor;
+	u8 pclk_val;
 };
 
 /**
@@ -69,9 +65,8 @@ struct pclk_sel {
  * @en_reg_bit: clk enable/disable bit
  * @ops: clk enable/disable ops - generic_clkops selected if NULL
  * @recalc: pointer to clock rate recalculate function
- * @div_factor: division factor to parent clock. Only for clks with one parent
+ * @div_factor: division factor to parent clock.
  * @pclk: current parent clk
- * @pclk_info: current parent clk's pclk_info
  * @pclk_sel: pointer to parent selection structure
  * @pclk_sel_shift: register shift for selecting parent of this clock
  * @children: list for childrens or this clock
@@ -89,7 +84,6 @@ struct clk {
 	unsigned int div_factor;
 
 	struct clk *pclk;
-	struct pclk_info *pclk_info;
 	struct pclk_sel *pclk_sel;
 	unsigned int pclk_sel_shift;
 
@@ -160,6 +154,17 @@ struct gpt_clk_config {
 	struct gpt_clk_masks *masks;
 };
 
+/* clcd clk configuration structure */
+struct clcd_synth_masks {
+	u32 div_factor_mask;
+	u32 div_factor_shift;
+};
+
+struct clcd_clk_config {
+	u32 *synth_reg;
+	struct clcd_synth_masks *masks;
+};
+
 /* platform specific clock functions */
 void clk_register(struct clk_lookup *cl);
 void recalc_root_clocks(void);
@@ -170,5 +175,6 @@ void pll_clk_recalc(struct clk *clk);
 void bus_clk_recalc(struct clk *clk);
 void gpt_clk_recalc(struct clk *clk);
 void aux_clk_recalc(struct clk *clk);
+void clcd_clk_recalc(struct clk *clk);
 
 #endif /* __PLAT_CLOCK_H */
