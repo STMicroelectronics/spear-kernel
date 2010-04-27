@@ -31,7 +31,10 @@ static void shirq_irq_mask(unsigned irq)
 
 	spin_lock_irqsave(&lock, flags);
 	val = readl(shirq->regs.base + shirq->regs.enb_reg);
-	val &= ~(shirq->dev_config[id].enb_mask);
+	if (shirq->regs.reset_to_enb)
+		val |= shirq->dev_config[id].enb_mask;
+	else
+		val &= ~(shirq->dev_config[id].enb_mask);
 	writel(val, shirq->regs.base + shirq->regs.enb_reg);
 	spin_unlock_irqrestore(&lock, flags);
 }
@@ -47,7 +50,10 @@ static void shirq_irq_unmask(unsigned irq)
 
 	spin_lock_irqsave(&lock, flags);
 	val = readl(shirq->regs.base + shirq->regs.enb_reg);
-	val |= shirq->dev_config[id].enb_mask;
+	if (shirq->regs.reset_to_enb)
+		val &= ~(shirq->dev_config[id].enb_mask);
+	else
+		val |= shirq->dev_config[id].enb_mask;
 	writel(val, shirq->regs.base + shirq->regs.enb_reg);
 	spin_unlock_irqrestore(&lock, flags);
 }
@@ -60,8 +66,8 @@ static struct irq_chip shirq_chip = {
 
 static void shirq_handler(unsigned irq, struct irq_desc *desc)
 {
-	u32 i, val;
-	struct spear_shirq *shirq = get_irq_chip_data(irq);
+	u32 i, val, mask;
+	struct spear_shirq *shirq = get_irq_data(irq);
 
 	desc->chip->ack(irq);
 	while ((val = readl(shirq->regs.base + shirq->regs.status_reg) &
@@ -77,8 +83,12 @@ static void shirq_handler(unsigned irq, struct irq_desc *desc)
 			if ((shirq->regs.clear_reg == -1) ||
 					shirq->dev_config[i].clear_mask == -1)
 				continue;
-			writel(shirq->dev_config[i].clear_mask, shirq->regs.base
-					+ shirq->regs.clear_reg);
+			mask = readl(shirq->regs.base + shirq->regs.clear_reg);
+			if (shirq->regs.reset_to_clear)
+				mask &= ~shirq->dev_config[i].clear_mask;
+			else
+				mask |= shirq->dev_config[i].clear_mask;
+			writel(mask, shirq->regs.base + shirq->regs.clear_reg);
 		}
 	}
 	desc->chip->unmask(irq);
@@ -102,6 +112,6 @@ int spear_shirq_register(struct spear_shirq *shirq)
 		set_irq_chip_data(shirq->dev_config[i].virq, shirq);
 	}
 
-	set_irq_chip_data(shirq->irq, shirq);
+	set_irq_data(shirq->irq, shirq);
 	return 0;
 }

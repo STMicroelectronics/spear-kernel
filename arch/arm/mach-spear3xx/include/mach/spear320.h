@@ -66,6 +66,7 @@
 #define SPEAR320_SOC_CONFIG_SIZE	0x00000070
 /* Interrupt registers offsets and masks */
 #define INT_STS_MASK_REG		0x04
+#define INT_CLR_MASK_REG		0x04
 #define INT_ENB_MASK_REG		0x08
 #define GPIO_IRQ_MASK			(1 << 0)
 #define I2S_PLAY_IRQ_MASK		(1 << 1)

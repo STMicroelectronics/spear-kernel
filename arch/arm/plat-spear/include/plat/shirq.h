@@ -37,16 +37,20 @@ struct shirq_dev_config {
  *
  * base: base address of shared irq register
  * enb_reg: enable register offset
+ * reset_to_enb: val 1 indicates, we need to clear bit for enabling interrupt
  * status_reg: status register offset
  * status_reg_mask: status register valid mask
  * clear_reg: clear register offset
+ * reset_to_clear: val 1 indicates, we need to clear bit for clearing interrupt
  */
 struct shirq_regs {
 	void __iomem *base;
 	u32 enb_reg;
+	u32 reset_to_enb;
 	u32 status_reg;
 	u32 status_reg_mask;
 	u32 clear_reg;
+	u32 reset_to_clear;
 };
 
 /*

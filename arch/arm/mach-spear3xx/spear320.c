@@ -407,12 +407,15 @@ struct shirq_dev_config shirq_ras1_config[] = {
 	{
 		.virq = VIRQ_EMI,
 		.status_mask = EMI_IRQ_MASK,
+		.clear_mask = EMI_IRQ_MASK,
 	}, {
 		.virq = VIRQ_CLCD,
 		.status_mask = CLCD_IRQ_MASK,
+		.clear_mask = CLCD_IRQ_MASK,
 	}, {
 		.virq = VIRQ_SPP,
 		.status_mask = SPP_IRQ_MASK,
+		.clear_mask = SPP_IRQ_MASK,
 	},
 };
 
@@ -424,7 +427,8 @@ struct spear_shirq shirq_ras1 = {
 		.enb_reg = -1,
 		.status_reg = INT_STS_MASK_REG,
 		.status_reg_mask = SHIRQ_RAS1_MASK,
-		.clear_reg = -1,
+		.clear_reg = INT_CLR_MASK_REG,
+		.reset_to_clear = 1,
 	},
 };
 
@@ -433,14 +437,17 @@ struct shirq_dev_config shirq_ras3_config[] = {
 		.virq = VIRQ_PLGPIO,
 		.enb_mask = GPIO_IRQ_MASK,
 		.status_mask = GPIO_IRQ_MASK,
+		.clear_mask = GPIO_IRQ_MASK,
 	}, {
 		.virq = VIRQ_I2S_PLAY,
 		.enb_mask = I2S_PLAY_IRQ_MASK,
 		.status_mask = I2S_PLAY_IRQ_MASK,
+		.clear_mask = I2S_PLAY_IRQ_MASK,
 	}, {
 		.virq = VIRQ_I2S_REC,
 		.enb_mask = I2S_REC_IRQ_MASK,
 		.status_mask = I2S_REC_IRQ_MASK,
+		.clear_mask = I2S_REC_IRQ_MASK,
 	},
 };
 
@@ -450,9 +457,11 @@ struct spear_shirq shirq_ras3 = {
 	.dev_count = ARRAY_SIZE(shirq_ras3_config),
 	.regs = {
 		.enb_reg = INT_ENB_MASK_REG,
+		.reset_to_enb = 1,
 		.status_reg = INT_STS_MASK_REG,
 		.status_reg_mask = SHIRQ_RAS3_MASK,
-		.clear_reg = -1,
+		.clear_reg = INT_CLR_MASK_REG,
+		.reset_to_clear = 1,
 	},
 };
 
@@ -460,36 +469,47 @@ struct shirq_dev_config shirq_intrcomm_ras_config[] = {
 	{
 		.virq = VIRQ_CANU,
 		.status_mask = CAN_U_IRQ_MASK,
+		.clear_mask = CAN_U_IRQ_MASK,
 	}, {
 		.virq = VIRQ_CANL,
 		.status_mask = CAN_L_IRQ_MASK,
+		.clear_mask = CAN_L_IRQ_MASK,
 	}, {
 		.virq = VIRQ_UART1,
 		.status_mask = UART1_IRQ_MASK,
+		.clear_mask = UART1_IRQ_MASK,
 	}, {
 		.virq = VIRQ_UART2,
 		.status_mask = UART2_IRQ_MASK,
+		.clear_mask = UART2_IRQ_MASK,
 	}, {
 		.virq = VIRQ_SSP1,
 		.status_mask = SSP1_IRQ_MASK,
+		.clear_mask = SSP1_IRQ_MASK,
 	}, {
 		.virq = VIRQ_SSP2,
 		.status_mask = SSP2_IRQ_MASK,
+		.clear_mask = SSP2_IRQ_MASK,
 	}, {
 		.virq = VIRQ_SMII0,
 		.status_mask = SMII0_IRQ_MASK,
+		.clear_mask = SMII0_IRQ_MASK,
 	}, {
 		.virq = VIRQ_MII1_SMII1,
 		.status_mask = MII1_SMII1_IRQ_MASK,
+		.clear_mask = MII1_SMII1_IRQ_MASK,
 	}, {
 		.virq = VIRQ_WAKEUP_SMII0,
 		.status_mask = WAKEUP_SMII0_IRQ_MASK,
+		.clear_mask = WAKEUP_SMII0_IRQ_MASK,
 	}, {
 		.virq = VIRQ_WAKEUP_MII1_SMII1,
 		.status_mask = WAKEUP_MII1_SMII1_IRQ_MASK,
+		.clear_mask = WAKEUP_MII1_SMII1_IRQ_MASK,
 	}, {
 		.virq = VIRQ_I2C,
 		.status_mask = I2C1_IRQ_MASK,
+		.clear_mask = I2C1_IRQ_MASK,
 	},
 };
 
@@ -501,7 +521,8 @@ struct spear_shirq shirq_intrcomm_ras = {
 		.enb_reg = -1,
 		.status_reg = INT_STS_MASK_REG,
 		.status_reg_mask = SHIRQ_INTRCOMM_RAS_MASK,
-		.clear_reg = -1,
+		.clear_reg = INT_CLR_MASK_REG,
+		.reset_to_clear = 1,
 	},
 };
 
