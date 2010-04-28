@@ -15,6 +15,7 @@
 #include <asm/irq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/gpio.h>
 #include <plat/shirq.h>
 
 /* pad multiplexing support */
@@ -140,6 +141,74 @@ struct pmx_driver pmx_driver = {
 };
 
 /* Add spear310 specific devices here */
+/* plgpio device registeration */
+/*
+ * pin to offset and offset to pin converter functions
+ *
+ * In spear310 there is inconsistency among bit positions in plgpio regiseters,
+ * for different plgpio pins. For example: for pin 27, bit offset is 23, pin
+ * 28-33 are not supported, pin 95 has offset bit 95, bit 100 has offset bit 1
+ */
+static int spear300_p2o(int pin)
+{
+	int offset = pin;
+
+	if (pin <= 27)
+		offset += 4;
+	else if (pin <= 33)
+		offset = -1;
+	else if (pin <= 97)
+		offset -= 2;
+	else if (pin <= 101)
+		offset = 101 - pin;
+	else
+		offset = -1;
+
+	return offset;
+}
+
+int spear300_o2p(int offset)
+{
+	if (offset <= 3)
+		return 101 - offset;
+	else if (offset <= 31)
+		return offset - 4;
+	else
+		return offset + 2;
+}
+
+static struct plgpio_platform_data plgpio_plat_data = {
+	.gpio_base = 8,
+	.irq_base = SPEAR_PLGPIO_INT_BASE,
+	.gpio_count = SPEAR_PLGPIO_COUNT,
+	.p2o = spear300_p2o,
+	.o2p = spear300_o2p,
+	/* list of registers with inconsistency */
+	.p2o_regs = PTO_RDATA_REG | PTO_WDATA_REG | PTO_DIR_REG |
+		PTO_IE_REG | PTO_RDATA_REG | PTO_MIS_REG,
+};
+
+static struct resource plgpio_resources[] = {
+	{
+		.start = SPEAR310_SOC_CONFIG_BASE,
+		.end = SPEAR310_SOC_CONFIG_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = VIRQ_PLGPIO,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device plgpio_device = {
+	.name = "plgpio",
+	.id = -1,
+	.dev = {
+		.platform_data = &plgpio_plat_data,
+	},
+	.num_resources = ARRAY_SIZE(plgpio_resources),
+	.resource = plgpio_resources,
+};
+
 
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
