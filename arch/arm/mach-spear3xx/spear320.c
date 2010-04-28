@@ -15,6 +15,7 @@
 #include <asm/irq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/gpio.h>
 #include <plat/shirq.h>
 
 /* pad multiplexing support */
@@ -385,7 +386,6 @@ struct pmx_driver pmx_driver = {
 };
 
 /* Add spear320 specific devices here */
-
 /* CLCD device registration */
 struct amba_device clcd_device = {
 	.dev = {
@@ -400,6 +400,34 @@ struct amba_device clcd_device = {
 	},
 	.dma_mask = ~0,
 	.irq = {VIRQ_CLCD, NO_IRQ},
+};
+
+/* plgpio device registeration */
+static struct plgpio_platform_data plgpio_plat_data = {
+	.gpio_base = 8,
+	.irq_base = SPEAR_PLGPIO_INT_BASE,
+	.gpio_count = SPEAR_PLGPIO_COUNT,
+};
+
+static struct resource plgpio_resources[] = {
+	{
+		.start = SPEAR320_SOC_CONFIG_BASE,
+		.end = SPEAR320_SOC_CONFIG_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = VIRQ_PLGPIO,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device plgpio_device = {
+	.name = "plgpio",
+	.id = -1,
+	.dev = {
+		.platform_data = &plgpio_plat_data,
+	},
+	.num_resources = ARRAY_SIZE(plgpio_resources),
+	.resource = plgpio_resources,
 };
 
 /* spear3xx shared irq */
