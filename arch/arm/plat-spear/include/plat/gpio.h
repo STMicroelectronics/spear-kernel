@@ -21,4 +21,39 @@
 #define gpio_cansleep	__gpio_cansleep
 #define gpio_to_irq	__gpio_to_irq
 
+/* plgpio driver declarations */
+/*
+ * plgpio pins in all machines are not one to one mapped, bitwise with
+ * registers bits. These set of macros define register masks for which below
+ * functions (pin_to_offset and offset_to_pin) are required to be called.
+ */
+#define PTO_ENB_REG		0x001
+#define PTO_WDATA_REG		0x002
+#define PTO_DIR_REG		0x004
+#define PTO_IE_REG		0x008
+#define PTO_RDATA_REG		0x010
+#define PTO_MIS_REG		0x020
+
+/* functions for converting pin to correct offset in register and vice versa */
+/**
+ * struct plgpio_platform_data: plgpio driver platform data
+ *
+ * gpio_base: gpio start number of plgpios
+ * irq_base: irq number of plgpio0
+ * gpio_count: total count of plgpios
+ * p2o: function ptr for pin to offset conversion. This is required only for
+ * machines where mapping b/w pin and offset is not 1-to-1.
+ * o2p: function ptr for offset to pin conversion. This is required only for
+ * machines where mapping b/w pin and offset is not 1-to-1.
+ * p2o_regs: mask of registers for which p2o and o2p are applicable
+ */
+struct plgpio_platform_data {
+	u32 gpio_base;
+	u32 irq_base;
+	u32 gpio_count;
+	int (*p2o)(int pin);		/* pin_to_offset */
+	int (*o2p)(int offset);		/* offset_to_pin */
+	u32 p2o_regs;
+};
+
 #endif /* __PLAT_GPIO_H */

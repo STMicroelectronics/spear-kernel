@@ -144,6 +144,7 @@ extern struct clcd_board clcd_plat_data;
 /* spear310 declarations */
 #ifdef CONFIG_MACH_SPEAR310
 /* Add spear310 machine device structure declarations here */
+extern struct platform_device plgpio_device;
 
 /* pad mux devices */
 extern struct pmx_dev pmx_emi_cs_0_1_4_5;
@@ -164,6 +165,7 @@ void __init spear310_init(void);
 #ifdef CONFIG_MACH_SPEAR320
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
+extern struct platform_device plgpio_device;
 
 /* pad mux modes */
 extern struct pmx_mode auto_net_smii_mode;
