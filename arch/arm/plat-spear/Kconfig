@@ -4,13 +4,6 @@
 
 if PLAT_SPEAR
 
-config SPEAR_CLCD
-	bool "SPEAr CLCD"
-	depends on FB_ARMCLCD && (ARCH_SPEAR6XX || MACH_SPEAR300 || MACH_SPEAR320)
-	default y
-	help
-	  Support for CLCD device driver over SPEAr platform.
-
 choice
 	prompt "ST SPEAr Family"
 	default ARCH_SPEAR3XX
@@ -42,5 +35,12 @@ endchoice
 source "arch/arm/mach-spear13xx/Kconfig"
 source "arch/arm/mach-spear3xx/Kconfig"
 source "arch/arm/mach-spear6xx/Kconfig"
+
+config SPEAR_CLCD
+	bool "SPEAr CLCD"
+	depends on FB_ARMCLCD && (ARCH_SPEAR6XX || MACH_SPEAR300 || MACH_SPEAR320)
+	default y
+	help
+	  Support for CLCD device driver over SPEAr platform.
 
 endif
