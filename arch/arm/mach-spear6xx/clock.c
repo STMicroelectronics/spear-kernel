@@ -590,7 +590,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "usbd",		.clk = &usbd_clk},
 	/* clock derived from ahb clk */
 	{ .con_id = "apb_clk",		.clk = &apb_clk},
-	{ .dev_id = "i2c",		.clk = &i2c_clk},
+	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
 	{ .dev_id = "dma",		.clk = &dma_clk},
 	{ .dev_id = "jpeg",		.clk = &jpeg_clk},
 	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},

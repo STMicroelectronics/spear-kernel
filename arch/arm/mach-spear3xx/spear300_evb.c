@@ -45,6 +45,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&eth_device,
+	&i2c_device,
 	&phy_device,
 	&rtc_device,
 
@@ -62,6 +63,9 @@ static void __init spear300_evb_init(void)
 
 	/* call spear300 machine init function */
 	spear300_init();
+
+	/* Register slave devices on the I2C buses */
+	i2c_register_board_devices();
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

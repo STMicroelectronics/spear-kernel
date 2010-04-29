@@ -456,6 +456,14 @@ static struct clk gpio_clk = {
 	.recalc = &follow_parent,
 };
 
+#ifdef CONFIG_MACH_SPEAR320
+/* i2c1 clock */
+static struct clk i2c1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
 	/* root clks */
@@ -486,7 +494,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	/* clock derived from ahb clk */
 	{ .con_id = "apb_clk",		.clk = &apb_clk},
-	{ .dev_id = "i2c",		.clk = &i2c_clk},
+	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
 	{ .dev_id = "dma",		.clk = &dma_clk},
 	{ .dev_id = "jpeg",		.clk = &jpeg_clk},
 	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},
@@ -496,6 +504,9 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp",		.clk = &ssp_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
+#ifdef CONFIG_MACH_SPEAR320
+	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
+#endif
 };
 
 void __init clk_init(void)

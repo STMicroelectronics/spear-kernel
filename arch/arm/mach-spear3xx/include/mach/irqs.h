@@ -133,7 +133,7 @@
 #define VIRQ_MII1_SMII1				(VIRQ_START + 13)
 #define VIRQ_WAKEUP_SMII0			(VIRQ_START + 14)
 #define VIRQ_WAKEUP_MII1_SMII1			(VIRQ_START + 15)
-#define VIRQ_I2C				(VIRQ_START + 16)
+#define VIRQ_I2C1				(VIRQ_START + 16)
 
 /* GPIO pins virtual irqs */
 #define SPEAR_GPIO_INT_BASE			(VIRQ_START + 17)
