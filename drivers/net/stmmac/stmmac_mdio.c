@@ -1,29 +1,27 @@
 /*******************************************************************************
-  STMMAC Ethernet Driver -- MDIO bus implementation
-  Provides Bus interface for MII registers
-
-  Copyright (C) 2007-2009  STMicroelectronics Ltd
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Author: Carl Shaw <carl.shaw@st.com>
-  Maintainer: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+ * STMMAC Ethernet Driver -- MDIO bus implementation
+ * Provides Bus interface for MII registers
+ *
+ * Copyright (C) 2007-2009 STMicroelectronics Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
-
 #include <linux/netdevice.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
@@ -75,7 +73,7 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
  * Description: it writes the data into the MII register from within the device.
  */
 static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
-			     u16 phydata)
+				u16 phydata)
 {
 	struct net_device *ndev = bus->priv;
 	struct stmmac_priv *priv = netdev_priv(ndev);
@@ -84,9 +82,8 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	unsigned int mii_data = priv->mac_type->hw.mii.data;
 
 	u16 value =
-	    (((phyaddr << 11) & (0x0000F800)) | ((phyreg << 6) & (0x000007C0)))
-	    | MII_WRITE;
-
+		(((phyaddr << 11) & (0x0000F800)) |
+		 ((phyreg << 6) & (0x000007C0))) | MII_WRITE;
 	value |= MII_BUSY;
 
 	/* Wait until any existing MII operation is complete */
@@ -182,9 +179,9 @@ int stmmac_mdio_register(struct net_device *ndev)
 				irqlist[addr] = priv->phy_irq;
 			}
 			pr_info("%s: PHY ID %08x at %d IRQ %d (%s)%s\n",
-			       ndev->name, phydev->phy_id, addr,
-			       phydev->irq, dev_name(&phydev->dev),
-			       (addr == priv->phy_addr) ? " active" : "");
+				ndev->name, phydev->phy_id, addr,
+				phydev->irq, dev_name(&phydev->dev),
+				(addr == priv->phy_addr) ? " active" : "");
 			found = 1;
 		}
 	}

@@ -1,27 +1,27 @@
 /*******************************************************************************
-  This is the driver for the GMAC on-chip Ethernet controller for ST SoCs.
-  DWC Ether MAC 10/100/1000 Universal version 3.41a  has been used for
-  developing this code.
-
-  Copyright (C) 2007-2009  STMicroelectronics Ltd
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+ * This is the driver for the GMAC on-chip Ethernet controller for ST SoCs.
+ * DWC Ether MAC 10/100/1000 Universal version 3.41a has been used for
+ * developing this code.
+ *
+ * Copyright (C) 2007-2009 STMicroelectronics Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
 #include <linux/netdevice.h>
@@ -37,23 +37,23 @@
 #undef FRAME_FILTER_DEBUG
 /*#define FRAME_FILTER_DEBUG*/
 #ifdef GMAC_DEBUG
-#define DBG(fmt, args...)  printk(fmt, ## args)
+#define DBG(fmt, args...) printk(fmt, ## args)
 #else
-#define DBG(fmt, args...)  do { } while (0)
+#define DBG(fmt, args...) do { } while (0)
 #endif
 
 static void gmac_dump_regs(unsigned long ioaddr)
 {
 	int i;
 	pr_info("\t----------------------------------------------\n"
-	       "\t  GMAC registers (base addr = 0x%8x)\n"
-	       "\t----------------------------------------------\n",
-	       (unsigned int)ioaddr);
+			"\t GMAC registers (base addr = 0x%8x)\n"
+			"\t----------------------------------------------\n",
+			(unsigned int)ioaddr);
 
 	for (i = 0; i < 55; i++) {
 		int offset = i * 4;
 		pr_info("\tReg No. %d (offset 0x%x): 0x%08x\n", i,
-		       offset, readl(ioaddr + offset));
+				offset, readl(ioaddr + offset));
 	}
 	return;
 }
@@ -67,8 +67,8 @@ static int gmac_dma_init(unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx)
 	do {} while ((readl(ioaddr + DMA_BUS_MODE) & DMA_BUS_MODE_SFT_RESET));
 
 	value = /* DMA_BUS_MODE_FB | */ DMA_BUS_MODE_4PBL |
-	    ((pbl << DMA_BUS_MODE_PBL_SHIFT) |
-	     (pbl << DMA_BUS_MODE_RPBL_SHIFT));
+		((pbl << DMA_BUS_MODE_PBL_SHIFT) |
+		 (pbl << DMA_BUS_MODE_RPBL_SHIFT));
 
 #ifdef CONFIG_STMMAC_DA
 	value |= DMA_BUS_MODE_DA;	/* Rx has priority over tx */
@@ -96,7 +96,7 @@ static void gmac_flush_tx_fifo(unsigned long ioaddr)
 }
 
 static void gmac_dma_operation_mode(unsigned long ioaddr, int txmode,
-				    int rxmode)
+					int rxmode)
 {
 	u32 csr6 = readl(ioaddr + DMA_CONTROL);
 
@@ -109,7 +109,7 @@ static void gmac_dma_operation_mode(unsigned long ioaddr, int txmode,
 		csr6 |= DMA_CONTROL_OSF;
 	} else {
 		DBG(KERN_DEBUG "GMAC: disabling TX store and forward mode"
-			      " (threshold = %d)\n", txmode);
+				" (threshold = %d)\n", txmode);
 		csr6 &= ~DMA_CONTROL_TSF;
 		csr6 &= DMA_CONTROL_TC_TX_MASK;
 		/* Set the transmit threashold */
@@ -130,7 +130,7 @@ static void gmac_dma_operation_mode(unsigned long ioaddr, int txmode,
 		csr6 |= DMA_CONTROL_RSF;
 	} else {
 		DBG(KERN_DEBUG "GMAC: disabling RX store and forward mode"
-			      " (threshold = %d)\n", rxmode);
+				" (threshold = %d)\n", rxmode);
 		csr6 &= ~DMA_CONTROL_RSF;
 		csr6 &= DMA_CONTROL_TC_RX_MASK;
 		if (rxmode <= 32)
@@ -149,7 +149,7 @@ static void gmac_dma_operation_mode(unsigned long ioaddr, int txmode,
 
 /* Not yet implemented --- no RMON module */
 static void gmac_dma_diagnostic_fr(void *data, struct stmmac_extra_stats *x,
-				   unsigned long ioaddr)
+				unsigned long ioaddr)
 {
 	return;
 }
@@ -162,15 +162,15 @@ static void gmac_dump_dma_regs(unsigned long ioaddr)
 		if ((i < 9) || (i > 17)) {
 			int offset = i * 4;
 			pr_err("\t Reg No. %d (offset 0x%x): 0x%08x\n", i,
-			       (DMA_BUS_MODE + offset),
-			       readl(ioaddr + DMA_BUS_MODE + offset));
+				(DMA_BUS_MODE + offset),
+				readl(ioaddr + DMA_BUS_MODE + offset));
 		}
 	}
 	return;
 }
 
 static int gmac_get_tx_frame_status(void *data, struct stmmac_extra_stats *x,
-				    struct dma_desc *p, unsigned long ioaddr)
+				struct dma_desc *p, unsigned long ioaddr)
 {
 	int ret = 0;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
@@ -257,14 +257,14 @@ static int gmac_coe_rdes0(int ipc_err, int type, int payload_err)
 
 	/* bits 5 7 0 | Frame status
 	 * ----------------------------------------------------------
-	 *      0 0 0 | IEEE 802.3 Type frame (lenght < 1536 octects)
-	 *      1 0 0 | IPv4/6 No CSUM errorS.
-	 *      1 0 1 | IPv4/6 CSUM PAYLOAD error
-	 *      1 1 0 | IPv4/6 CSUM IP HR error
-	 *      1 1 1 | IPv4/6 IP PAYLOAD AND HEADER errorS
-	 *      0 0 1 | IPv4/6 unsupported IP PAYLOAD
-	 *      0 1 1 | COE bypassed.. no IPv4/6 frame
-	 *      0 1 0 | Reserved.
+	 *	0 0 0 | IEEE 802.3 Type frame (lenght < 1536 octects)
+	 *	1 0 0 | IPv4/6 No CSUM errorS.
+	 *	1 0 1 | IPv4/6 CSUM PAYLOAD error
+	 *	1 1 0 | IPv4/6 CSUM IP HR error
+	 *	1 1 1 | IPv4/6 IP PAYLOAD AND HEADER errorS
+	 *	0 0 1 | IPv4/6 unsupported IP PAYLOAD
+	 *	0 1 1 | COE bypassed.. no IPv4/6 frame
+	 *	0 1 0 | Reserved.
 	 */
 	if (status == 0x0) {
 		DBG(KERN_INFO "RX Des0 status: IEEE 802.3 Type frame.\n");
@@ -280,11 +280,11 @@ static int gmac_coe_rdes0(int ipc_err, int type, int payload_err)
 		ret = csum_none;
 	} else if (status == 0x7) {
 		DBG(KERN_ERR
-		    "RX Des0 status: IPv4/6 Header and Payload Error.\n");
+			"RX Des0 status: IPv4/6 Header and Payload Error.\n");
 		ret = csum_none;
 	} else if (status == 0x1) {
 		DBG(KERN_ERR
-		    "RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
+			"RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
 		ret = discard_frame;
 	} else if (status == 0x3) {
 		DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
@@ -294,7 +294,7 @@ static int gmac_coe_rdes0(int ipc_err, int type, int payload_err)
 }
 
 static int gmac_get_rx_frame_status(void *data, struct stmmac_extra_stats *x,
-				    struct dma_desc *p)
+					struct dma_desc *p)
 {
 	int ret = good_frame;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
@@ -377,13 +377,13 @@ static void gmac_irq_status(unsigned long ioaddr)
 	/* Not used events (e.g. MMC interrupts) are not handled. */
 	if ((intr_status & mmc_tx_irq))
 		DBG(KERN_DEBUG "GMAC: MMC tx interrupt: 0x%08x\n",
-		    readl(ioaddr + GMAC_MMC_TX_INTR));
+			readl(ioaddr + GMAC_MMC_TX_INTR));
 	if (unlikely(intr_status & mmc_rx_irq))
 		DBG(KERN_DEBUG "GMAC: MMC rx interrupt: 0x%08x\n",
-		    readl(ioaddr + GMAC_MMC_RX_INTR));
+			readl(ioaddr + GMAC_MMC_RX_INTR));
 	if (unlikely(intr_status & mmc_rx_csum_offload_irq))
 		DBG(KERN_DEBUG "GMAC: MMC rx csum offload: 0x%08x\n",
-		    readl(ioaddr + GMAC_MMC_RX_CSUM_OFFLOAD));
+			readl(ioaddr + GMAC_MMC_RX_CSUM_OFFLOAD));
 	if (unlikely(intr_status & pmt_irq)) {
 		DBG(KERN_DEBUG "GMAC: received Magic frame\n");
 		/* clear the PMT bits 5 and 6 by reading the PMT
@@ -394,14 +394,18 @@ static void gmac_irq_status(unsigned long ioaddr)
 	return;
 }
 
-static void gmac_core_init(unsigned long ioaddr)
+static void gmac_core_init(unsigned long ioaddr, int disable_readahead)
 {
 	u32 value = readl(ioaddr + GMAC_CONTROL);
 	value |= GMAC_CORE_INIT;
 	writel(value, ioaddr + GMAC_CONTROL);
 
 	/* STBus Bridge Configuration */
-	/*writel(0xc5608, ioaddr + 0x00007000);*/
+	if (disable_readahead) {
+		value = readl(ioaddr + GMAC_AHB_CONFIG);
+		value &= GMAC_AHB_CONFIG_READ_AHEAD_MASK;
+		writel(value, ioaddr + GMAC_AHB_CONFIG);
+	}
 
 	/* Freeze MMC counters */
 	writel(0x8, ioaddr + GMAC_MMC_CTRL);
@@ -435,12 +439,12 @@ static void gmac_set_filter(struct net_device *dev)
 	unsigned int value = 0;
 
 	DBG(KERN_INFO "%s: # mcasts %d, # unicast %d\n",
-	    __func__, dev->mc_count, dev->uc_count);
+		__func__, dev->mc_count, dev->uc_count);
 
 	if (dev->flags & IFF_PROMISC)
 		value = GMAC_FRAME_FILTER_PR;
 	else if ((dev->mc_count > HASH_TABLE_SIZE)
-		   || (dev->flags & IFF_ALLMULTI)) {
+			|| (dev->flags & IFF_ALLMULTI)) {
 		value = GMAC_FRAME_FILTER_PM;	/* pass all multi */
 		writel(0xffffffff, ioaddr + GMAC_HASH_HIGH);
 		writel(0xffffffff, ioaddr + GMAC_HASH_LOW);
@@ -454,11 +458,12 @@ static void gmac_set_filter(struct net_device *dev)
 
 		memset(mc_filter, 0, sizeof(mc_filter));
 		for (i = 0, mclist = dev->mc_list;
-		     mclist && i < dev->mc_count; i++, mclist = mclist->next) {
+				mclist && i < dev->mc_count;
+				i++, mclist = mclist->next) {
 			/* The upper 6 bits of the calculated CRC are used to
-			   index the contens of the hash table */
+				index the contens of the hash table */
 			int bit_nr =
-			    bitrev32(~crc32_le(~0, mclist->dmi_addr, 6)) >> 26;
+			bitrev32(~crc32_le(~0, mclist->dmi_addr, 6)) >> 26;
 			/* The most significant bit determines the register to
 			 * use (H/L) while the other 5 bits determine the bit
 			 * within the register. */
@@ -469,25 +474,21 @@ static void gmac_set_filter(struct net_device *dev)
 	}
 
 	/* Handle multiple unicast addresses (perfect filtering)*/
-	if (dev->uc_count > GMAC_MAX_UNICAST_ADDRESSES)
+	if (dev->uc.count > GMAC_MAX_UNICAST_ADDRESSES)
 		/* Switch to promiscuous mode is more than 16 addrs
-		   are required */
+			are required */
 		value |= GMAC_FRAME_FILTER_PR;
 	else {
 		int i;
-		struct dev_addr_list *uc_ptr = dev->uc_list;
+		struct netdev_hw_addr *ha;
 
-			for (i = 0; i < dev->uc_count; i++) {
-				gmac_set_umac_addr(ioaddr, uc_ptr->da_addr,
-						i + 1);
+		i = 1;
+		list_for_each_entry(ha, &dev->uc.list, list) {
+			unsigned char *addr = ha->addr;
 
-				DBG(KERN_INFO "\t%d "
-				"- Unicast addr %02x:%02x:%02x:%02x:%02x:"
-				"%02x\n", i + 1,
-				uc_ptr->da_addr[0], uc_ptr->da_addr[1],
-				uc_ptr->da_addr[2], uc_ptr->da_addr[3],
-				uc_ptr->da_addr[4], uc_ptr->da_addr[5]);
-				uc_ptr = uc_ptr->next;
+			gmac_set_umac_addr(ioaddr, addr, i);
+			DBG(KERN_INFO "\t%d - Unicast addr %pM\n", i, addr);
+			i++;
 		}
 	}
 
@@ -498,14 +499,14 @@ static void gmac_set_filter(struct net_device *dev)
 	writel(value, ioaddr + GMAC_FRAME_FILTER);
 
 	DBG(KERN_INFO "\tFrame Filter reg: 0x%08x\n\tHash regs: "
-	    "HI 0x%08x, LO 0x%08x\n", readl(ioaddr + GMAC_FRAME_FILTER),
-	    readl(ioaddr + GMAC_HASH_HIGH), readl(ioaddr + GMAC_HASH_LOW));
+		"HI 0x%08x, LO 0x%08x\n", readl(ioaddr + GMAC_FRAME_FILTER),
+		readl(ioaddr + GMAC_HASH_HIGH), readl(ioaddr + GMAC_HASH_LOW));
 
 	return;
 }
 
 static void gmac_flow_ctrl(unsigned long ioaddr, unsigned int duplex,
-			   unsigned int fc, unsigned int pause_time)
+				unsigned int fc, unsigned int pause_time)
 {
 	unsigned int flow = 0;
 
@@ -677,7 +678,7 @@ struct mac_device_info *gmac_setup(unsigned long ioaddr)
 	u32 uid = readl(ioaddr + GMAC_VERSION);
 
 	pr_info("\tGMAC - user ID: 0x%x, Synopsys ID: 0x%x\n",
-	       ((uid & 0x0000ff00) >> 8), (uid & 0x000000ff));
+		((uid & 0x0000ff00) >> 8), (uid & 0x000000ff));
 
 	mac = kzalloc(sizeof(const struct mac_device_info), GFP_KERNEL);
 

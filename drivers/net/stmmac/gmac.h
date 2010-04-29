@@ -1,23 +1,24 @@
 /*******************************************************************************
-  Copyright (C) 2007-2009  STMicroelectronics Ltd
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+ *
+ * Copyright (C) 2007-2009 STMicroelectronics Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
 #define GMAC_CONTROL		0x00000000	/* Configuration */
@@ -95,8 +96,11 @@ enum inter_frame_gap {
 #define GMAC_CONTROL_TE		0x00000008 /* Transmitter Enable */
 #define GMAC_CONTROL_RE		0x00000004 /* Receiver Enable */
 
+/* #define GMAC_CORE_INIT (GMAC_CONTROL_JD | GMAC_CONTROL_PS |
+				GMAC_CONTROL_ACS |GMAC_CONTROL_IPC |
+				GMAC_CONTROL_JE | GMAC_CONTROL_BE) */
 #define GMAC_CORE_INIT (GMAC_CONTROL_JD | GMAC_CONTROL_PS | GMAC_CONTROL_ACS | \
-			GMAC_CONTROL_IPC | GMAC_CONTROL_JE | GMAC_CONTROL_BE)
+			GMAC_CONTROL_JE | GMAC_CONTROL_BE)
 
 /* GMAC Frame Filter defines */
 #define GMAC_FRAME_FILTER_PR	0x00000001	/* Promiscuous Mode */
@@ -109,7 +113,7 @@ enum inter_frame_gap {
 #define GMAC_FRAME_FILTER_SAF	0x00000200	/* Source Address Filter */
 #define GMAC_FRAME_FILTER_HPF	0x00000400	/* Hash or perfect Filter */
 #define GMAC_FRAME_FILTER_RA	0x80000000	/* Receive all mode */
-/* GMII ADDR  defines */
+/* GMII ADDR defines */
 #define GMAC_MII_ADDR_WRITE	0x00000002	/* MII Write */
 #define GMAC_MII_ADDR_BUSY	0x00000001	/* MII Busy */
 /* GMAC FLOW CTRL defines */
@@ -124,15 +128,15 @@ enum inter_frame_gap {
 #define DMA_BUS_MODE_SFT_RESET	0x00000001	/* Software Reset */
 #define DMA_BUS_MODE_DA		0x00000002	/* Arbitration scheme */
 #define DMA_BUS_MODE_DSL_MASK	0x0000007c	/* Descriptor Skip Length */
-#define DMA_BUS_MODE_DSL_SHIFT	2	/*   (in DWORDS)      */
+#define DMA_BUS_MODE_DSL_SHIFT	2		/* (in DWORDS) */
 /* Programmable burst length (passed thorugh platform)*/
 #define DMA_BUS_MODE_PBL_MASK	0x00003f00	/* Programmable Burst Len */
 #define DMA_BUS_MODE_PBL_SHIFT	8
 
 enum rx_tx_priority_ratio {
-	double_ratio = 0x00004000,	/*2:1 */
-	triple_ratio = 0x00008000,	/*3:1 */
-	quadruple_ratio = 0x0000c000,	/*4:1 */
+	double_ratio = 0x00004000,	/* 2:1 */
+	triple_ratio = 0x00008000,	/* 3:1 */
+	quadruple_ratio = 0x0000c000,	/* 4:1 */
 };
 
 #define DMA_BUS_MODE_FB		0x00010000	/* Fixed burst */
@@ -143,12 +147,12 @@ enum rx_tx_priority_ratio {
 #define DMA_BUS_MODE_AAL	0x02000000
 
 /* DMA CRS Control and Status Register Mapping */
-#define DMA_HOST_TX_DESC	  0x00001048	/* Current Host Tx descriptor */
-#define DMA_HOST_RX_DESC	  0x0000104c	/* Current Host Rx descriptor */
-/*  DMA Bus Mode register defines */
-#define DMA_BUS_PR_RATIO_MASK	  0x0000c000	/* Rx/Tx priority ratio */
-#define DMA_BUS_PR_RATIO_SHIFT	  14
-#define DMA_BUS_FB	  	  0x00010000	/* Fixed Burst */
+#define DMA_HOST_TX_DESC	 0x00001048	/* Current Host Tx descriptor */
+#define DMA_HOST_RX_DESC	 0x0000104c	/* Current Host Rx descriptor */
+/* DMA Bus Mode register defines */
+#define DMA_BUS_PR_RATIO_MASK	 0x0000c000	/* Rx/Tx priority ratio */
+#define DMA_BUS_PR_RATIO_SHIFT	 14
+#define DMA_BUS_FB		 0x00010000	/* Fixed Burst */
 
 /* DMA operation mode defines (start/stop tx/rx are placed in common header)*/
 #define DMA_CONTROL_DT		0x04000000 /* Disable Drop TCP/IP csum error */
@@ -168,7 +172,7 @@ enum rfd {
 	deac_full_minus_3 = 0x00401000,
 	deac_full_minus_4 = 0x00401800,
 };
-#define DMA_CONTROL_TSF		0x00200000 /* Transmit  Store and Forward */
+#define DMA_CONTROL_TSF		0x00200000 /* Transmit Store and Forward */
 #define DMA_CONTROL_FTF		0x00100000 /* Flush transmit FIFO */
 
 enum ttc_control {
@@ -198,7 +202,11 @@ enum rtc_control {
 #define DMA_CONTROL_OSF	0x00000004	/* Operate on second frame */
 
 /* MMC registers offset */
-#define GMAC_MMC_CTRL      0x100
-#define GMAC_MMC_RX_INTR   0x104
-#define GMAC_MMC_TX_INTR   0x108
-#define GMAC_MMC_RX_CSUM_OFFLOAD   0x208
+#define GMAC_MMC_CTRL			0x100
+#define GMAC_MMC_RX_INTR		0x104
+#define GMAC_MMC_TX_INTR		0x108
+#define GMAC_MMC_RX_CSUM_OFFLOAD	0x208
+
+/* AHB register offsets */
+#define GMAC_AHB_CONFIG			0x7000
+#define GMAC_AHB_CONFIG_READ_AHEAD_MASK	0xFFCFFFFF

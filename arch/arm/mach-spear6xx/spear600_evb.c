@@ -26,6 +26,8 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&eth_device,
+	&phy_device,
 	&rtc_device,
 };
 
@@ -43,7 +45,6 @@ static void __init spear600_evb_init(void)
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
 }
-
 
 MACHINE_START(SPEAR600, "ST-SPEAR600-EVB")
 	.boot_params	=	0x00000100,

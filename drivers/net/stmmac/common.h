@@ -1,32 +1,32 @@
 /*******************************************************************************
-  STMMAC Common Header File
-
-  Copyright (C) 2007-2009  STMicroelectronics Ltd
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+ * STMMAC Common Header File
+ *
+ * Copyright (C) 2007-2009 STMicroelectronics Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
 #include "descs.h"
 #include <linux/io.h>
 
 /* *********************************************
-   DMA CRS Control and Status Register Mapping
+ * DMA CRS Control and Status Register Mapping
  * *********************************************/
 #define DMA_BUS_MODE		0x00001000	/* Bus Mode */
 #define DMA_XMT_POLL_DEMAND	0x00001004	/* Transmit Poll Demand */
@@ -41,13 +41,13 @@
 #define DMA_CUR_RX_BUF_ADDR	0x00001054	/* Current Host Rx Buffer */
 
 /* ********************************
-   DMA Control register defines
+ * DMA Control register defines
  * ********************************/
 #define DMA_CONTROL_ST		0x00002000	/* Start/Stop Transmission */
 #define DMA_CONTROL_SR		0x00000002	/* Start/Stop Receive */
 
 /* **************************************
-   DMA Interrupt Enable register defines
+ * DMA Interrupt Enable register defines
  * **************************************/
 /**** NORMAL INTERRUPT ****/
 #define DMA_INTR_ENA_NIE 0x00010000	/* Normal Summary */
@@ -78,7 +78,7 @@
 #define DMA_INTR_DEFAULT_MASK	(DMA_INTR_NORMAL | DMA_INTR_ABNORMAL)
 
 /* ****************************
- *  DMA Status register defines
+ * DMA Status register defines
  * ****************************/
 #define DMA_STATUS_GPI		0x10000000	/* PMT interrupt */
 #define DMA_STATUS_GMI		0x08000000	/* MMC interrupt */
@@ -241,7 +241,8 @@ static inline void stmmac_get_mac_addr(unsigned long ioaddr,
 
 struct stmmac_ops {
 	/* MAC core initialization */
-	void (*core_init) (unsigned long ioaddr) ____cacheline_aligned;
+	void (*core_init) (unsigned long ioaddr, int disable_readahead)
+		____cacheline_aligned;
 	/* DMA core initialization */
 	int (*dma_init) (unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx);
 	/* Dump MAC registers */
@@ -253,7 +254,7 @@ struct stmmac_ops {
 	void (*dma_mode) (unsigned long ioaddr, int txmode, int rxmode);
 	/* To track extra statistic (if supported) */
 	void (*dma_diagnostic_fr) (void *data, struct stmmac_extra_stats *x,
-				   unsigned long ioaddr);
+				unsigned long ioaddr);
 	/* RX descriptor ring initialization */
 	void (*init_rx_desc) (struct dma_desc *p, unsigned int ring_size,
 				int disable_rx_ic);
@@ -277,7 +278,7 @@ struct stmmac_ops {
 	int (*get_tx_ls) (struct dma_desc *p);
 	/* Return the transmit status looking at the TDES1 */
 	int (*tx_status) (void *data, struct stmmac_extra_stats *x,
-			  struct dma_desc *p, unsigned long ioaddr);
+			struct dma_desc *p, unsigned long ioaddr);
 	/* Get the buffer size from the descriptor */
 	int (*get_tx_len) (struct dma_desc *p);
 	/* Handle extra events on specific interrupts hw dependent */
@@ -288,19 +289,19 @@ struct stmmac_ops {
 	int (*get_rx_frame_len) (struct dma_desc *p);
 	/* Return the reception status looking at the RDES1 */
 	int (*rx_status) (void *data, struct stmmac_extra_stats *x,
-			  struct dma_desc *p);
+			struct dma_desc *p);
 	/* Multicast filter setting */
 	void (*set_filter) (struct net_device *dev);
 	/* Flow control setting */
 	void (*flow_ctrl) (unsigned long ioaddr, unsigned int duplex,
-			   unsigned int fc, unsigned int pause_time);
+			unsigned int fc, unsigned int pause_time);
 	/* Set power management mode (e.g. magic frame) */
 	void (*pmt) (unsigned long ioaddr, unsigned long mode);
 	/* Set/Get Unicast MAC addresses */
 	void (*set_umac_addr) (unsigned long ioaddr, unsigned char *addr,
-			     unsigned int reg_n);
+			unsigned int reg_n);
 	void (*get_umac_addr) (unsigned long ioaddr, unsigned char *addr,
-			     unsigned int reg_n);
+			unsigned int reg_n);
 };
 
 struct mac_link {

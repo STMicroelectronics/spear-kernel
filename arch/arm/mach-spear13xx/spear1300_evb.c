@@ -22,6 +22,8 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&eth_device,
+	&phy_device,
 	&rtc_device,
 };
 
