@@ -738,7 +738,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "osc3_25m_clk",	.clk = &osc3_25m_clk},
 
 	/* clock derived from 32 KHz osc clk */
-	{.dev_id = "rtc",		.clk = &rtc_clk},
+	{.dev_id = "rtc-spear",		.clk = &rtc_clk},
 
 	/* clock derived from 24/25 MHz osc1/osc3 clk */
 	{.con_id = "pll1_clk",		.clk = &pll1_clk},
