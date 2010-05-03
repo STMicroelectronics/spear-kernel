@@ -100,15 +100,16 @@
 	#define C3_CLK_SHIFT		1
 
 #define GMAC_CLK_CFG		((unsigned int *)(MISC_BASE + 0x248))
-	#define GMAC_PHY_PAD_VAL	0
-	#define GMAC_PHY_PLL2_VAL	1
-	#define GMAC_PHY_OSC3_VAL	2
-	#define GMAC_PHY_SYNT_CLK_MASK	3
-	#define GMAC_PHY_SYNT_CLK_SHIFT	1
 
-	#define GMAC_PHY_SYNT_ENB_VAL	4
-	#define GMAC_PHY_CLK_MASK	7
-	#define GMAC_PHY_CLK_SHIFT	1
+	#define GMAC_PHY_PAD_VAL		0
+	#define GMAC_PHY_PLL2_VAL		1
+	#define GMAC_PHY_OSC3_VAL		2
+	#define GMAC_PHY_INPUT_CLK_MASK		3
+	#define GMAC_PHY_INPUT_CLK_SHIFT	1
+	#define GMAC_PHY_SYNT_ENB		3
+	#define GMAC_PHY_CLK_MASK		1
+	#define GMAC_PHY_CLK_SHIFT		3
+	#define GMAC_PHY_SYNT_ENB_VAL		4
 
 #define C3_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x24c))
 #define CLCD_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x250))

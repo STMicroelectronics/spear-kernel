@@ -422,8 +422,8 @@ static struct clk gmii_txclk125_pad = {
 	.rate = 125000000,
 };
 
-/* gmac phy synth parents */
-static struct pclk_info gmac_phy_synth_pclk_info[] = {
+/* gmac phy set of input clks*/
+static struct pclk_info gmac_phy_input_pclk_info[] = {
 	{
 		.pclk = &gmii_txclk125_pad,
 		.pclk_val = GMAC_PHY_PAD_VAL,
@@ -436,20 +436,24 @@ static struct pclk_info gmac_phy_synth_pclk_info[] = {
 	},
 };
 
-/* gmac phy synth parent select structure */
-static struct pclk_sel gmac_phy_synth_pclk_sel = {
-	.pclk_info = gmac_phy_synth_pclk_info,
-	.pclk_count = ARRAY_SIZE(gmac_phy_synth_pclk_info),
+static struct pclk_sel gmac_phy_input_pclk_sel = {
+	.pclk_info = gmac_phy_input_pclk_info,
+	.pclk_count = ARRAY_SIZE(gmac_phy_input_pclk_info),
 	.pclk_sel_reg = GMAC_CLK_CFG,
-	.pclk_sel_mask = GMAC_PHY_SYNT_CLK_MASK,
+	.pclk_sel_mask = GMAC_PHY_INPUT_CLK_MASK,
 };
 
-/* gmac phy synth clock */
+static struct clk gmac_phy_input_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &gmac_phy_input_pclk_sel,
+	.pclk_sel_shift = GMAC_PHY_INPUT_CLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
 static struct clk gmac_phy_synth_clk = {
-	.en_reg = GMAC_CLK_SYNT,
-	.en_reg_bit = AUX_SYNT_ENB,
-	.pclk_sel = &gmac_phy_synth_pclk_sel,
-	.pclk_sel_shift = GMAC_PHY_SYNT_CLK_SHIFT,
+	.en_reg = GMAC_CLK_CFG,
+	.en_reg_bit = GMAC_PHY_SYNT_ENB,
+	.pclk = &gmac_phy_input_clk,
 	.recalc = &aux_clk_recalc,
 	.private_data = &gmac_phy_synth_config,
 };
@@ -457,18 +461,12 @@ static struct clk gmac_phy_synth_clk = {
 /* gmac phy parents */
 static struct pclk_info gmac_phy_pclk_info[] = {
 	{
-		.pclk = &gmii_txclk125_pad,
-		.pclk_val = GMAC_PHY_PAD_VAL,
-	}, {
-		.pclk = &pll2_clk,
-		.pclk_val = GMAC_PHY_PLL2_VAL,
-	}, {
-		.pclk = &osc3_25m_clk,
-		.pclk_val = GMAC_PHY_OSC3_VAL,
+		.pclk = &gmac_phy_input_clk,
+		.pclk_val = 0,
 	}, {
 		.pclk = &gmac_phy_synth_clk,
-		.pclk_val = GMAC_PHY_SYNT_ENB_VAL,
-	},
+		.pclk_val = 1,
+	}
 };
 
 /* gmac phy parent select structure */
@@ -759,9 +757,10 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "c3_synth_clk",		.clk = &c3_synth_clk},
 	{.con_id = "clcd_synth_clk",		.clk = &clcd_synth_clk},
 	{.con_id = "uart_synth_clk",		.clk = &uart_synth_clk},
-	{.con_id = "gmac_phy_synth_clk",	.clk = &gmac_phy_synth_clk},
 	{.con_id = "sd_synth_clk",		.clk = &sd_synth_clk},
 	{.con_id = "cfxd_synth_clk",		.clk = &cfxd_synth_clk},
+	{.con_id = "gmac_phy_input_clk",	.clk = &gmac_phy_input_clk},
+	{.con_id = "gmac_phy_synth_clk",	.clk = &gmac_phy_synth_clk},
 	{.con_id = "gmac_phy_clk",		.clk = &gmac_phy_clk},
 
 	/* clocks having multiple parent source from above clocks */
