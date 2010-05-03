@@ -60,6 +60,7 @@ static void shirq_irq_unmask(unsigned irq)
 
 static struct irq_chip shirq_chip = {
 	.name		= "spear_shirq",
+	.ack		= shirq_irq_mask,
 	.mask		= shirq_irq_mask,
 	.unmask		= shirq_irq_unmask,
 };
