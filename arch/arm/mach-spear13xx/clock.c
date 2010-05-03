@@ -774,8 +774,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 
 	/* clock derived from ahb clk */
 	{.dev_id = "smi",		.clk = &smi_clk},
-	{.dev_id = "uhci0",		.clk = &uhci0_clk},
-	{.dev_id = "uhci1",		.clk = &uhci1_clk},
+	{.con_id = "usbh.0_clk",	.clk = &uhci0_clk},
+	{.con_id = "usbh.1_clk",	.clk = &uhci1_clk},
 	{.dev_id = "usbd",		.clk = &usbd_clk},
 	{.dev_id = "i2c",		.clk = &i2c_clk},
 	{.dev_id = "dma0",		.clk = &dma0_clk},

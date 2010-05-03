@@ -489,7 +489,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
 	{ .dev_id = "gpt2",		.clk = &gpt2_clk},
 	/* clock derived from pll3 clk */
-	{ .dev_id = "usbh",		.clk = &usbh_clk},
+	{ .con_id = "usbh_clk",		.clk = &usbh_clk},
 	{ .dev_id = "usbd",		.clk = &usbd_clk},
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	/* clock derived from ahb clk */
