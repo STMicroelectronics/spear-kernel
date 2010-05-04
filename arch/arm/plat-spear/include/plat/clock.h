@@ -21,6 +21,7 @@
 /* clk structure flags */
 #define	ALWAYS_ENABLED		(1 << 0) /* clock always enabled */
 #define	RESET_TO_ENABLE		(1 << 1) /* reset register bit to enable clk */
+#define	ENABLED_ON_INIT		(1 << 2) /* clocks enabled at init */
 
 /**
  * struct clkops - clock operations

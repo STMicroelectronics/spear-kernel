@@ -372,6 +372,9 @@ void propagate_rate(struct clk *pclk)
 				clk->recalc(clk);
 			propagate_rate(clk);
 		}
+		/* Enable clks enabled on init, in software view */
+		if (clk->flags & ENABLED_ON_INIT)
+			do_clk_enable(clk);
 	}
 }
 
@@ -550,6 +553,9 @@ void recalc_root_clocks(void)
 				pclk->recalc(pclk);
 			propagate_rate(pclk);
 		}
+		/* Enable clks enabled on init, in software view */
+		if (pclk->flags & ENABLED_ON_INIT)
+			do_clk_enable(pclk);
 	}
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }

@@ -89,6 +89,7 @@ static struct pll_clk_config pll1_config = {
 
 /* pll1 clock */
 static struct clk pll1_clk = {
+	.flags = ENABLED_ON_INIT,
 	.pclk_sel = &pll_pclk_sel,
 	.pclk_sel_shift = PLL1_CLK_SHIFT,
 	.en_reg = PLL1_CTR,
@@ -156,6 +157,7 @@ static struct pll_clk_config pll4_config = {
 
 /* pll4 (DDR) clock */
 static struct clk pll4_clk = {
+	.flags = ENABLED_ON_INIT,
 	.pclk = &osc1_24m_clk,
 	.en_reg = PLL4_CTR,
 	.en_reg_bit = PLL_ENABLE,
