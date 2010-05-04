@@ -123,6 +123,7 @@
 #define RAS3_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x074))
 #define RAS4_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x078))
 /* aux clk synthesiser register masks for irda to ras4 */
+#define AUX_SYNT_ENB		31
 #define AUX_EQ_SEL_SHIFT	30
 #define AUX_EQ_SEL_MASK		1
 #define AUX_EQ1_SEL		0

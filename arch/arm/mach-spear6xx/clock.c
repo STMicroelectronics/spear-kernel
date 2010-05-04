@@ -131,7 +131,8 @@ static struct aux_clk_config uart_synth_config = {
 
 /* uart synth clock */
 static struct clk uart_synth_clk = {
-	.flags = ALWAYS_ENABLED,
+	.en_reg = UART_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.recalc = &aux_clk_recalc,
 	.private_data = &uart_synth_config,
@@ -182,7 +183,8 @@ static struct aux_clk_config firda_synth_config = {
 
 /* firda synth clock */
 static struct clk firda_synth_clk = {
-	.flags = ALWAYS_ENABLED,
+	.en_reg = FIRDA_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.recalc = &aux_clk_recalc,
 	.private_data = &firda_synth_config,
@@ -224,7 +226,8 @@ static struct aux_clk_config clcd_synth_config = {
 
 /* firda synth clock */
 static struct clk clcd_synth_clk = {
-	.flags = ALWAYS_ENABLED,
+	.en_reg = CLCD_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.recalc = &aux_clk_recalc,
 	.private_data = &clcd_synth_config,
