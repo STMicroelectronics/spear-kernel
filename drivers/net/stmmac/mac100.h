@@ -1,29 +1,29 @@
-/*******************************************************************************
-  MAC 10/100 Header File
-
-  Copyright (C) 2007-2009  STMicroelectronics Ltd
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
-*******************************************************************************/
+/*
+ * MAC 10/100 Header File
+ *
+ * Copyright (C) 2007-2009 STMicroelectronics Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+ */
 
 /*----------------------------------------------------------------------------
- *	 			MAC BLOCK defines
+ *			MAC BLOCK defines
  *---------------------------------------------------------------------------*/
 /* MAC CSR offset */
 #define MAC_CONTROL	0x00000000	/* MAC Control */
@@ -73,12 +73,12 @@
 #define MAC_FLOW_CTRL_ENABLE	0x00000002	/* Flow Control Enable */
 #define MAC_FLOW_CTRL_PAUSE	0x00000001	/* Flow Control Busy ... */
 
-/* MII ADDR  defines */
+/* MII ADDR defines */
 #define MAC_MII_ADDR_WRITE	0x00000002	/* MII Write */
 #define MAC_MII_ADDR_BUSY	0x00000001	/* MII Busy */
 
 /*----------------------------------------------------------------------------
- * 				DMA BLOCK defines
+ *				DMA BLOCK defines
  *---------------------------------------------------------------------------*/
 
 /* DMA Bus Mode register defines */
@@ -87,7 +87,7 @@
 #define DMA_BUS_MODE_PBL_MASK	0x00003f00	/* Programmable Burst Len */
 #define DMA_BUS_MODE_PBL_SHIFT	8
 #define DMA_BUS_MODE_DSL_MASK	0x0000007c	/* Descriptor Skip Length */
-#define DMA_BUS_MODE_DSL_SHIFT	2	/*   (in DWORDS)      */
+#define DMA_BUS_MODE_DSL_SHIFT	2		/* (in DWORDS) */
 #define DMA_BUS_MODE_BAR_BUS	0x00000002	/* Bar-Bus Arbitration */
 #define DMA_BUS_MODE_SFT_RESET	0x00000001	/* Software Reset */
 #define DMA_BUS_MODE_DEFAULT	0x00000000

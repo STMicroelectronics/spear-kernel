@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*
  * STMMAC Common Header File
  *
  * Copyright (C) 2007-2009 STMicroelectronics Ltd
@@ -20,10 +20,9 @@
  * the file called "COPYING".
  *
  * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
-*******************************************************************************/
+ */
 
 #include "descs.h"
-#include <linux/io.h>
 
 /* *********************************************
  * DMA CRS Control and Status Register Mapping
@@ -239,26 +238,11 @@ static inline void stmmac_get_mac_addr(unsigned long ioaddr,
 	return;
 }
 
-struct stmmac_ops {
-	/* MAC core initialization */
-	void (*core_init) (unsigned long ioaddr, int disable_readahead)
-		____cacheline_aligned;
-	/* DMA core initialization */
-	int (*dma_init) (unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx);
-	/* Dump MAC registers */
-	void (*dump_mac_regs) (unsigned long ioaddr);
-	/* Dump DMA registers */
-	void (*dump_dma_regs) (unsigned long ioaddr);
-	/* Set tx/rx threshold in the csr6 register
-	 * An invalid value enables the store-and-forward mode */
-	void (*dma_mode) (unsigned long ioaddr, int txmode, int rxmode);
-	/* To track extra statistic (if supported) */
-	void (*dma_diagnostic_fr) (void *data, struct stmmac_extra_stats *x,
-				unsigned long ioaddr);
-	/* RX descriptor ring initialization */
+struct stmmac_desc_ops {
+	/* DMA RX descriptor ring initialization */
 	void (*init_rx_desc) (struct dma_desc *p, unsigned int ring_size,
-				int disable_rx_ic);
-	/* TX descriptor ring initialization */
+			int disable_rx_ic);
+	/* DMA TX descriptor ring initialization */
 	void (*init_tx_desc) (struct dma_desc *p, unsigned int ring_size);
 
 	/* Invoked by the xmit function to prepare the tx descriptor */
@@ -282,7 +266,6 @@ struct stmmac_ops {
 	/* Get the buffer size from the descriptor */
 	int (*get_tx_len) (struct dma_desc *p);
 	/* Handle extra events on specific interrupts hw dependent */
-	void (*host_irq_status) (unsigned long ioaddr);
 	int (*get_rx_owner) (struct dma_desc *p);
 	void (*set_rx_owner) (struct dma_desc *p);
 	/* Get the receive frame size */
@@ -290,6 +273,26 @@ struct stmmac_ops {
 	/* Return the reception status looking at the RDES1 */
 	int (*rx_status) (void *data, struct stmmac_extra_stats *x,
 			struct dma_desc *p);
+};
+
+struct stmmac_ops {
+	/* MAC core initialization */
+	void (*core_init) (unsigned long ioaddr, int disable_readahead)
+		____cacheline_aligned;
+	/* DMA core initialization */
+	int (*dma_init) (unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx);
+	/* Dump MAC registers */
+	void (*dump_mac_regs) (unsigned long ioaddr);
+	/* Dump DMA registers */
+	void (*dump_dma_regs) (unsigned long ioaddr);
+	/* Set tx/rx threshold in the csr6 register
+	 * An invalid value enables the store-and-forward mode */
+	void (*dma_mode) (unsigned long ioaddr, int txmode, int rxmode);
+	/* To track extra statistic (if supported) */
+	void (*dma_diagnostic_fr) (void *data, struct stmmac_extra_stats *x,
+				unsigned long ioaddr);
+	/* Handle extra events on specific interrupts hw dependent */
+	void (*host_irq_status) (unsigned long ioaddr);
 	/* Multicast filter setting */
 	void (*set_filter) (struct net_device *dev);
 	/* Flow control setting */
@@ -315,17 +318,14 @@ struct mii_regs {
 	unsigned int data;	/* MII Data */
 };
 
-struct hw_cap {
-	unsigned int version;	/* Core Version register (GMAC) */
+struct mac_device_info {
+	struct stmmac_ops *ops;
+	struct stmmac_desc_ops *desc;
 	unsigned int pmt;	/* Power-Down mode (GMAC) */
 	struct mac_link link;
 	struct mii_regs mii;
 };
 
-struct mac_device_info {
-	struct hw_cap hw;
-	struct stmmac_ops *ops;
-};
-
 struct mac_device_info *gmac_setup(unsigned long addr);
 struct mac_device_info *mac100_setup(unsigned long addr);
+extern void gmac_flush_tx_fifo(unsigned long ioaddr);

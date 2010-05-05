@@ -79,7 +79,7 @@ static struct resource phy_resources = {
 
 struct platform_device phy_device = {
 	.name		= "stmmacphy",
-	.id		= 0,
+	.id		= -1,
 	.num_resources	= 1,
 	.resource	= &phy_resources,
 	.dev.platform_data = &phy_private_data,
@@ -87,6 +87,7 @@ struct platform_device phy_device = {
 
 static struct plat_stmmacenet_data ether_platform_data = {
 	.has_gmac = 1,
+	.enh_desc = 1,
 };
 
 static struct resource eth_resources[] = {

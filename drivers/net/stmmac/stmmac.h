@@ -54,12 +54,13 @@ struct stmmac_priv {
 
 	struct net_device *dev;
 	int is_gmac;
+	int enh_desc;
 	dma_addr_t dma_rx_phy;
 	unsigned int dma_rx_size;
 	int rx_csum;
 	unsigned int dma_buf_sz;
 	struct device *device;
-	struct mac_device_info *mac_type;
+	struct mac_device_info *hw;
 
 	struct stmmac_extra_stats xstats;
 	struct napi_struct napi;
@@ -100,3 +101,5 @@ struct stmmac_priv {
 extern int stmmac_mdio_unregister(struct net_device *ndev);
 extern int stmmac_mdio_register(struct net_device *ndev);
 extern void stmmac_set_ethtool_ops(struct net_device *netdev);
+extern struct stmmac_desc_ops enh_desc_ops;
+extern struct stmmac_desc_ops ndesc_ops;

@@ -42,63 +42,6 @@ struct amba_device clcd_device = {
 	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
 };
 
-static struct plat_stmmacphy_data phy_private_data = {
-	.bus_id = 0,
-	.phy_addr = -1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
-};
-
-static struct resource phy_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-struct platform_device phy_device = {
-	.name = "stmmacphy",
-	.id = 0,
-	.num_resources = 1,
-	.resource = &phy_resources,
-	.dev.platform_data = &phy_private_data,
-};
-
-static struct plat_stmmacenet_data eth_platform_data = {
-	.has_gmac = 0,
-};
-
-static struct resource eth_resources[] = {
-	[0] = {
-		.start = SPEAR6XX_ICM4_GMAC_BASE,
-		.end = SPEAR6XX_ICM4_GMAC_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = IRQ_GMAC_2,
-		.flags = IORESOURCE_IRQ,
-		.name = "macirq",
-	},
-	[2] = {
-		.start = IRQ_GMAC_1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-static u64 eth_dma_mask = ~(u32) 0;
-
-struct platform_device eth_device = {
-	.name = "stmmaceth",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(eth_resources),
-	.resource = eth_resources,
-	.dev = {
-		.platform_data = &eth_platform_data,
-		.dma_mask = &eth_dma_mask,
-		.coherent_dma_mask = ~0,
-	},
-};
-
 /* uart device registeration */
 struct amba_device uart_device[] = {
 	{
@@ -178,6 +121,65 @@ struct amba_device gpio_device[] = {
 		},
 		.irq = {IRQ_APPL_GPIO, NO_IRQ},
 	}
+};
+
+/* stmmac device registeration */
+static struct plat_stmmacphy_data phy_private_data = {
+	.bus_id = 0,
+	.phy_addr = 1,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_GMII,
+};
+
+static struct resource phy_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+struct platform_device phy_device = {
+	.name = "stmmacphy",
+	.id = -1,
+	.num_resources = 1,
+	.resource = &phy_resources,
+	.dev.platform_data = &phy_private_data,
+};
+
+static struct plat_stmmacenet_data eth_platform_data = {
+	.has_gmac = 1,
+	.enh_desc = 0,
+};
+
+static struct resource eth_resources[] = {
+	[0] = {
+		.start = SPEAR6XX_ICM4_GMAC_BASE,
+		.end = SPEAR6XX_ICM4_GMAC_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GMAC_2,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GMAC_1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth_dma_mask = ~(u32) 0;
+
+struct platform_device eth_device = {
+	.name = "stmmaceth",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(eth_resources),
+	.resource = eth_resources,
+	.dev = {
+		.platform_data = &eth_platform_data,
+		.dma_mask = &eth_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
 };
 
 /* i2c device registeration */
