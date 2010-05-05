@@ -120,7 +120,7 @@
 
 #define UART_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x254))
 #define GMAC_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x258))
-#define SD_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x25c))
+#define SDHCI_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x25c))
 #define CFXD_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x260))
 #define RAS_CLK_SYNT0		((unsigned int *)(MISC_BASE + 0x264))
 #define RAS_CLK_SYNT1		((unsigned int *)(MISC_BASE + 0x268))
@@ -145,7 +145,7 @@
 	#define SYSRAM0_CLK_ENB		3
 	#define FSMC_CLK_ENB		4
 	#define SMI_CLK_ENB		5
-	#define SD_CLK_ENB		6
+	#define SDHCI_CLK_ENB		6
 	#define CFXD_CLK_ENB		7
 	#define GMAC_CLK_ENB		8
 	#define UHC0_CLK_ENB		9

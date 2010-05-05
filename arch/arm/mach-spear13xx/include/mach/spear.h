@@ -84,7 +84,7 @@
 #define SPEAR13XX_FSMC_BASE 		0xB0000000
 #define SPEAR13XX_JPEG_BASE 		0xB2000000
 #define SPEAR13XX_MCIF_CF_BASE		0xB2800000
-#define SPEAR13XX_MCIF_MMC_BASE		0xB3000000
+#define SPEAR13XX_MCIF_SDHCI_BASE	0xB3000000
 
 /* Debug uart for linux, will be used for debug and uncompress messages */
 #define SPEAR_DBG_UART_BASE		SPEAR13XX_UART_BASE

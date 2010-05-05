@@ -365,15 +365,15 @@ static struct clk uart_clk = {
 	.recalc = &follow_parent,
 };
 
-/* sd configurations */
-static struct aux_clk_config sd_synth_config = {
-	.synth_reg = SD_CLK_SYNT,
+/* sdhci configurations */
+static struct aux_clk_config sdhci_synth_config = {
+	.synth_reg = SDHCI_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
-/* sd synth clock */
-static struct clk sd_synth_clk = {
-	.en_reg = SD_CLK_SYNT,
+/* sdhci synth clock */
+static struct clk sdhci_synth_clk = {
+	.en_reg = SDHCI_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1div2_clk,
 	.calc_rate = &aux_calc_rate,
@@ -383,11 +383,11 @@ static struct clk sd_synth_clk = {
 	.private_data = &sdhci_synth_config,
 };
 
-/* sd clock */
-static struct clk sd_clk = {
+/* sdhci clock */
+static struct clk sdhci_clk = {
 	.en_reg = PERIP1_CLK_ENB,
-	.en_reg_bit = SD_CLK_ENB,
-	.pclk = &sd_synth_clk,
+	.en_reg_bit = SDHCI_CLK_ENB,
+	.pclk = &sdhci_synth_clk,
 	.recalc = &follow_parent,
 };
 
@@ -833,7 +833,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "gmii_txclk123_pad_clk",	.clk = &gmii_txclk125_pad},
 	{.con_id = "clcd_synth_clk",		.clk = &clcd_synth_clk},
 	{.con_id = "uart_synth_clk",		.clk = &uart_synth_clk},
-	{.con_id = "sd_synth_clk",		.clk = &sd_synth_clk},
+	{.con_id = "sdhci_synth_clk",		.clk = &sdhci_synth_clk},
 	{.con_id = "cfxd_synth_clk",		.clk = &cfxd_synth_clk},
 	{.con_id = "gmac_phy_input_clk",	.clk = &gmac_phy_input_clk},
 	{.con_id = "gmac_phy_synth_clk",	.clk = &gmac_phy_synth_clk},
@@ -862,8 +862,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "pcie1",		.clk = &pcie1_clk},
 	{.dev_id = "pcie2",		.clk = &pcie2_clk},
 	{.dev_id = "cfxd",		.clk = &cfxd_clk},
-	{.dev_id = "sd",		.clk = &sd_clk},
-	{.con_id = "fsmc",		.clk = &fsmc_clk},
+	{.dev_id = "sdhci",		.clk = &sdhci_clk},
+	{.dev_id = "fsmc",		.clk = &fsmc_clk},
 	{.dev_id = "sysram0",		.clk = &sysram0_clk},
 	{.dev_id = "sysram1",		.clk = &sysram1_clk},
 

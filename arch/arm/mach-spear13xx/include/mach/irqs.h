@@ -45,7 +45,7 @@
 #define IRQ_GPIO1		(IRQ_SHPI_START + 25)
 #define IRQ_PLAY_I2S1		(IRQ_SHPI_START + 26)
 #define IRQ_JPEG		(IRQ_SHPI_START + 27)
-#define IRQ_MMC			(IRQ_SHPI_START + 28)
+#define IRQ_SDHCI		(IRQ_SHPI_START + 28)
 #define IRQ_CF			(IRQ_SHPI_START + 29)
 #define IRQ_SMI			(IRQ_SHPI_START + 30)
 #define IRQ_SSP			(IRQ_SHPI_START + 31)

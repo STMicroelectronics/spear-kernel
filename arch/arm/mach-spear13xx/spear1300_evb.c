@@ -49,6 +49,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci1_device,
 	&phy_device,
 	&rtc_device,
+	&sdhci_device,
 	&smi_device,
 	&wdt_device,
 };
