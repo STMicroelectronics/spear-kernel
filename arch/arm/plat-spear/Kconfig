@@ -43,4 +43,11 @@ config SPEAR_CLCD
 	help
 	  Support for CLCD device driver over SPEAr platform.
 
+config SPEAR_PWM
+	tristate "SPEAr Pulse Width Modulator"
+	depends on MACH_SPEAR320
+	default y
+	help
+	  Support for ST Microelectronics Pulse Width Modulator present on SPEAr Platform.
+
 endif

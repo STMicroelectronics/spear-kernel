@@ -459,11 +459,29 @@ static struct clk gpio_clk = {
 	.recalc = &follow_parent,
 };
 
+/* spear300 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR300
+
+#endif
+
+/* spear310 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR310
+
+#endif
+
+/* spear320 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR320
 /* i2c1 clock */
 static struct clk i2c1_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* pwm clock */
+static struct clk pwm_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 #endif
@@ -517,11 +535,20 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp",		.clk = &ssp_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
+
+	/* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
 #endif
+
+	/* spear310 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR310
+
+#endif
+	/* spear320 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR320
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
+	{ .dev_id = "pwm",		.clk = &pwm_clk},
 #endif
 };
 

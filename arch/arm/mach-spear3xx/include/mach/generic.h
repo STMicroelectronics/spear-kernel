@@ -176,6 +176,7 @@ void __init spear310_init(void);
 extern struct amba_device clcd_device;
 extern struct platform_device i2c1_device;
 extern struct platform_device plgpio_device;
+extern struct platform_device pwm_device;
 
 /* pad mux modes */
 extern struct pmx_mode auto_net_smii_mode;
