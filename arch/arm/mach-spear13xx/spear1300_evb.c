@@ -16,6 +16,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/keyboard.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&uart_device,
@@ -26,15 +27,28 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ehci1_device,
 	&eth_device,
 	&i2c_device,
+	&kbd_device,
 	&ohci0_device,
 	&ohci1_device,
 	&phy_device,
 	&rtc_device,
 };
 
+/* keyboard specific platform data */
+static DECLARE_KEYMAP(spear_keymap);
+
+static struct kbd_platform_data kbd_data = {
+	.keymap = spear_keymap,
+	.keymapsize = ARRAY_SIZE(spear_keymap),
+	.rep = 1,
+};
+
 static void __init spear1300_evb_init(void)
 {
 	unsigned int i;
+
+	/* set keyboard plat data */
+	kbd_set_plat_data(&kbd_device, &kbd_data);
 
 	/* call spear1300 machine init function */
 	spear1300_init();

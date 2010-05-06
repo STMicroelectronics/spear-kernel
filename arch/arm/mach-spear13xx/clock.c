@@ -800,7 +800,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "ssp",		.clk = &ssp_clk},
 	{.dev_id = "gpio0",		.clk = &gpio0_clk},
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
-	{.dev_id = "kbd",		.clk = &kbd_clk},
+	{.dev_id = "keyboard",		.clk = &kbd_clk},
 	{.dev_id = "wdt",		.clk = &wdt_clk},
 };
 

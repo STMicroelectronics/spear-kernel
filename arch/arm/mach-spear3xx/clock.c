@@ -467,6 +467,16 @@ static struct clk i2c1_clk = {
 	.recalc = &follow_parent,
 };
 #endif
+
+#ifdef CONFIG_MACH_SPEAR300
+/* keyboard clock */
+static struct clk kbd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
 	/* root clks */
@@ -507,6 +517,9 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp",		.clk = &ssp_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
+#ifdef CONFIG_MACH_SPEAR300
+	{ .dev_id = "keyboard",		.clk = &kbd_clk},
+#endif
 #ifdef CONFIG_MACH_SPEAR320
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 #endif

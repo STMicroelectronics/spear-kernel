@@ -227,6 +227,25 @@ struct platform_device ohci1_device = {
 	.resource = ohci1_resources,
 };
 
+/* keyboard device registration */
+static struct resource kbd_resources[] = {
+	{
+		.start = SPEAR13XX_KBD_BASE,
+		.end = SPEAR13XX_KBD_BASE + SZ_1K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_KBD,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device kbd_device = {
+	.name = "keyboard",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(kbd_resources),
+	.resource = kbd_resources,
+};
+
 /* rtc device registration */
 static struct resource rtc_resources[] = {
 	{
