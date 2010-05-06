@@ -12,6 +12,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <asm/hardware/gic.h>
@@ -24,6 +25,42 @@
 #include <mach/hardware.h>
 
 /* Add spear13xx machines common devices here */
+/* gpio device registeration */
+static struct pl061_platform_data gpio_plat_data[] = {
+	{
+		.gpio_base	= 0,
+		.irq_base	= SPEAR_GPIO0_INT_BASE,
+	}, {
+		.gpio_base	= 8,
+		.irq_base	= SPEAR_GPIO1_INT_BASE,
+	},
+};
+
+struct amba_device spear13xx_gpio_device[] = {
+	{
+		.dev = {
+			.init_name = "gpio0",
+			.platform_data = &gpio_plat_data[0],
+		},
+		.res = {
+			.start = SPEAR13XX_GPIO0_BASE,
+			.end = SPEAR13XX_GPIO0_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {IRQ_GPIO0, NO_IRQ},
+	}, {
+		.dev = {
+			.init_name = "gpio1",
+			.platform_data = &gpio_plat_data[1],
+		},
+		.res = {
+			.start = SPEAR13XX_GPIO1_BASE,
+			.end = SPEAR13XX_GPIO1_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {IRQ_GPIO1, NO_IRQ},
+	}
+};
 
 /* uart device registeration */
 struct amba_device spear13xx_uart_device = {
