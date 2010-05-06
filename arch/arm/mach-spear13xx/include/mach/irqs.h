@@ -86,6 +86,14 @@
 
 #define IRQ_GIC_END		(IRQ_SHPI_START + 128)
 
-#define NR_IRQS			IRQ_GIC_END
+#define VIRQ_START		IRQ_GIC_END
+
+/* GPIO pins virtual irqs */
+#define SPEAR_GPIO0_INT_BASE	(VIRQ_START + 0)
+#define SPEAR_GPIO1_INT_BASE	(SPEAR_GPIO0_INT_BASE + 8)
+#define SPEAR_GPIO_INT_END	(SPEAR_GPIO1_INT_BASE + 8)
+
+#define VIRQ_END		SPEAR_GPIO_INT_END
+#define NR_IRQS			VIRQ_END
 
 #endif /* __MACH_IRQS_H */

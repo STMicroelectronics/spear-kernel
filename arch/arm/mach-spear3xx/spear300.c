@@ -401,7 +401,7 @@ struct amba_device gpio1_device = {
 	},
 	.res = {
 		.start = SPEAR300_GPIO_BASE,
-		.end = SPEAR300_GPIO_BASE + SPEAR300_GPIO_SIZE - 1,
+		.end = SPEAR300_GPIO_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {VIRQ_GPIO1, NO_IRQ},
