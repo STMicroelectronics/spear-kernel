@@ -19,6 +19,8 @@
 #include <plat/keyboard.h>
 
 static struct amba_device *amba_devs[] __initdata = {
+	&gpio_device[0],
+	&gpio_device[1],
 	&uart_device,
 };
 

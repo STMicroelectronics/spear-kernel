@@ -91,8 +91,7 @@ struct amba_device gpio_device[] = {
 		},
 		.res = {
 			.start = SPEAR6XX_CPU_GPIO_BASE,
-			.end = SPEAR6XX_CPU_GPIO_BASE +
-				SPEAR6XX_CPU_GPIO_SIZE - 1,
+			.end = SPEAR6XX_CPU_GPIO_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
 		.irq = {IRQ_LOCAL_GPIO, NO_IRQ},
@@ -103,8 +102,7 @@ struct amba_device gpio_device[] = {
 		},
 		.res = {
 			.start = SPEAR6XX_ICM3_GPIO_BASE,
-			.end = SPEAR6XX_ICM3_GPIO_BASE +
-				SPEAR6XX_ICM3_GPIO_SIZE - 1,
+			.end = SPEAR6XX_ICM3_GPIO_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
 		.irq = {IRQ_BASIC_GPIO, NO_IRQ},
@@ -115,8 +113,7 @@ struct amba_device gpio_device[] = {
 		},
 		.res = {
 			.start = SPEAR6XX_ICM2_GPIO_BASE,
-			.end = SPEAR6XX_ICM2_GPIO_BASE +
-				SPEAR6XX_ICM2_GPIO_SIZE - 1,
+			.end = SPEAR6XX_ICM2_GPIO_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
 		.irq = {IRQ_APPL_GPIO, NO_IRQ},

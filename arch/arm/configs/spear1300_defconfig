@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32
-# Mon May  3 17:09:47 2010
+# Thu May  6 13:37:34 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -776,12 +776,12 @@ CONFIG_I2C_DESIGNWARE=y
 CONFIG_ARCH_REQUIRE_GPIOLIB=y
 CONFIG_GPIOLIB=y
 # CONFIG_DEBUG_GPIO is not set
-# CONFIG_GPIO_SYSFS is not set
+CONFIG_GPIO_SYSFS=y
 
 #
 # Memory mapped GPIO expanders:
 #
-# CONFIG_GPIO_PL061 is not set
+CONFIG_GPIO_PL061=y
 
 #
 # I2C GPIO expanders:
