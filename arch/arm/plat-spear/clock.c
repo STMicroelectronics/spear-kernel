@@ -171,13 +171,13 @@ int do_clk_enable(struct clk *clk)
 					do_clk_disable(clk->pclk);
 				goto err;
 			}
-			/*
-			 * Now that we have enabled the clock please
-			 * recalc
-			 */
-			if (clk->recalc)
-				clk->recalc(clk);
 		}
+		/*
+		 * Since the clock is going to be used for the first
+		 * time please reclac
+		 */
+		if (clk->recalc)
+			clk->recalc(clk);
 	}
 	clk->usage_count++;
 err:
