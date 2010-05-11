@@ -14,7 +14,7 @@
 #ifndef __MACH_MISC_REGS_H
 #define __MACH_MISC_REGS_H
 
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 #define MISC_BASE		VA_SPEAR13XX_MISC_BASE
 
@@ -184,6 +184,7 @@
 	#define THSENS_CLK_ENB		8
 
 #define PERIP1_SW_RST		((unsigned int *)(MISC_BASE + 0x27c))
+	#define JPEG_SOF_RST		28
 #define PERIP2_SW_RST		((unsigned int *)(MISC_BASE + 0x280))
 #define RAS_CLK_ENB		((unsigned int *)(MISC_BASE + 0x284))
 #define RAS_SW_RST		((unsigned int *)(MISC_BASE + 0x288))
