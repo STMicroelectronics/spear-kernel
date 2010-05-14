@@ -55,6 +55,7 @@ struct stmmac_priv {
 	struct net_device *dev;
 	int is_gmac;
 	int enh_desc;
+	int tx_csum;
 	dma_addr_t dma_rx_phy;
 	unsigned int dma_rx_size;
 	int rx_csum;

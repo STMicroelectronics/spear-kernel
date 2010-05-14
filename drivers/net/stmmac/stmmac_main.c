@@ -470,11 +470,15 @@ static void init_dma_desc_rings(struct net_device *dev)
 	for (i = 0; i < rxsize; i++) {
 		struct dma_desc *p = priv->dma_rx + i;
 
-		skb = netdev_alloc_skb(dev, bfsize);
+		skb = netdev_alloc_skb(dev, bfsize + NET_IP_ALIGN);
 		if (unlikely(skb == NULL)) {
 			pr_err("%s: Rx init fails; skb is NULL\n", __func__);
 			break;
 		}
+
+		if (NET_IP_ALIGN && skb)
+			skb_reserve(skb, NET_IP_ALIGN);
+
 		priv->rx_skbuff[i] = skb;
 		priv->rx_skbuff_dma[i] = dma_map_single(priv->device, skb->data,
 						bfsize, DMA_FROM_DEVICE);
@@ -618,8 +622,7 @@ static void stmmac_dma_stop_rx(unsigned long ioaddr)
  */
 static void stmmac_dma_operation_mode(struct stmmac_priv *priv)
 {
-	if (!priv->is_gmac) {
-		/* MAC 10/100 */
+	if (!priv->tx_csum) {
 		priv->hw->ops->dma_mode(priv->dev->base_addr, tc, 0);
 		priv->tx_coe = NO_HW_CSUM;
 	} else {
@@ -1379,12 +1382,14 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 
 			skb = __skb_dequeue(&priv->rx_recycle);
 			if (skb == NULL)
-				/*skb = netdev_alloc_skb_ip_align(priv->dev,
-								bfsize);*/
-				skb = netdev_alloc_skb(priv->dev, bfsize);
+				skb = netdev_alloc_skb(priv->dev, bfsize +
+						NET_IP_ALIGN);
 
 			if (unlikely(skb == NULL))
 				break;
+
+			if (NET_IP_ALIGN && skb)
+				skb_reserve(skb, NET_IP_ALIGN);
 
 			priv->rx_skbuff[entry] = skb;
 			priv->rx_skbuff_dma[entry] =
@@ -1734,7 +1739,9 @@ static int stmmac_probe(struct net_device *dev)
 	dev->netdev_ops = &stmmac_netdev_ops;
 	stmmac_set_ethtool_ops(dev);
 
-	dev->features |= (NETIF_F_SG | NETIF_F_HW_CSUM | NETIF_F_HIGHDMA);
+	if (priv->tx_csum)
+		dev->features |= (NETIF_F_SG | NETIF_F_HW_CSUM);
+
 	dev->watchdog_timeo = msecs_to_jiffies(watchdog);
 #ifdef STMMAC_VLAN_TAG_USED
 	/* Both mac100 and gmac support receive VLAN tag detection */
@@ -1887,6 +1894,7 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	struct net_device *ndev = NULL;
 	struct stmmac_priv *priv;
 	struct plat_stmmacenet_data *plat_dat;
+	int rsrc_len;
 
 	pr_info("STMMAC driver:\n\tplatform registration... ");
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1896,8 +1904,8 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	}
 	pr_info("done!\n");
 
-	if (!request_mem_region(res->start, (res->end - res->start),
-				pdev->name)) {
+	rsrc_len = resource_size(res);
+	if (!request_mem_region(res->start, rsrc_len, pdev->name)) {
 		pr_err("%s: ERROR: memory allocation failed"
 			"cannot get the I/O addr 0x%x\n",
 			 __func__, (unsigned int)res->start);
@@ -1905,7 +1913,7 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	addr = ioremap(res->start, (res->end - res->start));
+	addr = ioremap(res->start, rsrc_len);
 	if (!addr) {
 		pr_err("%s: ERROR: memory mapping failed\n", __func__);
 		ret = -ENOMEM;
@@ -1937,7 +1945,8 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	priv->bus_id = plat_dat->bus_id;
 	priv->pbl = plat_dat->pbl;	/* TLI */
 	priv->is_gmac = plat_dat->has_gmac;	/* GMAC is on board */
-	priv->enh_desc = plat_dat->enh_desc;	/* GMAC is on board */
+	priv->enh_desc = plat_dat->enh_desc;
+	priv->tx_csum = plat_dat->tx_csum;
 
 	platform_set_drvdata(pdev, ndev);
 	priv->stmmac_clk = clk_get(&pdev->dev, NULL);

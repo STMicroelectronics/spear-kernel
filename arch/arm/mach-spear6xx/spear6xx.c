@@ -146,6 +146,7 @@ struct platform_device phy_device = {
 static struct plat_stmmacenet_data eth_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 0,
+	.tx_csum = 0,
 };
 
 static struct resource eth_resources[] = {
