@@ -757,6 +757,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "pll1div2_clk",		.clk = &pll1div2_clk},
 	{.con_id = "pll1div4_clk",		.clk = &pll1div4_clk},
 	{.con_id = "c3_synth_clk",		.clk = &c3_synth_clk},
+	{.con_id = "gmii_txclk123_pad_clk",	.clk = &gmii_txclk125_pad},
 	{.con_id = "clcd_synth_clk",		.clk = &clcd_synth_clk},
 	{.con_id = "uart_synth_clk",		.clk = &uart_synth_clk},
 	{.con_id = "sd_synth_clk",		.clk = &sd_synth_clk},
