@@ -141,6 +141,12 @@ config MX3_IPU_IRQS
 	  To avoid bloating the irq_desc[] array we allocate a sufficient
 	  number of IRQ slots and map them dynamically to specific sources.
 
+config PL080_DMAC
+	tristate "ARM PL080 AHB DMA support"
+	select DMA_ENGINE
+	help
+	  Support the ARM PL080 AHB DMA controller.
+
 config TXX9_DMAC
 	tristate "Toshiba TXx9 SoC DMA support"
 	depends on MACH_TX49XX || MACH_TX39XX
