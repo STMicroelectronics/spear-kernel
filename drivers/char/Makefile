@@ -17,6 +17,7 @@ obj-$(CONFIG_ISTALLION)		+= istallion.o
 obj-$(CONFIG_NOZOMI)		+= nozomi.o
 obj-$(CONFIG_DIGIEPCA)		+= epca.o
 obj-$(CONFIG_SPECIALIX)		+= specialix.o
+obj-$(CONFIG_SPEAR_ADC)		+= spear_adc.o
 obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
 obj-$(CONFIG_A2232)		+= ser_a2232.o generic_serial.o
 obj-$(CONFIG_ATARI_DSP56K)	+= dsp56k.o

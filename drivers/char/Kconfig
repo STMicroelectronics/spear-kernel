@@ -316,6 +316,18 @@ config SPECIALIX
 	  M here and compile this driver as kernel loadable module which will be
 	  called specialix.
 
+config SPEAR_ADC
+	tristate "ST SPEAr ADC"
+	depends on PLAT_SPEAR
+	help
+	  This is a driver for the ADC devices found on ST's SPEAr Platforms.
+
+config SPEAR_ADC_DMA_IF
+	bool "ST SPEAr ADC DMA Interface"
+	depends on SPEAR_ADC
+	help
+	  This enables DMA transfers on ADC Channel 0
+
 config SX
 	tristate "Specialix SX (and SI) card support"
 	depends on SERIAL_NONSTANDARD && (PCI || EISA || ISA) && BROKEN
