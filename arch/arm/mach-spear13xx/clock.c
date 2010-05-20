@@ -263,7 +263,8 @@ static struct clk gpt3_clk = {
 /* watch dog timer clock */
 static struct clk wdt_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
+	.pclk = &cpu_clk,
+	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
@@ -802,7 +803,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio0",		.clk = &gpio0_clk},
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
-	{.dev_id = "wdt",		.clk = &wdt_clk},
+	{.dev_id = "cortexa9-wdt",	.clk = &wdt_clk},
 };
 
 void __init clk_init(void)

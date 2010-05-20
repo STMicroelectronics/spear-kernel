@@ -398,16 +398,6 @@ struct platform_device rtc_device = {
 	.resource = rtc_resources,
 };
 
-static void dmac_setup(void)
-{
-	/*
-	 * This function does static initialization of few misc regs for dmac
-	 * operations.
-	 */
-	/* setting Peripheral flow controller for jpeg */
-	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
-}
-
 /* smi device registration */
 static struct resource smi_resources[] = {
 	{
@@ -426,6 +416,32 @@ struct platform_device smi_device = {
 	.num_resources = ARRAY_SIZE(smi_resources),
 	.resource = smi_resources,
 };
+
+/* wdt device registration */
+static struct resource wdt_resources[] = {
+	{
+		.start = SPEAR13XX_WDT_BASE,
+		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device wdt_device = {
+	.name = "cortexa9-wdt",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(wdt_resources),
+	.resource = wdt_resources,
+};
+
+static void dmac_setup(void)
+{
+	/*
+	 * This function does static initialization of few misc regs for dmac
+	 * operations.
+	 */
+	/* setting Peripheral flow controller for jpeg */
+	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+}
 
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)

@@ -44,6 +44,7 @@ extern struct platform_device ohci1_device;
 extern struct platform_device phy_device;
 extern struct platform_device rtc_device;
 extern struct platform_device smi_device;
+extern struct platform_device wdt_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear1300 machine device structure declarations here */
