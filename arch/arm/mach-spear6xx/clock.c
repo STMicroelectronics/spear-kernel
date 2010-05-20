@@ -723,7 +723,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "ddr_clk",		.clk = &ddr_clk},
 	{ .con_id = "apb_clk",		.clk = &apb_clk},
 	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
-	{ .dev_id = "dma",		.clk = &dma_clk},
+	{ .dev_id = "pl080_dmac",	.clk = &dma_clk},
 	{ .dev_id = "jpeg",		.clk = &jpeg_clk},
 	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},
 	{ .dev_id = "smi",		.clk = &smi_clk},
