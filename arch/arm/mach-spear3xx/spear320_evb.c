@@ -21,6 +21,7 @@
 #include <asm/mach-types.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
+#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/emi.h>
@@ -87,6 +88,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_dmac_device,
 	&spear3xx_ehci_device,
 	&spear3xx_i2c_device,
+	&spear3xx_jpeg_device,
 	&spear3xx_ohci0_device,
 	&spear3xx_ohci1_device,
 	&spear3xx_rtc_device,
@@ -127,6 +129,10 @@ static void __init spear320_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
+			&spear3xx_dmac_device.dev);
 
 	/* call spear320 machine init function */
 	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,

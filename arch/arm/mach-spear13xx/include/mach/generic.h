@@ -230,6 +230,7 @@ extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
 extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
+extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;

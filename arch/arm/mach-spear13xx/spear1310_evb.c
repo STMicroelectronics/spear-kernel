@@ -21,6 +21,7 @@
 #include <asm/mach-types.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
+#include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
@@ -86,6 +87,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci0_device,
 	&spear13xx_ehci1_device,
 	&spear13xx_i2c_device,
+	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
@@ -164,6 +166,10 @@ static void __init spear1310_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
+			&spear13xx_dmac_device[0].dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);

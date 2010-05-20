@@ -246,6 +246,28 @@ struct platform_device spear3xx_ohci1_device = {
 	.resource = ohci1_resources,
 };
 
+/* jpeg device registeration */
+static struct resource jpeg_resources[] = {
+	{
+		.start = SPEAR3XX_ICM1_JPEG_BASE,
+		.end = SPEAR3XX_ICM1_JPEG_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_JPEG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_jpeg_device = {
+	.name = "jpeg-designware",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(jpeg_resources),
+	.resource = jpeg_resources,
+};
+
 /* rtc device registration */
 static struct resource rtc_resources[] = {
 	{

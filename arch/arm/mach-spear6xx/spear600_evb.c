@@ -20,6 +20,7 @@
 #include <asm/mach-types.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
+#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
@@ -44,6 +45,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ehci0_device,
 	&ehci1_device,
 	&i2c_device,
+	&jpeg_device,
 	&ohci0_device,
 	&ohci1_device,
 	&nand_device,
@@ -64,6 +66,9 @@ static void __init spear600_evb_init(void)
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			FSMC_NAND_BW8);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
 
 	/* call spear600 machine init function */
 	spear600_init();
