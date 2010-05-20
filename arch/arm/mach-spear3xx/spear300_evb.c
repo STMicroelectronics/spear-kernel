@@ -15,6 +15,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/adc.h>
 #include <plat/keyboard.h>
 
 /* padmux devices to enable */
@@ -45,6 +46,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&adc_device,
 	&dmac_device,
 	&ehci_device,
 	&eth_device,
@@ -75,6 +77,9 @@ static void __init spear300_evb_init(void)
 	pmx_driver.mode = &photo_frame_mode;
 	pmx_driver.devs = pmx_devs;
 	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
+
+	/* set adc platform data */
+	set_adc_plat_data(&adc_device, &dmac_device.dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&kbd_device, &kbd_data);

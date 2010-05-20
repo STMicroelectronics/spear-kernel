@@ -15,6 +15,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/adc.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
@@ -26,6 +27,7 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&adc_device,
 	&dmac_device,
 	&ehci0_device,
 	&ehci1_device,
@@ -40,6 +42,9 @@ static struct platform_device *plat_devs[] __initdata = {
 static void __init spear600_evb_init(void)
 {
 	unsigned int i;
+
+	/* set adc platform data */
+	set_adc_plat_data(&adc_device, &dmac_device.dev);
 
 	/* call spear600 machine init function */
 	spear600_init();

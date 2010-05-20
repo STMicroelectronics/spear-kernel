@@ -3,7 +3,7 @@
 #
 
 # Common support
-obj-y	:= clock.o time.o
+obj-y	:= adc.o clock.o time.o
 
 obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o
 

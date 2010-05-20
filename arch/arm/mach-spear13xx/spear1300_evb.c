@@ -16,6 +16,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/adc.h>
 #include <plat/keyboard.h>
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -25,6 +26,7 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&adc_device,
 	&dmac_device[0],
 	&dmac_device[1],
 	&ehci0_device,
@@ -50,6 +52,9 @@ static struct kbd_platform_data kbd_data = {
 static void __init spear1300_evb_init(void)
 {
 	unsigned int i;
+
+	/* set adc platform data */
+	set_adc_plat_data(&adc_device, &dmac_device[0].dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&kbd_device, &kbd_data);

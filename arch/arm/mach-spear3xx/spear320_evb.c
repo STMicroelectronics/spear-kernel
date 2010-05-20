@@ -15,6 +15,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/adc.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -48,6 +49,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&adc_device,
 	&dmac_device,
 	&ehci_device,
 	&eth_device,
@@ -71,6 +73,9 @@ static void __init spear320_evb_init(void)
 	pmx_driver.mode = &auto_net_mii_mode;
 	pmx_driver.devs = pmx_devs;
 	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
+
+	/* set adc platform data */
+	set_adc_plat_data(&adc_device, &dmac_device.dev);
 
 	/* call spear320 machine init function */
 	spear320_init();
