@@ -37,9 +37,12 @@
  */
 #define DWC_DEFAULT_CTLLO	(DWC_CTLL_DST_MSIZE(0)		\
 				| DWC_CTLL_SRC_MSIZE(0)		\
-				| DWC_CTLL_DMS(0)		\
+				| DWC_CTLL_DMS(1)		\
 				| DWC_CTLL_SMS(1)		\
 				| DWC_CTLL_LLP_D_EN		\
+				| DWC_CTLL_LLP_S_EN)
+
+#define DWC_DEFAULT_SLAVE_CTLLO	(DWC_CTLL_LLP_D_EN		\
 				| DWC_CTLL_LLP_S_EN)
 
 /*
@@ -669,11 +672,15 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 
 	switch (direction) {
 	case DMA_TO_DEVICE:
-		ctllo = (DWC_DEFAULT_CTLLO
+		ctllo = (DWC_DEFAULT_SLAVE_CTLLO
 				| DWC_CTLL_DST_WIDTH(reg_width)
 				| DWC_CTLL_DST_FIX
 				| DWC_CTLL_SRC_INC
-				| DWC_CTLL_FC_M2P);
+				| DWC_CTLL_SMS(dws->sms)
+				| DWC_CTLL_DMS(dws->dms)
+				| DWC_CTLL_SRC_MSIZE(dws->smsize)
+				| DWC_CTLL_DST_MSIZE(dws->dmsize)
+				| DWC_CTLL_FC(dws->fc));
 		reg = dws->tx_reg;
 		for_each_sg(sgl, sg, sg_len, i) {
 			struct dw_desc	*desc;
@@ -714,11 +721,15 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 		}
 		break;
 	case DMA_FROM_DEVICE:
-		ctllo = (DWC_DEFAULT_CTLLO
+		ctllo = (DWC_DEFAULT_SLAVE_CTLLO
 				| DWC_CTLL_SRC_WIDTH(reg_width)
 				| DWC_CTLL_DST_INC
 				| DWC_CTLL_SRC_FIX
-				| DWC_CTLL_FC_P2M);
+				| DWC_CTLL_SMS(dws->sms)
+				| DWC_CTLL_DMS(dws->dms)
+				| DWC_CTLL_SRC_MSIZE(dws->smsize)
+				| DWC_CTLL_DST_MSIZE(dws->dmsize)
+				| DWC_CTLL_FC(dws->fc));
 
 		reg = dws->rx_reg;
 		for_each_sg(sgl, sg, sg_len, i) {

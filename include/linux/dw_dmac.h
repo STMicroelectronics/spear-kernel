@@ -33,6 +33,36 @@ enum dw_dma_slave_width {
 	DW_DMA_SLAVE_WIDTH_32BIT,
 };
 
+/* masters */
+enum dw_dma_master {
+	DW_DMA_MASTER0,
+	DW_DMA_MASTER1,
+};
+
+/* flow controller */
+enum dw_dma_fc {
+	DW_DMA_FC_D_M2M,
+	DW_DMA_FC_D_M2P,
+	DW_DMA_FC_D_P2M,
+	DW_DMA_FC_D_P2P,
+	DW_DMA_FC_P_P2M,
+	DW_DMA_FC_SP_P2P,
+	DW_DMA_FC_P_M2P,
+	DW_DMA_FC_DP_P2P,
+};
+
+/* bursts size */
+enum dw_dma_msize {
+	DW_DMA_MSIZE_1,
+	DW_DMA_MSIZE_4,
+	DW_DMA_MSIZE_8,
+	DW_DMA_MSIZE_16,
+	DW_DMA_MSIZE_32,
+	DW_DMA_MSIZE_64,
+	DW_DMA_MSIZE_128,
+	DW_DMA_MSIZE_256,
+};
+
 /**
  * struct dw_dma_slave - Controller-specific information about a slave
  *
@@ -52,6 +82,11 @@ struct dw_dma_slave {
 	enum dw_dma_slave_width	reg_width;
 	u32			cfg_hi;
 	u32			cfg_lo;
+	u32			sms;		/* Source Master select */
+	u32			dms;		/* Destination master select */
+	u8			smsize;		/* src & dest Burst size */
+	u8			dmsize;
+	u8			fc;		/* flow controller */
 };
 
 /* Platform-configurable bits in CFG_HI */
