@@ -202,6 +202,28 @@ struct amba_device wdt_device = {
 	},
 };
 
+/* adc device registeration */
+static struct resource adc_resources[] = {
+	{
+		.start = SPEAR6XX_ICM2_ADC_BASE,
+		.end = SPEAR6XX_ICM2_ADC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_APPL_ADC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device adc_device = {
+	.name = "adc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(adc_resources),
+	.resource = adc_resources,
+};
+
 /* dmac device registeration */
 static struct resource dmac_resources[] = {
 	{

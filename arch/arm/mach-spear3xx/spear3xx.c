@@ -100,6 +100,28 @@ struct amba_device spear3xx_wdt_device = {
 	},
 };
 
+/* adc device registeration */
+static struct resource adc_resources[] = {
+	{
+		.start = SPEAR3XX_ICM1_ADC_BASE,
+		.end = SPEAR3XX_ICM1_ADC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_ADC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_adc_device = {
+	.name = "adc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(adc_resources),
+	.resource = adc_resources,
+};
+
 /* dmac device registeration */
 static struct resource dmac_resources[] = {
 	{

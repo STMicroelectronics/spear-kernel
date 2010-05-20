@@ -112,6 +112,28 @@ struct amba_device spear13xx_uart_device = {
 	.irq = {IRQ_UART, NO_IRQ},
 };
 
+/* adc device registeration */
+static struct resource adc_resources[] = {
+	{
+		.start = SPEAR13XX_ADC_BASE,
+		.end = SPEAR13XX_ADC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_ADC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_adc_device = {
+	.name = "adc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(adc_resources),
+	.resource = adc_resources,
+};
+
 /* dmac device registeration */
 struct dw_dma_platform_data dmac_plat_data = {8, };
 static struct resource dmac_resources[][2] = {

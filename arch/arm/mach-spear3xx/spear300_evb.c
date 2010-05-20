@@ -19,6 +19,7 @@
 #include <linux/spi/spi.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
@@ -56,6 +57,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&spear3xx_adc_device,
 	&spear3xx_dmac_device,
 	&spear3xx_ehci_device,
 	&spear3xx_i2c_device,
@@ -111,6 +113,9 @@ static struct spi_board_info __initdata spi_board_info[] = {
 static void __init spear300_evb_init(void)
 {
 	unsigned int i;
+
+	/* set adc platform data */
+	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
