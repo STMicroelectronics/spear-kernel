@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/dw_dmac.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
@@ -24,6 +25,7 @@
 #include <asm/mach/arch.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/irqs.h>
@@ -108,6 +110,54 @@ struct amba_device spear13xx_uart_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {IRQ_UART, NO_IRQ},
+};
+
+/* dmac device registeration */
+struct dw_dma_platform_data dmac_plat_data = {8, };
+static struct resource dmac_resources[][2] = {
+	[0] = {
+		{
+			.start = SPEAR13XX_DMAC0_BASE,
+			.end = SPEAR13XX_DMAC0_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		}, {
+			.start = IRQ_DMAC0_COMBINED,
+			.flags = IORESOURCE_IRQ,
+		},
+	},
+	[1] = {
+		{
+			.start = SPEAR13XX_DMAC1_BASE,
+			.end = SPEAR13XX_DMAC1_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		}, {
+			.start = IRQ_DMAC1_COMBINED,
+			.flags = IORESOURCE_IRQ,
+		},
+	},
+};
+
+struct platform_device spear13xx_dmac_device[] = {
+	[0] = {
+		.name = "dw_dmac",
+		.id = 0,
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.platform_data = &dmac_plat_data,
+		},
+		.num_resources = ARRAY_SIZE(dmac_resources[0]),
+		.resource = dmac_resources[0],
+	},
+	[1] = {
+		.name = "dw_dmac",
+		.id = 1,
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.platform_data = &dmac_plat_data,
+		},
+		.num_resources = ARRAY_SIZE(dmac_resources[1]),
+		.resource = dmac_resources[1],
+	},
 };
 
 /* i2c device registeration */
@@ -517,6 +567,16 @@ struct platform_device spear13xx_smi_device = {
 	.resource = smi_resources,
 };
 
+static void dmac_setup(void)
+{
+	/*
+	 * This function does static initialization of few misc regs for dmac
+	 * operations.
+	 */
+	/* setting Peripheral flow controller for jpeg */
+	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+}
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
@@ -532,6 +592,7 @@ void __init spear13xx_init(void)
 #endif
 
 	sdhci_enable();
+	dmac_setup();
 }
 
 /* This will initialize vic */
