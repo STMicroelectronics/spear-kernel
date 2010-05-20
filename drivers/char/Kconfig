@@ -201,6 +201,12 @@ config DIGIEPCA
 	  To compile this driver as a module, choose M here: the
 	  module will be called epca.
 
+config DESIGNWARE_JPEG
+	 tristate "Synopsys JPEG Designware support"
+         default y
+         help
+	  Support the Synopsys JPEG Designware
+
 config MOXA_INTELLIO
 	tristate "Moxa Intellio support"
 	depends on SERIAL_NONSTANDARD && (ISA || EISA || PCI)

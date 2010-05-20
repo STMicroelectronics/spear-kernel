@@ -16,6 +16,7 @@ obj-$(CONFIG_STALLION)		+= stallion.o
 obj-$(CONFIG_ISTALLION)		+= istallion.o
 obj-$(CONFIG_NOZOMI)		+= nozomi.o
 obj-$(CONFIG_DIGIEPCA)		+= epca.o
+obj-$(CONFIG_DESIGNWARE_JPEG)	+= designware_jpeg.o
 obj-$(CONFIG_SPECIALIX)		+= specialix.o
 obj-$(CONFIG_SPEAR_ADC)		+= spear_adc.o
 obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
