@@ -611,6 +611,22 @@ struct platform_device spear13xx_smi_device = {
 	.resource = smi_resources,
 };
 
+/* wdt device registration */
+static struct resource wdt_resources[] = {
+	{
+		.start = SPEAR13XX_WDT_BASE,
+		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear13xx_wdt_device = {
+	.name = "cortexa9-wdt",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(wdt_resources),
+	.resource = wdt_resources,
+};
+
 static void dmac_setup(void)
 {
 	/*

@@ -241,6 +241,7 @@ extern struct platform_device spear13xx_pcie_gadget2_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
+extern struct platform_device spear13xx_wdt_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx family function declarations here */

@@ -1150,7 +1150,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio0",		.clk = &gpio0_clk},
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
-	{.dev_id = "wdt",		.clk = &wdt_clk},
+	{.dev_id = "cortexa9-wdt",	.clk = &wdt_clk},
 };
 
 /* array of all spear 1300 clock lookups */
