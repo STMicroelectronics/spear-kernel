@@ -17,6 +17,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
+#include <plat/jpeg.h>
 #include <plat/keyboard.h>
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -33,6 +34,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ehci1_device,
 	&eth_device,
 	&i2c_device,
+	&jpeg_device,
 	&kbd_device,
 	&ohci0_device,
 	&ohci1_device,
@@ -58,6 +60,9 @@ static void __init spear1300_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&kbd_device, &kbd_data);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&jpeg_device, &dmac_device[0].dev);
 
 	/* call spear1300 machine init function */
 	spear1300_init();

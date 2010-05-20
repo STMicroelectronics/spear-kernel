@@ -16,6 +16,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
+#include <plat/jpeg.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -54,6 +55,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ehci_device,
 	&eth_device,
 	&i2c_device,
+	&jpeg_device,
 	&ohci0_device,
 	&ohci1_device,
 	&phy_device,
@@ -76,6 +78,9 @@ static void __init spear320_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&adc_device, &dmac_device.dev);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
 
 	/* call spear320 machine init function */
 	spear320_init();

@@ -16,6 +16,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
+#include <plat/jpeg.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
@@ -36,6 +37,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci0_device,
 	&ohci1_device,
 	&phy_device,
+	&jpeg_device,
 	&rtc_device,
 };
 
@@ -45,6 +47,9 @@ static void __init spear600_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&adc_device, &dmac_device.dev);
+
+	/* set jpeg configurations for DMA xfers */
+	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
 
 	/* call spear600 machine init function */
 	spear600_init();
