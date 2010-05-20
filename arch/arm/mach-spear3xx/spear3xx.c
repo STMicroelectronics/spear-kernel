@@ -56,6 +56,28 @@ struct amba_device uart_device = {
 	.irq = {IRQ_UART, NO_IRQ},
 };
 
+/* dmac device registeration */
+static struct resource dmac_resources[] = {
+	{
+		.start = SPEAR3XX_ICM3_DMA_BASE,
+		.end = SPEAR3XX_ICM3_DMA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_BASIC_DMA,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device dmac_device = {
+	.name = "pl080_dmac",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(dmac_resources),
+	.resource = dmac_resources,
+};
+
 /* i2c device registeration */
 static struct resource i2c_resources[] = {
 	{

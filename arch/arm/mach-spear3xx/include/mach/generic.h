@@ -33,6 +33,7 @@
 /* Add spear3xx family device structure declarations here */
 extern struct amba_device gpio_device;
 extern struct amba_device uart_device;
+extern struct platform_device dmac_device;
 extern struct platform_device ehci_device;
 extern struct platform_device eth_device;
 extern struct platform_device i2c_device;
