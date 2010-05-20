@@ -894,6 +894,21 @@ CONFIG_USB_STORAGE=y
 CONFIG_RTC_LIB=y
 # CONFIG_RTC_CLASS is not set
 # CONFIG_DMADEVICES is not set
+CONFIG_DMADEVICES=y
+
+#
+# DMA Devices
+#
+CONFIG_DW_DMAC=y
+# CONFIG_PL080_DMAC is not set
+CONFIG_DMA_ENGINE=y
+
+#
+# DMA Clients
+#
+# CONFIG_NET_DMA is not set
+# CONFIG_ASYNC_TX_DMA is not set
+CONFIG_DMATEST=m
 # CONFIG_AUXDISPLAY is not set
 # CONFIG_UIO is not set
 

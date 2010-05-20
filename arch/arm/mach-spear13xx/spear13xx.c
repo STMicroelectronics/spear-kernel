@@ -13,6 +13,7 @@
 
 #include <linux/types.h>
 #include <linux/amba/pl061.h>
+#include <linux/dw_dmac.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/stmmac.h>
@@ -22,9 +23,11 @@
 #include <asm/localtimer.h>
 #include <asm/mach/arch.h>
 #include <asm/smp_twd.h>
+#include <mach/dma.h>
 #include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 /* Add spear13xx machines common devices here */
 /* gpio device registeration */
@@ -75,6 +78,54 @@ struct amba_device uart_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {IRQ_UART, NO_IRQ},
+};
+
+/* dmac device registeration */
+struct dw_dma_platform_data dmac_plat_data = {8, };
+static struct resource dmac_resources[][2] = {
+	[0] = {
+		{
+			.start = SPEAR13XX_DMAC0_BASE,
+			.end = SPEAR13XX_DMAC0_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		}, {
+			.start = IRQ_DMAC0_COMBINED,
+			.flags = IORESOURCE_IRQ,
+		},
+	},
+	[1] = {
+		{
+			.start = SPEAR13XX_DMAC1_BASE,
+			.end = SPEAR13XX_DMAC1_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		}, {
+			.start = IRQ_DMAC1_COMBINED,
+			.flags = IORESOURCE_IRQ,
+		},
+	},
+};
+
+struct platform_device dmac_device[] = {
+	[0] = {
+		.name = "dw_dmac",
+		.id = 0,
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.platform_data = &dmac_plat_data,
+		},
+		.num_resources = ARRAY_SIZE(dmac_resources[0]),
+		.resource = dmac_resources[0],
+	},
+	[1] = {
+		.name = "dw_dmac",
+		.id = 1,
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.platform_data = &dmac_plat_data,
+		},
+		.num_resources = ARRAY_SIZE(dmac_resources[1]),
+		.resource = dmac_resources[1],
+	},
 };
 
 /* i2c device registeration */
@@ -303,10 +354,20 @@ struct platform_device rtc_device = {
 	.resource = rtc_resources,
 };
 
+static void dmac_setup(void)
+{
+	/*
+	 * This function does static initialization of few misc regs for dmac
+	 * operations.
+	 */
+	/* setting Peripheral flow controller for jpeg */
+	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+}
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
-	/* nothing to do for now */
+	dmac_setup();
 }
 
 /* This will initialize vic */
