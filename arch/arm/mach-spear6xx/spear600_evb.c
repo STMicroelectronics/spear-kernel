@@ -21,6 +21,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
+#include <plat/smi.h>
 #include <plat/spi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -44,6 +45,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci1_device,
 	&nand_device,
 	&rtc_device,
+	&smi_device,
 };
 
 static struct spi_board_info __initdata spi_board_info[] = {
@@ -62,6 +64,9 @@ static void __init spear600_evb_init(void)
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

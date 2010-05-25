@@ -221,6 +221,25 @@ struct platform_device spear3xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
+/* smi device registration */
+static struct resource smi_resources[] = {
+	{
+		.start = SPEAR3XX_ICM3_SMI_CTRL_BASE,
+		.end = SPEAR3XX_ICM3_SMI_CTRL_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_BASIC_SMI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_smi_device = {
+	.name = "smi",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(smi_resources),
+	.resource = smi_resources,
+};
+
 /* Do spear3xx familiy common initialization part here */
 void __init spear3xx_init(void)
 {

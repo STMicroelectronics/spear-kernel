@@ -24,6 +24,7 @@
 #include <mach/pcie.h>
 #include <plat/keyboard.h>
 #include <plat/fsmc.h>
+#include <plat/smi.h>
 #include <plat/spi.h>
 
 /* fsmc nor partition info */
@@ -73,6 +74,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
+	&spear13xx_smi_device,
 };
 
 /* keyboard specific platform data */
@@ -153,6 +155,9 @@ static void __init spear1300_evb_init(void)
 	enable_pcie0_clk();
 	pcie_init(spear1300_pcie_port_is_host);
 #endif
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear13xx_smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

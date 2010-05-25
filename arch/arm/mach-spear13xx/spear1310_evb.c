@@ -21,6 +21,7 @@
 #include <asm/mach-types.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
+#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
@@ -86,6 +87,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
+	&spear13xx_smi_device,
 
 	/* spear1310 specific devices */
 	&spear1310_can0_device,
@@ -157,6 +159,9 @@ static void __init spear1310_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear13xx_smi_device);
 
 	/*
 	 * SPEAr1310 FSMC cannot used as NOR and NAND at the same time

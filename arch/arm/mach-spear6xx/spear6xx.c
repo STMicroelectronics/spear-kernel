@@ -376,6 +376,25 @@ struct platform_device rtc_device = {
 	.resource = rtc_resources,
 };
 
+/* smi device registration */
+static struct resource smi_resources[] = {
+	{
+		.start = SPEAR6XX_ICM3_SMI_CTRL_BASE,
+		.end = SPEAR6XX_ICM3_SMI_CTRL_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_BASIC_SMI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device smi_device = {
+	.name = "smi",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(smi_resources),
+	.resource = smi_resources,
+};
+
 /* This will add devices, and do machine specific tasks */
 void __init spear6xx_init(void)
 {

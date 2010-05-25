@@ -23,6 +23,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
+#include <plat/smi.h>
 #include <plat/spi.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -86,6 +87,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_ohci0_device,
 	&spear3xx_ohci1_device,
 	&spear3xx_rtc_device,
+	&spear3xx_smi_device,
 
 	/* spear320 specific devices */
 	&spear320_can0_device,
@@ -123,6 +125,9 @@ static void __init spear320_evb_init(void)
 	/* call spear320 machine init function */
 	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
