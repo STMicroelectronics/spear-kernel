@@ -17,6 +17,7 @@
 #include <mach/spear.h>
 #include <plat/adc.h>
 #include <plat/jpeg.h>
+#include <plat/smi.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -62,6 +63,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci1_device,
 	&phy_device,
 	&rtc_device,
+	&smi_device,
 
 	/* spear310 specific devices */
 	&plgpio_device,
@@ -87,6 +89,9 @@ static void __init spear310_evb_init(void)
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

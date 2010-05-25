@@ -19,6 +19,7 @@
 #include <plat/adc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
+#include <plat/smi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&gpio_device[0],
@@ -40,6 +41,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci1_device,
 	&phy_device,
 	&rtc_device,
+	&smi_device,
 };
 
 /* keyboard specific platform data */
@@ -69,6 +71,9 @@ static void __init spear1300_evb_init(void)
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

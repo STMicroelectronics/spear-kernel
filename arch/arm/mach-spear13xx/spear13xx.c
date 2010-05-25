@@ -408,6 +408,25 @@ static void dmac_setup(void)
 	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
+/* smi device registration */
+static struct resource smi_resources[] = {
+	{
+		.start = SPEAR13XX_SMI_CTRL_BASE,
+		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_SMI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device smi_device = {
+	.name = "smi",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(smi_resources),
+	.resource = smi_resources,
+};
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {

@@ -65,4 +65,7 @@ static inline void smi_set_plat_data(struct platform_device *pdev,
 	pdev->dev.platform_data = pdata;
 }
 
+/* function used to initialize default smi platform data */
+void smi_init_board_info(struct platform_device *pdev);
+
 #endif /* __PLAT_SMI_H */
