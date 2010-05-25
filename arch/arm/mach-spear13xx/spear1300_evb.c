@@ -18,6 +18,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <mach/pcie.h>
 #include <plat/keyboard.h>
 #include <plat/fsmc.h>
 
@@ -50,6 +51,30 @@ static struct kbd_platform_data kbd_data = {
 	.rep = 1,
 };
 
+#ifdef CONFIG_PCIEPORTBUS
+/*
+ * This function is needed for PCIE host and device driver. Same
+ * controller can not be programmed as host as well as device. So host
+ * driver must call this function and if this function returns 1 then
+ * only host should add that particular port as RC.
+ * A port to be added as device, one must also add device's information
+ * in plat_devs array defined in this file.
+ */
+static int spear1300_pcie_port_is_host(int port)
+{
+	switch (port) {
+	case 0:
+		return 0;
+	case 1:
+		return 1;
+	case 2:
+		return 1;
+	}
+
+	return -EINVAL;
+}
+#endif
+
 static void __init spear1300_evb_init(void)
 {
 	unsigned int i;
@@ -67,6 +92,12 @@ static void __init spear1300_evb_init(void)
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
+
+#ifdef CONFIG_PCIEPORTBUS
+	/* Enable PCIE0 clk */
+	enable_pcie0_clk();
+	pcie_init(spear1300_pcie_port_is_host);
+#endif
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

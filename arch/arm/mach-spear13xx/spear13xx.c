@@ -299,6 +299,34 @@ struct platform_device spear13xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
+#ifdef CONFIG_PCIEPORTBUS
+/* PCIE0 clock always needs to be enabled if any of the three PCIE port
+ * have to be used. So call this function from the board initilization
+ * file. Ideally , all controller should have been independent from
+ * others with respect to clock.
+ */
+int enable_pcie0_clk(void)
+{
+	struct clk *clk;
+	/*Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, PCIE_CFG);
+	clk = clk_get_sys("pcie0", NULL);
+	if (IS_ERR(clk)) {
+		pr_err("%s:couldn't get clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+	if (clk_enable(clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+#endif
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
