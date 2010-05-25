@@ -23,4 +23,11 @@
 /* typesafe io address */
 #define __io_address(n)		__io(IO_ADDRESS(n))
 
+#if defined(CONFIG_PCI)
+#define PCIBIOS_MIN_IO		0
+#define PCIBIOS_MIN_MEM		0
+#define pcibios_assign_all_busses()	0
+#endif
+
+
 #endif /* __MACH_HARDWARE_H */

@@ -12,6 +12,8 @@ config ARCH_SPEAR13XX
 	bool "SPEAr13XX"
 	select ARM_GIC
 	select CPU_V7
+	select ARCH_SUPPORTS_MSI
+	select MIGHT_HAVE_PCI
 	help
 	  Supports for ARM's SPEAR13XX family
 
