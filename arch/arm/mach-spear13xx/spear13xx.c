@@ -28,6 +28,7 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
+#include <plat/nand.h>
 
 /* Add spear13xx machines common devices here */
 /* gpio device registeration */
@@ -230,6 +231,62 @@ struct platform_device eth_device = {
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
+};
+
+/* nand device registeration */
+void __init nand_mach_init(u32 busw)
+{
+	u32 fsmc_cfg = readl(FSMC_CFG);
+	fsmc_cfg &= ~(FSMC_MEMSEL_MASK << FSMC_MEMSEL_SHIFT);
+	fsmc_cfg |= (FSMC_MEM_NAND << FSMC_MEMSEL_SHIFT);
+
+	if (busw == SPEAR_NAND_BW16)
+		fsmc_cfg |= 1 << NAND_DEV_WIDTH16;
+	else
+		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
+
+	writel(fsmc_cfg, FSMC_CFG);
+}
+
+static void nand_select_bank(u32 bank, u32 busw)
+{
+	u32 fsmc_cfg = readl(FSMC_CFG);
+
+	fsmc_cfg &= ~(NAND_BANK_MASK << NAND_BANK_SHIFT);
+	fsmc_cfg |= (bank << NAND_BANK_SHIFT);
+
+	if (busw)
+		fsmc_cfg |= 1 << NAND_DEV_WIDTH16;
+	else
+		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
+
+	writel(fsmc_cfg, FSMC_CFG);
+}
+
+static struct nand_platform_data nand_platform_data = {
+	.select_bank = nand_select_bank,
+};
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR13XX_FSMC_MEM_BASE,
+		.end = SPEAR13XX_FSMC_MEM_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR13XX_FSMC_BASE,
+		.end = SPEAR13XX_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand_device = {
+	.name = "nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
 };
 
 /* usb host device registeration */

@@ -459,6 +459,16 @@ static struct clk gpio_clk = {
 	.recalc = &follow_parent,
 };
 
+#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
+	defined(CONFIG_MACH_SPEAR320)
+/* fsmc clock */
+static struct clk fsmc_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
 /* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
 
@@ -535,6 +545,10 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp",		.clk = &ssp_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
+#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
+	defined(CONFIG_MACH_SPEAR320)
+	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+#endif
 
 	/* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300

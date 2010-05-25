@@ -12,6 +12,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/mtd/nand.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/generic.h>
@@ -19,6 +20,7 @@
 #include <plat/adc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
+#include <plat/nand.h>
 #include <plat/smi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -37,6 +39,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&i2c_device,
 	&jpeg_device,
 	&kbd_device,
+	&nand_device,
 	&ohci0_device,
 	&ohci1_device,
 	&phy_device,
@@ -66,6 +69,11 @@ static void __init spear1300_evb_init(void)
 
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&jpeg_device, &dmac_device[0].dev);
+
+	/* set nand device's plat data */
+	nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+			SPEAR_NAND_BW8);
+	nand_mach_init(SPEAR_NAND_BW8);
 
 	/* call spear1300 machine init function */
 	spear1300_init();

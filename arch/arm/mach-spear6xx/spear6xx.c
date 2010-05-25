@@ -23,6 +23,7 @@
 #include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/nand.h>
 
 /* Add spear6xx machines common devices here */
 
@@ -256,6 +257,31 @@ struct platform_device i2c_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c_resources),
 	.resource = i2c_resources,
+};
+
+/* nand device registeration */
+static struct nand_platform_data nand_platform_data;
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR6XX_ICM1_NAND_BASE,
+		.end = SPEAR6XX_ICM1_NAND_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR6XX_ICM1_FSMC_BASE,
+		.end = SPEAR6XX_ICM1_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand_device = {
+	.name = "nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
 };
 
 /* usb host device registeration */

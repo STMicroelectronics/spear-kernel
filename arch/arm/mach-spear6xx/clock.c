@@ -599,7 +599,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "jpeg-designware",	.clk = &jpeg_clk},
 	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},
 	{ .dev_id = "smi",		.clk = &smi_clk},
-	{ .dev_id = "fsmc",		.clk = &fsmc_clk},
+	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	/* clock derived from apb clk */
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp0",		.clk = &ssp0_clk},

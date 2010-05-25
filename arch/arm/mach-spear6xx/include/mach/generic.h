@@ -39,6 +39,7 @@ extern struct platform_device ehci0_device;
 extern struct platform_device ehci1_device;
 extern struct platform_device eth_device;
 extern struct platform_device i2c_device;
+extern struct platform_device nand_device;
 extern struct platform_device ohci0_device;
 extern struct platform_device ohci1_device;
 extern struct platform_device phy_device;

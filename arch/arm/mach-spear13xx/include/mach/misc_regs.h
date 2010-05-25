@@ -205,6 +205,16 @@
 #define PCIE_MIPHY_CFG		((unsigned int *)(MISC_BASE + 0x328))
 #define PERIP_CFG		((unsigned int *)(MISC_BASE + 0x32c))
 #define FSMC_CFG		((unsigned int *)(MISC_BASE + 0x330))
+	/* FSMC_CFG register masks */
+	#define FSMC_MEMSEL_MASK	0x3
+	#define FSMC_MEMSEL_SHIFT	0
+	#define FSMC_MEM_NOR		0
+	#define FSMC_MEM_NAND		1
+	#define FSMC_MEM_SRAM		2
+	#define NAND_BANK_MASK		0x3
+	#define NAND_BANK_SHIFT		2
+	#define NAND_DEV_WIDTH16	4
+
 #define MPMC_CTR_STS		((unsigned int *)(MISC_BASE + 0x334))
 
 /* Inter-Processor Communication Registers */

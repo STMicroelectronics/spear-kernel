@@ -39,6 +39,7 @@ extern struct platform_device eth_device;
 extern struct platform_device i2c_device;
 extern struct platform_device jpeg_device;
 extern struct platform_device kbd_device;
+extern struct platform_device nand_device;
 extern struct platform_device ohci0_device;
 extern struct platform_device ohci1_device;
 extern struct platform_device phy_device;
@@ -57,6 +58,7 @@ void __init spear1300_init(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
+void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
 
 #endif /* __MACH_GENERIC_H */

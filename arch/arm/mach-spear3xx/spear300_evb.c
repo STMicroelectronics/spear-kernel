@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/mtd/nand.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/generic.h>
@@ -18,6 +19,7 @@
 #include <plat/adc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
+#include <plat/nand.h>
 #include <plat/smi.h>
 
 /* padmux devices to enable */
@@ -55,6 +57,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&eth_device,
 	&i2c_device,
 	&jpeg_device,
+	&nand0_device,
 	&ohci0_device,
 	&ohci1_device,
 	&phy_device,
@@ -91,6 +94,10 @@ static void __init spear300_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&kbd_device, &kbd_data);
+
+	/* set nand0 device's plat data */
+	nand_set_plat_data(&nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
+			SPEAR_NAND_BW8);
 
 	/* call spear300 machine init function */
 	spear300_init();
