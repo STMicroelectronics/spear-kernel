@@ -444,7 +444,7 @@ static struct clk adc_clk = {
 };
 
 /* ssp clock */
-static struct clk ssp_clk = {
+static struct clk ssp0_clk = {
 	.pclk = &apb_clk,
 	.en_reg = PERIP1_CLK_ENB,
 	.en_reg_bit = SSP_CLK_ENB,
@@ -543,7 +543,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "c3",		.clk = &c3_clk},
 	/* clock derived from apb clk */
 	{ .dev_id = "adc",		.clk = &adc_clk},
-	{ .dev_id = "ssp",		.clk = &ssp_clk},
+	{ .dev_id = "ssp-pl022.0",	.clk = &ssp0_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
 	defined(CONFIG_MACH_SPEAR320)

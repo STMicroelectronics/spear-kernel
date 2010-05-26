@@ -602,9 +602,9 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	/* clock derived from apb clk */
 	{ .dev_id = "adc",		.clk = &adc_clk},
-	{ .dev_id = "ssp0",		.clk = &ssp0_clk},
-	{ .dev_id = "ssp1",		.clk = &ssp1_clk},
-	{ .dev_id = "ssp2",		.clk = &ssp2_clk},
+	{ .dev_id = "ssp-pl022.0",	.clk = &ssp0_clk},
+	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
+	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
 	{ .dev_id = "gpio0",		.clk = &gpio0_clk},
 	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "gpio2",		.clk = &gpio2_clk},

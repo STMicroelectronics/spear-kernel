@@ -14,12 +14,16 @@
 #include <linux/mtd/nand.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
 #include <plat/jpeg.h>
 #include <plat/nand.h>
 #include <plat/smi.h>
+#include <plat/spi.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -73,6 +77,51 @@ static struct platform_device *plat_devs[] __initdata = {
 	&pwm_device,
 };
 
+/* Currently no gpios are free on eval board so it is kept commented */
+#if 0
+/* spi board information */
+static const struct flash_platform_data spix_flash_data = {
+	.type = "m25p40",
+};
+
+/* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+/* spi0 flash Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+
+/* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+/* spi0 spidev Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+#endif
+
+static struct spi_board_info __initdata spi_board_info[] = {
+#if 0
+	/* spi0 board info */
+	{
+		.modalias = "spidev",
+		.controller_data = &spi0_dev_chip_info,
+		.max_speed_hz = 10000000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = 0,
+	}, {
+		.modalias = "m25p80",
+		.platform_data = &spix_flash_data,
+		.controller_data = &spi0_flash_chip_info,
+		.max_speed_hz = 10000000,
+		.bus_num = 0,
+		.chip_select = 1,
+		.mode = 0,
+	}
+#endif
+};
+
+static void spi_init(void)
+{
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+}
+
 static void __init spear320_evb_init(void)
 {
 	unsigned int i;
@@ -107,6 +156,8 @@ static void __init spear320_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_init();
 }
 
 MACHINE_START(SPEAR320, "ST-SPEAR320-EVB")
