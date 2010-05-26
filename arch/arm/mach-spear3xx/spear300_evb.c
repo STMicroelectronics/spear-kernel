@@ -100,9 +100,29 @@ DECLARE_SPI_CS_CONTROL(0, flash, RAS_GPIO_3);
 /* spi0 flash Chip Info structure */
 DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
 
+/*
+ * Chip select of spidev, currently no gpio is free on eval board so it is kept
+ * commented
+ */
+#if 0
+/* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+/* spi0 spidev Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+#endif
+
 static struct spi_board_info __initdata spi_board_info[] = {
 	/* spi0 board info */
 	{
+#if 0
+		.modalias = "spidev",
+		.controller_data = &spi0_dev_chip_info,
+		.max_speed_hz = 25000000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_1,
+	}, {
+#endif
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
 		.max_speed_hz = 25000000,

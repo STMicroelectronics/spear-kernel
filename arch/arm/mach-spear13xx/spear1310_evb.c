@@ -116,7 +116,37 @@ static struct kbd_platform_data kbd_data = {
 	.rep = 1,
 };
 
+#if 0
+/* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+/* spi0 flash Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+
+/* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+/* spi0 spidev Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+#endif
+
 static struct spi_board_info __initdata spi_board_info[] = {
+#if 0
+	/* spi0 board info */
+	{
+		.modalias = "spidev",
+		.controller_data = &spi0_dev_chip_info,
+		.max_speed_hz = 25000000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_1,
+	}, {
+		.modalias = "m25p80",
+		.controller_data = &spi0_flash_chip_info,
+		.max_speed_hz = 25000000,
+		.bus_num = 0,
+		.chip_select = 1,
+		.mode = SPI_MODE_1,
+	}
+#endif
 };
 
 #ifdef CONFIG_PCIEPORTBUS
