@@ -23,6 +23,7 @@
 #include <mach/misc_regs.h>
 
 #define NUM_PCIE_PORTS	3
+
 #define IN0_MEM_SIZE	(200 * 1024 * 1024 - 1)
 /* In current implementation address translation is done using IN0 only.
  * So IN1 start address and IN0 end address has been kept same
@@ -34,6 +35,7 @@
 #define IN_MSG_SIZE	(12 * 1024 * 1024 - 1)
 
 #define MAX_LINK_UP_WAIT_JIFFIES	10
+
 struct pcie_port {
 	u8			port;
 	u8			root_bus_nr;
@@ -70,6 +72,7 @@ static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 
 		cond_resched();
 	} while (!time_after_eq(jiffies, deadline));
+
 	return 0;
 }
 
@@ -129,6 +132,7 @@ static void __init spear13xx_pcie_preinit(void)
 		pp->res[0].start = app_reg->in0_mem_addr_start;
 		pp->res[0].end = app_reg->in0_mem_addr_limit;
 		pp->res[0].flags = IORESOURCE_MEM;
+
 		snprintf(pp->io_space_name, sizeof(pp->io_space_name),
 			"PCIe %d I/O", pp->port);
 		pp->io_space_name[sizeof(pp->io_space_name) - 1] = 0;
@@ -156,12 +160,10 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 		return 0;
 	pp->root_bus_nr = sys->busnr;
 
-	/*
-	 * Generic PCIe unit setup.
-	 */
-	/*
-	 * Need to come back here
-	 */
+	/*Generic PCIe unit setup.*/
+
+	/*Need to come back here*/
+
 	sys->resource[0] = &pp->res[0];
 	sys->resource[1] = &pp->res[1];
 	sys->resource[2] = NULL;
@@ -184,9 +186,7 @@ static struct pcie_port *bus_to_port(int bus)
 
 static int pcie_valid_config(struct pcie_port *pp, int bus, int dev)
 {
-	/*
-	* If there is no link, then there is no device
-	*/
+	/*If there is no link, then there is no device*/
 	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
 		return 0;
 	/*
@@ -366,7 +366,7 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 	}
 }
 
-void __init spear13xx_pcie_init(void)
+static int __init spear13xx_pcie_init(void)
 {
 	int port;
 	char port_name[20];
@@ -398,5 +398,7 @@ void __init spear13xx_pcie_init(void)
 	}
 
 	pci_common_init(&spear13xx_pci);
+
+	return 0;
 }
 subsys_initcall(spear13xx_pcie_init);
