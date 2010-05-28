@@ -27,27 +27,10 @@ static LIST_HEAD(root_clks);
 static LIST_HEAD(clocks);
 #endif
 
-static void propagate_rate(struct clk *);
+static void propagate_rate(struct clk *, int on_init);
 #ifdef CONFIG_DEBUG_FS
 static int clk_debugfs_reparent(struct clk *);
 #endif
-
-static int clk_is_enabled(struct clk *clk)
-{
-	unsigned int val;
-
-	if (clk->flags & ALWAYS_ENABLED)
-		return 1;
-
-	BUG_ON(!clk->en_reg);
-	val = readl(clk->en_reg);
-	val = val & (1 << clk->en_reg_bit);
-
-	if (unlikely(clk->flags & RESET_TO_ENABLE))
-		return !val;
-	else
-		return !!val;
-}
 
 static int generic_clk_enable(struct clk *clk)
 {
@@ -126,7 +109,7 @@ static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 #endif
 }
 
-void do_clk_disable(struct clk *clk)
+static void do_clk_disable(struct clk *clk)
 {
 	if (!clk)
 		return;
@@ -151,7 +134,7 @@ void do_clk_disable(struct clk *clk)
 	}
 }
 
-int do_clk_enable(struct clk *clk)
+static int do_clk_enable(struct clk *clk)
 {
 	int ret = 0;
 
@@ -176,8 +159,11 @@ int do_clk_enable(struct clk *clk)
 		 * Since the clock is going to be used for the first
 		 * time please reclac
 		 */
-		if (clk->recalc)
-			clk->recalc(clk);
+		if (clk->recalc) {
+			ret = clk->recalc(clk);
+			if (ret)
+				goto err;
+		}
 	}
 	clk->usage_count++;
 err:
@@ -287,6 +273,7 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	/* reflect parent change in software */
 	clk_reparent(clk, &clk->pclk_sel->pclk_info[i]);
 
+	propagate_rate(clk, 0);
 	return 0;
 }
 EXPORT_SYMBOL(clk_set_parent);
@@ -296,12 +283,30 @@ EXPORT_SYMBOL(clk_set_parent);
  * @clk: clock source
  * @rate: desired clock rate in Hz
  *
- * Returns success (0) or negative errno.
+ * Returns success (0) or negative errno. clk usage_count must be zero
+ * before calling this function.
  */
 int clk_set_rate(struct clk *clk, unsigned long rate)
 {
-	/* TODO */
-	return -EINVAL;
+	unsigned long flags;
+	int ret = -EINVAL;
+
+	if (!clk || !rate)
+		return -EFAULT;
+	if (clk->usage_count)
+		return -EPERM;
+
+	if (clk->set_rate) {
+		spin_lock_irqsave(&clocks_lock, flags);
+		ret = clk->set_rate(clk, rate);
+		if (!ret)
+			/* if successful -> propagate */
+			propagate_rate(clk, 0);
+		spin_unlock_irqrestore(&clocks_lock, flags);
+	} else if (clk->pclk)
+		ret = clk_set_rate(clk->pclk, rate);
+
+	return ret;
 }
 EXPORT_SYMBOL(clk_set_rate);
 
@@ -358,27 +363,102 @@ void clk_register(struct clk_lookup *cl)
 
 /**
  * propagate_rate - recalculate and propagate all clocks to children
+ * @pclk: parent clock required to be propogated
+ * @on_init: flag for enabling clocks which are ENABLED_ON_INIT.
  *
  * Recalculates all children clocks
  */
-void propagate_rate(struct clk *pclk)
+void propagate_rate(struct clk *pclk, int on_init)
 {
 	struct clk *clk, *_temp;
+	int ret = 0;
 
 	list_for_each_entry_safe(clk, _temp, &pclk->children, sibling) {
-		/* recalc and propogate only if clk is enabled */
-		if (clk_is_enabled(clk)) {
-			if (clk->recalc)
-				clk->recalc(clk);
-			propagate_rate(clk);
+		if (clk->recalc) {
+			ret = clk->recalc(clk);
+			/*
+			 * recalc will return error if clk out is not programmed
+			 * In this case configure default rate.
+			 */
+			if (ret && clk->set_rate)
+				clk->set_rate(clk, 0);
 		}
+		propagate_rate(clk, on_init);
+
+		if (!on_init)
+			continue;
+
 		/* Enable clks enabled on init, in software view */
 		if (clk->flags & ENABLED_ON_INIT)
 			do_clk_enable(clk);
 	}
 }
 
-/*All recalc functions are called with lock held */
+/**
+ * round_rate - Returns index of closest programmable rate in rate_config tbl
+ * @clk: ptr to clock structure
+ * @drate: desired rate
+ * @rate: final rate will be returned in this variable only.
+ *
+ * Finds index in rate_config for highest clk rate which is less than
+ * requested rate. If there is no clk rate lesser than requested rate then
+ * -EINVAL is returned. This routine assumes that rate_config is written
+ * in incrementing order of clk rates.
+ * If drate passed is zero then default rate is programmed.
+ */
+static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
+{
+	unsigned long tmp = 0;
+	int index;
+
+	if (!clk->calc_rate)
+		return -EFAULT;
+
+	/* Set default rate if desired rate is 0 */
+	if (!drate) {
+		index = clk->rate_config.default_index;
+		*rate = clk->calc_rate(clk, index);
+		return index;
+	}
+
+	for (index = 0; index < clk->rate_config.count; index++) {
+		tmp = clk->calc_rate(clk, index);
+		if (drate < tmp) {
+			index--;
+			break;
+		}
+	}
+	/* return if can't find suitable clock */
+	if ((index < 0) || (index >= clk->rate_config.count)) {
+		index = -EINVAL;
+		*rate = 0;
+	} else
+		*rate = tmp;
+
+	return index;
+}
+
+/*All below functions are called with lock held */
+
+/*
+ * Calculates pll clk rate for specific value of mode, m, n and p
+ *
+ * In normal mode
+ * rate = (2 * M[15:8] * Fin)/(N * 2^P)
+ *
+ * In Dithered mode
+ * rate = (2 * M[15:0] * Fin)/(256 * N * 2^P)
+ */
+unsigned long pll_calc_rate(struct clk *clk, int index)
+{
+	unsigned long rate = clk->pclk->rate;
+	struct pll_rate_tbl *tbls = clk->rate_config.tbls;
+	unsigned int mode;
+
+	mode = tbls[index].mode ? 256 : 1;
+	return (((2 * rate / 10000) * tbls[index].m) /
+			(mode * tbls[index].n * (1 << tbls[index].p))) * 10000;
+}
 
 /*
  * calculates current programmed rate of pll1
@@ -389,7 +469,7 @@ void propagate_rate(struct clk *pclk)
  * In Dithered mode
  * rate = (2 * M[15:0] * Fin)/(256 * N * 2^P)
  */
-void pll_clk_recalc(struct clk *clk)
+int pll_clk_recalc(struct clk *clk)
 {
 	struct pll_clk_config *config = clk->private_data;
 	unsigned int num = 2, den = 0, val, mode = 0;
@@ -415,13 +495,69 @@ void pll_clk_recalc(struct clk *clk)
 		den *= 256;
 	}
 
-	BUG_ON(!den);
+	if (!den)
+		return -EINVAL;
 
 	clk->rate = (((clk->pclk->rate/10000) * num) / den) * 10000;
+	return 0;
+}
+
+/*
+ * Configures new clock rate of pll
+ */
+int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+{
+	struct pll_rate_tbl *tbls = clk->rate_config.tbls;
+	struct pll_clk_config *config = clk->private_data;
+	unsigned long val, rate;
+	int i;
+
+	i = round_rate(clk, desired_rate, &rate);
+	if (i < 0)
+		return i;
+
+	val = readl(config->mode_reg) &
+		~(config->masks->mode_mask << config->masks->mode_shift);
+	val |= (tbls[i].mode & config->masks->mode_mask) <<
+		config->masks->mode_shift;
+	writel(val, config->mode_reg);
+
+	val = readl(config->cfg_reg) &
+		~(config->masks->div_p_mask << config->masks->div_p_shift);
+	val |= (tbls[i].p & config->masks->div_p_mask) <<
+		config->masks->div_p_shift;
+	val &= ~(config->masks->div_n_mask << config->masks->div_n_shift);
+	val |= (tbls[i].n & config->masks->div_n_mask) <<
+		config->masks->div_n_shift;
+	val &= ~(config->masks->dith_fdbk_m_mask <<
+			config->masks->dith_fdbk_m_shift);
+	if (tbls[i].mode)
+		val |= (tbls[i].m & config->masks->dith_fdbk_m_mask) <<
+			config->masks->dith_fdbk_m_shift;
+	else
+		val |= (tbls[i].m & config->masks->norm_fdbk_m_mask) <<
+			config->masks->norm_fdbk_m_shift;
+
+	writel(val, config->cfg_reg);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+/*
+ * Calculates ahb, apb clk rate for specific value of div
+ */
+unsigned long bus_calc_rate(struct clk *clk, int index)
+{
+	unsigned long rate = clk->pclk->rate;
+	struct bus_rate_tbl *tbls = clk->rate_config.tbls;
+
+	return rate / (tbls[index].div + 1);
 }
 
 /* calculates current programmed rate of ahb or apb bus */
-void bus_clk_recalc(struct clk *clk)
+int bus_clk_recalc(struct clk *clk)
 {
 	struct bus_clk_config *config = clk->private_data;
 	unsigned int div;
@@ -429,9 +565,50 @@ void bus_clk_recalc(struct clk *clk)
 	div = ((readl(config->reg) >> config->masks->shift) &
 			config->masks->mask) + 1;
 
-	BUG_ON(!div);
+	if (!div)
+		return -EINVAL;
 
 	clk->rate = (unsigned long)clk->pclk->rate / div;
+	return 0;
+}
+
+/* Configures new clock rate of AHB OR APB bus */
+int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+{
+	struct bus_rate_tbl *tbls = clk->rate_config.tbls;
+	struct bus_clk_config *config = clk->private_data;
+	unsigned long val, rate;
+	int i;
+
+	i = round_rate(clk, desired_rate, &rate);
+	if (i < 0)
+		return i;
+
+	val = readl(config->reg) &
+		~(config->masks->mask << config->masks->shift);
+	val |= (tbls[i].div & config->masks->mask) << config->masks->shift;
+	writel(val, config->reg);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+/*
+ * gives rate for different values of eq, x and y
+ *
+ * Fout from synthesizer can be given from two equations:
+ * Fout1 = (Fin * X/Y)/2		EQ1
+ * Fout2 = Fin * X/Y			EQ2
+ */
+unsigned long aux_calc_rate(struct clk *clk, int index)
+{
+	unsigned long rate = clk->pclk->rate;
+	struct aux_rate_tbl *tbls = clk->rate_config.tbls;
+	u8 eq = tbls[index].eq ? 1 : 2;
+
+	return (((rate/10000) * tbls[index].xscale) /
+			(tbls[index].yscale * eq)) * 10000;
 }
 
 /*
@@ -444,7 +621,7 @@ void bus_clk_recalc(struct clk *clk)
  *
  * Selection of eqn 1 or 2 is programmed in register
  */
-void aux_clk_recalc(struct clk *clk)
+int aux_clk_recalc(struct clk *clk)
 {
 	struct aux_clk_config *config = clk->private_data;
 	unsigned int num = 1, den = 1, val, eqn;
@@ -464,9 +641,56 @@ void aux_clk_recalc(struct clk *clk)
 	den *= (val >> config->masks->yscale_sel_shift) &
 		config->masks->yscale_sel_mask;
 
-	BUG_ON(!den);
+	if (!den)
+		return -EINVAL;
 
 	clk->rate = (((clk->pclk->rate/10000) * num) / den) * 10000;
+	return 0;
+}
+
+/* Configures new clock rate of auxiliary synthesizers used by: UART, FIRDA*/
+int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+{
+	struct aux_rate_tbl *tbls = clk->rate_config.tbls;
+	struct aux_clk_config *config = clk->private_data;
+	unsigned long val, rate;
+	int i;
+
+	i = round_rate(clk, desired_rate, &rate);
+	if (i < 0)
+		return i;
+
+	val = readl(config->synth_reg) &
+		~(config->masks->eq_sel_mask << config->masks->eq_sel_shift);
+	val |= (tbls[i].eq & config->masks->eq_sel_mask) <<
+		config->masks->eq_sel_shift;
+	val &= ~(config->masks->xscale_sel_mask <<
+			config->masks->xscale_sel_shift);
+	val |= (tbls[i].xscale & config->masks->xscale_sel_mask) <<
+		config->masks->xscale_sel_shift;
+	val &= ~(config->masks->yscale_sel_mask <<
+			config->masks->yscale_sel_shift);
+	val |= (tbls[i].yscale & config->masks->yscale_sel_mask) <<
+		config->masks->yscale_sel_shift;
+	writel(val, config->synth_reg);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+/*
+ * Calculates gpt clk rate for different values of mscale and nscale
+ *
+ * Fout= Fin/((2 ^ (N+1)) * (M+1))
+ */
+unsigned long gpt_calc_rate(struct clk *clk, int index)
+{
+	unsigned long rate = clk->pclk->rate;
+	struct gpt_rate_tbl *tbls = clk->rate_config.tbls;
+
+	return rate / ((1 << (tbls[index].nscale + 1)) *
+			(tbls[index].mscale + 1));
 }
 
 /*
@@ -474,7 +698,7 @@ void aux_clk_recalc(struct clk *clk)
  * Fout from synthesizer can be given from below equations:
  * Fout= Fin/((2 ^ (N+1)) * (M+1))
  */
-void gpt_clk_recalc(struct clk *clk)
+int gpt_clk_recalc(struct clk *clk)
 {
 	struct gpt_clk_config *config = clk->private_data;
 	unsigned int div = 1, val;
@@ -485,9 +709,64 @@ void gpt_clk_recalc(struct clk *clk)
 	div *= 1 << (((val >> config->masks->nscale_sel_shift) &
 				config->masks->nscale_sel_mask) + 1);
 
-	BUG_ON(!div);
+	if (!div)
+		return -EINVAL;
 
 	clk->rate = (unsigned long)clk->pclk->rate / div;
+	return 0;
+}
+
+/* Configures new clock rate of gptiliary synthesizers used by: UART, FIRDA*/
+int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+{
+	struct gpt_rate_tbl *tbls = clk->rate_config.tbls;
+	struct gpt_clk_config *config = clk->private_data;
+	unsigned long val, rate;
+	int i;
+
+	i = round_rate(clk, desired_rate, &rate);
+	if (i < 0)
+		return i;
+
+	val = readl(config->synth_reg) & ~(config->masks->mscale_sel_mask <<
+			config->masks->mscale_sel_shift);
+	val |= (tbls[i].mscale & config->masks->mscale_sel_mask) <<
+		config->masks->mscale_sel_shift;
+	val &= ~(config->masks->nscale_sel_mask <<
+			config->masks->nscale_sel_shift);
+	val |= (tbls[i].nscale & config->masks->nscale_sel_mask) <<
+		config->masks->nscale_sel_shift;
+	writel(val, config->synth_reg);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+/*
+ * Calculates clcd clk rate for different values of div
+ *
+ * Fout from synthesizer can be given from below equation:
+ * Fout= Fin/2*div (division factor)
+ * div is 17 bits:-
+ *	0-13 (fractional part)
+ *	14-16 (integer part)
+ * To calculate Fout we left shift val by 14 bits and divide Fin by
+ * complete div (including fractional part) and then right shift the
+ * result by 14 places.
+ */
+unsigned long clcd_calc_rate(struct clk *clk, int index)
+{
+	unsigned long rate = clk->pclk->rate;
+	struct clcd_rate_tbl *tbls = clk->rate_config.tbls;
+
+	rate /= 1000;
+	rate <<= 12;
+	rate /= (2 * tbls[index].div);
+	rate >>= 12;
+	rate *= 1000;
+
+	return rate;
 }
 
 /*
@@ -501,7 +780,7 @@ void gpt_clk_recalc(struct clk *clk)
  * complete div (including fractional part) and then right shift the
  * result by 14 places.
  */
-void clcd_clk_recalc(struct clk *clk)
+int clcd_clk_recalc(struct clk *clk)
 {
 	struct clcd_clk_config *config = clk->private_data;
 	unsigned int div = 1;
@@ -512,23 +791,49 @@ void clcd_clk_recalc(struct clk *clk)
 	div = (val >> config->masks->div_factor_shift) &
 		config->masks->div_factor_mask;
 
-	prate = clk->pclk->rate / 1000; /* first level division, make it KHz */
+	if (!div)
+		return -EINVAL;
 
-	BUG_ON(!div);
+	prate = clk->pclk->rate / 1000; /* first level division, make it KHz */
 
 	clk->rate = (((unsigned long)prate << 12) / (2 * div)) >> 12;
 	clk->rate *= 1000;
+	return 0;
+}
+
+/* Configures new clock rate of auxiliary synthesizers used by: UART, FIRDA*/
+int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+{
+	struct clcd_rate_tbl *tbls = clk->rate_config.tbls;
+	struct clcd_clk_config *config = clk->private_data;
+	unsigned long val, rate;
+	int i;
+
+	i = round_rate(clk, desired_rate, &rate);
+	if (i < 0)
+		return i;
+
+	val = readl(config->synth_reg) & ~(config->masks->div_factor_mask <<
+			config->masks->div_factor_shift);
+	val |= (tbls[i].div & config->masks->div_factor_mask) <<
+		config->masks->div_factor_shift;
+	writel(val, config->synth_reg);
+
+	clk->rate = rate;
+
+	return 0;
 }
 
 /*
  * Used for clocks that always have value as the parent clock divided by a
  * fixed divisor
  */
-void follow_parent(struct clk *clk)
+int follow_parent(struct clk *clk)
 {
 	unsigned int div_factor = (clk->div_factor < 1) ? 1 : clk->div_factor;
 
 	clk->rate = clk->pclk->rate/div_factor;
+	return 0;
 }
 
 /**
@@ -541,18 +846,20 @@ void recalc_root_clocks(void)
 {
 	struct clk *pclk;
 	unsigned long flags;
+	int ret = 0;
 
 	spin_lock_irqsave(&clocks_lock, flags);
 	list_for_each_entry(pclk, &root_clks, sibling) {
-		/*
-		 * It doesn't make a sense to recalc and propogate rate
-		 * if clk is not enabled in hw.
-		 */
-		if (clk_is_enabled(pclk)) {
-			if (pclk->recalc)
-				pclk->recalc(pclk);
-			propagate_rate(pclk);
+		if (pclk->recalc) {
+			ret = pclk->recalc(pclk);
+			/*
+			 * recalc will return error if clk out is not programmed
+			 * In this case configure default clock.
+			 */
+			if (ret && pclk->set_rate)
+				pclk->set_rate(pclk, 0);
 		}
+		propagate_rate(pclk, 1);
 		/* Enable clks enabled on init, in software view */
 		if (pclk->flags & ENABLED_ON_INIT)
 			do_clk_enable(pclk);

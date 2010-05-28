@@ -60,13 +60,22 @@ static struct pll_clk_config pll1_config = {
 	.masks = &pll1_masks,
 };
 
+/* pll rate configuration table, in ascending order of rates */
+struct pll_rate_tbl pll_rtbl[] = {
+	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* 266 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* 332 MHz */
+};
+
 /* PLL1 clock */
 static struct clk pll1_clk = {
 	.flags = ENABLED_ON_INIT,
 	.pclk = &osc_24m_clk,
 	.en_reg = PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
+	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
+	.set_rate = &pll_clk_set_rate,
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 1},
 	.private_data = &pll1_config,
 };
 
@@ -104,11 +113,22 @@ static struct bus_clk_config ahb_config = {
 	.masks = &ahb_masks,
 };
 
+/* ahb rate configuration table, in ascending order of rates */
+struct bus_rate_tbl bus_rtbl[] = {
+	{.div = 3}, /* == parent divided by 4 */
+	{.div = 2}, /* == parent divided by 3 */
+	{.div = 1}, /* == parent divided by 2 */
+	{.div = 0}, /* == parent divided by 1 */
+};
+
 /* ahb clock */
 static struct clk ahb_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &pll1_clk,
+	.calc_rate = &bus_calc_rate,
 	.recalc = &bus_clk_recalc,
+	.set_rate = &bus_clk_set_rate,
+	.rate_config = {bus_rtbl, ARRAY_SIZE(bus_rtbl), 2},
 	.private_data = &ahb_config,
 };
 
@@ -130,12 +150,23 @@ static struct aux_clk_config uart_synth_config = {
 	.masks = &aux_masks,
 };
 
+/* aux rate configuration table, in ascending order of rates */
+struct aux_rate_tbl aux_rtbl[] = {
+	/* For PLL1 = 332 MHz */
+	{.xscale = 1, .yscale = 8, .eq = 1}, /* 41.5 MHz */
+	{.xscale = 1, .yscale = 4, .eq = 1}, /* 83 MHz */
+	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
+};
+
 /* uart synth clock */
 static struct clk uart_synth_clk = {
 	.en_reg = UART_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
 	.private_data = &uart_synth_config,
 };
 
@@ -178,7 +209,10 @@ static struct clk firda_synth_clk = {
 	.en_reg = FIRDA_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
 	.private_data = &firda_synth_config,
 };
 
@@ -218,6 +252,14 @@ static struct gpt_clk_masks gpt_masks = {
 	.nscale_sel_shift = GPT_NSCALE_SHIFT,
 };
 
+/* gpt rate configuration table, in ascending order of rates */
+struct gpt_rate_tbl gpt_rtbl[] = {
+	/* For pll1 = 332 MHz */
+	{.mscale = 4, .nscale = 0}, /* 41.5 MHz */
+	{.mscale = 2, .nscale = 0}, /* 55.3 MHz */
+	{.mscale = 1, .nscale = 0}, /* 83 MHz */
+};
+
 /* gpt0 synth clk config*/
 static struct gpt_clk_config gpt0_synth_config = {
 	.synth_reg = PRSC1_CLK_CFG,
@@ -228,7 +270,10 @@ static struct gpt_clk_config gpt0_synth_config = {
 static struct clk gpt0_synth_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &pll1_clk,
+	.calc_rate = &gpt_calc_rate,
 	.recalc = &gpt_clk_recalc,
+	.set_rate = &gpt_clk_set_rate,
+	.rate_config = {gpt_rtbl, ARRAY_SIZE(gpt_rtbl), 2},
 	.private_data = &gpt0_synth_config,
 };
 
@@ -269,7 +314,10 @@ static struct gpt_clk_config gpt1_synth_config = {
 static struct clk gpt1_synth_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &pll1_clk,
+	.calc_rate = &gpt_calc_rate,
 	.recalc = &gpt_clk_recalc,
+	.set_rate = &gpt_clk_set_rate,
+	.rate_config = {gpt_rtbl, ARRAY_SIZE(gpt_rtbl), 2},
 	.private_data = &gpt1_synth_config,
 };
 
@@ -310,7 +358,10 @@ static struct gpt_clk_config gpt2_synth_config = {
 static struct clk gpt2_synth_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &pll1_clk,
+	.calc_rate = &gpt_calc_rate,
 	.recalc = &gpt_clk_recalc,
+	.set_rate = &gpt_clk_set_rate,
+	.rate_config = {gpt_rtbl, ARRAY_SIZE(gpt_rtbl), 2},
 	.private_data = &gpt2_synth_config,
 };
 
@@ -382,7 +433,10 @@ static struct bus_clk_config apb_config = {
 static struct clk apb_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &ahb_clk,
+	.calc_rate = &bus_calc_rate,
 	.recalc = &bus_clk_recalc,
+	.set_rate = &bus_clk_set_rate,
+	.rate_config = {bus_rtbl, ARRAY_SIZE(bus_rtbl), 2},
 	.private_data = &apb_config,
 };
 

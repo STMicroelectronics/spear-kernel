@@ -87,6 +87,15 @@ static struct pll_clk_config pll1_config = {
 	.masks = &pll_masks,
 };
 
+/* pll rate configuration table, in ascending order of rates */
+struct pll_rate_tbl pll_rtbl[] = {
+	/* PCLK 24MHz */
+	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* 500 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* 664 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* 800 MHz */
+	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* 1000 MHz */
+};
+
 /* pll1 clock */
 static struct clk pll1_clk = {
 	.flags = ENABLED_ON_INIT,
@@ -94,7 +103,10 @@ static struct clk pll1_clk = {
 	.pclk_sel_shift = PLL1_CLK_SHIFT,
 	.en_reg = PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
+	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
+	.set_rate = &pll_clk_set_rate,
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 3},
 	.private_data = &pll1_config,
 };
 
@@ -127,7 +139,10 @@ static struct clk pll2_clk = {
 	.pclk_sel_shift = PLL2_CLK_SHIFT,
 	.en_reg = PLL2_CTR,
 	.en_reg_bit = PLL_ENABLE,
+	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
+	.set_rate = &pll_clk_set_rate,
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 3},
 	.private_data = &pll2_config,
 };
 
@@ -144,7 +159,10 @@ static struct clk pll3_clk = {
 	.pclk_sel_shift = PLL3_CLK_SHIFT,
 	.en_reg = PLL3_CTR,
 	.en_reg_bit = PLL_ENABLE,
+	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
+	.set_rate = &pll_clk_set_rate,
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 3},
 	.private_data = &pll3_config,
 };
 
@@ -155,13 +173,24 @@ static struct pll_clk_config pll4_config = {
 	.masks = &pll_masks,
 };
 
+/* pll4 rate configuration table, in ascending order of rates */
+struct pll_rate_tbl pll4_rtbl[] = {
+	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* 500 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* 664 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* 800 MHz */
+	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* 1000 MHz */
+};
+
 /* pll4 (DDR) clock */
 static struct clk pll4_clk = {
 	.flags = ENABLED_ON_INIT,
 	.pclk = &osc1_24m_clk,
 	.en_reg = PLL4_CTR,
 	.en_reg_bit = PLL_ENABLE,
+	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
+	.set_rate = &pll_clk_set_rate,
+	.rate_config = {pll4_rtbl, ARRAY_SIZE(pll4_rtbl), 3},
 	.private_data = &pll4_config,
 };
 
@@ -287,12 +316,24 @@ static struct aux_clk_config uart_synth_config = {
 	.masks = &aux_masks,
 };
 
+/* aux rate configuration table, in ascending order of rates */
+struct aux_rate_tbl aux_rtbl[] = {
+	/* For PLL1div2 = 500 MHz */
+	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
+	{.xscale = 1, .yscale = 4, .eq = 1}, /* 125 MHz */
+	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
+	{.xscale = 1, .yscale = 2, .eq = 1}, /* 250 MHz */
+};
+
 /* uart synth clock */
 static struct clk uart_synth_clk = {
 	.en_reg = UART_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1div2_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 0},
 	.private_data = &uart_synth_config,
 };
 
@@ -335,8 +376,11 @@ static struct clk sd_synth_clk = {
 	.en_reg = SD_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1div2_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
-	.private_data = &sd_synth_config,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
+	.private_data = &sdhci_synth_config,
 };
 
 /* sd clock */
@@ -358,7 +402,10 @@ static struct clk cfxd_synth_clk = {
 	.en_reg = CFXD_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1div2_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
 	.private_data = &cfxd_synth_config,
 };
 
@@ -381,7 +428,10 @@ static struct clk c3_synth_clk = {
 	.en_reg = C3_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1div2_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 0},
 	.private_data = &c3_synth_config,
 };
 
@@ -453,11 +503,23 @@ static struct clk gmac_phy_input_clk = {
 	.recalc = &follow_parent,
 };
 
+/* gmac rate configuration table, in ascending order of rates */
+struct aux_rate_tbl gmac_rtbl[] = {
+	/* For gmac phy input clk */
+	{.xscale = 1, .yscale = 6, .eq = 1}, /* divided by 6 */
+	{.xscale = 1, .yscale = 4, .eq = 1}, /* divided by 4 */
+	{.xscale = 1, .yscale = 3, .eq = 1}, /* divided by 3 */
+	{.xscale = 1, .yscale = 2, .eq = 1}, /* divided by 2 */
+};
+
 static struct clk gmac_phy_synth_clk = {
 	.en_reg = GMAC_CLK_CFG,
 	.en_reg_bit = GMAC_PHY_SYNT_ENB,
 	.pclk = &gmac_phy_input_clk,
+	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {gmac_rtbl, ARRAY_SIZE(gmac_rtbl), 0},
 	.private_data = &gmac_phy_synth_config,
 };
 
@@ -518,13 +580,23 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 	.pclk_sel_mask = CLCD_SYNT_CLK_MASK,
 };
 
+/* clcd rate configuration table, in ascending order of rates */
+struct clcd_rate_tbl clcd_rtbl[] = {
+	/* For pll1div4 = 250 MHz */
+	{.div = 0x4000}, /* 62.5 MHz */
+	{.div = 0x2000}, /* 125 MHz */
+};
+
 /* clcd synth clock */
 static struct clk clcd_synth_clk = {
 	.en_reg = CLCD_CLK_SYNT,
 	.en_reg_bit = CLCD_SYNT_ENB,
 	.pclk_sel = &clcd_synth_pclk_sel,
 	.pclk_sel_shift = CLCD_SYNT_CLK_SHIFT,
+	.calc_rate = &clcd_calc_rate,
 	.recalc = &clcd_clk_recalc,
+	.set_rate = &clcd_clk_set_rate,
+	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 1},
 	.private_data = &clcd_synth_config,
 };
 

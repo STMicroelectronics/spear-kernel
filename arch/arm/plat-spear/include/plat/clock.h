@@ -58,6 +58,18 @@ struct pclk_sel {
 };
 
 /**
+ * struct rate_config - clk rate configurations
+ * @tbls: array of device specific clk rate tables, in ascending order of rates
+ * @count: size of tbls array
+ * @default_index: default setting when originally disabled
+ */
+struct rate_config {
+	void *tbls;
+	u8 count;
+	u8 default_index;
+};
+
+/**
  * struct clk - clock structure
  * @usage_count: num of users who enabled this clock
  * @flags: flags for clock properties
@@ -66,6 +78,9 @@ struct pclk_sel {
  * @en_reg_bit: clk enable/disable bit
  * @ops: clk enable/disable ops - generic_clkops selected if NULL
  * @recalc: pointer to clock rate recalculate function
+ * @set_rate: pointer to clock set rate function
+ * @calc_rate: pointer to clock get rate function for index
+ * @rate_config: rate configuration information, used by set_rate
  * @div_factor: division factor to parent clock.
  * @pclk: current parent clk
  * @pclk_sel: pointer to parent selection structure
@@ -84,7 +99,10 @@ struct clk {
 	unsigned int *en_reg;
 	u8 en_reg_bit;
 	const struct clkops *ops;
-	void (*recalc) (struct clk *);
+	int (*recalc) (struct clk *);
+	int (*set_rate) (struct clk *, unsigned long rate);
+	unsigned long (*calc_rate)(struct clk *, int index);
+	struct rate_config rate_config;
 	unsigned int div_factor;
 
 	struct clk *pclk;
@@ -122,6 +140,14 @@ struct pll_clk_config {
 	struct pll_clk_masks *masks;
 };
 
+/* pll clk rate config structure */
+struct pll_rate_tbl {
+	u8 mode;
+	u16 m;
+	u8 n;
+	u8 p;
+};
+
 /* ahb and apb bus configuration structure */
 struct bus_clk_masks {
 	u32 mask;
@@ -131,6 +157,11 @@ struct bus_clk_masks {
 struct bus_clk_config {
 	u32 *reg;
 	struct bus_clk_masks *masks;
+};
+
+/* ahb and apb clk bus rate config structure */
+struct bus_rate_tbl {
+	u8 div;
 };
 
 /* Aux clk configuration structure: applicable to UART and FIRDA */
@@ -150,6 +181,13 @@ struct aux_clk_config {
 	struct aux_clk_masks *masks;
 };
 
+/* aux clk rate config structure */
+struct aux_rate_tbl {
+	u16 xscale;
+	u16 yscale;
+	u8 eq;
+};
+
 /* GPT clk configuration structure */
 struct gpt_clk_masks {
 	u32 mscale_sel_mask;
@@ -163,6 +201,12 @@ struct gpt_clk_config {
 	struct gpt_clk_masks *masks;
 };
 
+/* gpt clk rate config structure */
+struct gpt_rate_tbl {
+	u16 mscale;
+	u16 nscale;
+};
+
 /* clcd clk configuration structure */
 struct clcd_synth_masks {
 	u32 div_factor_mask;
@@ -174,16 +218,31 @@ struct clcd_clk_config {
 	struct clcd_synth_masks *masks;
 };
 
+/* clcd clk rate config structure */
+struct clcd_rate_tbl {
+	u16 div;
+};
+
 /* platform specific clock functions */
 void clk_register(struct clk_lookup *cl);
 void recalc_root_clocks(void);
 
-/* clock recalc functions */
-void follow_parent(struct clk *clk);
-void pll_clk_recalc(struct clk *clk);
-void bus_clk_recalc(struct clk *clk);
-void gpt_clk_recalc(struct clk *clk);
-void aux_clk_recalc(struct clk *clk);
-void clcd_clk_recalc(struct clk *clk);
+/* clock recalc & set rate functions */
+int follow_parent(struct clk *clk);
+unsigned long pll_calc_rate(struct clk *clk, int index);
+int pll_clk_recalc(struct clk *clk);
+int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+unsigned long bus_calc_rate(struct clk *clk, int index);
+int bus_clk_recalc(struct clk *clk);
+int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+unsigned long gpt_calc_rate(struct clk *clk, int index);
+int gpt_clk_recalc(struct clk *clk);
+int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+unsigned long aux_calc_rate(struct clk *clk, int index);
+int aux_clk_recalc(struct clk *clk);
+int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+unsigned long clcd_calc_rate(struct clk *clk, int index);
+int clcd_clk_recalc(struct clk *clk);
+int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 
 #endif /* __PLAT_CLOCK_H */
