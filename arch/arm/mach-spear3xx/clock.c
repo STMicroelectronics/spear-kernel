@@ -523,9 +523,24 @@ static struct clk fsmc_clk = {
 };
 #endif
 
+/* common clocks to spear300 and spear320 */
+#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
+/* sdhci clock */
+static struct clk sdhci_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
+
 /* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
-
+/* keyboard clock */
+static struct clk kbd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
 #endif
 
 /* spear310 machine specific clock structures */
@@ -549,25 +564,6 @@ static struct clk pwm_clk = {
 	.recalc = &follow_parent,
 };
 #endif
-
-#ifdef CONFIG_MACH_SPEAR300
-/* keyboard clock */
-static struct clk kbd_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
-#endif
-
-/* common clocks to spear300 and spear320 */
-#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
-/* sdhci clock */
-static struct clk sdhci_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &ahb_clk,
-	.recalc = &follow_parent,
-};
-#endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
 
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
@@ -614,6 +610,11 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 #endif
 
+	/* common clock to spear300 and spear320 */
+#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
+	{ .dev_id = "sdhci",	.clk = &sdhci_clk},
+#endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
+
 	/* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
@@ -628,11 +629,6 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
 #endif
-
-	/* common clock to spear300 and spear320 */
-#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
-	{ .dev_id = "sdhci",	.clk = &sdhci_clk},
-#endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
 };
 
 void __init clk_init(void)
