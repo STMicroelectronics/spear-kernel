@@ -235,22 +235,22 @@ struct map_desc spear3xx_io_desc[] __initdata = {
 	{
 		.virtual	= VA_SPEAR3XX_ICM1_UART_BASE,
 		.pfn		= __phys_to_pfn(SPEAR3XX_ICM1_UART_BASE),
-		.length		= SPEAR3XX_ICM1_UART_SIZE,
+		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	}, {
 		.virtual	= VA_SPEAR3XX_ML1_VIC_BASE,
 		.pfn		= __phys_to_pfn(SPEAR3XX_ML1_VIC_BASE),
-		.length		= SPEAR3XX_ML1_VIC_SIZE,
+		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	}, {
 		.virtual	= VA_SPEAR3XX_ICM3_SYS_CTRL_BASE,
 		.pfn		= __phys_to_pfn(SPEAR3XX_ICM3_SYS_CTRL_BASE),
-		.length		= SPEAR3XX_ICM3_SYS_CTRL_SIZE,
+		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	}, {
 		.virtual	= VA_SPEAR3XX_ICM3_MISC_REG_BASE,
 		.pfn		= __phys_to_pfn(SPEAR3XX_ICM3_MISC_REG_BASE),
-		.length		= SPEAR3XX_ICM3_MISC_REG_SIZE,
+		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	},
 };
