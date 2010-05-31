@@ -28,6 +28,8 @@
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/hardware.h>
+#include <asm/hardware/cache-l2x0.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
@@ -126,6 +128,17 @@ static void spi_init(void)
 
 static void __init spear1300_evb_init(void)
 {
+#ifdef CONFIG_CACHE_L2X0
+	/*
+	 * 256KB (16KB/way), 16-way associativity, parity not
+	 * supported
+	 * TODO: 0x249, picked from nomadik, to be analyzed
+	 * Comment from nomadik:
+	 * At full speed latency must be >=2, so 0x249 in low bits
+	 */
+	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+#endif
+
 	/* set adc platform data */
 	set_adc_plat_data(&adc_device, &dmac_device[0].dev);
 
