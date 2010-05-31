@@ -604,8 +604,7 @@ struct spear_shirq shirq_ras1 = {
 void sdhci_i2s_mem_enable(u8 mask)
 {
 	u32 val;
-	void __iomem *base = ioremap(SPEAR300_SOC_CONFIG_BASE,
-			SPEAR300_SOC_CONFIG_SIZE);
+	void __iomem *base = ioremap(SPEAR300_SOC_CONFIG_BASE, SZ_4K);
 	if (!base) {
 		pr_debug("sdhci_i2s_enb: ioremap fail\n");
 		return;
@@ -628,8 +627,7 @@ void __init spear300_init(void)
 	spear3xx_init();
 
 	/* shared irq registration */
-	shirq_ras1.regs.base =
-		ioremap(SPEAR300_TELECOM_BASE, SPEAR300_TELECOM_REG_SIZE);
+	shirq_ras1.regs.base = ioremap(SPEAR300_TELECOM_BASE, SZ_4K);
 	if (shirq_ras1.regs.base) {
 		ret = spear_shirq_register(&shirq_ras1);
 		if (ret)
@@ -637,8 +635,7 @@ void __init spear300_init(void)
 	}
 
 	/* pmx initialization */
-	pmx_driver.base = ioremap(SPEAR300_SOC_CONFIG_BASE,
-			SPEAR300_SOC_CONFIG_SIZE);
+	pmx_driver.base = ioremap(SPEAR300_SOC_CONFIG_BASE, SZ_4K);
 	if (pmx_driver.base) {
 		ret = pmx_register(&pmx_driver);
 		if (ret)
