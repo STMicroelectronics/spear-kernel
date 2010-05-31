@@ -11,9 +11,9 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/mtd/nand.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/mtd/nand.h>
 #include <linux/gpio.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
@@ -103,8 +103,6 @@ static void spi_init(void)
 
 static void __init spear600_evb_init(void)
 {
-	unsigned int i;
-
 	/* set adc platform data */
 	set_adc_plat_data(&adc_device, &dmac_device.dev);
 
@@ -128,8 +126,7 @@ static void __init spear600_evb_init(void)
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
-	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
-		amba_device_register(amba_devs[i], &iomem_resource);
+	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
 	spi_init();
 }

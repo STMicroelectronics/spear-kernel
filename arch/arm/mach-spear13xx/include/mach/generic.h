@@ -19,6 +19,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
+#include <plat/device.h>
 
 /*
  * Each GPT has 2 timer channels
