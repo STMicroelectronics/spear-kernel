@@ -23,11 +23,11 @@
 #ifndef SPEAR_ADC_USR_H
 #define SPEAR_ADC_USR_H
 
-#define SPEAR_ADC_BASE 'A'
-#define ADCIOC_CONFIG _IOW(SPEAR_ADC_BASE, 1, struct adc_config)
-#define ADCIOC_CHAN_CONFIG _IOW(SPEAR_ADC_BASE, 2, struct adc_chan_config)
-#define ADCIOC_GET_CONFIG _IOR(SPEAR_ADC_BASE, 3, struct adc_config)
-#define ADCIOC_GET_CHAN_CONFIG _IOR(SPEAR_ADC_BASE, 4, struct adc_chan_config)
+#define ADC_NAME 'A'
+#define ADCIOC_CONFIG _IOW(ADC_NAME, 1, struct adc_config)
+#define ADCIOC_CHAN_CONFIG _IOW(ADC_NAME, 2, struct adc_chan_config)
+#define ADCIOC_GET_CONFIG _IOR(ADC_NAME, 3, struct adc_config)
+#define ADCIOC_GET_CHAN_CONFIG _IOR(ADC_NAME, 4, struct adc_chan_config)
 
 /* channel list */
 enum adc_chan_id {
