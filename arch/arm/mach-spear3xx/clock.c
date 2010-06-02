@@ -535,6 +535,13 @@ static struct clk sdhci_clk = {
 
 /* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
+/* gpio1 clock */
+static struct clk gpio1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
 /* keyboard clock */
 static struct clk kbd_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -617,6 +624,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 
 	/* spear300 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR300
+	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
 #endif
 
