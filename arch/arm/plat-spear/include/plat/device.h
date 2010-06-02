@@ -15,6 +15,7 @@
 #define __PLAT_DEVICE_H
 
 #include <linux/amba/bus.h>
+#include <linux/err.h>
 #include <linux/clk.h>
 
 static inline void
@@ -24,7 +25,7 @@ spear_amba_device_register(struct amba_device **devices, u32 count)
 
 	for (i = 0; i < count; i++) {
 		struct clk *clk = clk_get_sys(devices[i]->dev.init_name, NULL);
-		if (!clk)
+		if (IS_ERR(clk))
 			continue;
 
 		clk_enable(clk);
