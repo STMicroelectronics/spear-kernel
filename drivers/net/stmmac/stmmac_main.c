@@ -1101,7 +1101,6 @@ static int stmmac_open(struct net_device *dev)
 
 	if (priv->phydev)
 		phy_start(priv->phydev);
-
 	napi_enable(&priv->napi);
 	skb_queue_head_init(&priv->rx_recycle);
 	netif_start_queue(dev);
@@ -1999,6 +1998,10 @@ out:
 			iounmap(addr);
 	}
 
+#ifdef CONFIG_PM
+	if (!device_can_wakeup(&pdev->dev))
+		device_init_wakeup(&pdev->dev, 1);
+#endif
 	return ret;
 }
 
@@ -2026,7 +2029,10 @@ static int stmmac_dvr_remove(struct platform_device *pdev)
 	netif_carrier_off(ndev);
 	clk_put(priv->stmmac_clk);
 	stmmac_mdio_unregister(ndev);
-
+#ifdef CONFIG_PM
+	if (device_can_wakeup(&pdev->dev))
+		device_init_wakeup(&pdev->dev, 0);
+#endif
 	platform_set_drvdata(pdev, NULL);
 	unregister_netdev(ndev);
 
@@ -2045,6 +2051,7 @@ static int stmmac_suspend(struct platform_device *pdev, pm_message_t state)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int dis_ic = 0;
+	int irq_eth_wake;
 
 	if (!dev || !netif_running(dev))
 		return 0;
@@ -2078,8 +2085,11 @@ static int stmmac_suspend(struct platform_device *pdev, pm_message_t state)
 		if (device_may_wakeup(&(pdev->dev))) {
 			/* Enable Power down mode by programming the PMT regs */
 			if (priv->wolenabled == PMT_SUPPORTED)
-				priv->mac_type->ops->pmt(dev->base_addr,
+				priv->hw->ops->pmt(dev->base_addr,
 							 priv->wolopts);
+			irq_eth_wake = platform_get_irq(pdev, 1);
+			if (irq_eth_wake)
+				enable_irq_wake(irq_eth_wake);
 		} else {
 			stmmac_mac_disable_rx(dev->base_addr);
 		}
@@ -2100,6 +2110,7 @@ static int stmmac_resume(struct platform_device *pdev)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct stmmac_priv *priv = netdev_priv(dev);
 	unsigned long ioaddr = dev->base_addr;
+	int irq_eth_wake;
 
 	if (!netif_running(dev))
 		return 0;
@@ -2118,9 +2129,13 @@ static int stmmac_resume(struct platform_device *pdev)
 	 * is received. Anyway, it's better to manually clear
 	 * this bit because it can generate problems while resuming
 	 * from another devices (e.g. serial console). */
-	if (device_may_wakeup(&(pdev->dev)))
+	if (device_may_wakeup(&(pdev->dev))) {
 		if (priv->wolenabled == PMT_SUPPORTED)
-			priv->mac_type->ops->pmt(dev->base_addr, 0);
+			priv->hw->ops->pmt(dev->base_addr, 0);
+		irq_eth_wake = platform_get_irq(pdev, 1);
+		if (irq_eth_wake)
+			disable_irq_wake(irq_eth_wake);
+	}
 
 	netif_device_attach(dev);
 
