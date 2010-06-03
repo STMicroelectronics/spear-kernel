@@ -409,13 +409,6 @@ static struct clk usbd_clk = {
 	.recalc = &follow_parent,
 };
 
-/* clcd clock */
-static struct clk clcd_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &pll3_48m_clk,
-	.recalc = &follow_parent,
-};
-
 /* clock derived from ahb clk */
 /* apb masks structure */
 static struct bus_clk_masks apb_masks = {
@@ -523,8 +516,32 @@ static struct clk fsmc_clk = {
 };
 #endif
 
+/* common clocks to spear310 and spear320 */
+#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+/* uart1 clock */
+static struct clk uart1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk uart2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
+
 /* common clocks to spear300 and spear320 */
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
+/* clcd clock */
+static struct clk clcd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll3_48m_clk,
+	.recalc = &follow_parent,
+};
+
 /* sdhci clock */
 static struct clk sdhci_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -552,7 +569,26 @@ static struct clk kbd_clk = {
 
 /* spear310 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR310
+/* uart3 clock */
+static struct clk uart3_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
 
+/* uart4 clock */
+static struct clk uart4_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart5 clock */
+static struct clk uart5_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
 #endif
 
 /* spear320 machine specific clock structures */
@@ -561,6 +597,20 @@ static struct clk kbd_clk = {
 static struct clk i2c1_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* ssp1 clock */
+static struct clk ssp1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* ssp2 clock */
+static struct clk ssp2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 
@@ -599,7 +649,6 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* clock derived from pll3 clk */
 	{ .con_id = "usbh_clk",		.clk = &usbh_clk},
 	{ .dev_id = "usbd",		.clk = &usbd_clk},
-	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	/* clock derived from ahb clk */
 	{ .con_id = "apb_clk",		.clk = &apb_clk},
 	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
@@ -617,9 +666,16 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 #endif
 
+/* common clocks to spear310 and spear320 */
+#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+	{ .dev_id = "uart1",		.clk = &uart1_clk},
+	{ .dev_id = "uart2",		.clk = &uart2_clk},
+#endif
+
 	/* common clock to spear300 and spear320 */
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
-	{ .dev_id = "sdhci",	.clk = &sdhci_clk},
+	{ .dev_id = "clcd",		.clk = &clcd_clk},
+	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
 #endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
 
 	/* spear300 machine specific clock structures */
@@ -630,11 +686,16 @@ static struct clk_lookup spear_clk_lookups[] = {
 
 	/* spear310 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR310
+	{ .dev_id = "uart3",		.clk = &uart3_clk},
+	{ .dev_id = "uart4",		.clk = &uart4_clk},
+	{ .dev_id = "uart5",		.clk = &uart5_clk},
 
 #endif
 	/* spear320 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR320
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
+	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
+	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
 #endif
 };
