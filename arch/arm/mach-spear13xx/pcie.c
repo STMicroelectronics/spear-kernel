@@ -15,11 +15,14 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
+#include <linux/msi.h>
 #include <linux/mbus.h>
 #include <linux/sched.h>
 #include <asm/irq.h>
 #include <asm/mach/pci.h>
+#include <asm/mach/irq.h>
 #include <mach/pcie.h>
+#include <mach/irqs.h>
 #include <mach/misc_regs.h>
 
 #define NUM_PCIE_PORTS	3
@@ -36,18 +39,6 @@
 
 #define MAX_LINK_UP_WAIT_JIFFIES	10
 
-struct pcie_port {
-	u8			port;
-	u8			root_bus_nr;
-	void __iomem		*base;
-	void __iomem		*app_base;
-	void __iomem		*va_app_base;
-	spinlock_t		conf_lock;
-	char			mem_space_name[16];
-	char			io_space_name[16];
-	struct resource		res[2];
-};
-
 static struct pcie_port pcie_port[NUM_PCIE_PORTS];
 static u32 spr_pcie_base[NUM_PCIE_PORTS] = {
 	SPEAR13XX_PCIE0_BASE,
@@ -59,6 +50,82 @@ static u32 spr_pcie_app_base[NUM_PCIE_PORTS] = {
 	SPEAR13XX_PCIE1_APP_BASE,
 	SPEAR13XX_PCIE2_APP_BASE,
 };
+
+/* Keeping all DDR area of 256MB accesible for inbound transaction */
+#define INBOUND_ADDR_MASK	0xFFFFFFF
+
+#ifdef CONFIG_PCI_MSI
+static DECLARE_BITMAP(msi_irq_in_use[NUM_PCIE_PORTS], SPEAR_NUM_MSI_IRQS);
+static unsigned int spear_msi_data[NUM_PCIE_PORTS];
+
+static void spear13xx_msi_init(struct pcie_port *pp);
+#endif
+
+static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc);
+
+static void enable_dbi_access(struct pcie_app_reg *app_reg)
+{
+	/* Enable DBI access */
+	writel(readl(&app_reg->slv_armisc) | (1 << AXI_OP_DBI_ACCESS_ID),
+			&app_reg->slv_armisc);
+	writel(readl(&app_reg->slv_awmisc) | (1 << AXI_OP_DBI_ACCESS_ID),
+			&app_reg->slv_awmisc);
+
+}
+
+static void disable_dbi_access(struct pcie_app_reg *app_reg)
+{
+	/* disable DBI access */
+	writel(readl(&app_reg->slv_armisc) & ~(1 << AXI_OP_DBI_ACCESS_ID),
+			&app_reg->slv_armisc);
+	writel(readl(&app_reg->slv_awmisc) & ~(1 << AXI_OP_DBI_ACCESS_ID),
+			&app_reg->slv_awmisc);
+
+}
+
+static void spear_dbi_read_reg(struct pcie_port *pp, int where, int size,
+		u32 *val)
+{
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
+	u32 va_address;
+
+	/* Enable DBI access */
+	enable_dbi_access(app_reg);
+
+	va_address = (u32)pp->va_dbi_base + (where & ~0x3);
+
+	*val = readl(va_address);
+
+	if (size == 1)
+		*val = (*val >> (8 * (where & 3))) & 0xff;
+	else if (size == 2)
+		*val = (*val >> (8 * (where & 3))) & 0xffff;
+
+	/* Disable DBI access */
+	disable_dbi_access(app_reg);
+}
+
+static void spear_dbi_write_reg(struct pcie_port *pp, int where, int size,
+		u32 val)
+{
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
+	u32 va_address;
+
+	/* Enable DBI access */
+	enable_dbi_access(app_reg);
+
+	va_address = (u32)pp->va_dbi_base + (where & ~0x3);
+
+	if (size == 4)
+		writel(val, va_address);
+	else if (size == 2)
+		writew(val, va_address + (where & 2));
+	else if (size == 1)
+		writeb(val, va_address + (where & 3));
+
+	/* Disable DBI access */
+	disable_dbi_access(app_reg);
+}
 
 static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 {
@@ -76,11 +143,13 @@ static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 	return 0;
 }
 
-static void spear13xx_pcie_host_init(void *va_app_base, u32 base)
+static void spear13xx_pcie_host_init(struct pcie_port *pp)
 {
-	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) va_app_base;
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
 
-	writel(base, &app_reg->in0_mem_addr_start);
+	/*setup registers for outbound translation */
+
+	writel(pp->base, &app_reg->in0_mem_addr_start);
 	writel(app_reg->in0_mem_addr_start + IN0_MEM_SIZE,
 			&app_reg->in0_mem_addr_limit);
 	writel(app_reg->in0_mem_addr_limit + 1, &app_reg->in1_mem_addr_start);
@@ -103,9 +172,14 @@ static void spear13xx_pcie_host_init(void *va_app_base, u32 base)
 	writel(app_reg->in1_mem_addr_start, &app_reg->pom1_mem_addr_start);
 	writel(app_reg->in_io_addr_start, &app_reg->pom_io_addr_start);
 
-	writel(0xFFFFFFF0, &app_reg->mem0_addr_offset_limit);
-	writel(0x0, &app_reg->pim0_mem_addr_start);
-	writel(0x0, &app_reg->pim1_mem_addr_start);
+	/*setup registers for inbound translation */
+
+	writel(INBOUND_ADDR_MASK + 1, &app_reg->mem0_addr_offset_limit);
+	writel(0, &app_reg->pim0_mem_addr_start);
+	writel(0, &app_reg->pim1_mem_addr_start);
+	spear_dbi_write_reg(pp, PCIE_BAR0_MASK_REG, 4, INBOUND_ADDR_MASK);
+	spear_dbi_write_reg(pp, PCI_BASE_ADDRESS_0, 4, 0);
+
 	writel(0x0, &app_reg->pim_io_addr_start);
 	writel(0x0, &app_reg->pim_io_addr_start);
 	writel(0x0, &app_reg->pim_rom_addr_start);
@@ -151,6 +225,7 @@ static void __init spear13xx_pcie_preinit(void)
 static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct pcie_port *pp;
+	u32 val = 0;
 
 	if (nr >= NUM_PCIE_PORTS)
 		return 0;
@@ -160,9 +235,16 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 		return 0;
 	pp->root_bus_nr = sys->busnr;
 
-	/*Generic PCIe unit setup.*/
+	/* Generic PCIe unit setup.*/
 
-	/*Need to come back here*/
+	/* Enable own BME. It is necessary to enable own BME to do a
+	 * memory transaction on a downstream device
+	 */
+	spear_dbi_read_reg(pp, PCI_COMMAND, 2, &val);
+	val |= (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
+	spear_dbi_write_reg(pp, PCI_COMMAND, 2, val);
+
+	/* Need to come back here*/
 
 	sys->resource[0] = &pp->res[0];
 	sys->resource[1] = &pp->res[1];
@@ -203,7 +285,7 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 *va_address;
+	u32 va_address;
 	u32 address = readl(&app_reg->in_cfg0_addr_start)
 			| (PCI_FUNC(devfn) << 16)
 			| (where & 0xFFFC);
@@ -214,7 +296,7 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 			&app_reg->slv_armisc);
 	writel(readl(&app_reg->slv_armisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
 			&app_reg->slv_armisc);
-	va_address = ioremap(address, 4);
+	va_address = (u32)ioremap(address, 4);
 	if (!va_address) {
 		pr_err("error with ioremap in function %s\n", __func__);
 		return -ENOMEM;
@@ -257,7 +339,7 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 {
 	int ret = PCIBIOS_SUCCESSFUL;
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 *va_address;
+	u32 va_address;
 	u32 address = readl(&app_reg->in_cfg0_addr_start)
 			| (PCI_FUNC(devfn) << 16)
 			| (where & 0xFFFC);
@@ -268,7 +350,7 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 			&app_reg->slv_awmisc);
 	writel(readl(&app_reg->slv_awmisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
 			&app_reg->slv_awmisc);
-	va_address = ioremap(address, 4);
+	va_address = (u32)ioremap(address, 4);
 	if (!va_address) {
 		pr_err("error with ioremap in function %s\n", __func__);
 		return -ENOMEM;
@@ -329,8 +411,9 @@ spear13xx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 static int __init spear13xx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
 {
 	struct pcie_port *pp = bus_to_port(dev->bus->number);
+	int irq = (SPEAR_INTX0_BASE + pp->port * SPEAR_NUM_INTX_IRQS + pin - 1);
 
-	return IRQ_PCIE0 + pp->port;
+	return irq;
 }
 
 static struct hw_pci spear13xx_pci __initdata = {
@@ -345,6 +428,7 @@ static struct hw_pci spear13xx_pci __initdata = {
 static void __init add_pcie_port(int port, u32 base, u32 app_base)
 {
 	struct pcie_port *pp = &pcie_port[port];
+	struct pcie_app_reg *app_reg;
 
 	pp->port = port;
 	pp->root_bus_nr = -1;
@@ -355,6 +439,11 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 		pr_err("error with ioremap in function %s\n", __func__);
 		return;
 	}
+	pp->va_dbi_base = (void __iomem *) ioremap(base, 0x2000);
+	if (!pp->va_dbi_base) {
+		pr_err("error with ioremap in function %s\n", __func__);
+		return;
+	}
 	spin_lock_init(&pp->conf_lock);
 	memset(pp->res, 0, sizeof(pp->res));
 	pr_info("spear13xx PCIe port %d\n", port);
@@ -362,7 +451,20 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 		pr_info("link up in bios\n");
 	} else {
 		pr_info("link down in bios\n");
-		spear13xx_pcie_host_init(pp->va_app_base, base);
+		spear13xx_pcie_host_init(pp);
+
+#ifdef CONFIG_PCI_MSI
+		spear13xx_msi_init(pp);
+#endif
+	/* Enbale INTX interrupt*/
+		app_reg = (struct pcie_app_reg *)pp->va_app_base;
+		writel(readl(&app_reg->int_mask) | INTA_CTRL_INT
+				| INTB_CTRL_INT	| INTC_CTRL_INT
+				| INTD_CTRL_INT, &app_reg->int_mask);
+
+		set_irq_chained_handler(IRQ_PCIE0 + pp->port,
+				spear_pcie_int_handler);
+
 	}
 }
 
@@ -402,3 +504,271 @@ static int __init spear13xx_pcie_init(void)
 	return 0;
 }
 subsys_initcall(spear13xx_pcie_init);
+
+#ifdef CONFIG_PCI_MSI
+/* MSI int handler
+ */
+static void handle_msi(struct pcie_port *pp)
+{
+	unsigned long val;
+	int i, pos;
+
+	for (i = 0; i < 8; i++) {
+		spear_dbi_read_reg(pp, PCIE_MSI_INTR0_STATUS + i * 12, 4,
+				(u32 *)&val);
+		if (val) {
+			pos = 0;
+			while ((pos = find_next_bit(&val, 32, pos)) != 32) {
+				generic_handle_irq(SPEAR_MSI0_INT_BASE
+					+ pp->port * SPEAR_NUM_MSI_IRQS
+					+ (i * 32) + pos);
+				pos++;
+			}
+		}
+		spear_dbi_write_reg(pp, PCIE_MSI_INTR0_STATUS + i * 12, 4, val);
+	}
+}
+#else
+static void handle_msi(struct pcie_port *pp)
+{
+}
+#endif
+
+static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
+{
+	struct pcie_port *pp = &pcie_port[irq - IRQ_PCIE0];
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
+	unsigned int status, type;
+	int i;
+
+	status = readl(&app_reg->int_sts);
+	for (i = 0; i < 32; i++) {
+		type = status & (1 << i);
+		switch (type) {
+		case MSI_CTRL_INT:
+			handle_msi(pp);
+			writel(type, &app_reg->int_clr);
+			break;
+		case INTA_CTRL_INT:
+			generic_handle_irq(SPEAR_INTX0_BASE
+					+ pp->port * SPEAR_NUM_INTX_IRQS);
+			break;
+		case INTB_CTRL_INT:
+			generic_handle_irq(SPEAR_INTX0_BASE
+					+ pp->port * SPEAR_NUM_INTX_IRQS + 1);
+			break;
+		case INTC_CTRL_INT:
+			generic_handle_irq(SPEAR_INTX0_BASE
+					+ pp->port * SPEAR_NUM_INTX_IRQS + 2);
+			break;
+		case INTD_CTRL_INT:
+			generic_handle_irq(SPEAR_INTX0_BASE
+					+ pp->port * SPEAR_NUM_INTX_IRQS + 3);
+			break;
+		default:
+			writel(type, &app_reg->int_clr);
+			break;
+		}
+	}
+}
+
+#ifdef CONFIG_PCI_MSI
+static int find_valid_pos0(int port, int nvec, int pos, int *pos0)
+{
+find_next_pos0:
+	pos = find_next_zero_bit(msi_irq_in_use[port],
+			SPEAR_NUM_MSI_IRQS, pos);
+	/*if you have reached to the end then get out from here.*/
+	if (pos == SPEAR_NUM_MSI_IRQS)
+		return -ENOSPC;
+	/* Check if this position is at correct offset.nvec is always a
+	 * power of two. pos0 must be nvec bit alligned.
+	 */
+	if (pos % nvec) {
+		pos += nvec - (pos % nvec);
+		goto find_next_pos0;
+	}
+	*pos0 = pos;
+	return 0;
+}
+
+static void spear13xx_msi_nop(unsigned int irq)
+{
+	return;
+}
+
+static struct irq_chip spear13xx_msi_chip = {
+	.name = "PCI-MSI",
+	.ack = spear13xx_msi_nop,
+	.enable = unmask_msi_irq,
+	.disable = mask_msi_irq,
+	.mask = mask_msi_irq,
+	.unmask = unmask_msi_irq,
+};
+
+/*
+ * Dynamic irq allocate and deallocation
+ */
+static int get_irq(int nvec, struct msi_desc *desc, int *pos)
+{
+	int res, bit, irq, pos0, pos1, i;
+	u32 val;
+	struct pcie_port *pp = bus_to_port(desc->dev->bus->number);
+
+	pos0 = find_first_zero_bit(msi_irq_in_use[pp->port],
+			SPEAR_NUM_MSI_IRQS);
+	if (pos0 % nvec) {
+		if (find_valid_pos0(pp->port, nvec, pos0, &pos0))
+			goto no_valid_irq;
+	}
+	if (nvec > 1) {
+		pos1 = find_next_bit(msi_irq_in_use[pp->port],
+				SPEAR_NUM_MSI_IRQS, pos0);
+		/* there must be nvec number of consecutive free bits */
+		while ((pos1 - pos0) < nvec) {
+			if (find_valid_pos0(pp->port, nvec, pos1, &pos0))
+				goto no_valid_irq;
+			pos1 = find_next_bit(msi_irq_in_use[pp->port],
+					SPEAR_NUM_MSI_IRQS, pos0);
+		}
+	}
+
+	irq = (SPEAR_MSI0_INT_BASE + (pp->port * SPEAR_NUM_MSI_IRQS)) + pos0;;
+
+	if ((irq + nvec) > (SPEAR_MSI0_INT_END
+				+ (pp->port * SPEAR_NUM_MSI_IRQS)))
+		goto no_valid_irq;
+
+	i = 0;
+	while (i < nvec) {
+		set_bit(pos0 + i, msi_irq_in_use[pp->port]);
+		dynamic_irq_init(irq + i);
+		set_irq_msi(irq + i, desc);
+		set_irq_chip_and_handler(irq + i, &spear13xx_msi_chip,
+				handle_simple_irq);
+
+		/* Enable corresponding interrupt on MSI interrupt
+		 * controller.
+		 */
+		res = ((pos0 + i) / 32) * 12;
+		bit = (pos0 + i) % 32;
+		spear_dbi_read_reg(pp, PCIE_MSI_INTR0_ENABLE + res, 4, &val);
+		val |= 1 << bit;
+		spear_dbi_write_reg(pp, PCIE_MSI_INTR0_ENABLE + res, 4, val);
+
+		i++;
+	}
+
+	*pos = pos0;
+	return irq;
+no_valid_irq:
+	*pos = pos0;
+	return -ENOSPC;
+}
+
+static void clean_irq(unsigned int irq)
+{
+	int res, bit, val, pos;
+	struct irq_desc *desc = irq_to_desc(irq);
+	struct pcie_port *pp = bus_to_port(desc->msi_desc->dev->bus->number);
+
+	pos = irq - (SPEAR_MSI0_INT_BASE + (pp->port * SPEAR_NUM_MSI_IRQS));
+
+	dynamic_irq_cleanup(irq);
+
+	clear_bit(pos, msi_irq_in_use[pp->port]);
+
+	/* Disable corresponding interrupt on MSI interrupt
+	 * controller.
+	 */
+	res = (pos / 32) * 12;
+	bit = pos % 32;
+	spear_dbi_read_reg(pp, PCIE_MSI_INTR0_ENABLE + res, 4, &val);
+	val &= ~(1 << bit);
+	spear_dbi_write_reg(pp, PCIE_MSI_INTR0_ENABLE + res, 4, val);
+
+}
+
+int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
+{
+	int cvec, rvec, irq, pos;
+	struct msi_msg msg;
+	uint16_t control;
+	struct pcie_port *pp = bus_to_port(pdev->bus->number);
+
+	/*
+	 * Read the MSI config to figure out how many IRQs this device
+	 * wants.Most devices only want 1, which will give
+	 * configured_private_bits and request_private_bits equal 0.
+	 */
+	pci_read_config_word(pdev, desc->msi_attrib.pos + PCI_MSI_FLAGS,
+			&control);
+
+	/*
+	 * If the number of private bits has been configured then use
+	 * that value instead of the requested number. This gives the
+	 * driver the chance to override the number of interrupts
+	 * before calling pci_enable_msi().
+	 */
+
+	cvec = (control & PCI_MSI_FLAGS_QSIZE) >> 4;
+
+	if (cvec == 0) {
+		/* Nothing is configured, so use the hardware requested size */
+		rvec = (control & PCI_MSI_FLAGS_QMASK) >> 1;
+	} else {
+		/*
+		 * Use the number of configured bits, assuming the
+		 * driver wanted to override the hardware request
+		 * value.
+		 */
+		rvec = cvec;
+	}
+
+	/*
+	 * The PCI 2.3 spec mandates that there are at most 32
+	 * interrupts. If this device asks for more, only give it one.
+	 */
+	if (rvec > 5)
+		rvec = 0;
+
+	irq = get_irq((1 << rvec), desc, &pos);
+
+	 if (irq < 0)
+		return irq;
+
+	 /* Update the number of IRQs the device has available to it */
+	 control &= ~PCI_MSI_FLAGS_QSIZE;
+	 control |= rvec << 4;
+	 pci_write_config_word(pdev, desc->msi_attrib.pos + PCI_MSI_FLAGS,
+			 control);
+	 desc->msi_attrib.multiple = rvec;
+
+	/* An EP will modify lower 8 bits(max) of msi data while
+	 * sending any msi interrupt
+	 */
+	msg.address_hi = 0x0;
+	msg.address_lo = __virt_to_phys((u32)(&spear_msi_data[pp->port]));
+	msg.data = pos;
+	write_msi_msg(irq, &msg);
+
+	return 0;
+}
+
+void arch_teardown_msi_irq(unsigned int irq)
+{
+	clean_irq(irq);
+}
+
+static void spear13xx_msi_init(struct pcie_port *pp)
+{
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
+
+	spear_dbi_write_reg(pp, PCIE_MSI_ADDR_LO, 4,
+			__virt_to_phys((u32)(&spear_msi_data[pp->port])));
+	spear_dbi_write_reg(pp, PCIE_MSI_ADDR_HI, 4, 0);
+	/* Enbale MSI interrupt*/
+	writel(readl(&app_reg->int_mask) | MSI_CTRL_INT,
+			&app_reg->int_mask);
+}
+#endif

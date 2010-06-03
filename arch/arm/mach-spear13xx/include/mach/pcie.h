@@ -13,6 +13,20 @@
 
 #ifndef __MACH_PCIE_H
 #define __MACH_PCIE_H
+
+struct pcie_port {
+	u8			port;
+	u8			root_bus_nr;
+	void __iomem		*base;
+	void __iomem		*app_base;
+	void __iomem		*va_app_base;
+	void __iomem		*va_dbi_base;
+	spinlock_t		conf_lock;
+	char			mem_space_name[16];
+	char			io_space_name[16];
+	struct resource		res[2];
+};
+
 struct pcie_app_reg {
 	u32	app_ctrl_0;		/*cr0*/
 	u32	app_ctrl_1;		/*cr1*/
@@ -97,7 +111,11 @@ struct pcie_app_reg {
 #define CFG_MSI_EN_ID	18
 
 /*CR6*/
-#define MSI_CTRL_INT_ID	26
+#define INTA_CTRL_INT	(1 << 7)
+#define INTB_CTRL_INT	(1 << 8)
+#define INTC_CTRL_INT	(1 << 9)
+#define INTD_CTRL_INT	(1 << 10)
+#define MSI_CTRL_INT	(1 << 26)
 
 /*CR19 ID*/
 #define VEN_MSI_REQ_ID	11
@@ -130,3 +148,13 @@ struct pcie_app_reg {
 #define AXI_OP_TYPE_COMPLETION	10
 #define AXI_OP_TYPE_COMPLETION_LOCKED	11
 #define AXI_OP_TYPE_DBI_ELBI_ENABLE	1
+
+/* synopsis specific PCIE configuration registers*/
+#define PCIE_MSI_ADDR_LO	0x820	/* 32 bits */
+#define PCIE_MSI_ADDR_HI	0x824	/* 32 bits */
+#define PCIE_MSI_INTR0_ENABLE	0x828	/* 32 bits */
+#define PCIE_MSI_INTR0_MASK	0x82C	/* 32 bits */
+#define PCIE_MSI_INTR0_STATUS	0x830	/* 32 bits */
+
+/*BAR MASK registers*/
+#define PCIE_BAR0_MASK_REG	0x1010
