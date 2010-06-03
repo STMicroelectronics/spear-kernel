@@ -234,8 +234,7 @@ EXPORT_SYMBOL(clk_get_rate);
  * @clk: clock source
  * @parent: parent clock source
  *
- * Returns success (0) or negative errno. clk usage_count must be zero
- * before calling this function.
+ * Returns success (0) or negative errno.
  */
 int clk_set_parent(struct clk *clk, struct clk *parent)
 {
@@ -244,8 +243,6 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 
 	if (!clk || !parent)
 		return -EFAULT;
-	if (clk->usage_count)
-		return -EPERM;
 	if (clk->pclk == parent)
 		return 0;
 	if (!clk->pclk_sel)
@@ -283,8 +280,7 @@ EXPORT_SYMBOL(clk_set_parent);
  * @clk: clock source
  * @rate: desired clock rate in Hz
  *
- * Returns success (0) or negative errno. clk usage_count must be zero
- * before calling this function.
+ * Returns success (0) or negative errno.
  */
 int clk_set_rate(struct clk *clk, unsigned long rate)
 {
@@ -293,8 +289,6 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 
 	if (!clk || !rate)
 		return -EFAULT;
-	if (clk->usage_count)
-		return -EPERM;
 
 	if (clk->set_rate) {
 		spin_lock_irqsave(&clocks_lock, flags);
@@ -303,8 +297,10 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 			/* if successful -> propagate */
 			propagate_rate(clk, 0);
 		spin_unlock_irqrestore(&clocks_lock, flags);
-	} else if (clk->pclk)
-		ret = clk_set_rate(clk->pclk, rate);
+	} else if (clk->pclk) {
+		u32 mult = clk->div_factor ? clk->div_factor : 1;
+		ret = clk_set_rate(clk->pclk, mult * rate);
+	}
 
 	return ret;
 }
@@ -408,7 +404,7 @@ void propagate_rate(struct clk *pclk, int on_init)
  */
 static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
 {
-	unsigned long tmp = 0;
+	unsigned long tmp = 0, prev_rate = 0;
 	int index;
 
 	if (!clk->calc_rate)
@@ -421,7 +417,13 @@ static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
 		return index;
 	}
 
+	/*
+	 * This loops ends on two conditions:
+	 * - as soon as clk is found with rate greater than requested rate.
+	 * - if all clks in rate_config are smaller than requested rate.
+	 */
 	for (index = 0; index < clk->rate_config.count; index++) {
+		prev_rate = tmp;
 		tmp = clk->calc_rate(clk, index);
 		if (drate < tmp) {
 			index--;
@@ -429,11 +431,15 @@ static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
 		}
 	}
 	/* return if can't find suitable clock */
-	if ((index < 0) || (index >= clk->rate_config.count)) {
+	if (index < 0) {
 		index = -EINVAL;
 		*rate = 0;
-	} else
+	} else if (index == clk->rate_config.count) {
+		/* program with highest clk rate possible */
+		index = clk->rate_config.count - 1;
 		*rate = tmp;
+	} else
+		*rate = prev_rate;
 
 	return index;
 }
