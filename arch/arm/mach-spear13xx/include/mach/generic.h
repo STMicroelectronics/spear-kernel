@@ -51,17 +51,32 @@ extern struct platform_device smi_device;
 extern struct platform_device wdt_device;
 extern struct sys_timer spear13xx_timer;
 
-/* Add spear1300 machine device structure declarations here */
-
 /* Add spear13xx family function declarations here */
 void __init clk_init(void);
 void __init i2c_register_board_devices(void);
 void __init spear_setup_timer(void);
-void __init spear1300_init(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
+
+/* spear1300 declarations */
+#ifdef CONFIG_MACH_SPEAR1300
+/* Add spear1300 machine function declarations here */
+void __init spear1300_init(void);
+
+#endif /* CONFIG_MACH_SPEAR1300 */
+
+/* spear1310 declarations */
+#ifdef CONFIG_MACH_SPEAR1310
+/* Add spear1310 machine device structure declarations here */
+extern struct platform_device can0_device;
+extern struct platform_device can1_device;
+
+/* Add spear1310 machine function declarations here */
+void __init spear1310_init(void);
+
+#endif /* CONFIG_MACH_SPEAR1310 */
 
 #endif /* __MACH_GENERIC_H */

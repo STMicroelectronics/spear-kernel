@@ -28,6 +28,7 @@
 #include <plat/spi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
+	/* spear13xx specific devices */
 	&gpio_device[0],
 	&gpio_device[1],
 	&ssp_device,
@@ -35,6 +36,7 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	/* spear13xx specific devices */
 	&adc_device,
 	&dmac_device[0],
 	&dmac_device[1],
@@ -52,6 +54,10 @@ static struct platform_device *plat_devs[] __initdata = {
 	&sdhci_device,
 	&smi_device,
 	&wdt_device,
+
+	/* spear1310 specific devices */
+	&can0_device,
+	&can1_device,
 };
 
 /* keyboard specific platform data */

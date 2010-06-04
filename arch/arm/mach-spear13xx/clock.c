@@ -803,6 +803,28 @@ static struct clk kbd_clk = {
 	.recalc = &follow_parent,
 };
 
+/* spear1300 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR1300
+
+#endif
+
+/* spear1310 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR1310
+/* can0 clock */
+static struct clk can0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* can1 clock */
+static struct clk can1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
 /* array of all spear 13xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
 	/* root clks */
@@ -876,6 +898,16 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
 	{.dev_id = "cortexa9-wdt",	.clk = &wdt_clk},
+
+	/* spear1300 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR1300
+#endif
+
+	/* spear1310 machine specific clock structures */
+#ifdef CONFIG_MACH_SPEAR1310
+	{.dev_id = "spear_can.0",	.clk = &can0_clk},
+	{.dev_id = "spear_can.1",	.clk = &can1_clk},
+#endif
 };
 
 void __init clk_init(void)

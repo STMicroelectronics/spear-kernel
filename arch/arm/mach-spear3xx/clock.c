@@ -593,6 +593,20 @@ static struct clk uart5_clk = {
 
 /* spear320 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR320
+/* can0 clock */
+static struct clk can0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* can1 clock */
+static struct clk can1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
 /* i2c1 clock */
 static struct clk i2c1_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -693,6 +707,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 #endif
 	/* spear320 machine specific clock structures */
 #ifdef CONFIG_MACH_SPEAR320
+	{ .dev_id = "spear_can.0",	.clk = &can0_clk},
+	{ .dev_id = "spear_can.1",	.clk = &can1_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
