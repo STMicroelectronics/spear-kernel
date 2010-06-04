@@ -13,9 +13,15 @@ config MACH_SPEAR1300
 	help
 	  Supports ST SPEAr1300 Machine
 
+config MACH_SPEAR1310
+	bool "SPEAr1310"
+	help
+	  Supports ST SPEAr1310 Machine
+
 endchoice
 
 # Adding SPEAr13XX machine specific configuration files
 source "arch/arm/mach-spear13xx/Kconfig1300"
+source "arch/arm/mach-spear13xx/Kconfig1310"
 
 endif #ARCH_SPEAR13XX

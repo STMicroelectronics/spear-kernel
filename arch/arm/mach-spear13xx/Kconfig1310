@@ -1,0 +1,17 @@
+#
+# SPEAr1310 machine configuration file
+#
+
+if MACH_SPEAR1310
+
+choice
+	prompt "SPEAr1310 Boards"
+	default BOARD_SPEAR1310_EVB
+
+config BOARD_SPEAR1310_EVB
+	bool "SPEAr1310 Evaluation Board"
+	help
+	  Supports ST SPEAr1310 Evaluation Board
+endchoice
+
+endif #MACH_SPEAR1310
