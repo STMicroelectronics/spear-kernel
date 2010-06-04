@@ -41,6 +41,21 @@ config CAN_AT91
 	---help---
 	  This is a driver for the SoC CAN controller in Atmel's AT91SAM9263.
 
+config CAN_BOSCH_CCAN
+	tristate "Bosch CCAN controller"
+	depends on CAN_DEV
+	---help---
+	  If you say yes to this option, support will be included for the
+	  Bosch CCAN controller.
+
+config CAN_SPEAR
+	tristate "SPEAr CAN controller"
+	depends on CAN_DEV && CAN_BOSCH_CCAN
+	---help---
+	  If you say yes to this option, support will be included for the
+	  SPEAr CAN controller which has two inbuilt CCAN controllers.
+	  This driver can also be built as a module.
+
 source "drivers/net/can/sja1000/Kconfig"
 
 source "drivers/net/can/usb/Kconfig"
