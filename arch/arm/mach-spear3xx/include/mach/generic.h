@@ -160,9 +160,10 @@ void sdhci_i2s_mem_enable(u8 mask);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
+#endif
 
 /* spear310 declarations */
-#elif defined(CONFIG_MACH_SPEAR310)
+#if defined(CONFIG_MACH_SPEAR310)
 /* Add spear310 machine device structure declarations here */
 extern struct amba_device uart1_device;
 extern struct amba_device uart2_device;
@@ -187,9 +188,10 @@ extern struct pmx_dev spear310_pmx_tdm0;
 /* Add spear310 machine function declarations here */
 void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
+#endif
 
 /* spear320 declarations */
-#elif defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_MACH_SPEAR320)
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
 extern struct amba_device ssp_device[];
