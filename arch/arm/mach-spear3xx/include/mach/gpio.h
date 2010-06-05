@@ -51,8 +51,9 @@
 #define RAS_GPIO_5		13
 #define RAS_GPIO_6		14
 #define RAS_GPIO_7		15
+#endif
 
-#elif defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
 #define PLGPIO_0		8
 #define PLGPIO_1		9
 #define PLGPIO_2		10
