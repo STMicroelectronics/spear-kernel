@@ -273,7 +273,6 @@ void __init spear3xx_map_io(void)
 }
 
 /* pad multiplexing support */
-/* devices */
 
 /* Pad multiplexing for firda device */
 static struct pmx_mux_reg pmx_firda_mux[] = {
@@ -606,7 +605,6 @@ struct pmx_dev pmx_timer_1_2 = {
 };
 
 #if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
-/* plgpios devices */
 /* Pad multiplexing for plgpio_0_1 devices */
 static struct pmx_mux_reg pmx_plgpio_0_1_mux[] = {
 	{
