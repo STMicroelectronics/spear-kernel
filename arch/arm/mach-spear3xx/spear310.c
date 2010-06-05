@@ -38,7 +38,7 @@ static struct pmx_dev_mode pmx_emi_cs_0_1_4_5_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_emi_cs_0_1_4_5 = {
+struct pmx_dev spear310_pmx_emi_cs_0_1_4_5 = {
 	.name = "emi_cs_0_1_4_5",
 	.modes = pmx_emi_cs_0_1_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_cs_0_1_4_5_modes),
@@ -59,7 +59,7 @@ static struct pmx_dev_mode pmx_emi_cs_2_3_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_emi_cs_2_3 = {
+struct pmx_dev spear310_pmx_emi_cs_2_3 = {
 	.name = "emi_cs_2_3",
 	.modes = pmx_emi_cs_2_3_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_cs_2_3_modes),
@@ -80,7 +80,7 @@ static struct pmx_dev_mode pmx_uart1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart1 = {
+struct pmx_dev spear310_pmx_uart1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
@@ -101,7 +101,7 @@ static struct pmx_dev_mode pmx_uart2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart2 = {
+struct pmx_dev spear310_pmx_uart2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
@@ -122,7 +122,7 @@ static struct pmx_dev_mode pmx_uart3_4_5_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart3_4_5 = {
+struct pmx_dev spear310_pmx_uart3_4_5 = {
 	.name = "uart3_4_5",
 	.modes = pmx_uart3_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart3_4_5_modes),
@@ -143,7 +143,7 @@ static struct pmx_dev_mode pmx_fsmc_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_fsmc = {
+struct pmx_dev spear310_pmx_fsmc = {
 	.name = "fsmc",
 	.modes = pmx_fsmc_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
@@ -164,7 +164,7 @@ static struct pmx_dev_mode pmx_rs485_0_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_rs485_0_1 = {
+struct pmx_dev spear310_pmx_rs485_0_1 = {
 	.name = "rs485_0_1",
 	.modes = pmx_rs485_0_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_rs485_0_1_modes),
@@ -185,14 +185,14 @@ static struct pmx_dev_mode pmx_tdm0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_tdm0 = {
+struct pmx_dev spear310_pmx_tdm0 = {
 	.name = "tdm0",
 	.modes = pmx_tdm0_modes,
 	.mode_count = ARRAY_SIZE(pmx_tdm0_modes),
 };
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver;
+static struct pmx_driver pmx_driver;
 
 /* Add spear310 specific devices here */
 /* uart1 device registeration */
@@ -479,7 +479,8 @@ static struct spear_shirq shirq_intrcomm_ras = {
 };
 
 /* spear310 routines */
-void __init spear310_init(void)
+void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count)
 {
 	void __iomem *base;
 	int ret = 0;
@@ -515,10 +516,13 @@ void __init spear310_init(void)
 			printk(KERN_ERR "Error registering Shared IRQ 4\n");
 	}
 
+	/* pmx initialization */
+	pmx_driver.mode = pmx_mode;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = pmx_dev_count;
+
 	/* This fixes addresses of all pmx devices for spear310 */
 	spear3xx_pmx_init_addr(&pmx_driver, SPEAR310_PAD_MUX_CONFIG_REG);
-
-	/* pmx initialization */
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);

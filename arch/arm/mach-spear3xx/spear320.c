@@ -71,7 +71,7 @@ static struct pmx_dev_mode pmx_clcd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd = {
+struct pmx_dev spear320_pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
@@ -93,7 +93,7 @@ static struct pmx_dev_mode pmx_emi_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_emi = {
+struct pmx_dev spear320_pmx_emi = {
 	.name = "emi",
 	.modes = pmx_emi_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_modes),
@@ -115,7 +115,7 @@ static struct pmx_dev_mode pmx_fsmc_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_fsmc = {
+struct pmx_dev spear320_pmx_fsmc = {
 	.name = "fsmc",
 	.modes = pmx_fsmc_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
@@ -137,7 +137,7 @@ static struct pmx_dev_mode pmx_spp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_spp = {
+struct pmx_dev spear320_pmx_spp = {
 	.name = "spp",
 	.modes = pmx_spp_modes,
 	.mode_count = ARRAY_SIZE(pmx_spp_modes),
@@ -160,7 +160,7 @@ static struct pmx_dev_mode pmx_sdhci_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_sdhci = {
+struct pmx_dev spear320_pmx_sdhci = {
 	.name = "sdhci",
 	.modes = pmx_sdhci_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
@@ -182,7 +182,7 @@ static struct pmx_dev_mode pmx_i2s_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2s = {
+struct pmx_dev spear320_pmx_i2s = {
 	.name = "i2s",
 	.modes = pmx_i2s_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s_modes),
@@ -204,7 +204,7 @@ static struct pmx_dev_mode pmx_uart1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart1 = {
+struct pmx_dev spear320_pmx_uart1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
@@ -239,7 +239,7 @@ static struct pmx_dev_mode pmx_uart1_modem_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart1_modem = {
+struct pmx_dev spear320_pmx_uart1_modem = {
 	.name = "uart1_modem",
 	.modes = pmx_uart1_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes),
@@ -261,7 +261,7 @@ static struct pmx_dev_mode pmx_uart2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart2 = {
+struct pmx_dev spear320_pmx_uart2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
@@ -283,7 +283,7 @@ static struct pmx_dev_mode pmx_touchscreen_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_touchscreen = {
+struct pmx_dev spear320_pmx_touchscreen = {
 	.name = "touchscreen",
 	.modes = pmx_touchscreen_modes,
 	.mode_count = ARRAY_SIZE(pmx_touchscreen_modes),
@@ -306,7 +306,7 @@ static struct pmx_dev_mode pmx_can_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_can = {
+struct pmx_dev spear320_pmx_can = {
 	.name = "can",
 	.modes = pmx_can_modes,
 	.mode_count = ARRAY_SIZE(pmx_can_modes),
@@ -328,7 +328,7 @@ static struct pmx_dev_mode pmx_sdhci_led_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_sdhci_led = {
+struct pmx_dev spear320_pmx_sdhci_led = {
 	.name = "sdhci_led",
 	.modes = pmx_sdhci_led_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_led_modes),
@@ -361,7 +361,7 @@ static struct pmx_dev_mode pmx_pwm0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_pwm0 = {
+struct pmx_dev spear320_pmx_pwm0 = {
 	.name = "pwm0",
 	.modes = pmx_pwm0_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm0_modes),
@@ -394,7 +394,7 @@ static struct pmx_dev_mode pmx_pwm1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_pwm1 = {
+struct pmx_dev spear320_pmx_pwm1 = {
 	.name = "pwm1",
 	.modes = pmx_pwm1_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm1_modes),
@@ -427,7 +427,7 @@ static struct pmx_dev_mode pmx_pwm2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_pwm2 = {
+struct pmx_dev spear320_pmx_pwm2 = {
 	.name = "pwm2",
 	.modes = pmx_pwm2_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm2_modes),
@@ -449,7 +449,7 @@ static struct pmx_dev_mode pmx_pwm3_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_pwm3 = {
+struct pmx_dev spear320_pmx_pwm3 = {
 	.name = "pwm3",
 	.modes = pmx_pwm3_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm3_modes),
@@ -471,7 +471,7 @@ static struct pmx_dev_mode pmx_ssp1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp1 = {
+struct pmx_dev spear320_pmx_ssp1 = {
 	.name = "ssp1",
 	.modes = pmx_ssp1_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp1_modes),
@@ -493,7 +493,7 @@ static struct pmx_dev_mode pmx_ssp2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp2 = {
+struct pmx_dev spear320_pmx_ssp2 = {
 	.name = "ssp2",
 	.modes = pmx_ssp2_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp2_modes),
@@ -515,7 +515,7 @@ static struct pmx_dev_mode pmx_mii1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_mii1 = {
+struct pmx_dev spear320_pmx_mii1 = {
 	.name = "mii1",
 	.modes = pmx_mii1_modes,
 	.mode_count = ARRAY_SIZE(pmx_mii1_modes),
@@ -537,7 +537,7 @@ static struct pmx_dev_mode pmx_smii0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smii0 = {
+struct pmx_dev spear320_pmx_smii0 = {
 	.name = "smii0",
 	.modes = pmx_smii0_modes,
 	.mode_count = ARRAY_SIZE(pmx_smii0_modes),
@@ -559,7 +559,7 @@ static struct pmx_dev_mode pmx_smii1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smii1 = {
+struct pmx_dev spear320_pmx_smii1 = {
 	.name = "smii1",
 	.modes = pmx_smii1_modes,
 	.mode_count = ARRAY_SIZE(pmx_smii1_modes),
@@ -581,14 +581,14 @@ static struct pmx_dev_mode pmx_i2c1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2c1 = {
+struct pmx_dev spear320_pmx_i2c1 = {
 	.name = "i2c1",
 	.modes = pmx_i2c1_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
 };
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver = {
+static struct pmx_driver pmx_driver = {
 	.mode_reg = {.address = SPEAR320_MODE_CONFIG_REG, .mask = 0x00000007},
 };
 
@@ -959,7 +959,8 @@ static struct spear_shirq shirq_intrcomm_ras = {
 };
 
 /* spear320 routines */
-void __init spear320_init(void)
+void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count)
 {
 	void __iomem *base;
 	int ret = 0;
@@ -989,10 +990,13 @@ void __init spear320_init(void)
 			printk(KERN_ERR "Error registering Shared IRQ 4\n");
 	}
 
+	/* pmx initialization */
+	pmx_driver.mode = pmx_mode;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = pmx_dev_count;
+
 	/* This fixes addresses of all pmx devices for spear320 */
 	spear3xx_pmx_init_addr(&pmx_driver, SPEAR320_PAD_MUX_CONFIG_REG);
-
-	/* pmx initialization */
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);

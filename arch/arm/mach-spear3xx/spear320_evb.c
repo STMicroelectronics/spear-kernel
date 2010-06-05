@@ -46,22 +46,22 @@ static struct resource emi_nor_resources[] = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear3xx specific devices */
-	&pmx_i2c,
-	&pmx_ssp,
-	&pmx_mii,
-	&pmx_uart0,
+	&spear3xx_pmx_i2c,
+	&spear3xx_pmx_ssp,
+	&spear3xx_pmx_mii,
+	&spear3xx_pmx_uart0,
 
 	/* spear320 specific devices */
-	&pmx_fsmc,
-	&pmx_sdhci,
-	&pmx_i2s,
-	&pmx_uart1,
-	&pmx_uart2,
-	&pmx_can,
-	&pmx_pwm0,
-	&pmx_pwm1,
-	&pmx_pwm2,
-	&pmx_mii1,
+	&spear320_pmx_fsmc,
+	&spear320_pmx_sdhci,
+	&spear320_pmx_i2s,
+	&spear320_pmx_uart1,
+	&spear320_pmx_uart2,
+	&spear320_pmx_can,
+	&spear320_pmx_pwm0,
+	&spear320_pmx_pwm1,
+	&spear320_pmx_pwm2,
+	&spear320_pmx_mii1,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -110,17 +110,12 @@ static void __init spear320_evb_init(void)
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
 
-	/* padmux initialization, must be done before spear320_init */
-	pmx_driver.mode = &auto_net_mii_mode;
-	pmx_driver.devs = pmx_devs;
-	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
-
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			FSMC_NAND_BW8);
 
 	/* call spear320 machine init function */
-	spear320_init();
+	spear320_init(&auto_net_mii_mode, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
