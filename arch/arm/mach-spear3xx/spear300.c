@@ -537,13 +537,13 @@ struct amba_device clcd_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.dma_mask = ~0,
-	.irq = {IRQ_CLCD, NO_IRQ},
+	.irq = {SPEAR300_IRQ_CLCD, NO_IRQ},
 };
 
 /* arm gpio1 device registration */
 static struct pl061_platform_data gpio1_plat_data = {
 	.gpio_base	= 8,
-	.irq_base	= SPEAR_GPIO1_INT_BASE,
+	.irq_base	= SPEAR300_GPIO1_INT_BASE,
 };
 
 struct amba_device gpio1_device = {
@@ -556,7 +556,7 @@ struct amba_device gpio1_device = {
 		.end = SPEAR300_GPIO_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {VIRQ_GPIO1, NO_IRQ},
+	.irq = {SPEAR300_VIRQ_GPIO1, NO_IRQ},
 };
 
 /* keyboard device registration */
@@ -566,7 +566,7 @@ static struct resource kbd_resources[] = {
 		.end = SPEAR300_KEYBOARD_BASE + SZ_1K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = VIRQ_KEYBOARD,
+		.start = SPEAR300_VIRQ_KEYBOARD,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -682,7 +682,7 @@ static struct resource sdhci_resources[] = {
 		.end	= SPEAR300_SDHCI_BASE + SZ_256 - 1,
 		.flags	= IORESOURCE_MEM,
 	}, {
-		.start	= IRQ_SDHCI,
+		.start	= SPEAR300_IRQ_SDHCI,
 		.flags	= IORESOURCE_IRQ,
 	}
 };
@@ -700,53 +700,52 @@ struct platform_device sdhci_device = {
 /* spear3xx shared irq */
 static struct shirq_dev_config shirq_ras1_config[] = {
 	{
-		.virq = VIRQ_IT_PERS_S,
-		.enb_mask = IT_PERS_S_IRQ_MASK,
-		.status_mask = IT_PERS_S_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_IT_PERS_S,
+		.enb_mask = SPEAR300_IT_PERS_S_IRQ_MASK,
+		.status_mask = SPEAR300_IT_PERS_S_IRQ_MASK,
 	}, {
-		.virq = VIRQ_IT_CHANGE_S,
-		.enb_mask = IT_CHANGE_S_IRQ_MASK,
-		.status_mask = IT_CHANGE_S_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_IT_CHANGE_S,
+		.enb_mask = SPEAR300_IT_CHANGE_S_IRQ_MASK,
+		.status_mask = SPEAR300_IT_CHANGE_S_IRQ_MASK,
 	}, {
-		.virq = VIRQ_I2S,
-		.enb_mask = I2S_IRQ_MASK,
-		.status_mask = I2S_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_I2S,
+		.enb_mask = SPEAR300_I2S_IRQ_MASK,
+		.status_mask = SPEAR300_I2S_IRQ_MASK,
 	}, {
-		.virq = VIRQ_TDM,
-		.enb_mask = TDM_IRQ_MASK,
-		.status_mask = TDM_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_TDM,
+		.enb_mask = SPEAR300_TDM_IRQ_MASK,
+		.status_mask = SPEAR300_TDM_IRQ_MASK,
 	}, {
-		.virq = VIRQ_CAMERA_L,
-		.enb_mask = CAMERA_L_IRQ_MASK,
-		.status_mask = CAMERA_L_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_CAMERA_L,
+		.enb_mask = SPEAR300_CAMERA_L_IRQ_MASK,
+		.status_mask = SPEAR300_CAMERA_L_IRQ_MASK,
 	}, {
-		.virq = VIRQ_CAMERA_F,
-		.enb_mask = CAMERA_F_IRQ_MASK,
-		.status_mask = CAMERA_F_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_CAMERA_F,
+		.enb_mask = SPEAR300_CAMERA_F_IRQ_MASK,
+		.status_mask = SPEAR300_CAMERA_F_IRQ_MASK,
 	}, {
-		.virq = VIRQ_CAMERA_V,
-		.enb_mask = CAMERA_V_IRQ_MASK,
-		.status_mask = CAMERA_V_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_CAMERA_V,
+		.enb_mask = SPEAR300_CAMERA_V_IRQ_MASK,
+		.status_mask = SPEAR300_CAMERA_V_IRQ_MASK,
 	}, {
-		.virq = VIRQ_KEYBOARD,
-		.enb_mask = KEYBOARD_IRQ_MASK,
-		.status_mask = KEYBOARD_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_KEYBOARD,
+		.enb_mask = SPEAR300_KEYBOARD_IRQ_MASK,
+		.status_mask = SPEAR300_KEYBOARD_IRQ_MASK,
 	}, {
-		.virq = VIRQ_GPIO1,
-		.enb_mask = GPIO1_IRQ_MASK,
-		.status_mask = GPIO1_IRQ_MASK,
+		.virq = SPEAR300_VIRQ_GPIO1,
+		.enb_mask = SPEAR300_GPIO1_IRQ_MASK,
+		.status_mask = SPEAR300_GPIO1_IRQ_MASK,
 	},
 };
 
-
 static struct spear_shirq shirq_ras1 = {
-	.irq = IRQ_GEN_RAS_1,
+	.irq = SPEAR3XX_IRQ_GEN_RAS_1,
 	.dev_config = shirq_ras1_config,
 	.dev_count = ARRAY_SIZE(shirq_ras1_config),
 	.regs = {
-		.enb_reg = INT_ENB_MASK_REG,
-		.status_reg = INT_STS_MASK_REG,
-		.status_reg_mask = SHIRQ_RAS1_MASK,
+		.enb_reg = SPEAR300_INT_ENB_MASK_REG,
+		.status_reg = SPEAR300_INT_STS_MASK_REG,
+		.status_reg_mask = SPEAR300_SHIRQ_RAS1_MASK,
 		.clear_reg = -1,
 	},
 };
