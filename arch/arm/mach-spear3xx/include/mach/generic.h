@@ -69,21 +69,21 @@ void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr);
 #define PMX_TIMER_1_2_MASK	(1 << 0)
 
 /* pad mux devices */
-extern struct pmx_dev pmx_firda;
-extern struct pmx_dev pmx_i2c;
-extern struct pmx_dev pmx_ssp_cs;
-extern struct pmx_dev pmx_ssp;
-extern struct pmx_dev pmx_mii;
-extern struct pmx_dev pmx_gpio_pin0;
-extern struct pmx_dev pmx_gpio_pin1;
-extern struct pmx_dev pmx_gpio_pin2;
-extern struct pmx_dev pmx_gpio_pin3;
-extern struct pmx_dev pmx_gpio_pin4;
-extern struct pmx_dev pmx_gpio_pin5;
-extern struct pmx_dev pmx_uart0_modem;
-extern struct pmx_dev pmx_uart0;
-extern struct pmx_dev pmx_timer_3_4;
-extern struct pmx_dev pmx_timer_1_2;
+extern struct pmx_dev spear3xx_pmx_firda;
+extern struct pmx_dev spear3xx_pmx_i2c;
+extern struct pmx_dev spear3xx_pmx_ssp_cs;
+extern struct pmx_dev spear3xx_pmx_ssp;
+extern struct pmx_dev spear3xx_pmx_mii;
+extern struct pmx_dev spear3xx_pmx_gpio_pin0;
+extern struct pmx_dev spear3xx_pmx_gpio_pin1;
+extern struct pmx_dev spear3xx_pmx_gpio_pin2;
+extern struct pmx_dev spear3xx_pmx_gpio_pin3;
+extern struct pmx_dev spear3xx_pmx_gpio_pin4;
+extern struct pmx_dev spear3xx_pmx_gpio_pin5;
+extern struct pmx_dev spear3xx_pmx_uart0_modem;
+extern struct pmx_dev spear3xx_pmx_uart0;
+extern struct pmx_dev spear3xx_pmx_timer_3_4;
+extern struct pmx_dev spear3xx_pmx_timer_1_2;
 
 #if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
 /* padmux plgpio devices */
@@ -103,8 +103,6 @@ extern struct pmx_dev pmx_plgpio_37_42;
 extern struct pmx_dev pmx_plgpio_43_44_47_48;
 extern struct pmx_dev pmx_plgpio_45_46_49_50;
 #endif
-
-extern struct pmx_driver pmx_driver;
 
 /* spear300 declarations */
 #ifdef CONFIG_MACH_SPEAR300
@@ -134,27 +132,28 @@ extern struct pmx_mode camu_wlcd_mode;
 extern struct pmx_mode caml_lcd_mode;
 
 /* pad mux devices */
-extern struct pmx_dev pmx_fsmc_2_chips;
-extern struct pmx_dev pmx_fsmc_4_chips;
-extern struct pmx_dev pmx_keyboard;
-extern struct pmx_dev pmx_clcd;
-extern struct pmx_dev pmx_telecom_gpio;
-extern struct pmx_dev pmx_telecom_tdm;
-extern struct pmx_dev pmx_telecom_spi_cs_i2c_clk;
-extern struct pmx_dev pmx_telecom_camera;
-extern struct pmx_dev pmx_telecom_dac;
-extern struct pmx_dev pmx_telecom_i2s;
-extern struct pmx_dev pmx_telecom_boot_pins;
-extern struct pmx_dev pmx_telecom_sdhci_4bit;
-extern struct pmx_dev pmx_telecom_sdhci_8bit;
-extern struct pmx_dev pmx_gpio1;
+extern struct pmx_dev spear300_pmx_fsmc_2_chips;
+extern struct pmx_dev spear300_pmx_fsmc_4_chips;
+extern struct pmx_dev spear300_pmx_keyboard;
+extern struct pmx_dev spear300_pmx_clcd;
+extern struct pmx_dev spear300_pmx_telecom_gpio;
+extern struct pmx_dev spear300_pmx_telecom_tdm;
+extern struct pmx_dev spear300_pmx_telecom_spi_cs_i2c_clk;
+extern struct pmx_dev spear300_pmx_telecom_camera;
+extern struct pmx_dev spear300_pmx_telecom_dac;
+extern struct pmx_dev spear300_pmx_telecom_i2s;
+extern struct pmx_dev spear300_pmx_telecom_boot_pins;
+extern struct pmx_dev spear300_pmx_telecom_sdhci_4bit;
+extern struct pmx_dev spear300_pmx_telecom_sdhci_8bit;
+extern struct pmx_dev spear300_pmx_gpio1;
 
 /* pad multiplexing support */
 #define SPEAR300_PAD_MUX_CONFIG_REG	0x99000000
 #define SPEAR300_MODE_CONFIG_REG	0x99000004
 
 /* Add spear300 machine function declarations here */
-void __init spear300_init(void);
+void __init spear300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
 #define SDHCI_MEM_ENB	0x1
 #define I2S_MEM_ENB	0x2
 void sdhci_i2s_mem_enable(u8 mask);
@@ -175,18 +174,19 @@ extern struct platform_device plgpio_device;
 extern struct platform_device nand_device;
 
 /* pad mux devices */
-extern struct pmx_dev pmx_emi_cs_0_1_4_5;
-extern struct pmx_dev pmx_emi_cs_2_3;
-extern struct pmx_dev pmx_uart1;
-extern struct pmx_dev pmx_uart2;
-extern struct pmx_dev pmx_uart3_4_5;
-extern struct pmx_dev pmx_fsmc;
-extern struct pmx_dev pmx_rs485_0_1;
-extern struct pmx_dev pmx_tdm0;
+extern struct pmx_dev spear310_pmx_emi_cs_0_1_4_5;
+extern struct pmx_dev spear310_pmx_emi_cs_2_3;
+extern struct pmx_dev spear310_pmx_uart1;
+extern struct pmx_dev spear310_pmx_uart2;
+extern struct pmx_dev spear310_pmx_uart3_4_5;
+extern struct pmx_dev spear310_pmx_fsmc;
+extern struct pmx_dev spear310_pmx_rs485_0_1;
+extern struct pmx_dev spear310_pmx_tdm0;
 #define SPEAR310_PAD_MUX_CONFIG_REG	0xB4000008
 
 /* Add spear310 machine function declarations here */
-void __init spear310_init(void);
+void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
 
 /* spear320 declarations */
 #elif defined(CONFIG_MACH_SPEAR320)
@@ -211,35 +211,36 @@ extern struct pmx_mode auto_exp_mode;
 extern struct pmx_mode small_printers_mode;
 
 /* pad mux devices */
-extern struct pmx_dev pmx_clcd;
-extern struct pmx_dev pmx_emi;
-extern struct pmx_dev pmx_fsmc;
-extern struct pmx_dev pmx_spp;
-extern struct pmx_dev pmx_sdhci;
-extern struct pmx_dev pmx_i2s;
-extern struct pmx_dev pmx_uart1;
-extern struct pmx_dev pmx_uart1_modem;
-extern struct pmx_dev pmx_uart2;
-extern struct pmx_dev pmx_touchscreen;
-extern struct pmx_dev pmx_can;
-extern struct pmx_dev pmx_sdhci_led;
-extern struct pmx_dev pmx_pwm0;
-extern struct pmx_dev pmx_pwm1;
-extern struct pmx_dev pmx_pwm2;
-extern struct pmx_dev pmx_pwm3;
-extern struct pmx_dev pmx_ssp1;
-extern struct pmx_dev pmx_ssp2;
-extern struct pmx_dev pmx_mii1;
-extern struct pmx_dev pmx_smii0;
-extern struct pmx_dev pmx_smii1;
-extern struct pmx_dev pmx_i2c1;
+extern struct pmx_dev spear320_pmx_clcd;
+extern struct pmx_dev spear320_pmx_emi;
+extern struct pmx_dev spear320_pmx_fsmc;
+extern struct pmx_dev spear320_pmx_spp;
+extern struct pmx_dev spear320_pmx_sdhci;
+extern struct pmx_dev spear320_pmx_i2s;
+extern struct pmx_dev spear320_pmx_uart1;
+extern struct pmx_dev spear320_pmx_uart1_modem;
+extern struct pmx_dev spear320_pmx_uart2;
+extern struct pmx_dev spear320_pmx_touchscreen;
+extern struct pmx_dev spear320_pmx_can;
+extern struct pmx_dev spear320_pmx_sdhci_led;
+extern struct pmx_dev spear320_pmx_pwm0;
+extern struct pmx_dev spear320_pmx_pwm1;
+extern struct pmx_dev spear320_pmx_pwm2;
+extern struct pmx_dev spear320_pmx_pwm3;
+extern struct pmx_dev spear320_pmx_ssp1;
+extern struct pmx_dev spear320_pmx_ssp2;
+extern struct pmx_dev spear320_pmx_mii1;
+extern struct pmx_dev spear320_pmx_smii0;
+extern struct pmx_dev spear320_pmx_smii1;
+extern struct pmx_dev spear320_pmx_i2c1;
 
 /* pad multiplexing support */
 #define SPEAR320_PAD_MUX_CONFIG_REG	0xB300000C
 #define SPEAR320_MODE_CONFIG_REG	0xB3000010
 
 /* Add spear320 machine function declarations here */
-void __init spear320_init(void);
+void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
