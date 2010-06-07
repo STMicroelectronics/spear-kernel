@@ -98,6 +98,10 @@
 	#define CLCD_CLK_SHIFT		2
 	#define C3_CLK_MASK		1
 	#define C3_CLK_SHIFT		1
+	#define MCTR_CLK_SHIFT		10
+	#define MCTR_CLK_MASK		0x1
+	#define MCTR_CLK_PLL1_VAL	0x0
+	#define MCTR_CLK_PLL4_VAL	0x1
 
 #define GMAC_CLK_CFG		(MISC_BASE + 0x248)
 

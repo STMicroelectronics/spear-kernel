@@ -21,6 +21,8 @@
 #include <linux/spinlock.h>
 #include <plat/clock.h>
 
+/* pointer to ddr clock structure */
+static struct clk *ddr_clk;
 static DEFINE_SPINLOCK(clocks_lock);
 static LIST_HEAD(root_clks);
 #ifdef CONFIG_DEBUG_FS
@@ -160,7 +162,7 @@ static int do_clk_enable(struct clk *clk)
 		 * time please reclac
 		 */
 		if (clk->recalc) {
-			ret = clk->recalc(clk);
+			ret = clk->recalc(clk, &clk->rate, clk->pclk->rate);
 			if (ret)
 				goto err;
 		}
@@ -298,7 +300,16 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 			propagate_rate(clk, 0);
 		spin_unlock_irqrestore(&clocks_lock, flags);
 	} else if (clk->pclk) {
-		u32 mult = clk->div_factor ? clk->div_factor : 1;
+		u32 mult;
+		/*
+		 * if pclk is SYSTEM_CLK and clk is not SYSTEM_CLK then return
+		 * error
+		 */
+		if (clk->pclk->flags & SYSTEM_CLK)
+			if (!(clk->flags & SYSTEM_CLK))
+				return -EPERM;
+
+		mult = clk->div_factor ? clk->div_factor : 1;
 		ret = clk_set_rate(clk->pclk, mult * rate);
 	}
 
@@ -371,7 +382,7 @@ void propagate_rate(struct clk *pclk, int on_init)
 
 	list_for_each_entry_safe(clk, _temp, &pclk->children, sibling) {
 		if (clk->recalc) {
-			ret = clk->recalc(clk);
+			ret = clk->recalc(clk, &clk->rate, clk->pclk->rate);
 			/*
 			 * recalc will return error if clk out is not programmed
 			 * In this case configure default rate.
@@ -387,6 +398,47 @@ void propagate_rate(struct clk *pclk, int on_init)
 		/* Enable clks enabled on init, in software view */
 		if (clk->flags & ENABLED_ON_INIT)
 			do_clk_enable(clk);
+	}
+}
+
+/* updates "rate" pointer with current_clk's output for input "rate" */
+static void rate_calc(struct clk *current_clk, struct clk *ancestor_clk,
+		unsigned long *rate)
+{
+	if (current_clk->pclk != ancestor_clk)
+		rate_calc(current_clk->pclk, ancestor_clk, rate);
+
+	if (current_clk->recalc)
+		current_clk->recalc(current_clk, rate, *rate);
+}
+
+/*
+ * Check if ancestor clk rate is acceptable to ddr or not.
+ * This will call recursive rate_calc function, starting from ddr upto ancestor
+ * clk mentioned. This will calculate divisions / multiplications by all
+ * intermediate ancestor clocks and return the final rate of ddr if ancestor clk
+ * sets its rate to "rate", value passed in function.
+ */
+static int ddr_rate_acceptable(struct clk *aclk, unsigned long rate)
+{
+	struct ddr_rate_tbl *tbl = ddr_clk->private_data;
+
+	rate_calc(ddr_clk, aclk, &rate);
+	if ((rate >= tbl->minrate) && (rate <= tbl->maxrate))
+		return true;
+
+	return false;
+}
+
+/* mark all ddr ancestors with DDR_ANCESTOR flag */
+static void mark_ddr_ancestors(struct clk *dclk)
+{
+	struct clk *clk = dclk->pclk;
+
+	/* mark all ancestors of DDR */
+	while (clk != NULL) {
+		clk->flags |= DDR_ANCESTOR;
+		clk = clk->pclk;
 	}
 }
 
@@ -492,7 +544,7 @@ unsigned long pll_calc_rate(struct clk *clk, int index)
  * In Dithered mode
  * rate = (2 * M[15:0] * Fin)/(256 * N * 2^P)
  */
-int pll_clk_recalc(struct clk *clk)
+int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct pll_clk_config *config = clk->private_data;
 	unsigned int num = 2, den = 0, val, mode = 0;
@@ -521,7 +573,7 @@ int pll_clk_recalc(struct clk *clk)
 	if (!den)
 		return -EINVAL;
 
-	clk->rate = (((clk->pclk->rate/10000) * num) / den) * 10000;
+	*rate = (((prate/10000) * num) / den) * 10000;
 	return 0;
 }
 
@@ -538,6 +590,25 @@ int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
+
+	/* if clk is ddrs ancestor, check if rate is acceptable to ddr */
+	if (ddr_clk && (clk->flags & DDR_ANCESTOR)) {
+		int ret;
+
+		ret = ddr_rate_acceptable(clk, rate);
+		if (ret == false)
+			return -EPERM;
+		else {
+			/*
+			 * call routine to put ddr in refresh mode, and
+			 * configure pll.
+			 */
+			/* TBD */
+			clk->rate = rate;
+		}
+
+		return ret;
+	}
 
 	val = readl(config->mode_reg) &
 		~(config->masks->mode_mask << config->masks->mode_shift);
@@ -580,7 +651,7 @@ unsigned long bus_calc_rate(struct clk *clk, int index)
 }
 
 /* calculates current programmed rate of ahb or apb bus */
-int bus_clk_recalc(struct clk *clk)
+int bus_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct bus_clk_config *config = clk->private_data;
 	unsigned int div;
@@ -591,7 +662,7 @@ int bus_clk_recalc(struct clk *clk)
 	if (!div)
 		return -EINVAL;
 
-	clk->rate = (unsigned long)clk->pclk->rate / div;
+	*rate = prate / div;
 	return 0;
 }
 
@@ -614,6 +685,14 @@ int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 
 	clk->rate = rate;
 
+	return 0;
+}
+
+/* calculates current programmed rate of ahbmult2 */
+int
+ahbmult2_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
+{
+	*rate = prate * 2;
 	return 0;
 }
 
@@ -644,7 +723,7 @@ unsigned long aux_calc_rate(struct clk *clk, int index)
  *
  * Selection of eqn 1 or 2 is programmed in register
  */
-int aux_clk_recalc(struct clk *clk)
+int aux_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct aux_clk_config *config = clk->private_data;
 	unsigned int num = 1, den = 1, val, eqn;
@@ -667,7 +746,7 @@ int aux_clk_recalc(struct clk *clk)
 	if (!den)
 		return -EINVAL;
 
-	clk->rate = (((clk->pclk->rate/10000) * num) / den) * 10000;
+	*rate = (((prate / 10000) * num) / den) * 10000;
 	return 0;
 }
 
@@ -721,7 +800,7 @@ unsigned long gpt_calc_rate(struct clk *clk, int index)
  * Fout from synthesizer can be given from below equations:
  * Fout= Fin/((2 ^ (N+1)) * (M+1))
  */
-int gpt_clk_recalc(struct clk *clk)
+int gpt_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct gpt_clk_config *config = clk->private_data;
 	unsigned int div = 1, val;
@@ -735,7 +814,7 @@ int gpt_clk_recalc(struct clk *clk)
 	if (!div)
 		return -EINVAL;
 
-	clk->rate = (unsigned long)clk->pclk->rate / div;
+	*rate = prate / div;
 	return 0;
 }
 
@@ -803,11 +882,10 @@ unsigned long clcd_calc_rate(struct clk *clk, int index)
  * complete div (including fractional part) and then right shift the
  * result by 14 places.
  */
-int clcd_clk_recalc(struct clk *clk)
+int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct clcd_clk_config *config = clk->private_data;
 	unsigned int div = 1;
-	unsigned long prate;
 	unsigned int val;
 
 	val = readl(config->synth_reg);
@@ -817,10 +895,10 @@ int clcd_clk_recalc(struct clk *clk)
 	if (!div)
 		return -EINVAL;
 
-	prate = clk->pclk->rate / 1000; /* first level division, make it KHz */
+	prate = prate / 1000; /* first level division, make it KHz */
 
-	clk->rate = (((unsigned long)prate << 12) / (2 * div)) >> 12;
-	clk->rate *= 1000;
+	*rate = (((unsigned long)prate << 12) / (2 * div)) >> 12;
+	*rate *= 1000;
 	return 0;
 }
 
@@ -851,11 +929,11 @@ int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate)
  * Used for clocks that always have value as the parent clock divided by a
  * fixed divisor
  */
-int follow_parent(struct clk *clk)
+int follow_parent(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	unsigned int div_factor = (clk->div_factor < 1) ? 1 : clk->div_factor;
 
-	clk->rate = clk->pclk->rate/div_factor;
+	*rate = prate / div_factor;
 	return 0;
 }
 
@@ -874,7 +952,7 @@ void recalc_root_clocks(void)
 	spin_lock_irqsave(&clocks_lock, flags);
 	list_for_each_entry(pclk, &root_clks, sibling) {
 		if (pclk->recalc) {
-			ret = pclk->recalc(pclk);
+			ret = pclk->recalc(pclk, &pclk->rate, pclk->pclk->rate);
 			/*
 			 * recalc will return error if clk out is not programmed
 			 * In this case configure default clock.
@@ -888,6 +966,23 @@ void recalc_root_clocks(void)
 			do_clk_enable(pclk);
 	}
 	spin_unlock_irqrestore(&clocks_lock, flags);
+}
+
+void __init
+clk_init(struct clk_lookup *clk_lookups, u32 count, struct clk *dclk)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		clk_register(&clk_lookups[i]);
+
+	recalc_root_clocks();
+
+	/* Mark all ancestors of DDR with special flag */
+	if (dclk) {
+		ddr_clk = dclk;
+		mark_ddr_ancestors(dclk);
+	}
 }
 
 #ifdef CONFIG_DEBUG_FS
