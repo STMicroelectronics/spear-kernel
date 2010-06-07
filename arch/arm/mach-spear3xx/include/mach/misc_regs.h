@@ -46,6 +46,13 @@
 
 #define PLL2_MOD		(MISC_BASE + 0x01C)
 #define PLL_CLK_CFG		(MISC_BASE + 0x020)
+/* PLL_CLK_CFG register masks */
+#define MCTR_CLK_SHIFT		28
+#define MCTR_CLK_MASK		0x7
+#define MCTR_CLK_HCLK_VAL	0x0
+#define MCTR_CLK_2HCLK_VAL	0x1
+#define MCTR_CLK_PLL2_VAL	0x3
+
 #define CORE_CLK_CFG		(MISC_BASE + 0x024)
 /* CORE CLK CFG register masks */
 #define PLL_HCLK_RATIO_SHIFT	10

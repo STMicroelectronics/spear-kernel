@@ -23,19 +23,19 @@
 /* root clks */
 /* 24 MHz oscillator clock */
 static struct clk osc1_24m_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.rate = 24000000,
 };
 
 /* 32 KHz oscillator clock */
 static struct clk osc2_32k_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.rate = 32000,
 };
 
 /* 25 MHz MIPHY oscillator clock */
 static struct clk osc3_25m_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.rate = 25000000,
 };
 
@@ -99,7 +99,7 @@ struct pll_rate_tbl pll_rtbl[] = {
 
 /* pll1 clock */
 static struct clk pll1_clk = {
-	.flags = ENABLED_ON_INIT,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk_sel = &pll_pclk_sel,
 	.pclk_sel_shift = PLL1_CLK_SHIFT,
 	.en_reg = PLL1_CTR,
@@ -113,7 +113,7 @@ static struct clk pll1_clk = {
 
 /* pll1div2 clock */
 static struct clk pll1div2_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &pll1_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
@@ -121,7 +121,7 @@ static struct clk pll1div2_clk = {
 
 /* pll1div4 clock */
 static struct clk pll1div4_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &pll1_clk,
 	.div_factor = 4,
 	.recalc = &follow_parent,
@@ -136,6 +136,7 @@ static struct pll_clk_config pll2_config = {
 
 /* pll2 clock */
 static struct clk pll2_clk = {
+	.flags = SYSTEM_CLK,
 	.pclk_sel = &pll_pclk_sel,
 	.pclk_sel_shift = PLL2_CLK_SHIFT,
 	.en_reg = PLL2_CTR,
@@ -156,6 +157,7 @@ static struct pll_clk_config pll3_config = {
 
 /* pll3 clock */
 static struct clk pll3_clk = {
+	.flags = SYSTEM_CLK,
 	.pclk_sel = &pll_pclk_sel,
 	.pclk_sel_shift = PLL3_CLK_SHIFT,
 	.en_reg = PLL3_CTR,
@@ -184,7 +186,7 @@ struct pll_rate_tbl pll4_rtbl[] = {
 
 /* pll4 (DDR) clock */
 static struct clk pll4_clk = {
-	.flags = ENABLED_ON_INIT,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc1_24m_clk,
 	.en_reg = PLL4_CTR,
 	.en_reg_bit = PLL_ENABLE,
@@ -197,22 +199,54 @@ static struct clk pll4_clk = {
 
 /* pll5 USB 48 MHz clock */
 static struct clk pll5_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &osc1_24m_clk,
 	.rate = 48000000,
 };
 
 /* pll6 (MIPHY) clock */
 static struct clk pll6_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &osc3_25m_clk,
 	.rate = 25000000,
 };
 
 /* clocks derived from pll1 clk */
+/* ddr clock */
+struct ddr_rate_tbl ddr_rate_tbl = {
+	.minrate = 332000000,
+	.maxrate = 500000000,
+};
+
+static struct pclk_info ddr_pclk_info[] = {
+	{
+		.pclk = &pll1_clk,
+		.pclk_val = MCTR_CLK_PLL1_VAL,
+	}, {
+		.pclk = &pll4_clk,
+		.pclk_val = MCTR_CLK_PLL4_VAL,
+	},
+};
+
+/* ddr parent select structure */
+static struct pclk_sel ddr_pclk_sel = {
+	.pclk_info = ddr_pclk_info,
+	.pclk_count = ARRAY_SIZE(ddr_pclk_info),
+	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_mask = MCTR_CLK_MASK,
+};
+
+static struct clk ddr_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.recalc = &follow_parent,
+	.pclk_sel = &ddr_pclk_sel,
+	.pclk_sel_shift = MCTR_CLK_SHIFT,
+	.private_data = &ddr_rate_tbl,
+};
+
 /* cpu clock */
 static struct clk cpu_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &pll1_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
@@ -220,7 +254,7 @@ static struct clk cpu_clk = {
 
 /* ahb clock */
 static struct clk ahb_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &pll1_clk,
 	.div_factor = 6,
 	.recalc = &follow_parent,
@@ -228,7 +262,7 @@ static struct clk ahb_clk = {
 
 /* apb clock */
 static struct clk apb_clk = {
-	.flags = ALWAYS_ENABLED,
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
 	.pclk = &pll1_clk,
 	.div_factor = 12,
 	.recalc = &follow_parent,
@@ -845,6 +879,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "pll6_clk",		.clk = &pll6_clk},
 
 	/* clock derived from pll1 clk */
+	{.con_id = "ddr_clk",		.clk = &ddr_clk},
 	{.con_id = "cpu_clk",		.clk = &cpu_clk},
 	{.con_id = "ahb_clk",		.clk = &ahb_clk},
 	{.con_id = "apb_clk",		.clk = &apb_clk},
@@ -911,12 +946,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 #endif
 };
 
-void __init clk_init(void)
+/* machine clk init */
+void __init spear13xx_clk_init(void)
 {
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(spear_clk_lookups); i++)
-		clk_register(&spear_clk_lookups[i]);
-
-	recalc_root_clocks();
+	clk_init(spear_clk_lookups, ARRAY_SIZE(spear_clk_lookups), &ddr_clk);
 }

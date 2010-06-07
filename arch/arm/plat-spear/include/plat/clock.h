@@ -19,9 +19,12 @@
 #include <linux/types.h>
 
 /* clk structure flags */
-#define	ALWAYS_ENABLED		(1 << 0) /* clock always enabled */
-#define	RESET_TO_ENABLE		(1 << 1) /* reset register bit to enable clk */
-#define	ENABLED_ON_INIT		(1 << 2) /* clocks enabled at init */
+#define ALWAYS_ENABLED		(1 << 0) /* clock always enabled */
+#define RESET_TO_ENABLE		(1 << 1) /* reset register bit to enable clk */
+#define ENABLED_ON_INIT		(1 << 2) /* clocks enabled at init */
+/* Only System clocks can call other sytem clocks set rate function */
+#define SYSTEM_CLK		(1 << 3)
+#define DDR_ANCESTOR		(1 << 4) /* ancestor clks of DDR */
 
 /**
  * struct clkops - clock operations
@@ -99,8 +102,9 @@ struct clk {
 	void __iomem *en_reg;
 	u8 en_reg_bit;
 	const struct clkops *ops;
-	int (*recalc) (struct clk *);
-	int (*set_rate) (struct clk *, unsigned long rate);
+	int (*recalc) (struct clk *clk, unsigned long *rate,
+			unsigned long prate);
+	int (*set_rate) (struct clk *clk, unsigned long rate);
 	unsigned long (*calc_rate)(struct clk *, int index);
 	struct rate_config rate_config;
 	unsigned int div_factor;
@@ -223,26 +227,42 @@ struct clcd_rate_tbl {
 	u16 div;
 };
 
+/* ddr min, max clk rate table */
+struct ddr_rate_tbl {
+	unsigned long minrate;
+	unsigned long maxrate;
+};
+
 /* platform specific clock functions */
+/*
+ * must be called from machine clock.c file, dclk is pointer to ddr_clk
+ * strucutre. Which is required by clock framework.
+ *
+ * Actually before changing rate of DDRs ancestor, we must put ddr in refresh
+ * state and then change parent.
+ */
+void clk_init(struct clk_lookup *clk_lookups, u32 count, struct clk *dclk);
 void clk_register(struct clk_lookup *cl);
 void recalc_root_clocks(void);
 
 /* clock recalc & set rate functions */
-int follow_parent(struct clk *clk);
+int follow_parent(struct clk *clk, unsigned long *rate, unsigned long prate);
 unsigned long pll_calc_rate(struct clk *clk, int index);
-int pll_clk_recalc(struct clk *clk);
+int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long bus_calc_rate(struct clk *clk, int index);
-int bus_clk_recalc(struct clk *clk);
+int bus_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+int ahbmult2_clk_recalc(struct clk *clk, unsigned long *rate,
+		unsigned long prate);
 unsigned long gpt_calc_rate(struct clk *clk, int index);
-int gpt_clk_recalc(struct clk *clk);
+int gpt_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long aux_calc_rate(struct clk *clk, int index);
-int aux_clk_recalc(struct clk *clk);
+int aux_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long clcd_calc_rate(struct clk *clk, int index);
-int clcd_clk_recalc(struct clk *clk);
+int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 
 #endif /* __PLAT_CLOCK_H */

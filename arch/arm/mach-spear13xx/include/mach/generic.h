@@ -44,7 +44,7 @@ extern struct platform_device spear13xx_sdhci_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx family function declarations here */
-void __init clk_init(void);
+void __init spear13xx_clk_init(void);
 void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
 void __init spear13xx_map_io(void);
