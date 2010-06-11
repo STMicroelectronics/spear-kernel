@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
@@ -267,6 +268,50 @@ int spear300_o2p(int offset)
 	else
 		return offset + 2;
 }
+
+/* emi nor flash device registeration */
+static struct physmap_flash_data emi_norflash_data;
+
+static struct resource emi_nor_resources[] = {
+	{
+		.start	= SPEAR310_EMI_MEM_0_BASE,
+		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = emi_nor_resources,
+	.num_resources = ARRAY_SIZE(emi_nor_resources),
+	.dev.platform_data = &emi_norflash_data,
+};
+
+/* nand device registeration */
+static struct nand_platform_data nand_platform_data;
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR310_NAND_BASE,
+		.end = SPEAR310_NAND_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR310_FSMC_BASE,
+		.end = SPEAR310_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand_device = {
+	.name = "nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
+};
 
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,

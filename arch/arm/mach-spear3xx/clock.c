@@ -552,6 +552,15 @@ static struct clk adc_clk = {
 	.recalc = &follow_parent,
 };
 
+#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+/* emi clock */
+static struct clk emi_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
 /* ssp clock */
 static struct clk ssp0_clk = {
 	.pclk = &apb_clk,
@@ -740,6 +749,9 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp-pl022.0",	.clk = &ssp0_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
+#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+	{ .dev_id = "physmap-flash",	.clk = &emi_clk},
+#endif
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
 	defined(CONFIG_MACH_SPEAR320)
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},

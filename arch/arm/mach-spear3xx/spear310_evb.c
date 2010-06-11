@@ -16,6 +16,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/spear.h>
@@ -24,6 +25,15 @@
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -64,6 +74,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&adc_device,
 	&dmac_device,
 	&ehci_device,
+	&emi_nor_device,
 	&eth_device,
 	&i2c_device,
 	&jpeg_device,
@@ -144,11 +155,18 @@ static void __init spear310_evb_init(void)
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&smi_device);
 
+	/* initialize emi related data in emi plat data */
+	emi_init_board_info(&emi_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH32);
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
+
+	/* Initialize emi regiters */
+	emi_init(&emi_nor_device, SPEAR310_EMI_REG_BASE, 0, EMI_FLASH_WIDTH32);
 
 	spi_init();
 }

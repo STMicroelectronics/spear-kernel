@@ -17,6 +17,7 @@
 #include <linux/spi/flash.h>
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/spi/spi.h>
+#include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/spear.h>
@@ -25,6 +26,15 @@
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -163,11 +173,18 @@ static void __init spear320_evb_init(void)
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
 
+	/* initialize emi related data in emi plat data */
+	emi_init_board_info(&emi_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH16);
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
+
+	/* Initialize emi regiters */
+	emi_init(&emi_nor_device, SPEAR320_EMI_CTRL_BASE, 0, EMI_FLASH_WIDTH16);
 
 	spi_init();
 }
