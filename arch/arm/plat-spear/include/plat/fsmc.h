@@ -15,10 +15,35 @@
 #define __PLAT_FSMC_H
 
 #include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/platform_device.h>
+#include <linux/mtd/physmap.h>
 #include <linux/types.h>
 #include <asm/param.h>
 
+#define FSMC_MAX_NOR_BANKS	4
 #define FSMC_MAX_NAND_BANKS	4
+
+#define FSMC_FLASH_WIDTH8	1
+#define FSMC_FLASH_WIDTH16	2
+
+struct nor_bank_regs {
+	u32 ctrl;
+	u32 ctrl_tim;
+};
+
+/* ctrl register definitions */
+#define BANK_ENABLE		(1 << 0)
+#define MUXED			(1 << 1)
+#define NOR_DEV			(2 << 2)
+#define WIDTH_8			(0 << 4)
+#define WIDTH_16		(1 << 4)
+#define RSTPWRDWN		(1 << 6)
+#define WPROT			(1 << 7)
+#define WRT_ENABLE		(1 << 12)
+#define WAIT_ENB		(1 << 13)
+
+/* ctrl_tim register definitions */
 
 struct nand_bank_regs {
 	u32 pc;
@@ -31,8 +56,11 @@ struct nand_bank_regs {
 	u32 ecc3;
 };
 
+#define FSMC_NOR_REG_SIZE	0x40
+
 struct fsmc_regs {
-	u8 reserved_1[0x40];
+	struct nor_bank_regs nor_bank_regs[FSMC_MAX_NOR_BANKS];
+	u8 reserved_1[0x40 - 0x20];
 	struct nand_bank_regs bank_regs[FSMC_MAX_NAND_BANKS];
 	u8 reserved_2[0xfe0 - 0xc0];
 	u32 peripid0;			/* 0xfe0 */
@@ -105,5 +133,26 @@ struct fsmc_nand_eccplace {
 struct fsmc_eccplace {
 	struct fsmc_nand_eccplace eccplace[MAX_ECCPLACE_ENTRIES];
 };
+
+static inline void fsmc_init_plat_data(struct platform_device *pdev,
+		struct mtd_partition *partitions, unsigned int nr_partitions,
+		unsigned int width)
+{
+	struct physmap_flash_data *fsmc_plat_data;
+	fsmc_plat_data = dev_get_platdata(&pdev->dev);
+
+	if (partitions) {
+		fsmc_plat_data->parts = partitions;
+		fsmc_plat_data->nr_parts = nr_partitions;
+	}
+
+	fsmc_plat_data->width = width;
+}
+
+extern int __init fsmc_nor_init(struct platform_device *pdev,
+		unsigned long base, u32 bank, u32 width);
+extern void __init fsmc_init_board_info(struct platform_device *pdev,
+		struct mtd_partition *partitions, unsigned int nr_partitions,
+		unsigned int width);
 
 #endif /* __PLAT_FSMC_H */

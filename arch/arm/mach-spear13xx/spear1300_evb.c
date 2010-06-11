@@ -21,11 +21,21 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
+#include <plat/fsmc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
 
 static struct amba_device *amba_devs[] __initdata = {
 	&gpio_device[0],
@@ -133,11 +143,19 @@ static void __init spear1300_evb_init(void)
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&smi_device);
 
+	/* initialize fsmc related data in fsmc plat data */
+	fsmc_init_board_info(&fsmc_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
+
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+			FSMC_FLASH_WIDTH8);
 
 	spi_init();
 }

@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/mtd/physmap.h>
 #include <linux/dw_dmac.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
@@ -262,6 +263,25 @@ struct platform_device eth_device = {
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
+};
+
+/* fsmc nor flash device registeration */
+static struct physmap_flash_data fsmc_norflash_data;
+
+static struct resource fsmc_nor_resources[] = {
+	{
+		.start	= SPEAR13XX_FSMC_MEM_BASE,
+		.end	= SPEAR13XX_FSMC_MEM_BASE + SZ_16M - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device fsmc_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = fsmc_nor_resources,
+	.num_resources = ARRAY_SIZE(fsmc_nor_resources),
+	.dev.platform_data = &fsmc_norflash_data,
 };
 
 /* nand device registeration */

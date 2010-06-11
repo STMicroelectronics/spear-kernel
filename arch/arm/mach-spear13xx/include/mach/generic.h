@@ -42,6 +42,7 @@ extern struct platform_device i2c_device;
 extern struct platform_device jpeg_device;
 extern struct platform_device kbd_device;
 extern struct platform_device nand_device;
+extern struct platform_device fsmc_nor_device;
 extern struct platform_device ohci0_device;
 extern struct platform_device ohci1_device;
 extern struct platform_device phy_device;
