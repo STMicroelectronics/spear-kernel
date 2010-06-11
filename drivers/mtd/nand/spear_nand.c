@@ -762,21 +762,21 @@ err_probe1:
 		clk_put(host->clk);
 	if (host->regs_va)
 		iounmap(host->regs_va);
-	if (host->cmd_va)
-		iounmap(host->cmd_va);
-	if (host->addr_va)
-		iounmap(host->addr_va);
-	if (host->data_va)
-		iounmap(host->data_va);
 	if (host->resregs)
 		release_mem_region(host->resregs->start,
 				resource_size(host->resregs));
+	if (host->cmd_va)
+		iounmap(host->cmd_va);
 	if (host->rescmd)
-		release_mem_region(host->rescmd->start + PLAT_NAND_CLE,
+		release_mem_region(host->rescmd->start,
 				resource_size(host->rescmd));
+	if (host->addr_va)
+		iounmap(host->addr_va);
 	if (host->resaddr)
-		release_mem_region(host->resaddr->start + PLAT_NAND_ALE,
+		release_mem_region(host->resaddr->start,
 				resource_size(host->resaddr));
+	if (host->data_va)
+		iounmap(host->data_va);
 	if (host->resdata)
 		release_mem_region(host->resdata->start,
 				resource_size(host->resdata));
@@ -803,16 +803,16 @@ static int spear_nand_remove(struct platform_device *pdev)
 		clk_disable(host->clk);
 		clk_put(host->clk);
 
-		iounmap(host->cmd_va);
-		iounmap(host->data_va);
-		iounmap(host->addr_va);
 		iounmap(host->regs_va);
 		release_mem_region(host->resregs->start,
 				resource_size(host->resregs));
-		release_mem_region(host->rescmd->start + PLAT_NAND_CLE,
+		iounmap(host->cmd_va);
+		release_mem_region(host->rescmd->start,
 				resource_size(host->rescmd));
-		release_mem_region(host->resaddr->start + PLAT_NAND_ALE,
+		iounmap(host->addr_va);
+		release_mem_region(host->resaddr->start,
 				resource_size(host->resaddr));
+		iounmap(host->data_va);
 		release_mem_region(host->resdata->start,
 				resource_size(host->resdata));
 
