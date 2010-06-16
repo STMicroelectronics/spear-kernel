@@ -126,6 +126,11 @@ static void __init poke_milo(void)
 			__io_address(SPEAR13XX_SYS_LOCATION));
 
 	mb();
+
+	/*
+	 * Send a 'sev' to wake the secondary core from WFE.
+	 */
+	set_event();
 }
 
 /*

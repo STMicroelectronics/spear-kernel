@@ -24,6 +24,12 @@
 		cpunum &= 0x0F;				\
 	})
 
+/*
+ * set_event() is used to wake up secondary core from wfe using sev. Booting
+ * code puts the second core into wfe(standby).
+ */
+#define set_event()	__asm__ __volatile__ ("sev" : : : "memory")
+
 /* We use IRQ1 as the IPI */
 static inline void smp_cross_call(const struct cpumask *mask)
 {
