@@ -256,6 +256,7 @@ static void __init spear_clockevent_init(void)
 void __init spear_setup_timer(void)
 {
 	struct clk *clk;
+	int ret;
 
 	if (!request_mem_region(SPEAR_GPT0_BASE, SZ_1K, "gpt0")) {
 		pr_err("%s:cannot get IO addr\n", __func__);
@@ -285,14 +286,21 @@ void __init spear_setup_timer(void)
 
 	clk_set_parent(gpt_clk, clk);
 
+	ret = clk_enable(gpt_clk);
+	if (ret < 0) {
+		pr_err("%s:couldn't enable gpt clock\n", __func__);
+		goto err_clk;
+	}
+
 	spear_clockevent_init();
 	spear_clocksource_init();
 
 	return;
 
+err_clk:
+	clk_put(gpt_clk);
 err_iomap:
 	iounmap(gpt_base);
-
 err_mem:
 	release_mem_region(SPEAR_GPT0_BASE, SZ_1K);
 }
