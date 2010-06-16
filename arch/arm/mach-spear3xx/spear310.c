@@ -288,31 +288,6 @@ struct platform_device emi_nor_device = {
 	.dev.platform_data = &emi_norflash_data,
 };
 
-/* nand device registeration */
-static struct nand_platform_data nand_platform_data;
-
-static struct resource nand_resources[] = {
-	{
-		.name = "nand_data",
-		.start = SPEAR310_NAND_BASE,
-		.end = SPEAR310_NAND_BASE + SZ_16 - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "fsmc_regs",
-		.start = SPEAR310_FSMC_BASE,
-		.end = SPEAR310_FSMC_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
-struct platform_device nand_device = {
-	.name = "nand",
-	.id = -1,
-	.resource = nand_resources,
-	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
-};
-
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,
 	.irq_base = SPEAR_PLGPIO_INT_BASE,
