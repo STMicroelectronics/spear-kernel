@@ -25,6 +25,7 @@
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/pcie.h>
 #include <mach/spear.h>
@@ -216,6 +217,10 @@ static void __init spear1300_evb_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+	spear1300_evb_init_lcd();
+#endif
 }
 
 MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")
