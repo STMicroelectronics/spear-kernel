@@ -252,6 +252,11 @@ struct map_desc spear3xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR3XX_ICM3_MISC_REG_BASE),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR3XX_ICM3_SDRAM_CTRL_BASE),
+		.pfn		= __phys_to_pfn(SPEAR3XX_ICM3_SDRAM_CTRL_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
 	},
 };
 
