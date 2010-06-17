@@ -11,7 +11,10 @@
  *
  * Data sheet: ARM DDI 0190B, September 2000
  */
+
+#include <linux/clk.h>
 #include <linux/spinlock.h>
+#include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/module.h>
 #include <linux/list.h>
@@ -55,7 +58,32 @@ struct pl061_gpio {
 	void __iomem		*base;
 	unsigned		irq_base;
 	struct gpio_chip	gc;
+	unsigned		usage_count;
+	struct clk		*clk;
 };
+
+static int pl061_request(struct gpio_chip *gc, unsigned offset)
+{
+	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
+
+	if (offset >= gc->ngpio)
+		return -EINVAL;
+
+	if (!chip->usage_count)
+		clk_enable(chip->clk);
+
+	chip->usage_count++;
+	return 0;
+}
+
+static void pl061_free(struct gpio_chip *gc, unsigned offset)
+{
+	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
+
+	chip->usage_count--;
+	if (!chip->usage_count)
+		clk_disable(chip->clk);
+}
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
 {
@@ -259,10 +287,18 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 		goto release_region;
 	}
 
+	chip->clk = clk_get(&dev->dev, NULL);
+	if (IS_ERR(chip->clk)) {
+		ret = PTR_ERR(chip->clk);
+		goto iounmap;
+	}
+
 	spin_lock_init(&chip->lock);
 	spin_lock_init(&chip->irq_lock);
 	INIT_LIST_HEAD(&chip->list);
 
+	chip->gc.request = pl061_request;
+	chip->gc.free = pl061_free;
 	chip->gc.direction_input = pl061_direction_input;
 	chip->gc.direction_output = pl061_direction_output;
 	chip->gc.get = pl061_get_value;
@@ -278,7 +314,7 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 
 	ret = gpiochip_add(&chip->gc);
 	if (ret)
-		goto iounmap;
+		goto free_clk;
 
 	/*
 	 * irq_chip support
@@ -291,7 +327,7 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 	irq = dev->irq[0];
 	if (irq < 0) {
 		ret = -ENODEV;
-		goto iounmap;
+		goto free_clk;
 	}
 	set_irq_chained_handler(irq, pl061_irq_handler);
 	if (!test_and_set_bit(irq, init_irq)) { /* list initialized? */
@@ -299,7 +335,7 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 		if (chip_list == NULL) {
 			clear_bit(irq, init_irq);
 			ret = -ENOMEM;
-			goto iounmap;
+			goto free_clk;
 		}
 		INIT_LIST_HEAD(chip_list);
 		set_irq_data(irq, chip_list);
@@ -322,6 +358,8 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 
 	return 0;
 
+free_clk:
+	clk_put(chip->clk);
 iounmap:
 	iounmap(chip->base);
 release_region:
