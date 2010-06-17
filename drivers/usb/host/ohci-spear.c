@@ -194,13 +194,14 @@ static int spear_ohci_hcd_drv_remove(struct platform_device *pdev)
 static int spear_ohci_hcd_drv_suspend(struct platform_device *dev,
 		pm_message_t message)
 {
-	struct ohci_hcd *ohci = hcd_to_ohci(platform_get_drvdata(dev));
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct usb_hcd *hcd = platform_get_drvdata(dev);
+	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
 	struct spear_ohci *ohci_p = to_spear_ohci(hcd);
 
 	if (time_before(jiffies, ohci->next_statechange))
 		msleep(5);
 	ohci->next_statechange = jiffies;
+
 	spear_stop_ohci(ohci_p);
 	ohci_to_hcd(ohci)->state = HC_STATE_SUSPENDED;
 	return 0;
@@ -208,13 +209,14 @@ static int spear_ohci_hcd_drv_suspend(struct platform_device *dev,
 
 static int spear_ohci_hcd_drv_resume(struct platform_device *dev)
 {
-	struct ohci_hcd	*ohci = hcd_to_ohci(platform_get_drvdata(dev));
-	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct usb_hcd *hcd = platform_get_drvdata(dev);
+	struct ohci_hcd	*ohci = hcd_to_ohci(hcd);
 	struct spear_ohci *ohci_p = to_spear_ohci(hcd);
 
 	if (time_before(jiffies, ohci->next_statechange))
 		msleep(5);
 	ohci->next_statechange = jiffies;
+
 	spear_start_ohci(ohci_p);
 	ohci_finish_controller_resume(hcd);
 	return 0;
