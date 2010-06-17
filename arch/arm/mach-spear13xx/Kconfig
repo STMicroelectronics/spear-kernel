@@ -24,4 +24,11 @@ endchoice
 source "arch/arm/mach-spear13xx/Kconfig1300"
 source "arch/arm/mach-spear13xx/Kconfig1310"
 
+config SPEAR_DB9000
+	bool "SPEAr DB9000 LCD"
+	depends on FB_DB9000 && (ARCH_SPEAR13XX)
+	default y
+	help
+	  Support for DB9000 LCD device driver over SPEAr platform.
+
 endif #ARCH_SPEAR13XX

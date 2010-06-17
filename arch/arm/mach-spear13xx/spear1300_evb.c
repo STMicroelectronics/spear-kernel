@@ -37,6 +37,10 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
 
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+extern void __init spear1300_evb_init_lcd(void);
+#endif
+
 static struct amba_device *amba_devs[] __initdata = {
 	&gpio_device[0],
 	&gpio_device[1],
@@ -158,6 +162,10 @@ static void __init spear1300_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 
 	spi_init();
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+   spear1300_evb_init_lcd();
+#endif
+
 }
 
 MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")

@@ -87,7 +87,7 @@ config FB_BOOT_VESA_SUPPORT
 	  of VESA video modes set at an early boot stage via the vga= parameter.
 
 config FB_CFB_FILLRECT
-	tristate
+	bool "Enable cfb_fillrect function"
 	depends on FB
 	default n
 	---help---
@@ -96,7 +96,7 @@ config FB_CFB_FILLRECT
 	  (accelerated) version.
 
 config FB_CFB_COPYAREA
-	tristate
+	bool "Enable cfb_copyarea function"
 	depends on FB
 	default n
 	---help---
@@ -105,7 +105,7 @@ config FB_CFB_COPYAREA
 	  version.
 
 config FB_CFB_IMAGEBLIT
-	tristate
+	bool "Enable cfb_imageblit function"
 	depends on FB
 	default n
 	---help---
@@ -1811,6 +1811,56 @@ config FB_PXA_PARAMETERS
 	  option disabled.
 
 	  <file:Documentation/fb/pxafb.txt> describes the available parameters.
+
+config FB_DB9000
+	tristate "DB9000 LCD framebuffer support"
+	depends on FB && ARCH_SPEAR13XX
+	---help---
+	  Frame buffer driver for the DB9000 LCD controller in the
+	  STMicroelectronics SPEAR13xx processor.
+
+	  This driver is also available as a module ( = code which can be
+	  inserted and removed from the running kernel whenever you want). The
+	  module will be called db9000fb. If you want to compile it as a module,
+	  say M here and read <file:Documentation/kbuild/modules.txt>.
+
+	  If unsure, say N.
+
+config FB_DB9000_OVERLAY
+	bool "Support DB9000 Overlay(s) as framebuffer"
+	default n
+	depends on FB_DB9000 && (ARCH_SPEAR13XX)
+
+config FB_DB9000_PARAMETERS
+	bool "DB9000 LCD command line parameters"
+	default n
+	depends on FB_DB9000
+	---help---
+	  Enable the use of kernel command line or module parameters
+	  to configure the physical properties of the LCD panel when
+	  using the DB9000 LCD driver.
+
+	  This option allows you to override the panel parameters
+	  supplied by the platform in order to support multiple
+	  different models of flatpanel. If you will only be using a
+	  single model of flatpanel then you can safely leave this
+	  option disabled.
+
+#	  <file:Documentation/fb/db9000fb.txt> describes the available parameters.
+
+choice
+
+	depends on FB_DB9000 && ARCH_SPEAR13XX
+	prompt "LCD Panel"
+	default FB_DB9000_LCD_SHARP_LQ043T3DX0A
+
+config FB_DB9000_LCD_SHARP_LQ043T3DX0A
+	bool "SHARP LQ043T3DX0A CLCD 4.2\" TFT(480x272)"
+	help
+	  This is an implementation of the Sharp LQ043T3DX0A, a 4.2"
+	  color TFT panel. The native resolution is 480x272.
+
+endchoice
 
 config FB_MBX
 	tristate "2700G LCD framebuffer support"
