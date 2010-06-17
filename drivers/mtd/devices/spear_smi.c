@@ -287,7 +287,7 @@ static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 	do {
 		status = spear_smi_read_sr(dev, bank);
 		if (status < 0)
-			break;
+			continue; /* try till timeout */
 		else if (!(status & SR_WIP))
 			return 0;
 
