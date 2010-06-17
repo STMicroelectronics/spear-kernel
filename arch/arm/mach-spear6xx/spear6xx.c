@@ -24,6 +24,12 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 
+/* The wake sources are routed through vic-2 */
+#define SPEAR6XX_WKUP_SRCS_VIC2		(1 << (IRQ_GMAC_1 - 32) | \
+					1 << (IRQ_USB_DEV - 32) | \
+					1 << (IRQ_BASIC_RTC - 32) |\
+					1 << (IRQ_BASIC_GPIO - 32))
+
 /* Add spear6xx machines common devices here */
 
 /* CLCD device registration */
@@ -381,7 +387,8 @@ void __init spear6xx_init(void)
 void __init spear6xx_init_irq(void)
 {
 	vic_init((void __iomem *)VA_SPEAR6XX_CPU_VIC_PRI_BASE, 0, ~0, 0);
-	vic_init((void __iomem *)VA_SPEAR6XX_CPU_VIC_SEC_BASE, 32, ~0, 0);
+	vic_init((void __iomem *)VA_SPEAR6XX_CPU_VIC_SEC_BASE, 32, ~0,
+			SPEAR6XX_WKUP_SRCS_VIC2);
 }
 
 /* Following will create static virtual/physical mappings */

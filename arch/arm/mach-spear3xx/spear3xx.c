@@ -22,6 +22,8 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 
+#define SPEAR3XX_WKUP_SRCS	(1 << IRQ_MAC_1 | 1 << IRQ_USB_DEV | \
+				1 << IRQ_BASIC_RTC | 1 << IRQ_BASIC_GPIO)
 /* Add spear3xx machines common devices here */
 /* gpio device registration */
 static struct pl061_platform_data gpio_plat_data = {
@@ -227,7 +229,8 @@ void __init spear3xx_init(void)
 /* This will initialize vic */
 void __init spear3xx_init_irq(void)
 {
-	vic_init((void __iomem *)VA_SPEAR3XX_ML1_VIC_BASE, 0, ~0, 0);
+	vic_init((void __iomem *)VA_SPEAR3XX_ML1_VIC_BASE, 0, ~0,
+			SPEAR3XX_WKUP_SRCS);
 }
 
 /* Following will create static virtual/physical mappings */
