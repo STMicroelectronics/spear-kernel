@@ -603,11 +603,10 @@ int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 			 * call routine to put ddr in refresh mode, and
 			 * configure pll.
 			 */
-			/* TBD */
+			pll_set_rate(tbls[i].m, tbls[i].p, tbls[i].n);
 			clk->rate = rate;
 		}
-
-		return ret;
+		return 0;
 	}
 
 	val = readl(config->mode_reg) &
@@ -633,7 +632,6 @@ int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 			config->masks->norm_fdbk_m_shift;
 
 	writel(val, config->cfg_reg);
-
 	clk->rate = rate;
 
 	return 0;
