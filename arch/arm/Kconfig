@@ -872,6 +872,7 @@ config PLAT_SPEAR
 	select CLKDEV_LOOKUP
 	select GENERIC_CLOCKEVENTS
 	select HAVE_CLK
+	select ARCH_HAS_CPUFREQ
 	help
 	  Support for ST's SPEAr platform (SPEAr3xx, SPEAr6xx and SPEAr13xx).
 
