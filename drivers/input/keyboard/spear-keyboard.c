@@ -276,7 +276,7 @@ static int spear_kbd_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int spear_kbd_suspend(struct platform_device *dev, pm_message_t state)
+static int spear_kbd_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	int irq;
