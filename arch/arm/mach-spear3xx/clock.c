@@ -55,6 +55,7 @@ static struct pll_clk_masks pll_masks = {
 
 /* pll rate configuration table, in ascending order of rates */
 struct pll_rate_tbl pll_rtbl[] = {
+	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* 166 MHz */
 	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* 266 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* 332 MHz */
 };
@@ -75,7 +76,7 @@ static struct clk pll1_clk = {
 	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
 	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 1},
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
 	.private_data = &pll1_config,
 };
 
@@ -95,7 +96,7 @@ static struct clk pll2_clk = {
 	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
 	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 1},
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
 	.private_data = &pll2_config,
 };
 
