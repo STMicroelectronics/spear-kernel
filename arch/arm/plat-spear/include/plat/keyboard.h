@@ -12,7 +12,9 @@
 #ifndef __PLAT_KEYBOARD_H
 #define __PLAT_KEYBOARD_H
 
+#include <linux/bitops.h>
 #include <linux/input.h>
+#include <mach/misc_regs.h>
 
 #define KEY(row, col, val) (((row) << 28 | ((col) << 24) | (val)))
 
@@ -138,7 +140,15 @@ struct kbd_platform_data {
 static inline void
 kbd_set_plat_data(struct platform_device *pdev, struct kbd_platform_data *data)
 {
+#ifdef CONFIG_ARCH_SPEAR13XX
+#define KBD_PAD_SEL	(BIT(18) | BIT(20) | BIT(22) | BIT(24) | BIT(26))
+
+	u32 val;
+	/* Workaround:Setting bit for routing it to the IP */
+	val = readl(PAD_FUNCTION_EN_2);
+	val &= ~KBD_PAD_SEL;
+	writel(val, PAD_FUNCTION_EN_2);
+#endif
 	pdev->dev.platform_data = data;
 }
-
 #endif /* __PLAT_KEYBOARD_H */
