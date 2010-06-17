@@ -55,6 +55,7 @@ static struct pll_clk_masks pll_masks = {
 
 /* pll rate configuration table, in ascending order of rates */
 struct pll_rate_tbl pll_rtbl[] = {
+	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* 166 MHz */
 	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* 266 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* 332 MHz */
 };

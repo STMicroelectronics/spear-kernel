@@ -90,6 +90,7 @@ static struct pll_clk_config pll1_config = {
 /* pll rate configuration table, in ascending order of rates */
 struct pll_rate_tbl pll_rtbl[] = {
 	/* PCLK 24MHz */
+	{.mode = 0, .m = 0x64, .n = 0x03, .p = 0x2}, /* 400 MHz */
 	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* 500 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* 664 MHz */
 	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* 800 MHz */
