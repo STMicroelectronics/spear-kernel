@@ -264,5 +264,6 @@ int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long clcd_calc_rate(struct clk *clk, int index);
 int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+void pll_set_rate(u16 pdiv, u8 nmul, u8 hclkdiv);
 
 #endif /* __PLAT_CLOCK_H */
