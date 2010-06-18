@@ -14,6 +14,10 @@
 #ifndef __MACH_PCIE_H
 #define __MACH_PCIE_H
 
+extern int spear13xx_pcie_port_is_host(int port);
+extern int enable_pcie0_clk(void);
+
+
 struct pcie_port {
 	u8			port;
 	u8			root_bus_nr;

@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32
-# Thu Jun 17 12:38:26 2010
+# Thu Jun 17 18:29:26 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -234,7 +234,8 @@ CONFIG_COMMON_CLKDEV=y
 CONFIG_ARM_AMBA=y
 CONFIG_PCI=y
 CONFIG_PCI_SYSCALL=y
-# CONFIG_PCI_MSI is not set
+CONFIG_ARCH_SUPPORTS_MSI=y
+CONFIG_PCI_MSI=y
 CONFIG_PCI_LEGACY=y
 # CONFIG_PCI_DEBUG is not set
 # CONFIG_PCI_STUB is not set

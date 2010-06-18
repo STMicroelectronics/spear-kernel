@@ -20,6 +20,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <mach/pcie.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/jpeg.h>
@@ -151,6 +152,11 @@ static void __init spear1300_evb_init(void)
 	fsmc_init_board_info(&fsmc_nor_device, partition_info,
 			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
 
+#ifdef CONFIG_PCIEPORTBUS
+	/* Enable PCIE0 clk */
+	enable_pcie0_clk();
+#endif
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
@@ -167,6 +173,30 @@ static void __init spear1300_evb_init(void)
 #endif
 
 }
+
+#ifdef CONFIG_PCIEPORTBUS
+/* this function is needed for PCIE host and device driver. Same
+ * controller can not be programmed as host as well as device. So host
+ * driver must call this function and if this function returns 1 then
+ * only host should add that particular port as RC.
+ * A port to be added as device, one must also add device's information
+ * in plat_devs array defined in this file.
+ * it is the responsibility of calling function to not send port number
+ * greter than max no of controller(3)
+ */
+int spear13xx_pcie_port_is_host(int port)
+{
+	switch (port) {
+	case 0:
+		return 0;
+	case 1:
+		return 1;
+	case 2:
+		return 1;
+	}
+	return -EINVAL;
+}
+#endif
 
 MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")
 	.boot_params	=	0x00000100,

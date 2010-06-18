@@ -193,12 +193,15 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 static void __init spear13xx_pcie_preinit(void)
 {
 	int i;
+	struct pcie_port *pp;
+	struct pcie_app_reg *app_reg;
 
 	for (i = 0; i < NUM_PCIE_PORTS; i++) {
-		struct pcie_port *pp = pcie_port + i;
-		struct pcie_app_reg *app_reg =
-			(struct pcie_app_reg *) (pp->va_app_base);
+		pp = pcie_port + i;
+		app_reg = (struct pcie_app_reg *) (pp->va_app_base);
 
+		if (!spear13xx_pcie_port_is_host(i))
+			continue;
 		snprintf(pp->mem_space_name, sizeof(pp->mem_space_name),
 			"PCIe %d MEM", pp->port);
 		pp->mem_space_name[sizeof(pp->mem_space_name) - 1] = 0;
@@ -230,6 +233,9 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	if (nr >= NUM_PCIE_PORTS)
 		return 0;
 
+	if (!spear13xx_pcie_port_is_host(nr))
+		return 0;
+
 	pp = &pcie_port[nr];
 	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
 		return 0;
@@ -259,6 +265,8 @@ static struct pcie_port *bus_to_port(int bus)
 
 	for (i = NUM_PCIE_PORTS - 1; i >= 0; i--) {
 		int rbus = pcie_port[i].root_bus_nr;
+		if (!spear13xx_pcie_port_is_host(i))
+			continue;
 		if (rbus != -1 && rbus <= bus)
 			break;
 	}
@@ -398,7 +406,7 @@ spear13xx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 {
 	struct pci_bus *bus;
 
-	if (nr < NUM_PCIE_PORTS) {
+	if ((nr < NUM_PCIE_PORTS) && spear13xx_pcie_port_is_host(nr)) {
 		bus = pci_scan_bus(sys->busnr, &pcie_ops, sys);
 	} else {
 		bus = NULL;
@@ -425,10 +433,95 @@ static struct hw_pci spear13xx_pci __initdata = {
 	.map_irq	= spear13xx_pcie_map_irq,
 };
 
+void mask_intx_irq(unsigned int irq)
+{
+	int irq_offset = (irq - SPEAR_INTX0_BASE) % SPEAR_NUM_INTX_IRQS;
+	int port = (irq - SPEAR_INTX0_BASE) / SPEAR_NUM_INTX_IRQS;
+	struct pcie_port *pp = &pcie_port[port];
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
+
+	switch (irq_offset) {
+	case 0:
+		writel(readl(&app_reg->int_mask) & ~INTA_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 1:
+		writel(readl(&app_reg->int_mask) & ~INTB_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 2:
+		writel(readl(&app_reg->int_mask) & ~INTC_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 3:
+		writel(readl(&app_reg->int_mask) & ~INTD_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	}
+}
+
+void unmask_intx_irq(unsigned int irq)
+{
+	int irq_offset = (irq - SPEAR_INTX0_BASE) % SPEAR_NUM_INTX_IRQS;
+	int port = (irq - SPEAR_INTX0_BASE) / SPEAR_NUM_INTX_IRQS;
+	struct pcie_port *pp = &pcie_port[port];
+	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
+
+	switch (irq_offset) {
+	case 0:
+		writel(readl(&app_reg->int_mask) | INTA_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 1:
+		writel(readl(&app_reg->int_mask) | INTB_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 2:
+		writel(readl(&app_reg->int_mask) | INTC_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	case 3:
+		writel(readl(&app_reg->int_mask) | INTD_CTRL_INT,
+				&app_reg->int_mask);
+		break;
+	}
+}
+
+static struct irq_chip spear13xx_intx_chip = {
+	.name = "PCI-INTX",
+	.mask = mask_intx_irq,
+	.unmask = unmask_intx_irq,
+};
+
+static void spear13xx_int_init(struct pcie_port *pp)
+{
+	int i, irq;
+	struct pcie_app_reg *app_reg;
+
+	set_irq_chained_handler(IRQ_PCIE0 + pp->port, spear_pcie_int_handler);
+
+#ifdef CONFIG_PCI_MSI
+	spear13xx_msi_init(pp);
+#endif
+	/* Enbale INTX interrupt*/
+	app_reg = (struct pcie_app_reg *)pp->va_app_base;
+	writel(readl(&app_reg->int_mask) | INTA_CTRL_INT
+			| INTB_CTRL_INT	| INTC_CTRL_INT
+			| INTD_CTRL_INT, &app_reg->int_mask);
+
+	/* initilize INTX chip here only. MSI chip will be
+	 * initilized dynamically.*/
+	irq = (SPEAR_INTX0_BASE + pp->port * SPEAR_NUM_INTX_IRQS);
+	for (i = 0; i < SPEAR_NUM_INTX_IRQS; i++) {
+		set_irq_chip_and_handler(irq + i, &spear13xx_intx_chip,
+				handle_simple_irq);
+		set_irq_flags(irq + i, IRQF_VALID);
+	}
+}
+
 static void __init add_pcie_port(int port, u32 base, u32 app_base)
 {
 	struct pcie_port *pp = &pcie_port[port];
-	struct pcie_app_reg *app_reg;
 
 	pp->port = port;
 	pp->root_bus_nr = -1;
@@ -452,18 +545,7 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 	} else {
 		pr_info("link down in bios\n");
 		spear13xx_pcie_host_init(pp);
-
-#ifdef CONFIG_PCI_MSI
-		spear13xx_msi_init(pp);
-#endif
-	/* Enbale INTX interrupt*/
-		app_reg = (struct pcie_app_reg *)pp->va_app_base;
-		writel(readl(&app_reg->int_mask) | INTA_CTRL_INT
-				| INTB_CTRL_INT	| INTC_CTRL_INT
-				| INTD_CTRL_INT, &app_reg->int_mask);
-
-		set_irq_chained_handler(IRQ_PCIE0 + pp->port,
-				spear_pcie_int_handler);
+		spear13xx_int_init(pp);
 
 	}
 }
@@ -471,32 +553,48 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 static int __init spear13xx_pcie_init(void)
 {
 	int port;
-	char port_name[20];
 	struct clk *clk;
 
-	/*
-	* enable core clock in PCIE_CFG MISC register
-	* for all three controller
-	* need to find a better way to do it (TBD)
-	*/
-	writel(0xFFF, PCIE_CFG);
 	for (port = 0; port < NUM_PCIE_PORTS; port++) {
-		snprintf(port_name, sizeof(port_name), "pcie%d", port);
-		port_name[sizeof(port_name) - 1] = 0;
-		clk = clk_get_sys(port_name, NULL);
-		if (!clk) {
-			pr_err("%s:couldn't get clk for pcie%d\n",
-					__func__, port);
-			continue;
+		/* do not enable clock if it is PCIE0. Ideally , all controller
+		 * should have been independent from others with respect to
+		 * clock. But PCIE1 and 2 depends on PCIE0.So PCIE0 clk
+		 * is provided during board init.*/
+		if (port == 1) {
+			/* Ideally CFG Clock should have been also enabled
+			 * here. But it is done currently during board
+			 * init routne*/
+			clk = clk_get_sys("pcie1", NULL);
+			if (!clk) {
+				pr_err("%s:couldn't get clk for pcie1\n",
+						__func__);
+				continue;
+			}
+			if (clk_enable(clk)) {
+				pr_err("%s:couldn't enable clk for pcie1\n",
+						__func__);
+				continue;
+			}
+		} else if (port == 2) {
+			/* Ideally CFG Clock should have been also enabled
+			 * here. But it is done currently during board
+			 * init routne*/
+			clk = clk_get_sys("pcie2", NULL);
+			if (!clk) {
+				pr_err("%s:couldn't get clk for pcie2\n",
+						__func__);
+				continue;
+			}
+			if (clk_enable(clk)) {
+				pr_err("%s:couldn't enable clk for pcie2\n",
+						__func__);
+				continue;
+			}
 		}
-		if (clk_enable(clk)) {
-			pr_err("%s:couldn't enable clk for pcie%d\n",
-					__func__, port);
-			continue;
-		}
-		add_pcie_port(port,
-				spr_pcie_base[port],
-				spr_pcie_app_base[port]);
+
+		if (spear13xx_pcie_port_is_host(port))
+			add_pcie_port(port, spr_pcie_base[port],
+					spr_pcie_app_base[port]);
 	}
 
 	pci_common_init(&spear13xx_pci);
@@ -542,7 +640,7 @@ static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	int i;
 
 	status = readl(&app_reg->int_sts);
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < 26; i++) {
 		type = status & (1 << i);
 		switch (type) {
 		case MSI_CTRL_INT:
@@ -575,19 +673,22 @@ static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 #ifdef CONFIG_PCI_MSI
 static int find_valid_pos0(int port, int nvec, int pos, int *pos0)
 {
-find_next_pos0:
-	pos = find_next_zero_bit(msi_irq_in_use[port],
-			SPEAR_NUM_MSI_IRQS, pos);
-	/*if you have reached to the end then get out from here.*/
-	if (pos == SPEAR_NUM_MSI_IRQS)
-		return -ENOSPC;
-	/* Check if this position is at correct offset.nvec is always a
-	 * power of two. pos0 must be nvec bit alligned.
-	 */
-	if (pos % nvec) {
-		pos += nvec - (pos % nvec);
-		goto find_next_pos0;
-	}
+	int flag = 1;
+	do {
+		pos = find_next_zero_bit(msi_irq_in_use[port],
+				SPEAR_NUM_MSI_IRQS, pos);
+		/*if you have reached to the end then get out from here.*/
+		if (pos == SPEAR_NUM_MSI_IRQS)
+			return -ENOSPC;
+		/* Check if this position is at correct offset.nvec is always a
+		 * power of two. pos0 must be nvec bit alligned.
+		 */
+		if (pos % nvec)
+			pos += nvec - (pos % nvec);
+		else
+			flag = 0;
+	} while (flag);
+
 	*pos0 = pos;
 	return 0;
 }
