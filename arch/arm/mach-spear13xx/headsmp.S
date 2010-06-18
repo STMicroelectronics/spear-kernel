@@ -66,7 +66,14 @@ ENDPROC(v7_invalidate_l1)
  */
 ENTRY(spear13xx_secondary_startup)
 	/* If we don't do this then we have a crash */
+
+	/*
+	 * Since now this is being called from xloader so removing it
+	 * here
+	 */
+#if 0
 	bl v7_invalidate_l1
+#endif
 
 	mrc	p15, 0, r0, c0, c0, 5
 	and	r0, r0, #15
