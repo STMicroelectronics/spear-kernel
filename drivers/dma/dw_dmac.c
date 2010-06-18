@@ -38,7 +38,7 @@
 #define DWC_DEFAULT_CTLLO	(DWC_CTLL_DST_MSIZE(0)		\
 				| DWC_CTLL_SRC_MSIZE(0)		\
 				| DWC_CTLL_DMS(1)		\
-				| DWC_CTLL_SMS(1)		\
+				| DWC_CTLL_SMS(0)		\
 				| DWC_CTLL_LLP_D_EN		\
 				| DWC_CTLL_LLP_S_EN)
 
