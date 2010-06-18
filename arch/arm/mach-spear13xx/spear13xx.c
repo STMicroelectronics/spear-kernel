@@ -563,6 +563,100 @@ struct platform_device sdhci_device = {
 	.resource = sdhci_resources,
 };
 
+/* pcie gadget registration */
+static struct resource pcie_gadget0_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE0_APP_BASE,
+		.end = SPEAR13XX_PCIE0_APP_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE0_BASE,
+		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+/* pcie_gadget0_id defaults to 0, being static variable */
+static int pcie_gadget0_id;
+static u64 pcie_gadget0_dmamask = ~0;
+
+struct platform_device pcie_gadget0_device = {
+	.name = "pcie-gadget-spear",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget0_dmamask,
+		.platform_data = &pcie_gadget0_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie_gadget0_resources),
+	.resource = pcie_gadget0_resources,
+};
+
+static struct resource pcie_gadget1_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE1_APP_BASE,
+		.end = SPEAR13XX_PCIE1_APP_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE1_BASE,
+		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+/* pcie_gadget1_id defaults to 0, being static variable */
+static int pcie_gadget1_id;
+static u64 pcie_gadget1_dmamask = ~0;
+
+struct platform_device pcie_gadget1_device = {
+	.name = "pcie-gadget-spear",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget1_dmamask,
+		.platform_data = &pcie_gadget1_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie_gadget1_resources),
+	.resource = pcie_gadget1_resources,
+};
+
+static struct resource pcie_gadget2_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE2_APP_BASE,
+		.end = SPEAR13XX_PCIE2_APP_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE2_BASE,
+		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+/* pcie_gadget2_id defaults to 0, being static variable */
+static int pcie_gadget2_id;
+static u64 pcie_gadget2_dmamask = ~0;
+
+struct platform_device pcie_gadget2_device = {
+	.name = "pcie-gadget-spear",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget2_dmamask,
+		.platform_data = &pcie_gadget2_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie_gadget2_resources),
+	.resource = pcie_gadget2_resources,
+};
+
 static void dmac_setup(void)
 {
 	/*

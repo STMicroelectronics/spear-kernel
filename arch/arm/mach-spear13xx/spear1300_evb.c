@@ -67,6 +67,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&sdhci_device,
 	&smi_device,
 	&wdt_device,
+	&pcie_gadget0_device,
 };
 
 /* keyboard specific platform data */

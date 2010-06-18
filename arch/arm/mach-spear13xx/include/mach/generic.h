@@ -50,6 +50,9 @@ extern struct platform_device rtc_device;
 extern struct platform_device sdhci_device;
 extern struct platform_device smi_device;
 extern struct platform_device wdt_device;
+extern struct platform_device pcie_gadget0_device;
+extern struct platform_device pcie_gadget1_device;
+extern struct platform_device pcie_gadget2_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx family function declarations here */
