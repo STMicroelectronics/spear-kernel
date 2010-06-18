@@ -427,13 +427,14 @@ out_dma_channel:
 s32 spear_adc_chan_get(void *dev_id, enum adc_chan_id chan_id)
 {
 	s32 status = 0;
+	unsigned long flags;
 
 	if (!dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "null devid ptr passed\n");
 		return -EFAULT;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 
 	if ((g_drv_data->mode == SINGLE_CONVERSION) &&
 			g_drv_data->usage_count) {
@@ -461,7 +462,7 @@ s32 spear_adc_chan_get(void *dev_id, enum adc_chan_id chan_id)
 	}
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_chan_get);
@@ -477,6 +478,7 @@ EXPORT_SYMBOL(spear_adc_chan_get);
 s32 spear_adc_chan_put(void *dev_id, enum adc_chan_id chan_id)
 {
 	s32 status = 0;
+	unsigned long flags;
 
 	if (!dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "null devid ptr passed\n");
@@ -488,7 +490,7 @@ s32 spear_adc_chan_put(void *dev_id, enum adc_chan_id chan_id)
 		return -ENODEV;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 
 	if (g_drv_data->chan[chan_id].owner == dev_id) {
 		if (g_drv_data->mode == CONTINUOUS_CONVERSION)
@@ -513,7 +515,7 @@ s32 spear_adc_chan_put(void *dev_id, enum adc_chan_id chan_id)
 		}
 	}
 
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_chan_put);
@@ -569,6 +571,7 @@ s32 spear_adc_get_data(void *dev_id, enum adc_chan_id chan_id,
 		uint *digital_volt, u32 count)
 {
 	s32 i, status = 0;
+	unsigned long flags;
 	u32 data_mask = DATA_MASK;
 
 	if (!dev_id || !digital_volt) {
@@ -577,7 +580,7 @@ s32 spear_adc_get_data(void *dev_id, enum adc_chan_id chan_id,
 		return -EFAULT;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 	if (g_drv_data->chan[chan_id].owner != dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "user not owner of channel\n");
 		status = -EACCES;
@@ -590,7 +593,7 @@ s32 spear_adc_get_data(void *dev_id, enum adc_chan_id chan_id,
 		status = -EINVAL;
 		goto out_lock;
 	}
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 
 	/* Enabling DMA for Channel0 */
 	if (count > 1) {
@@ -644,7 +647,7 @@ s32 spear_adc_get_data(void *dev_id, enum adc_chan_id chan_id,
 	return 0;
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_get_data);
@@ -714,6 +717,7 @@ s32 spear_adc_configure(void *dev_id, enum adc_chan_id chan_id,
 		struct adc_config *config)
 {
 	s32 status = 0, irq;
+	unsigned long flags;
 
 	if (!dev_id || !config) {
 		dev_err(&g_drv_data->pdev->dev, "null devid or config ptr "
@@ -736,7 +740,7 @@ s32 spear_adc_configure(void *dev_id, enum adc_chan_id chan_id,
 		return -ENODEV;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 
 	if (g_drv_data->chan[chan_id].owner != dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "user not owner of channel\n");
@@ -786,7 +790,7 @@ s32 spear_adc_configure(void *dev_id, enum adc_chan_id chan_id,
 #endif
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_configure);
@@ -804,6 +808,7 @@ s32 spear_adc_get_configure(void *dev_id, enum adc_chan_id chan_id,
 		struct adc_config *config)
 {
 	s32 status = 0;
+	unsigned long flags;
 
 	if (!dev_id || !config) {
 		dev_err(&g_drv_data->pdev->dev, "null devid or config ptr "
@@ -816,7 +821,7 @@ s32 spear_adc_get_configure(void *dev_id, enum adc_chan_id chan_id,
 		return -ENODEV;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 
 	if (g_drv_data->chan[chan_id].owner != dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "user not owner of channel\n");
@@ -846,7 +851,7 @@ s32 spear_adc_get_configure(void *dev_id, enum adc_chan_id chan_id,
 	}
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_get_configure);
@@ -916,6 +921,7 @@ u32 adc_chan_configure(struct adc_chan_config *config)
 s32 spear_adc_chan_configure(void *dev_id, struct adc_chan_config *config)
 {
 	s32 status = 0;
+	unsigned long flags;
 
 	if (!dev_id || !config) {
 		dev_err(&g_drv_data->pdev->dev, "null devid or config ptr "
@@ -923,7 +929,7 @@ s32 spear_adc_chan_configure(void *dev_id, struct adc_chan_config *config)
 		return -EFAULT;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 	if (g_drv_data->chan[config->chan_id].owner != dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "user not owner of channel\n");
 		status = -EACCES;
@@ -987,7 +993,7 @@ s32 spear_adc_chan_configure(void *dev_id, struct adc_chan_config *config)
 	g_drv_data->chan[config->chan_id].avg_samples = config->avg_samples;
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_chan_configure);
@@ -1003,6 +1009,7 @@ EXPORT_SYMBOL(spear_adc_chan_configure);
 s32 spear_adc_get_chan_configure(void *dev_id, struct adc_chan_config *config)
 {
 	s32 status = 0;
+	unsigned long flags;
 
 	if (!dev_id || !config) {
 		dev_err(&g_drv_data->pdev->dev, "null devid or config ptr "
@@ -1016,7 +1023,7 @@ s32 spear_adc_get_chan_configure(void *dev_id, struct adc_chan_config *config)
 		return -ENODEV;
 	}
 
-	spin_lock(&g_drv_data->adc_lock);
+	spin_lock_irqsave(&g_drv_data->adc_lock, flags);
 
 	if (g_drv_data->chan[config->chan_id].owner != dev_id) {
 		dev_err(&g_drv_data->pdev->dev, "user not owner of channel\n");
@@ -1055,7 +1062,7 @@ s32 spear_adc_get_chan_configure(void *dev_id, struct adc_chan_config *config)
 	}
 
 out_lock:
-	spin_unlock(&g_drv_data->adc_lock);
+	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
 	return status;
 }
 EXPORT_SYMBOL(spear_adc_get_chan_configure);
