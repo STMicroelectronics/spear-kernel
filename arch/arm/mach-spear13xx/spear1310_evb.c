@@ -20,12 +20,27 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <mach/pcie.h>
 #include <plat/adc.h>
+#include <plat/fsmc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+extern void __init spear1300_evb_init_lcd(void);
+#endif
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear13xx specific devices */
@@ -54,6 +69,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&sdhci_device,
 	&smi_device,
 	&wdt_device,
+	&pcie_gadget0_device,
 
 	/* spear1310 specific devices */
 	&can0_device,
@@ -138,6 +154,14 @@ static void __init spear1310_evb_init(void)
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&smi_device);
+	/* initialize fsmc related data in fsmc plat data */
+	fsmc_init_board_info(&fsmc_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
+
+#ifdef CONFIG_PCIEPORTBUS
+	/* Enable PCIE0 clk */
+	enable_pcie0_clk();
+#endif
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
@@ -145,8 +169,40 @@ static void __init spear1310_evb_init(void)
 	/* Add Amba Devices */
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+			FSMC_FLASH_WIDTH8);
+
 	spi_init();
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+   spear1300_evb_init_lcd();
+#endif
+
 }
+
+#ifdef CONFIG_PCIEPORTBUS
+/* this function is needed for PCIE host and device driver. Same
+ * controller can not be programmed as host as well as device. So host
+ * driver must call this function and if this function returns 1 then
+ * only host should add that particular port as RC.
+ * A port to be added as device, one must also add device's information
+ * in plat_devs array defined in this file.
+ * it is the responsibility of calling function to not send port number
+ * greter than max no of controller(3)
+ */
+int spear13xx_pcie_port_is_host(int port)
+{
+	switch (port) {
+	case 0:
+		return 0;
+	case 1:
+		return 1;
+	case 2:
+		return 1;
+	}
+	return -EINVAL;
+}
+#endif
 
 MACHINE_START(SPEAR1310, "ST-SPEAR1310-EVB")
 	.boot_params	=	0x00000100,
