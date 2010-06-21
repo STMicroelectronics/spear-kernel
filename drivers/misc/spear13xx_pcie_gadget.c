@@ -371,13 +371,13 @@ static ssize_t pcie_gadget_store_send_msi(struct device *dev,
 	ven_msi |= vector << VEN_MSI_VECTOR_ID;
 
 	/*generating interrupt for msi vector*/
-	ven_msi |=  VEN_MSI_REQ_EN;
-	writel(ven_msi,	&app_reg->ven_msi_1);
+	ven_msi |= VEN_MSI_REQ_EN;
+	writel(ven_msi, &app_reg->ven_msi_1);
 	/*need to wait till this bit is cleared, it is not cleared
 	 * autometically[Bug RTL] TBD*/
 	udelay(1);
-	ven_msi &=  ~VEN_MSI_REQ_EN;
-	writel(ven_msi,	&app_reg->ven_msi_1);
+	ven_msi &= ~VEN_MSI_REQ_EN;
+	writel(ven_msi, &app_reg->ven_msi_1);
 
 	return count;
 }

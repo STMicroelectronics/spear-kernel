@@ -640,6 +640,9 @@ static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	int i;
 
 	status = readl(&app_reg->int_sts);
+
+	desc->chip->ack(irq);
+
 	for (i = 0; i < 26; i++) {
 		type = status & (1 << i);
 		switch (type) {
@@ -668,6 +671,8 @@ static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 			break;
 		}
 	}
+
+	desc->chip->unmask(irq);
 }
 
 #ifdef CONFIG_PCI_MSI
