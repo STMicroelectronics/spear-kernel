@@ -19,8 +19,6 @@
 #include <mach/suspend.h>
 #include <mach/hardware.h>
 
-static void (*saved_idle)(void);
-
 static int spear_pm_sleep(suspend_state_t state)
 {
 	void (*spear_sram_sleep)(suspend_state_t state) = NULL;
@@ -50,8 +48,7 @@ static int spear_pm_sleep(suspend_state_t state)
 static int spear_pm_prepare(void)
 {
 	/* We cannot sleep in idle until we have resumed */
-	saved_idle = pm_idle;
-	pm_idle = NULL;
+	disable_hlt();
 	return 0;
 }
 
@@ -84,7 +81,7 @@ static int spear_pm_enter(suspend_state_t state)
  */
 static void spear_pm_finish(void)
 {
-	pm_idle = saved_idle;
+	enable_hlt();
 }
 
 static struct platform_suspend_ops spear_pm_ops = {

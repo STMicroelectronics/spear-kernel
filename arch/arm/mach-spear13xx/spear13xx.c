@@ -713,7 +713,7 @@ struct map_desc spear13xx_io_desc[] __initdata = {
 		.virtual	= IO_ADDRESS(SPEAR13XX_SYSRAM1_BASE),
 		.pfn		= __phys_to_pfn(SPEAR13XX_SYSRAM1_BASE),
 		.length		= SZ_1M,
-		.type		= MT_DEVICE
+		.type		= MT_MEMORY_NONCACHED
 	},
 };
 
