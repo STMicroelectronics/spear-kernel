@@ -19,3 +19,4 @@ obj-$(CONFIG_MACH_SPEAR1310)		+= spear1310.o
 # spear1310 boards files
 obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= spear1310_evb.o
 obj-$(CONFIG_PM)	+= pm.o sleep.o
+obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o

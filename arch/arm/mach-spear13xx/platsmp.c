@@ -101,6 +101,18 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	pen_release = cpu;
 	flush_cache_all();
 
+	/*
+	 * XXX
+	 *
+	 * This is a later addition to the booting protocol: the
+	 * bootMonitor now puts secondary cores into WFI, so
+	 * poke_milo() no longer gets the cores moving; we need
+	 * to send a soft interrupt to wake the secondary core.
+	 * Use smp_cross_call() for this, since there's little
+	 * point duplicating the code here
+	 */
+	smp_cross_call(cpumask_of(cpu));
+
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
