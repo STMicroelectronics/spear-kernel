@@ -834,16 +834,24 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 static int fsmc_nand_suspend(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
-	if (host)
+	int ret = 0;
+
+	if (host) {
+		ret = host->mtd.suspend(&host->mtd);
 		clk_disable(host->clk);
-	return 0;
+	}
+
+	return ret;
 }
 
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
-	if (host)
+	if (host) {
 		clk_enable(host->clk);
+		host->mtd.resume(&host->mtd);
+	}
+
 	return 0;
 }
 
