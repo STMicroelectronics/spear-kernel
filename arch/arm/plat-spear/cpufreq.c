@@ -97,17 +97,17 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	return ret;
 }
 
-static int __init spear_cpufreq_init(struct cpufreq_policy *policy)
+static int spear_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int result;
 	int i = 0;
 
+	if (policy->cpu != 0)
+		return -EINVAL;
+
 	cpu_clk = clk_get(NULL, CPU_CLK);
 	if (IS_ERR(cpu_clk))
 		return PTR_ERR(cpu_clk);
-
-	if (policy->cpu != 0)
-		return -EINVAL;
 
 	policy->cpuinfo.min_freq = MIN_CPU_FREQ;
 	policy->cpuinfo.max_freq = MAX_CPU_FREQ;
