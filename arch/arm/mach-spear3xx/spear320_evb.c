@@ -139,7 +139,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #endif
 };
 
-static void spi_init(void)
+static void __init spi_init(void)
 {
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
