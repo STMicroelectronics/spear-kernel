@@ -58,10 +58,6 @@ static struct platform_device *plat_devs[] __initdata = {
 /* Currently no gpios are free on eval board so it is kept commented */
 #if 0
 /* spi board information */
-static const struct flash_platform_data spix_flash_data = {
-	.type = "m25p40",
-};
-
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
 DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
@@ -85,7 +81,6 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.mode = 0,
 	}, {
 		.modalias = "m25p80",
-		.platform_data = &spix_flash_data,
 		.controller_data = &spi0_flash_chip_info,
 		.max_speed_hz = 10000000,
 		.bus_num = 0,
