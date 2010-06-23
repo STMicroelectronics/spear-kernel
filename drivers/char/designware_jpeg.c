@@ -697,7 +697,6 @@ static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 	if (ret)
 		return ret;
 
-	spin_lock(&g_drv_data->lock);
 	if (dev_type == JPEG_READ) {
 		direction = DMA_FROM_DEVICE;
 		callback = dma_read_callback;
@@ -713,7 +712,6 @@ static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 	tx = chan->device->device_prep_slave_sg(chan, g_drv_data->sg[dev_type],
 			g_drv_data->sg_len[dev_type], direction,
 			DMA_PREP_INTERRUPT);
-	spin_unlock(&g_drv_data->lock);
 
 	if (!tx)
 		return -ENOMEM;
