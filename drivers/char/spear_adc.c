@@ -758,36 +758,39 @@ s32 spear_adc_configure(void *dev_id, enum adc_chan_id chan_id,
 
 	status = adc_configure(config);
 	if (!status) {
+		enum adc_conv_mode old_mode = g_drv_data->mode;
+		g_drv_data->mode = config->mode;
+		g_drv_data->configured = true;
+		g_drv_data->mvolt = config->mvolt;
+#ifndef CONFIG_ARCH_SPEAR6XX
+		g_drv_data->resolution = config->resolution;
+#endif
+		irq = platform_get_irq(g_drv_data->pdev, 0);
+		if (irq < 0) {
+			dev_err(&g_drv_data->pdev->dev, "irq resource "
+					"not defined\n");
+			status = -ENODEV;
+			goto out_lock;
+		}
+
+		if ((config->mode == CONTINUOUS_CONVERSION) &&
+				(old_mode == SINGLE_CONVERSION))
+			free_irq(irq, g_drv_data);
+
+		spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
+
 		if ((config->mode == SINGLE_CONVERSION) &&
-				(g_drv_data->mode != SINGLE_CONVERSION)) {
-			irq = platform_get_irq(g_drv_data->pdev, 0);
-			if (irq < 0) {
-				dev_err(&g_drv_data->pdev->dev, "irq resource "
-						"not defined\n");
-				status = -ENODEV;
-				goto out_lock;
-			}
+				(old_mode != SINGLE_CONVERSION)) {
 			status = request_irq(irq, spear_adc_irq, 0, "spear-adc",
 					g_drv_data);
 			if (status < 0) {
 				dev_err(&g_drv_data->pdev->dev, "request irq"
 						" error\n");
-				goto out_lock;
+				return status;
 			}
 		}
-		if ((config->mode == CONTINUOUS_CONVERSION) &&
-				(g_drv_data->mode == SINGLE_CONVERSION)) {
-			irq = platform_get_irq(g_drv_data->pdev, 0);
-			if (irq >= 0)
-				free_irq(irq, g_drv_data);
-		}
-		g_drv_data->mode = config->mode;
-		g_drv_data->configured = true;
-		g_drv_data->mvolt = config->mvolt;
+		return 0;
 	}
-#ifndef CONFIG_ARCH_SPEAR6XX
-	g_drv_data->resolution = config->resolution;
-#endif
 
 out_lock:
 	spin_unlock_irqrestore(&g_drv_data->adc_lock, flags);
