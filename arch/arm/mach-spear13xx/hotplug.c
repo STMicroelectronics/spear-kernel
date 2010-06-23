@@ -108,7 +108,7 @@ int platform_cpu_kill(unsigned int cpu)
  *
  * Called with IRQs disabled
  */
-void platform_cpu_die(unsigned int cpu)
+void __cpuinit platform_cpu_die(unsigned int cpu)
 {
 #ifdef DEBUG
 	unsigned int this_cpu = hard_smp_processor_id();
