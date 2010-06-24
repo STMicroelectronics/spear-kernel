@@ -600,8 +600,12 @@ s32 spear_adc_get_data(void *dev_id, enum adc_chan_id chan_id,
 #ifdef CONFIG_SPEAR_ADC_DMA_IF
 		if ((chan_id == ADC_CHANNEL0) &&
 				(g_drv_data->mode == CONTINUOUS_CONVERSION)) {
-			adc_writel(g_drv_data->regs, STATUS, DMA_ENABLE |
-					adc_readl(g_drv_data->regs, STATUS));
+			uint status = adc_readl(g_drv_data->regs, STATUS);
+			adc_writel(g_drv_data->regs, STATUS,
+					STOP_CONVERSION & status);
+			adc_writel(g_drv_data->regs, STATUS,
+					DMA_ENABLE | status);
+			msleep(100);
 			status = dma_xfer(count, digital_volt);
 			adc_writel(g_drv_data->regs, STATUS, DMA_DISABLE &
 					adc_readl(g_drv_data->regs, STATUS));
