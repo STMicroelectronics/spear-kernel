@@ -228,6 +228,11 @@
 
 #define PCIE_MIPHY_CFG		((unsigned int *)(MISC_BASE + 0x328))
 #define PERIP_CFG		((unsigned int *)(MISC_BASE + 0x32c))
+	#define MCIF_SEL_SHIFT	3
+	#define MCIF_SEL_MASK	0x3
+	#define SD_MMC_ACTIVE	0x1
+	#define CF_MMC_ACTIVE	0x2
+	#define XD_MMC_ACTIVE	0x3
 #define FSMC_CFG		((unsigned int *)(MISC_BASE + 0x330))
 	/* FSMC_CFG register masks */
 	#define FSMC_MEMSEL_MASK	0x3

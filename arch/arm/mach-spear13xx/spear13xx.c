@@ -667,6 +667,16 @@ static void dmac_setup(void)
 	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
+static void sdhci_enable(void)
+{
+	unsigned val = readl(PERIP_CFG);
+
+	/* This function enables SD/MMC interface out of SD/MMC, CF, XD */
+	val &= ~(MCIF_SEL_MASK << MCIF_SEL_SHIFT);
+	val |= SD_MMC_ACTIVE << MCIF_SEL_SHIFT;
+	writel(val, PERIP_CFG);
+}
+
 #ifdef CONFIG_PCIEPORTBUS
 /* PCIE0 clock always needs to be enabled if any of the three PCIE port
  * have to be used. So call this function from the board initilization
@@ -699,6 +709,7 @@ int enable_pcie0_clk(void)
 void __init spear13xx_init(void)
 {
 	dmac_setup();
+	sdhci_enable();
 }
 
 /* This will initialize vic */
