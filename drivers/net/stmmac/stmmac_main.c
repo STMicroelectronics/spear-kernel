@@ -157,7 +157,7 @@ static void stmmac_verify_args(void)
 		dma_rxsize = DMA_RX_SIZE;
 	if (unlikely(dma_txsize < 0))
 		dma_txsize = DMA_TX_SIZE;
-	if (unlikely((buf_sz < DMA_BUFFER_SIZE) || (buf_sz > BUF_SIZE_16KiB)))
+	if (unlikely((buf_sz < DMA_BUFFER_SIZE) || (buf_sz > BUF_SIZE_12KiB)))
 		buf_sz = DMA_BUFFER_SIZE;
 	if (unlikely(flow_ctrl > 1))
 		flow_ctrl = FLOW_AUTO;
@@ -413,7 +413,7 @@ static void init_dma_desc_rings(struct net_device *dev)
 	 * indeed, in case of jumbo we need to bump-up the buffer sizes.
 	 */
 	if (unlikely(dev->mtu >= BUF_SIZE_8KiB))
-		bfsize = BUF_SIZE_16KiB;
+		bfsize = BUF_SIZE_12KiB;
 	else if (unlikely(dev->mtu >= BUF_SIZE_4KiB))
 		bfsize = BUF_SIZE_8KiB;
 	else if (unlikely(dev->mtu >= BUF_SIZE_2KiB))
@@ -634,7 +634,7 @@ static void stmmac_dma_operation_mode(struct stmmac_priv *priv)
 		} else {
 			/* Checksum computation is performed in software. */
 			priv->hw->ops->dma_mode(priv->dev->base_addr, tc,
-						SF_DMA_MODE);
+						0);
 			priv->tx_coe = NO_HW_CSUM;
 		}
 	}

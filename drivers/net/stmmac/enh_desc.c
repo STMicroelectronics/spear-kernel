@@ -149,10 +149,10 @@ static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
 	} else if (status == 0x1) {
 		DBG(KERN_ERR
 		    "RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
-		ret = discard_frame;
+		ret = csum_none;
 	} else if (status == 0x3) {
 		DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
-		ret = discard_frame;
+		ret = csum_none;
 	}
 	return ret;
 }

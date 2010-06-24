@@ -124,7 +124,7 @@
 #define NO_HW_CSUM 0
 
 /* GMAC TX FIFO is 8K, Rx FIFO is 16K */
-#define BUF_SIZE_16KiB 16384
+#define BUF_SIZE_12KiB 12288
 #define BUF_SIZE_8KiB 8192
 #define BUF_SIZE_4KiB 4096
 #define BUF_SIZE_2KiB 2048
