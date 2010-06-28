@@ -23,4 +23,4 @@ obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_C2PORT)		+= c2port/
 obj-y				+= eeprom/
 obj-y				+= cb710/
-obj-$(CONFIG_ARCH_SPEAR13XX))	+= spear13xx_pcie_gadget.o
+obj-$(CONFIG_ARCH_SPEAR13XX)	+= spear13xx_pcie_gadget.o
