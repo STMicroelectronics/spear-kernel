@@ -247,6 +247,7 @@ static void dwc_complete_all(struct dw_dma *dw, struct dw_dma_chan *dwc)
 {
 	struct dw_desc *desc, *_desc;
 	LIST_HEAD(list);
+	struct list_head *entry;
 
 	if (dma_readl(dw, CH_EN) & dwc->mask) {
 		dev_err(chan2dev(&dwc->chan),
@@ -262,10 +263,15 @@ static void dwc_complete_all(struct dw_dma *dw, struct dw_dma_chan *dwc)
 	 * Submit queued descriptors ASAP, i.e. before we go through
 	 * the completed ones.
 	 */
-	if (!list_empty(&dwc->queue))
-		dwc_dostart(dwc, dwc_first_queued(dwc));
 	list_splice_init(&dwc->active_list, &list);
-	list_splice_init(&dwc->queue, &dwc->active_list);
+
+	/* remove only first desc from dwc->queue */
+	if (!list_empty(&dwc->queue)) {
+		dwc_dostart(dwc, dwc_first_queued(dwc));
+		entry = dwc->queue.next;
+		list_del(entry);
+		list_add(entry, &dwc->active_list);
+	}
 
 	list_for_each_entry_safe(desc, _desc, &list, desc_node)
 		dwc_descriptor_complete(dwc, desc);
@@ -322,8 +328,11 @@ static void dwc_scan_descriptors(struct dw_dma *dw, struct dw_dma_chan *dwc)
 		cpu_relax();
 
 	if (!list_empty(&dwc->queue)) {
+		struct list_head *entry;
 		dwc_dostart(dwc, dwc_first_queued(dwc));
-		list_splice_init(&dwc->queue, &dwc->active_list);
+		entry = dwc->queue.next;
+		list_del(entry);
+		list_add(entry, &dwc->active_list);
 	}
 }
 
@@ -339,6 +348,7 @@ static void dwc_handle_error(struct dw_dma *dw, struct dw_dma_chan *dwc)
 {
 	struct dw_desc *bad_desc;
 	struct dw_desc *child;
+	struct list_head *entry;
 
 	dwc_scan_descriptors(dw, dwc);
 
@@ -349,7 +359,9 @@ static void dwc_handle_error(struct dw_dma *dw, struct dw_dma_chan *dwc)
 	 */
 	bad_desc = dwc_first_active(dwc);
 	list_del_init(&bad_desc->desc_node);
-	list_splice_init(&dwc->queue, dwc->active_list.prev);
+	entry = dwc->queue.next;
+	list_del(entry);
+	list_add(entry, dwc->active_list.prev);
 
 	/* Clear the error flag and try to restart the controller */
 	dma_writel(dw, CLEAR.ERROR, dwc->mask);
@@ -486,7 +498,7 @@ static void dw_dma_tasklet(unsigned long data)
 	 * will trigger a scan before the whole list is done.
 	 */
 	channel_set_bit(dw, MASK.XFER, dw->all_chan_mask);
-	channel_set_bit(dw, MASK.BLOCK, dw->all_chan_mask);
+/*	channel_set_bit(dw, MASK.BLOCK, dw->all_chan_mask); */
 	channel_set_bit(dw, MASK.ERROR, dw->all_chan_mask);
 }
 
@@ -840,12 +852,14 @@ dwc_tx_status(struct dma_chan *chan,
 	dma_cookie_t		last_complete;
 	int			ret;
 
+	spin_lock_bh(&dwc->lock);
 	last_complete = dwc->completed;
 	last_used = chan->cookie;
 
 	ret = dma_async_is_complete(cookie, last_complete, last_used);
 	if (ret != DMA_SUCCESS) {
-		dwc_scan_descriptors(to_dw_dma(chan->device), dwc);
+		if (list_empty(&dwc->active_list))
+			dwc_scan_descriptors(to_dw_dma(chan->device), dwc);
 
 		last_complete = dwc->completed;
 		last_used = chan->cookie;
@@ -854,6 +868,7 @@ dwc_tx_status(struct dma_chan *chan,
 	}
 
 	dma_set_tx_state(txstate, last_complete, last_used, 0);
+	spin_unlock_bh(&dwc->lock);
 
 	return ret;
 }
@@ -863,7 +878,7 @@ static void dwc_issue_pending(struct dma_chan *chan)
 	struct dw_dma_chan	*dwc = to_dw_dma_chan(chan);
 
 	spin_lock_bh(&dwc->lock);
-	if (!list_empty(&dwc->queue))
+	if (!list_empty(&dwc->queue) && list_empty(&dwc->active_list))
 		dwc_scan_descriptors(to_dw_dma(chan->device), dwc);
 	spin_unlock_bh(&dwc->lock);
 }
@@ -938,7 +953,7 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 
 	/* Enable interrupts */
 	channel_set_bit(dw, MASK.XFER, dwc->mask);
-	channel_set_bit(dw, MASK.BLOCK, dwc->mask);
+/*	channel_set_bit(dw, MASK.BLOCK, dwc->mask); */
 	channel_set_bit(dw, MASK.ERROR, dwc->mask);
 
 	spin_unlock_bh(&dwc->lock);
