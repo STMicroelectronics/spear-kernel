@@ -44,7 +44,7 @@ struct spear_pcie_gadget_config {
 	u32 requested_msi;
 	u32 configured_msi;
 	u32 bar0_size;
-	u32 bar0_offset;
+	u32 bar0_rw_offset;
 	u32 va_bar0_address;
 };
 
@@ -137,7 +137,7 @@ static int pci_find_own_next_cap_ttl(struct spear_pcie_gadget_config *config,
 }
 
 static int pci_find_own_next_cap(struct spear_pcie_gadget_config *config,
-			       u32 pos, int cap)
+			u32 pos, int cap)
 {
 	int ttl = PCI_FIND_CAP_TTL;
 
@@ -145,7 +145,7 @@ static int pci_find_own_next_cap(struct spear_pcie_gadget_config *config,
 }
 
 static int pci_find_own_cap_start(struct spear_pcie_gadget_config *config,
-				    u8 hdr_type)
+				u8 hdr_type)
 {
 	u32 status;
 
@@ -166,21 +166,20 @@ static int pci_find_own_cap_start(struct spear_pcie_gadget_config *config,
 	return 0;
 }
 
-
 /**
  * Tell if a device supports a given PCI capability.
  * Returns the address of the requested capability structure within the
  * device's PCI configuration space or 0 in case the device does not
- * support it.  Possible values for @cap:
+ * support it. Possible values for @cap:
  *
- *  %PCI_CAP_ID_PM           Power Management
- *  %PCI_CAP_ID_AGP          Accelerated Graphics Port
- *  %PCI_CAP_ID_VPD          Vital Product Data
- *  %PCI_CAP_ID_SLOTID       Slot Identification
- *  %PCI_CAP_ID_MSI          Message Signalled Interrupts
- *  %PCI_CAP_ID_CHSWP        CompactPCI HotSwap
- *  %PCI_CAP_ID_PCIX         PCI-X
- *  %PCI_CAP_ID_EXP          PCI Express
+ * %PCI_CAP_ID_PM	Power Management
+ * %PCI_CAP_ID_AGP	Accelerated Graphics Port
+ * %PCI_CAP_ID_VPD	Vital Product Data
+ * %PCI_CAP_ID_SLOTID	Slot Identification
+ * %PCI_CAP_ID_MSI	Message Signalled Interrupts
+ * %PCI_CAP_ID_CHSWP	CompactPCI HotSwap
+ * %PCI_CAP_ID_PCIX	PCI-X
+ * %PCI_CAP_ID_EXP	PCI Express
  */
 static int pci_find_own_capability(struct spear_pcie_gadget_config *config,
 		int cap)
@@ -196,7 +195,6 @@ static int pci_find_own_capability(struct spear_pcie_gadget_config *config,
 
 	return pos;
 }
-
 
 static irqreturn_t spear_pcie_gadget_irq(int irq, void *dev_id)
 {
@@ -359,7 +357,11 @@ static ssize_t pcie_gadget_store_send_msi(struct device *dev,
 
 	if (sscanf(buf, "%d", &vector) != 1)
 		return -EINVAL;
-	if (vector > config->configured_msi)
+
+	if (!config->configured_msi)
+		return -EINVAL;
+
+	if (vector >= config->configured_msi)
 		return -EINVAL;
 
 	ven_msi = readl(&app_reg->ven_msi_1);
@@ -453,6 +455,7 @@ static ssize_t pcie_gadget_store_bar0_size(struct device *dev,
 {
 	struct spear_pcie_gadget_config *config = dev_get_drvdata(dev);
 	u32 size, pos, pos1;
+	u32 no_of_bit = 0;
 
 	if (sscanf(buf, "%x", &size) != 1)
 		return -EINVAL;
@@ -464,14 +467,18 @@ static ssize_t pcie_gadget_store_bar0_size(struct device *dev,
 	else if (size >= 0x100000)
 		size = 0x100000;
 	else {
-		pos = 9;
-		pos1 = 9;
+		pos = 0;
+		pos1 = 0;
 		while (pos < 21) {
-			find_next_bit((unsigned long *)&size, 21, pos);
+			pos = find_next_bit((unsigned long *)&size, 21, pos);
 			if (pos != 21)
-				pos1 = pos;
+				pos1 = pos + 1;
 			pos++;
+			no_of_bit++;
 		}
+		if (no_of_bit == 2)
+			pos1--;
+
 		size = 1 << pos1;
 	}
 	config->bar0_size = size;
@@ -510,6 +517,8 @@ static ssize_t pcie_gadget_store_bar0_address(struct device *dev,
 	if (config->va_bar0_address)
 		iounmap((void *)config->va_bar0_address);
 	config->va_bar0_address = (u32)ioremap(address, config->bar0_size);
+	if (!config->va_bar0_address)
+		return -ENOMEM;
 
 	writel(address, &app_reg->pim0_mem_addr_start);
 
@@ -519,15 +528,15 @@ static ssize_t pcie_gadget_store_bar0_address(struct device *dev,
 static DEVICE_ATTR(bar0_address, S_IWUSR | S_IRUGO,
 		pcie_gadget_show_bar0_address, pcie_gadget_store_bar0_address);
 
-static ssize_t pcie_gadget_show_bar0_offset(struct device *dev,
+static ssize_t pcie_gadget_show_bar0_rw_offset(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct spear_pcie_gadget_config *config = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%x", config->bar0_offset);
+	return sprintf(buf, "%x", config->bar0_rw_offset);
 }
 
-static ssize_t pcie_gadget_store_bar0_offset(struct device *dev,
+static ssize_t pcie_gadget_store_bar0_rw_offset(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct spear_pcie_gadget_config *config = dev_get_drvdata(dev);
@@ -539,13 +548,13 @@ static ssize_t pcie_gadget_store_bar0_offset(struct device *dev,
 	if (offset % 4)
 		return -EINVAL;
 
-	config->bar0_offset = offset;
+	config->bar0_rw_offset = offset;
 
 	return count;
 }
 
-static DEVICE_ATTR(bar0_offset, S_IWUSR | S_IRUGO,
-		pcie_gadget_show_bar0_offset, pcie_gadget_store_bar0_offset);
+static DEVICE_ATTR(bar0_rw_offset, S_IWUSR | S_IRUGO,
+	pcie_gadget_show_bar0_rw_offset, pcie_gadget_store_bar0_rw_offset);
 
 static ssize_t pcie_gadget_show_bar0_data(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -553,7 +562,10 @@ static ssize_t pcie_gadget_show_bar0_data(struct device *dev,
 	struct spear_pcie_gadget_config *config = dev_get_drvdata(dev);
 	u32 data;
 
-	data = readl(config->va_bar0_address + config->bar0_offset);
+	if (!config->va_bar0_address)
+		return -ENOMEM;
+
+	data = readl(config->va_bar0_address + config->bar0_rw_offset);
 
 	return sprintf(buf, "%x", data);
 }
@@ -567,7 +579,10 @@ static ssize_t pcie_gadget_store_bar0_data(struct device *dev,
 	if (sscanf(buf, "%x", &data) != 1)
 		return -EINVAL;
 
-	writel(data, config->va_bar0_address + config->bar0_offset);
+	if (!config->va_bar0_address)
+		return -ENOMEM;
+
+	writel(data, config->va_bar0_address + config->bar0_rw_offset);
 
 	return count;
 }
@@ -578,36 +593,37 @@ static DEVICE_ATTR(bar0_data, S_IWUSR | S_IRUGO,
 static ssize_t pcie_gadget_show_help(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	char text[] = "\t\tlink read-> ltssm status\n \
-		link write-> arg1 = UP to enable ltsmm DOWN to disbale\n \
-		int_type read-> type of supported interrupt\n \
-		int_type write-> arg1 = interrupt type to be configured and\n \
+	char text[] = "\t\tlink read->ltssm status\n \
+		link write->arg1 = UP to enable ltsmm DOWN to disable\n \
+		int_type read->type of supported interrupt\n \
+		int_type write->arg1 = interrupt type to be configured and\n \
 		can be INTA, MSI or NO_INT\n \
 		(select MSI only when you have programmed no_of_msi)\n \
-		no_of_msi read-> zero if MSI is not enabled by host\n \
-		and positve value is the number of MSI vector granted\n \
-		no_of_msi write-> arg1 = number of MSI vector needed\n \
-		inta write-> arg1 = 1 to assert INTA and 0 to deassert\n \
-		send_msi write-> arg1 = MSI vector to be send\n \
-		vendor_id read-> programmed vendor id (hex)\n\
-		vendor_id write-> arg1 = vendor id(hex) to be programmed\n \
-		device_id read-> programmed device id(hex)\n \
-		device_id write-> arg1 = device id(hex) to be programmed\n \
-		bar0_size read-> size of bar0 in hex\n \
-		bar0_size write-> arg1= size of bar0 in hex\n \
+		no_of_msi read->zero if MSI is not enabled by host\n \
+		and positive value is the number of MSI vector granted\n \
+		no_of_msi write->arg1 = number of MSI vector needed\n \
+		inta write->arg1 = 1 to assert INTA and 0 to de-assert\n \
+		send_msi write->arg1 = MSI vector to be send\n \
+		vendor_id read->programmed vendor id (hex)\n\
+		vendor_id write->arg1 = vendor id(hex) to be programmed\n \
+		device_id read->programmed device id(hex)\n \
+		device_id write->arg1 = device id(hex) to be programmed\n \
+		bar0_size read->size of bar0 in hex\n \
+		bar0_size write->arg1= size of bar0 in hex\n \
 		(default bar0 size is 1000 (hex) bytes)\n \
-		bar0_address read-> address of bar0 mapped area in hex\n \
-		bar0_address write-> arg1= addrees of bar0 mapped area in hex\n\
-		(defalut mapping of bar0 is SYSRAM1(E0800000)\n \
+		bar0_address read->address of bar0 mapped area in hex\n \
+		bar0_address write->arg1 = address of bar0 mapped area in hex\n\
+		(default mapping of bar0 is SYSRAM1(E0800000)\n \
 		(always program bar size before bar address)\n \
-		(kerenl might modify bar size and address to allign)\n \
-		(read back bar size and address after wrting to check)\n \
-		bar0_offset read-> offset of bar0 for which bar0_data will\n \
+		(kernel might modify bar size and address to align)\n \
+		(read back bar size and address after writing to check)\n \
+		bar0_rw_offset read->offset of bar0 for which bar0_data \n \
 		will return value\n \
-		bar0_offset write-> arg1 = offset of bar0 for which\n \
+		bar0_rw_offset write->arg1 = offset of bar0 for which\n \
 		bar0_data will write value\n \
-		bar0_data read-> data at bar0_offset\n \
-		bar0_data write-> arg1 = data to be written at bar0_offset\n";
+		bar0_data read->data at bar0_rw_offset\n \
+		bar0_data write->arg1 = data to be written at\n \
+		bar0_rw_offset\n";
 
 	int size = (sizeof(text) < PAGE_SIZE) ? sizeof(text) : PAGE_SIZE;
 
@@ -626,7 +642,7 @@ static struct attribute *pcie_gadget_attributes[] = {
 	&dev_attr_device_id.attr,
 	&dev_attr_bar0_size.attr,
 	&dev_attr_bar0_address.attr,
-	&dev_attr_bar0_offset.attr,
+	&dev_attr_bar0_rw_offset.attr,
 	&dev_attr_bar0_data.attr,
 	&dev_attr_help.attr,
 	NULL
@@ -669,11 +685,15 @@ static void spear13xx_pcie_device_init(struct spear_pcie_gadget_config *config)
 	/*setup registers for inbound translation */
 
 	/* Keep AORAM mapped at BAR0 as default */
+	config->bar0_size = INBOUND_ADDR_MASK + 1;
+	spear_dbi_write_reg(config, PCIE_BAR0_MASK_REG, 4, INBOUND_ADDR_MASK);
+	spear_dbi_write_reg(config, PCI_BASE_ADDRESS_0, 4, 0xC);
+	config->va_bar0_address = (u32)ioremap(SPEAR13XX_SYSRAM1_BASE,
+			config->bar0_size);
+
 	writel(SPEAR13XX_SYSRAM1_BASE, &app_reg->pim0_mem_addr_start);
 	writel(0, &app_reg->pim1_mem_addr_start);
 	writel(INBOUND_ADDR_MASK + 1, &app_reg->mem0_addr_offset_limit);
-	spear_dbi_write_reg(config, PCIE_BAR0_MASK_REG, 4, INBOUND_ADDR_MASK);
-	spear_dbi_write_reg(config, PCI_BASE_ADDRESS_0, 4, 0xC);
 
 	writel(0x0, &app_reg->pim_io_addr_start);
 	writel(0x0, &app_reg->pim_io_addr_start);

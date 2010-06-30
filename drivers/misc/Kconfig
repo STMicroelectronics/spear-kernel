@@ -246,6 +246,16 @@ config EP93XX_PWM
 	  To compile this driver as a module, choose M here: the module will
 	  be called ep93xx_pwm.
 
+config SPEAR13XX_PCIE_GADGET
+	bool "PCIE gadget support for SPEAr13XX platform"
+	depends on ARCH_SPEAR13XX
+	default n
+	help
+	 This option enables gadget support for PCIE controller. If
+	 board file defines any controller as PCIE endpoint then a sysfs
+	 entry will be created for that controller. User can use these
+	 sysfs node to configure PCIE EP as per his requirements.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
