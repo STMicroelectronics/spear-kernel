@@ -113,7 +113,7 @@ static int spear_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.max_freq = MAX_CPU_FREQ;
 	policy->cur = policy->min = policy->max = spear_cpufreq_get(0);
 
-	for (i = 0; spear_cpu_freq[i]; i++) {
+	for (i = 0; i < ARRAY_SIZE(spear_cpu_freq); i++) {
 		spear_freq_tbl[i].index = i;
 		spear_freq_tbl[i].frequency = spear_cpu_freq[i];
 	}
