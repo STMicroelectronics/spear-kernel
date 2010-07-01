@@ -87,11 +87,6 @@ static struct dw_desc *dwc_first_active(struct dw_dma_chan *dwc)
 	return list_entry(dwc->active_list.next, struct dw_desc, desc_node);
 }
 
-static struct dw_desc *dwc_first_queued(struct dw_dma_chan *dwc)
-{
-	return list_entry(dwc->queue.next, struct dw_desc, desc_node);
-}
-
 static struct dw_desc *dwc_desc_get(struct dw_dma_chan *dwc)
 {
 	struct dw_desc *desc, *_desc;
@@ -247,7 +242,6 @@ static void dwc_complete_all(struct dw_dma *dw, struct dw_dma_chan *dwc)
 {
 	struct dw_desc *desc, *_desc;
 	LIST_HEAD(list);
-	struct list_head *entry;
 
 	if (dma_readl(dw, CH_EN) & dwc->mask) {
 		dev_err(chan2dev(&dwc->chan),
@@ -259,18 +253,12 @@ static void dwc_complete_all(struct dw_dma *dw, struct dw_dma_chan *dwc)
 			cpu_relax();
 	}
 
-	/*
-	 * Submit queued descriptors ASAP, i.e. before we go through
-	 * the completed ones.
-	 */
 	list_splice_init(&dwc->active_list, &list);
 
 	/* remove only first desc from dwc->queue */
 	if (!list_empty(&dwc->queue)) {
-		dwc_dostart(dwc, dwc_first_queued(dwc));
-		entry = dwc->queue.next;
-		list_del(entry);
-		list_add(entry, &dwc->active_list);
+		list_move(dwc->queue.next, &dwc->active_list);
+		dwc_dostart(dwc, dwc_first_active(dwc));
 	}
 
 	list_for_each_entry_safe(desc, _desc, &list, desc_node)
@@ -328,11 +316,8 @@ static void dwc_scan_descriptors(struct dw_dma *dw, struct dw_dma_chan *dwc)
 		cpu_relax();
 
 	if (!list_empty(&dwc->queue)) {
-		struct list_head *entry;
-		dwc_dostart(dwc, dwc_first_queued(dwc));
-		entry = dwc->queue.next;
-		list_del(entry);
-		list_add(entry, &dwc->active_list);
+		list_move(dwc->queue.next, &dwc->active_list);
+		dwc_dostart(dwc, dwc_first_active(dwc));
 	}
 }
 
@@ -348,7 +333,6 @@ static void dwc_handle_error(struct dw_dma *dw, struct dw_dma_chan *dwc)
 {
 	struct dw_desc *bad_desc;
 	struct dw_desc *child;
-	struct list_head *entry;
 
 	dwc_scan_descriptors(dw, dwc);
 
@@ -359,9 +343,7 @@ static void dwc_handle_error(struct dw_dma *dw, struct dw_dma_chan *dwc)
 	 */
 	bad_desc = dwc_first_active(dwc);
 	list_del_init(&bad_desc->desc_node);
-	entry = dwc->queue.next;
-	list_del(entry);
-	list_add(entry, dwc->active_list.prev);
+	list_move(dwc->queue.next, dwc->active_list.prev);
 
 	/* Clear the error flag and try to restart the controller */
 	dma_writel(dw, CLEAR.ERROR, dwc->mask);
@@ -556,8 +538,8 @@ static dma_cookie_t dwc_tx_submit(struct dma_async_tx_descriptor *tx)
 	if (list_empty(&dwc->active_list)) {
 		dev_vdbg(chan2dev(tx->chan), "tx_submit: started %u\n",
 				desc->txd.cookie);
-		dwc_dostart(dwc, desc);
 		list_add_tail(&desc->desc_node, &dwc->active_list);
+		dwc_dostart(dwc, dwc_first_active(dwc));
 	} else {
 		dev_vdbg(chan2dev(tx->chan), "tx_submit: queued %u\n",
 				desc->txd.cookie);
