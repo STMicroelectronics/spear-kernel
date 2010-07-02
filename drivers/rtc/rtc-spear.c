@@ -317,8 +317,8 @@ static int spear_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alm)
 	date = (alm->time.tm_mday << MDAY_SHIFT) | (alm->time.tm_mon <<
 			MONTH_SHIFT) | (alm->time.tm_year << YEAR_SHIFT);
 
-	writel(time, config->ioaddr + TIME_REG);
-	writel(date, config->ioaddr + DATE_REG);
+	writel(time, config->ioaddr + ALARM_TIME_REG);
+	writel(date, config->ioaddr + ALARM_DATE_REG);
 	err = is_write_complete(config);
 	if (err < 0)
 		return err;
