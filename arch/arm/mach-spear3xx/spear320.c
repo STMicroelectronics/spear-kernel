@@ -24,8 +24,6 @@
 #include <plat/shirq.h>
 
 /* pad multiplexing support */
-/* muxing registers */
-#define PAD_MUX_CONFIG_REG	0x0C
 #define MODE_CONFIG_REG		0x10
 
 /* modes */
@@ -38,32 +36,42 @@
 struct pmx_mode auto_net_smii_mode = {
 	.id = AUTO_NET_SMII_MODE,
 	.name = "Automation Networking SMII Mode",
-	.mask = 0x00,
+	.value = 0x00,
 };
 
 struct pmx_mode auto_net_mii_mode = {
 	.id = AUTO_NET_MII_MODE,
 	.name = "Automation Networking MII Mode",
-	.mask = 0x01,
+	.value = 0x01,
 };
 
 struct pmx_mode auto_exp_mode = {
 	.id = AUTO_EXP_MODE,
 	.name = "Automation Expanded Mode",
-	.mask = 0x02,
+	.value = 0x02,
 };
 
 struct pmx_mode small_printers_mode = {
 	.id = SMALL_PRINTERS_MODE,
 	.name = "Small Printers Mode",
-	.mask = 0x03,
+	.value = 0x03,
 };
 
 /* devices */
-struct pmx_dev_mode pmx_clcd_modes[] = {
+/* Pad multiplexing for CLCD device */
+static struct pmx_mux_reg pmx_clcd_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_clcd_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE,
-		.mask = 0x0,
+		.mux_regs = pmx_clcd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd_mux),
 	},
 };
 
@@ -71,13 +79,22 @@ struct pmx_dev pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_emi_modes[] = {
+/* Pad multiplexing for EMI (Parallel NOR flash) device */
+static struct pmx_mux_reg pmx_emi_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_emi_modes[] = {
 	{
 		.ids = AUTO_EXP_MODE,
-		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.mux_regs = pmx_emi_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_mux),
 	},
 };
 
@@ -85,13 +102,22 @@ struct pmx_dev pmx_emi = {
 	.name = "emi",
 	.modes = pmx_emi_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_fsmc_modes[] = {
+/* Pad multiplexing for FSMC (NAND flash) device */
+static struct pmx_mux_reg pmx_fsmc_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_fsmc_modes[] = {
 	{
 		.ids = ALL_MODES,
-		.mask = 0x0,
+		.mux_regs = pmx_fsmc_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_mux),
 	},
 };
 
@@ -99,13 +125,22 @@ struct pmx_dev pmx_fsmc = {
 	.name = "fsmc",
 	.modes = pmx_fsmc_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_spp_modes[] = {
+/* Pad multiplexing for SPP device */
+static struct pmx_mux_reg pmx_spp_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_spp_modes[] = {
 	{
 		.ids = SMALL_PRINTERS_MODE,
-		.mask = 0x0,
+		.mux_regs = pmx_spp_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_spp_mux),
 	},
 };
 
@@ -113,14 +148,23 @@ struct pmx_dev pmx_spp = {
 	.name = "spp",
 	.modes = pmx_spp_modes,
 	.mode_count = ARRAY_SIZE(pmx_spp_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_sdhci_modes[] = {
+/* Pad multiplexing for SDHCI device */
+static struct pmx_mux_reg pmx_sdhci_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_sdhci_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |
 			SMALL_PRINTERS_MODE,
-		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.mux_regs = pmx_sdhci_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),
 	},
 };
 
@@ -128,13 +172,22 @@ struct pmx_dev pmx_sdhci = {
 	.name = "sdhci",
 	.modes = pmx_sdhci_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_i2s_modes[] = {
+/* Pad multiplexing for I2S device */
+static struct pmx_mux_reg pmx_i2s_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2s_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mask = PMX_UART0_MODEM_MASK,
+		.mux_regs = pmx_i2s_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_mux),
 	},
 };
 
@@ -142,13 +195,22 @@ struct pmx_dev pmx_i2s = {
 	.name = "i2s",
 	.modes = pmx_i2s_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart1_modes[] = {
+/* Pad multiplexing for UART1 device */
+static struct pmx_mux_reg pmx_uart1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart1_modes[] = {
 	{
 		.ids = ALL_MODES,
-		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK,
+		.mux_regs = pmx_uart1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_mux),
 	},
 };
 
@@ -156,18 +218,36 @@ struct pmx_dev pmx_uart1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart1_modem_modes[] = {
+/* Pad multiplexing for UART1 Modem device */
+static struct pmx_mux_reg pmx_uart1_modem_autoexp_mux[] = {
 	{
-		.ids = AUTO_EXP_MODE,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK |
 			PMX_SSP_CS_MASK,
-	}, {
-		.ids = SMALL_PRINTERS_MODE,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart1_modem_smallpri_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN3_MASK | PMX_GPIO_PIN4_MASK |
 			PMX_GPIO_PIN5_MASK | PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart1_modem_modes[] = {
+	{
+		.ids = AUTO_EXP_MODE,
+		.mux_regs = pmx_uart1_modem_autoexp_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_autoexp_mux),
+	}, {
+		.ids = SMALL_PRINTERS_MODE,
+		.mux_regs = pmx_uart1_modem_smallpri_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_smallpri_mux),
 	},
 };
 
@@ -175,13 +255,22 @@ struct pmx_dev pmx_uart1_modem = {
 	.name = "uart1_modem",
 	.modes = pmx_uart1_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart2_modes[] = {
+/* Pad multiplexing for UART2 device */
+static struct pmx_mux_reg pmx_uart2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_FIRDA_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart2_modes[] = {
 	{
 		.ids = ALL_MODES,
-		.mask = PMX_FIRDA_MASK,
+		.mux_regs = pmx_uart2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart2_mux),
 	},
 };
 
@@ -189,13 +278,22 @@ struct pmx_dev pmx_uart2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_touchscreen_modes[] = {
+/* Pad multiplexing for Touchscreen device */
+static struct pmx_mux_reg pmx_touchscreen_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_touchscreen_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE,
-		.mask = PMX_SSP_CS_MASK,
+		.mux_regs = pmx_touchscreen_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_touchscreen_mux),
 	},
 };
 
@@ -203,14 +301,23 @@ struct pmx_dev pmx_touchscreen = {
 	.name = "touchscreen",
 	.modes = pmx_touchscreen_modes,
 	.mode_count = ARRAY_SIZE(pmx_touchscreen_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_can_modes[] = {
+/* Pad multiplexing for CAN device */
+static struct pmx_mux_reg pmx_can_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE | AUTO_EXP_MODE,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
 			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_can_modes[] = {
+	{
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE | AUTO_EXP_MODE,
+		.mux_regs = pmx_can_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_can_mux),
 	},
 };
 
@@ -218,13 +325,22 @@ struct pmx_dev pmx_can = {
 	.name = "can",
 	.modes = pmx_can_modes,
 	.mode_count = ARRAY_SIZE(pmx_can_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_sdhci_led_modes[] = {
+/* Pad multiplexing for SDHCI LED device */
+static struct pmx_mux_reg pmx_sdhci_led_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_sdhci_led_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mask = PMX_SSP_CS_MASK,
+		.mux_regs = pmx_sdhci_led_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_led_mux),
 	},
 };
 
@@ -232,16 +348,34 @@ struct pmx_dev pmx_sdhci_led = {
 	.name = "sdhci_led",
 	.modes = pmx_sdhci_led_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_led_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_pwm0_modes[] = {
+/* Pad multiplexing for PWM0 device */
+static struct pmx_mux_reg pmx_pwm0_net_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm0_autoexpsmallpri_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pwm0_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mask = PMX_UART0_MODEM_MASK,
+		.mux_regs = pmx_pwm0_net_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_net_mux),
 	}, {
 		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_pwm0_autoexpsmallpri_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_autoexpsmallpri_mux),
 	},
 };
 
@@ -249,16 +383,34 @@ struct pmx_dev pmx_pwm0 = {
 	.name = "pwm0",
 	.modes = pmx_pwm0_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm0_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_pwm1_modes[] = {
+/* Pad multiplexing for PWM1 device */
+static struct pmx_mux_reg pmx_pwm1_net_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm1_autoexpsmallpri_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pwm1_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mask = PMX_UART0_MODEM_MASK,
+		.mux_regs = pmx_pwm1_net_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm1_net_mux),
 	}, {
 		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_pwm1_autoexpsmallpri_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm1_autoexpsmallpri_mux),
 	},
 };
 
@@ -266,16 +418,34 @@ struct pmx_dev pmx_pwm1 = {
 	.name = "pwm1",
 	.modes = pmx_pwm1_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_pwm2_modes[] = {
+/* Pad multiplexing for PWM2 device */
+static struct pmx_mux_reg pmx_pwm2_net_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_autoexpsmallpri_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pwm2_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mask = PMX_SSP_CS_MASK,
+		.mux_regs = pmx_pwm2_net_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_net_mux),
 	}, {
 		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_pwm2_autoexpsmallpri_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_autoexpsmallpri_mux),
 	},
 };
 
@@ -283,13 +453,22 @@ struct pmx_dev pmx_pwm2 = {
 	.name = "pwm2",
 	.modes = pmx_pwm2_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm2_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_pwm3_modes[] = {
+/* Pad multiplexing for PWM3 device */
+static struct pmx_mux_reg pmx_pwm3_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pwm3_modes[] = {
 	{
 		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE | AUTO_NET_SMII_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_pwm3_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_mux),
 	},
 };
 
@@ -297,13 +476,22 @@ struct pmx_dev pmx_pwm3 = {
 	.name = "pwm3",
 	.modes = pmx_pwm3_modes,
 	.mode_count = ARRAY_SIZE(pmx_pwm3_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_ssp1_modes[] = {
+/* Pad multiplexing for SSP1 device */
+static struct pmx_mux_reg pmx_ssp1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp1_modes[] = {
 	{
 		.ids = SMALL_PRINTERS_MODE | AUTO_NET_SMII_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_ssp1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp1_mux),
 	},
 };
 
@@ -311,13 +499,22 @@ struct pmx_dev pmx_ssp1 = {
 	.name = "ssp1",
 	.modes = pmx_ssp1_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_ssp2_modes[] = {
+/* Pad multiplexing for SSP2 device */
+static struct pmx_mux_reg pmx_ssp2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp2_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_ssp2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_mux),
 	},
 };
 
@@ -325,13 +522,22 @@ struct pmx_dev pmx_ssp2 = {
 	.name = "ssp2",
 	.modes = pmx_ssp2_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp2_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_mii1_modes[] = {
+/* Pad multiplexing for mii1 device */
+static struct pmx_mux_reg pmx_mii1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_mii1_modes[] = {
 	{
 		.ids = AUTO_NET_MII_MODE,
-		.mask = 0x0,
+		.mux_regs = pmx_mii1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_mii1_mux),
 	},
 };
 
@@ -339,13 +545,22 @@ struct pmx_dev pmx_mii1 = {
 	.name = "mii1",
 	.modes = pmx_mii1_modes,
 	.mode_count = ARRAY_SIZE(pmx_mii1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_smii0_modes[] = {
+/* Pad multiplexing for smii0 device */
+static struct pmx_mux_reg pmx_smii0_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_smii0_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_smii0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smii0_mux),
 	},
 };
 
@@ -353,13 +568,22 @@ struct pmx_dev pmx_smii0 = {
 	.name = "smii0",
 	.modes = pmx_smii0_modes,
 	.mode_count = ARRAY_SIZE(pmx_smii0_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_smii1_modes[] = {
+/* Pad multiplexing for smii1 device */
+static struct pmx_mux_reg pmx_smii1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_smii1_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | SMALL_PRINTERS_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_smii1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smii1_mux),
 	},
 };
 
@@ -367,13 +591,22 @@ struct pmx_dev pmx_smii1 = {
 	.name = "smii1",
 	.modes = pmx_smii1_modes,
 	.mode_count = ARRAY_SIZE(pmx_smii1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_i2c1_modes[] = {
+/* Pad multiplexing for i2c1 device */
+static struct pmx_mux_reg pmx_i2c1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c1_modes[] = {
 	{
 		.ids = AUTO_EXP_MODE,
-		.mask = 0x0,
+		.mux_regs = pmx_i2c1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2c1_mux),
 	},
 };
 
@@ -381,13 +614,11 @@ struct pmx_dev pmx_i2c1 = {
 	.name = "i2c1",
 	.modes = pmx_i2c1_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
-	.enb_on_reset = 1,
 };
 
 /* pmx driver structure */
 struct pmx_driver pmx_driver = {
 	.mode_reg = {.offset = MODE_CONFIG_REG, .mask = 0x00000007},
-	.mux_reg = {.offset = PAD_MUX_CONFIG_REG, .mask = 0x00007fff},
 };
 
 /* Add spear320 specific devices here */

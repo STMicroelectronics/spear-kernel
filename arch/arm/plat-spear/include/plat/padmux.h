@@ -28,26 +28,42 @@ struct pmx_reg {
 };
 
 /*
+ * struct pmx_mux_reg: configuration structure every group of modes of a device
+ *
+ * offset: multiplexing register offset
+ * mask: mask for supported mode
+ * value: value to be written
+ */
+struct pmx_mux_reg {
+	u32 offset;
+	u32 mask;
+	u32 value;
+};
+
+/*
  * struct pmx_dev_mode: configuration structure every group of modes of a device
  *
  * ids: all modes for this configuration
- * mask: mask for supported mode
+ * mux_regs: array of mux registers, masks and values to enable the device in
+ *		this group of modes
+ * mux_reg_cnt: count of mux_regs elements
  */
 struct pmx_dev_mode {
 	u32 ids;
-	u32 mask;
+	struct pmx_mux_reg *mux_regs;
+	u8 mux_reg_cnt;
 };
 
 /*
  * struct pmx_mode: mode definition structure
  *
  * name: mode name
- * mask: mode mask
+ * value: mode value
  */
 struct pmx_mode {
 	char *name;
 	u32 id;
-	u32 mask;
+	u32 value;
 };
 
 /*
@@ -57,14 +73,12 @@ struct pmx_mode {
  * modes: device configuration array for different modes supported
  * mode_count: size of modes array
  * is_active: is peripheral active/enabled
- * enb_on_reset: if 1, mask bits to be cleared in reg otherwise to be set in reg
  */
 struct pmx_dev {
 	char *name;
 	struct pmx_dev_mode *modes;
 	u8 mode_count;
 	bool is_active;
-	bool enb_on_reset;
 };
 
 /*
@@ -75,7 +89,6 @@ struct pmx_dev {
  * devs_count: ARRAY_SIZE of devs
  * base: base address of soc config registers
  * mode_reg: structure of mode config register
- * mux_reg: structure of device mux config register
  */
 struct pmx_driver {
 	struct pmx_mode *mode;
@@ -83,7 +96,6 @@ struct pmx_driver {
 	u8 devs_count;
 	u32 *base;
 	struct pmx_reg mode_reg;
-	struct pmx_reg mux_reg;
 };
 
 /* pmx functions */
