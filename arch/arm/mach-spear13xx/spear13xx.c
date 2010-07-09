@@ -496,3 +496,531 @@ static void __init spear13xx_timer_init(void)
 struct sys_timer spear13xx_timer = {
 	.init = spear13xx_timer_init,
 };
+
+/* pad multiplexing support */
+/* devices */
+
+/* Pad multiplexing for i2c device */
+static struct pmx_mux_reg pmx_i2c_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_I2C_MASK,
+		.value = PMX_I2C_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c_modes[] = {
+	{
+		.mux_regs = pmx_i2c_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2c_mux),
+	},
+};
+
+struct pmx_dev pmx_i2c = {
+	.name = "i2c",
+	.modes = pmx_i2c_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2c_modes),
+};
+
+/* Pad multiplexing for ssp device */
+static struct pmx_mux_reg pmx_ssp_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_SSP_MASK,
+		.value = PMX_SSP_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp_modes[] = {
+	{
+		.mux_regs = pmx_ssp_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp_mux),
+	},
+};
+
+struct pmx_dev pmx_ssp = {
+	.name = "ssp",
+	.modes = pmx_ssp_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp_modes),
+};
+
+/* Pad multiplexing for i2s1 device */
+static struct pmx_mux_reg pmx_i2s1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_I2S1_MASK,
+		.value = PMX_I2S1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2s1_modes[] = {
+	{
+		.mux_regs = pmx_i2s1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s1_mux),
+	},
+};
+
+struct pmx_dev pmx_i2s1 = {
+	.name = "i2s1",
+	.modes = pmx_i2s1_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2s1_modes),
+};
+
+/* Pad multiplexing for i2s2 device */
+static struct pmx_mux_reg pmx_i2s2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_I2S2_MASK,
+		.value = PMX_I2S2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2s2_modes[] = {
+	{
+		.mux_regs = pmx_i2s2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s2_mux),
+	},
+};
+
+struct pmx_dev pmx_i2s2 = {
+	.name = "i2s2",
+	.modes = pmx_i2s2_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2s2_modes),
+};
+
+/* Pad multiplexing for clcd1 device */
+static struct pmx_mux_reg pmx_clcd1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_CLCD1_MASK,
+		.value = PMX_CLCD1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_clcd1_modes[] = {
+	{
+		.mux_regs = pmx_clcd1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd1_mux),
+	},
+};
+
+struct pmx_dev pmx_clcd1 = {
+	.name = "clcd1",
+	.modes = pmx_clcd1_modes,
+	.mode_count = ARRAY_SIZE(pmx_clcd1_modes),
+};
+
+/* Pad multiplexing for clcd2 device */
+static struct pmx_mux_reg pmx_clcd2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_CLCD2_MASK,
+		.value = PMX_CLCD2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_clcd2_modes[] = {
+	{
+		.mux_regs = pmx_clcd2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd2_mux),
+	},
+};
+
+struct pmx_dev pmx_clcd2 = {
+	.name = "clcd2",
+	.modes = pmx_clcd2_modes,
+	.mode_count = ARRAY_SIZE(pmx_clcd2_modes),
+};
+
+/*
+ * By default, all EGPIOs are enabled.
+ * TBD : Board specific enabling of specific GPIOs only
+ */
+static struct pmx_mux_reg pmx_egpio_grp_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_EGPIO_0_GRP_MASK,
+		.value = PMX_EGPIO_0_GRP_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_EGPIO_1_GRP_MASK,
+		.value = PMX_EGPIO_1_GRP_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_egpio_grp_modes[] = {
+	{
+		.mux_regs = pmx_egpio_grp_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_egpio_grp_mux),
+	},
+};
+
+struct pmx_dev pmx_egpio_grp = {
+	.name = "egpios",
+	.modes = pmx_egpio_grp_modes,
+	.mode_count = ARRAY_SIZE(pmx_egpio_grp_modes),
+};
+
+/* Pad multiplexing for smi 2 chips device */
+static struct pmx_mux_reg pmx_smi_2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_SMI_MASK,
+		.value = PMX_SMI_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_smi_2_modes[] = {
+	{
+		.mux_regs = pmx_smi_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smi_2_mux),
+	},
+};
+
+struct pmx_dev pmx_smi_2_chips = {
+	.name = "smi_2_chips",
+	.modes = pmx_smi_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_smi_2_modes),
+};
+
+/* Pad multiplexing for smi 4 chips device */
+static struct pmx_mux_reg pmx_smi_4_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_SMI_MASK,
+		.value = PMX_SMI_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
+		.value = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_smi_4_modes[] = {
+	{
+		.mux_regs = pmx_smi_4_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smi_4_mux),
+	},
+};
+
+struct pmx_dev pmx_smi_4_chips = {
+	.name = "smi_4_chips",
+	.modes = pmx_smi_4_modes,
+	.mode_count = ARRAY_SIZE(pmx_smi_4_modes),
+};
+
+/* Pad multiplexing for gmii device */
+static struct pmx_mux_reg pmx_gmii_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_GMII_MASK,
+		.value = PMX_GMII_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gmii_modes[] = {
+	{
+		.mux_regs = pmx_gmii_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gmii_mux),
+	},
+};
+
+struct pmx_dev pmx_gmii = {
+	.name = "gmii",
+	.modes = pmx_gmii_modes,
+	.mode_count = ARRAY_SIZE(pmx_gmii_modes),
+};
+
+/* Pad multiplexing for nand 8bit (4 chips) */
+static struct pmx_mux_reg pmx_nand8_4_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_NAND8BIT4DEV_0_MASK,
+		.value = PMX_NAND8BIT4DEV_0_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_NAND8BIT4DEV_1_MASK,
+		.value = PMX_NAND8BIT4DEV_1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_nand8_4_modes[] = {
+	{
+		.mux_regs = pmx_nand8_4_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_nand8_4_mux),
+	},
+};
+
+struct pmx_dev pmx_nand_8bit_4_chips = {
+	.name = "nand-8bit_4_chips",
+	.modes = pmx_nand8_4_modes,
+	.mode_count = ARRAY_SIZE(pmx_nand8_4_modes),
+};
+
+/* Pad multiplexing for nand 8bit device */
+static struct pmx_mux_reg pmx_nand8_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_NAND8BIT_0_MASK,
+		.value = PMX_NAND8BIT_0_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_NAND8BIT_1_MASK,
+		.value = PMX_NAND8BIT_1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_nand8_modes[] = {
+	{
+		.mux_regs = pmx_nand8_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_nand8_mux),
+	},
+};
+
+struct pmx_dev pmx_nand_8bit = {
+	.name = "nand-8bit",
+	.modes = pmx_nand8_modes,
+	.mode_count = ARRAY_SIZE(pmx_nand8_modes),
+};
+
+/*
+ * Pad multiplexing for nand 16bit device
+ * Note : Enabling pmx_nand_16bit means that all the required pads for
+ *   16bit nand device operations are enabled. These also include pads
+ *   for 8bit devices
+ */
+static struct pmx_mux_reg pmx_nand16_4_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_NAND16BIT4DEV_0_MASK,
+		.value = PMX_NAND16BIT4DEV_0_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_NAND16BIT4DEV_1_MASK,
+		.value = PMX_NAND16BIT4DEV_1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_nand16_4_modes[] = {
+	{
+		.mux_regs = pmx_nand16_4_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_nand16_4_mux),
+	},
+};
+
+struct pmx_dev pmx_nand_16bit_4_chips = {
+	.name = "nand-16bit_4_chips",
+	.modes = pmx_nand16_4_modes,
+	.mode_count = ARRAY_SIZE(pmx_nand16_4_modes),
+};
+
+/* Pad multiplexing for nand 16bit device */
+static struct pmx_mux_reg pmx_nand16_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_NAND16BIT_0_MASK,
+		.value = PMX_NAND16BIT_0_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_NAND16BIT_1_MASK,
+		.value = PMX_NAND16BIT_1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_nand16_modes[] = {
+	{
+		.mux_regs = pmx_nand16_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_nand16_mux),
+	},
+};
+
+struct pmx_dev pmx_nand_16bit = {
+	.name = "nand-16bit",
+	.modes = pmx_nand16_modes,
+	.mode_count = ARRAY_SIZE(pmx_nand16_modes),
+};
+
+/* Pad multiplexing for keyboard device */
+static struct pmx_mux_reg pmx_keyboard_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_KEYBOARD_MASK,
+		.value = PMX_KEYBOARD_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_NFIO815_MASK | PMX_NFCE1_MASK | \
+			PMX_NFCE2_MASK | PMX_NFWPRT1_MASK | PMX_NFWPRT2_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_keyboard_modes[] = {
+	{
+		.mux_regs = pmx_keyboard_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_keyboard_mux),
+	},
+};
+
+struct pmx_dev pmx_keyboard = {
+	.name = "keyboard",
+	.modes = pmx_keyboard_modes,
+	.mode_count = ARRAY_SIZE(pmx_keyboard_modes),
+};
+
+/* Pad multiplexing for uart0 device */
+static struct pmx_mux_reg pmx_uart0_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_UART0_MASK,
+		.value = PMX_UART0_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart0_modes[] = {
+	{
+		.mux_regs = pmx_uart0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart0_mux),
+	},
+};
+
+struct pmx_dev pmx_uart0 = {
+	.name = "uart0",
+	.modes = pmx_uart0_modes,
+	.mode_count = ARRAY_SIZE(pmx_uart0_modes),
+};
+
+/* Pad multiplexing for uart0_modem device */
+static struct pmx_mux_reg pmx_uart0_modem_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = PMX_UART0_MODEM_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart0_modem_modes[] = {
+	{
+		.mux_regs = pmx_uart0_modem_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart0_modem_mux),
+	},
+};
+
+struct pmx_dev pmx_uart0_modem = {
+	.name = "uart0_modem",
+	.modes = pmx_uart0_modem_modes,
+	.mode_count = ARRAY_SIZE(pmx_uart0_modem_modes),
+};
+
+/* Pad multiplexing for gpt_0_1 device */
+static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_GPT0_TMR1_MASK,
+		.value = PMX_GPT0_TMR1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gpt_0_1_modes[] = {
+	{
+		.mux_regs = pmx_gpt_0_1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpt_0_1_mux),
+	},
+};
+
+struct pmx_dev pmx_gpt_0_1 = {
+	.name = "gpt_0_1",
+	.modes = pmx_gpt_0_1_modes,
+	.mode_count = ARRAY_SIZE(pmx_gpt_0_1_modes),
+};
+
+/* Pad multiplexing for gpt_0_2 device */
+static struct pmx_mux_reg pmx_gpt_0_2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_GPT0_TMR2_MASK,
+		.value = PMX_GPT0_TMR2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gpt_0_2_modes[] = {
+	{
+		.mux_regs = pmx_gpt_0_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpt_0_2_mux),
+	},
+};
+
+struct pmx_dev pmx_gpt_0_2 = {
+	.name = "gpt_0_2",
+	.modes = pmx_gpt_0_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_gpt_0_2_modes),
+};
+
+/* Pad multiplexing for gpt_1_1 device */
+static struct pmx_mux_reg pmx_gpt_1_1_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_GPT1_TMR1_MASK,
+		.value = PMX_GPT1_TMR1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gpt_1_1_modes[] = {
+	{
+		.mux_regs = pmx_gpt_1_1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpt_1_1_mux),
+	},
+};
+
+struct pmx_dev pmx_gpt_1_1 = {
+	.name = "gpt_1_1",
+	.modes = pmx_gpt_1_1_modes,
+	.mode_count = ARRAY_SIZE(pmx_gpt_1_1_modes),
+};
+
+/* Pad multiplexing for gpt_1_2 device */
+static struct pmx_mux_reg pmx_gpt_1_2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_GPT1_TMR2_MASK,
+		.value = PMX_GPT1_TMR2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gpt_1_2_modes[] = {
+	{
+		.mux_regs = pmx_gpt_1_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpt_1_2_mux),
+	},
+};
+
+struct pmx_dev pmx_gpt_1_2 = {
+	.name = "gpt_1_2",
+	.modes = pmx_gpt_1_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_gpt_1_2_modes),
+};
+
+/* Pad multiplexing for mcif device */
+static struct pmx_mux_reg pmx_mcif_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_MCIFALL_1_MASK,
+		.value = PMX_MCIFALL_1_MASK,
+	}, {
+		.offset = PAD_MUX_CONFIG_REG_2,
+		.mask = PMX_MCIFALL_2_MASK,
+		.value = PMX_MCIFALL_2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_mcif_modes[] = {
+	{
+		.mux_regs = pmx_mcif_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_mcif_mux),
+	},
+};
+
+struct pmx_dev pmx_mcif = {
+	.name = "mcif",
+	.modes = pmx_mcif_modes,
+	.mode_count = ARRAY_SIZE(pmx_mcif_modes),
+};

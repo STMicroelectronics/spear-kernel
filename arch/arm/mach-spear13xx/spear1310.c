@@ -16,6 +16,9 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
+/* pmx driver structure */
+struct pmx_driver pmx_driver;
+
 /* Add spear1310 specific devices here */
 
 /* CAN device registeration */
@@ -74,6 +77,18 @@ void __init spear1310_map_io(void)
 
 void __init spear1310_init(void)
 {
+	int ret;
+
 	/* call spear13xx family common init function */
 	spear13xx_init();
+
+	/* pmx initialization */
+	pmx_driver.base = ioremap(SPEAR13XX_FUNC_ENB_BASE, SZ_4K);
+	if (pmx_driver.base) {
+		ret = pmx_register(&pmx_driver);
+		if (ret)
+			pr_err("padmux: registeration failed. err no: %d\n",
+					ret);
+		iounmap(pmx_driver.base);
+	}
 }
