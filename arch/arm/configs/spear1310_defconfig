@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32
-# Fri Jul  2 18:44:52 2010
+# Fri Jul  9 13:36:51 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -324,7 +324,9 @@ CONFIG_CPU_FREQ_GOV_CONSERVATIVE=y
 #
 # CONFIG_FPE_NWFPE is not set
 # CONFIG_FPE_FASTFPE is not set
-# CONFIG_VFP is not set
+CONFIG_VFP=y
+CONFIG_VFPv3=y
+# CONFIG_NEON is not set
 
 #
 # Userspace binary formats
@@ -840,7 +842,7 @@ CONFIG_INPUT_MOUSEDEV=y
 CONFIG_INPUT_MOUSEDEV_SCREEN_X=1024
 CONFIG_INPUT_MOUSEDEV_SCREEN_Y=768
 # CONFIG_INPUT_JOYDEV is not set
-# CONFIG_INPUT_EVDEV is not set
+CONFIG_INPUT_EVDEV=y
 # CONFIG_INPUT_EVBUG is not set
 
 #
