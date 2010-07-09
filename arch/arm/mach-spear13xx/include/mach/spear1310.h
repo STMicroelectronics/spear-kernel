@@ -20,6 +20,11 @@
 #define SPEAR1310_CAN1_BASE		UL(0x6DB00000)
 #define SPEAR1310_RAS_BASE		UL(0x6C800000)
 
+/* RAS Area Control Register */
+#define RAS_CTRL_REG1		(SPEAR1310_RAS_BASE + 0x4)
+#define PHY_CLK_MASK		0xF
+#define PHY_CLK_SHIFT		0
+
 #endif /* __MACH_SPEAR1310_H */
 
 #endif /* CONFIG_MACH_SPEAR1310 */
