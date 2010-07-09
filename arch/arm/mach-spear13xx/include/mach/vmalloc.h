@@ -13,6 +13,6 @@
 #ifndef __MACH_VMALLOC_H
 #define __MACH_VMALLOC_H
 
-#include <plat/vmalloc.h>
+#define VMALLOC_END		0xEC800000UL
 
 #endif /* __MACH_VMALLOC_H */
