@@ -37,7 +37,7 @@ extern struct platform_device adc_device;
 extern struct platform_device dmac_device[];
 extern struct platform_device ehci0_device;
 extern struct platform_device ehci1_device;
-extern struct platform_device eth_device;
+extern struct platform_device eth0_device;
 extern struct platform_device i2c_device;
 extern struct platform_device jpeg_device;
 extern struct platform_device kbd_device;
@@ -45,7 +45,7 @@ extern struct platform_device nand_device;
 extern struct platform_device fsmc_nor_device;
 extern struct platform_device ohci0_device;
 extern struct platform_device ohci1_device;
-extern struct platform_device phy_device;
+extern struct platform_device phy0_device;
 extern struct platform_device rtc_device;
 extern struct platform_device sdhci_device;
 extern struct platform_device smi_device;
@@ -77,6 +77,14 @@ void __init spear1300_init(void);
 /* Add spear1310 machine device structure declarations here */
 extern struct platform_device can0_device;
 extern struct platform_device can1_device;
+extern struct platform_device eth1_device;
+extern struct platform_device eth2_device;
+extern struct platform_device eth3_device;
+extern struct platform_device eth4_device;
+extern struct platform_device phy1_device;
+extern struct platform_device phy2_device;
+extern struct platform_device phy3_device;
+extern struct platform_device phy4_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_init(void);

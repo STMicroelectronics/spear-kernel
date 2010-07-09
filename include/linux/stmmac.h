@@ -50,6 +50,8 @@ struct plat_stmmacphy_data {
 	int interface;
 	int (*phy_reset)(void *priv);
 	void *priv;
+	int (*phy_clk_cfg) (void *priv);
+	struct clk *clk;
 };
 #endif
 

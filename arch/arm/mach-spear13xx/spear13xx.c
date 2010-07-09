@@ -206,38 +206,39 @@ struct platform_device i2c_device = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacphy_data phy_private_data = {
+static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,
 	.phy_addr = -1,
 	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
+	.interface = PHY_INTERFACE_MODE_GMII,
 };
 
-static struct resource phy_resources = {
+static struct resource phy0_resources = {
 	.name = "phyirq",
 	.start = -1,
 	.end = -1,
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy_device = {
+struct platform_device phy0_device = {
 	.name		= "stmmacphy",
-	.id		= -1,
+	.id		= 0,
 	.num_resources	= 1,
-	.resource	= &phy_resources,
-	.dev.platform_data = &phy_private_data,
+	.resource	= &phy0_resources,
+	.dev.platform_data = &phy0_private_data,
 };
 
-static struct plat_stmmacenet_data ether_platform_data = {
+static struct plat_stmmacenet_data ether0_platform_data = {
+	.bus_id = 0,
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 1,
 };
 
-static struct resource eth_resources[] = {
+static struct resource eth0_resources[] = {
 	[0] = {
-		.start = SPEAR13XX_GETH_BASE,
-		.end = SPEAR13XX_GETH_BASE + SZ_8K - 1,
+		.start = SPEAR13XX_GETH0_BASE,
+		.end = SPEAR13XX_GETH0_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -251,16 +252,16 @@ static struct resource eth_resources[] = {
 	},
 };
 
-static u64 eth_dma_mask = ~(u32) 0;
+static u64 eth0_dma_mask = ~(u32) 0;
 
-struct platform_device eth_device = {
+struct platform_device eth0_device = {
 	.name = "stmmaceth",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(eth_resources),
-	.resource = eth_resources,
+	.id = 0,
+	.num_resources = ARRAY_SIZE(eth0_resources),
+	.resource = eth0_resources,
 	.dev = {
-		.platform_data = &ether_platform_data,
-		.dma_mask = &eth_dma_mask,
+		.platform_data = &ether0_platform_data,
+		.dma_mask = &eth0_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
 };

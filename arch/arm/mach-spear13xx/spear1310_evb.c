@@ -57,14 +57,14 @@ static struct platform_device *plat_devs[] __initdata = {
 	&dmac_device[1],
 	&ehci0_device,
 	&ehci1_device,
-	&eth_device,
+	&eth0_device,
 	&i2c_device,
 	&jpeg_device,
 	&kbd_device,
 	&nand_device,
 	&ohci0_device,
 	&ohci1_device,
-	&phy_device,
+	&phy0_device,
 	&rtc_device,
 	&sdhci_device,
 	&smi_device,
@@ -74,6 +74,14 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1310 specific devices */
 	&can0_device,
 	&can1_device,
+	&eth1_device,
+	&eth2_device,
+	&eth3_device,
+	&eth4_device,
+	&phy1_device,
+	&phy2_device,
+	&phy3_device,
+	&phy4_device,
 };
 
 /* keyboard specific platform data */

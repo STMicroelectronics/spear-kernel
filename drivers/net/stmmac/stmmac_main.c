@@ -1817,12 +1817,16 @@ static int stmmac_mac_device_setup(struct net_device *dev)
 static int stmmacphy_dvr_probe(struct platform_device *pdev)
 {
 	struct plat_stmmacphy_data *plat_dat;
+	int ret = 0;
+
 	plat_dat = dev_get_platdata(&pdev->dev);
+	if (plat_dat->phy_clk_cfg)
+		ret = plat_dat->phy_clk_cfg(pdev);
 
 	pr_debug("stmmacphy_dvr_probe: added phy for bus %d\n",
 		plat_dat->bus_id);
 
-	return 0;
+	return ret;
 }
 
 static int stmmacphy_dvr_remove(struct platform_device *pdev)
