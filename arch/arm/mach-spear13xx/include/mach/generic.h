@@ -24,10 +24,21 @@
 /*
  * Function enable (Pad multiplexing register) offsets
  */
-#define PAD_MUX_CONFIG_REG_0	0x0
-#define PAD_MUX_CONFIG_REG_1	0x4
-#define PAD_MUX_CONFIG_REG_2	0x8
-#define PAD_MUX_CONFIG_REG_3	0xC
+/* Pad multiplexing base */
+#define SPEAR13XX_FUNC_ENB_BASE		UL(0xE0700650)
+#define SPEAR13XX_PCM_CFG_BASE		UL(0xE0700100)
+
+#define PAD_MUX_CONFIG_REG_0	UL(0xE0700650)
+#define PAD_MUX_CONFIG_REG_1	UL(0xE0700654)
+#define PAD_MUX_CONFIG_REG_2	UL(0xE0700658)
+#define PAD_MUX_CONFIG_REG_3	UL(0xE070065C)
+
+#if defined(CONFIG_MACH_SPEAR1310)
+#define SPEAR1310_FUNC_CNTL_0	UL(0x6C800000)
+
+#define PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
+#define PMX_EGPIO7_MASK		(1 << 2)	/* Pcm cfg reg */
+#endif
 
 /* pad mux declarations */
 #define PMX_I2S1_MASK		(1 << 3)
@@ -111,9 +122,8 @@
 #define PMX_KBD_ROWCOL68_MASK	(1 << 4)	/* Offset 4 */
 #define PMX_KBD_COL0_MASK	(1 << 21)	/* Offset 4 */
 #define PMX_KBD_COL1_MASK	(1 << 19)	/* Offset 4 */
-#define PMX_KEYBOARD_MASK	(PMX_KBD_ROW0_MASK | PMX_KBD_ROW1_MASK | \
-		PMX_KBD_ROWCOL25_MASK | PMX_KBD_ROWCOL68_MASK | \
-		PMX_KBD_COL0_MASK | PMX_KBD_COL1_MASK)
+#define PMX_KEYBOARD_6X6_MASK	(PMX_KBD_ROW0_MASK | PMX_KBD_ROW1_MASK | \
+		PMX_KBD_ROWCOL25_MASK | PMX_KBD_COL0_MASK | PMX_KBD_COL1_MASK)
 
 #define PMX_UART0_MASK		(1 << 1)
 #define PMX_I2C_MASK		(1 << 2)
@@ -164,16 +174,18 @@
 /* pad mux devices */
 extern struct pmx_dev pmx_i2c;
 extern struct pmx_dev pmx_ssp;
+extern struct pmx_dev pmx_i2s1;
 extern struct pmx_dev pmx_i2s2;
-extern struct pmx_dev pmx_clcd1;
-extern struct pmx_dev pmx_clcd2;
+extern struct pmx_dev pmx_clcd;
+extern struct pmx_dev pmx_clcd_hires;
 extern struct pmx_dev pmx_egpio_grp;
 extern struct pmx_dev pmx_smi_2_chips;
 extern struct pmx_dev pmx_smi_4_chips;
 extern struct pmx_dev pmx_gmii;
 extern struct pmx_dev pmx_nand_8bit;
 extern struct pmx_dev pmx_nand_16bit;
-extern struct pmx_dev pmx_keyboard;
+extern struct pmx_dev pmx_keyboard_6x6;
+extern struct pmx_dev pmx_keyboard_9x9;
 extern struct pmx_dev pmx_uart0;
 extern struct pmx_dev pmx_uart0_modem;
 extern struct pmx_dev pmx_gpt_0_1;
@@ -181,6 +193,24 @@ extern struct pmx_dev pmx_gpt_0_2;
 extern struct pmx_dev pmx_gpt_1_1;
 extern struct pmx_dev pmx_gpt_1_2;
 extern struct pmx_dev pmx_mcif;
+
+#if defined(CONFIG_MACH_SPEAR1310)
+extern struct pmx_dev pmx_uart1_modem;
+extern struct pmx_dev pmx_uart_1;
+extern struct pmx_dev pmx_uart_2;
+extern struct pmx_dev pmx_uart_3_4_5;
+extern struct pmx_dev pmx_rs485_hdlc_1_2;
+extern struct pmx_dev pmx_tdm_hdlc_1_2;
+extern struct pmx_dev pmx_nand32bit;
+extern struct pmx_dev pmx_fsmc16bit_4_chips;
+extern struct pmx_dev pmx_fsmc32bit_4_chips;
+extern struct pmx_dev pmx_gmii1;
+extern struct pmx_dev pmx_rgmii;
+extern struct pmx_dev pmx_i2c1;
+extern struct pmx_dev pmx_smii_0_1_2;
+extern struct pmx_dev pmx_can;
+extern struct pmx_dev pmx_uart1_modem;
+#endif
 
 /*
  * Each GPT has 2 timer channels

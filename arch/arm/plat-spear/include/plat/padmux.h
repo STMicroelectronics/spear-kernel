@@ -19,23 +19,23 @@
 /*
  * struct pmx_reg: configuration structure for mode reg and mux reg
  *
- * offset: offset of mode reg
+ * address: physical address of mode reg
  * mask: mask of mode reg
  */
 struct pmx_reg {
-	u32 offset;
+	u32 address;
 	u32 mask;
 };
 
 /*
  * struct pmx_mux_reg: configuration structure every group of modes of a device
  *
- * offset: multiplexing register offset
+ * address: physical address of multiplexing register
  * mask: mask for supported mode
  * value: value to be written
  */
 struct pmx_mux_reg {
-	u32 offset;
+	u32 address;
 	u32 mask;
 	u32 value;
 };
@@ -87,14 +87,12 @@ struct pmx_dev {
  * mode: mode to be set
  * devs: array of pointer to pmx devices
  * devs_count: ARRAY_SIZE of devs
- * base: base address of soc config registers
  * mode_reg: structure of mode config register
  */
 struct pmx_driver {
 	struct pmx_mode *mode;
 	struct pmx_dev **devs;
 	u8 devs_count;
-	u32 *base;
 	struct pmx_reg mode_reg;
 };
 
