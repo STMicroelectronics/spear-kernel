@@ -21,13 +21,11 @@
  *
  * base: base address of configuration registers
  * mode_reg: mode configurations
- * mux_reg: muxing configurations
  * active_mode: pointer to current active mode
  */
 struct pmx {
 	u32 base;
 	struct pmx_reg mode_reg;
-	struct pmx_reg mux_reg;
 	struct pmx_mode *active_mode;
 };
 
@@ -51,7 +49,7 @@ static int pmx_mode_set(struct pmx_mode *mode)
 
 	val = readl(pmx->base + pmx->mode_reg.offset);
 	val &= ~pmx->mode_reg.mask;
-	val |= mode->mask & pmx->mode_reg.mask;
+	val |= mode->value & pmx->mode_reg.mask;
 	writel(val, pmx->base + pmx->mode_reg.offset);
 
 	return 0;
@@ -66,19 +64,18 @@ static int pmx_mode_set(struct pmx_mode *mode)
  * If peripheral is not supported by current mode then request is rejected.
  * Conflicts between peripherals are not handled and peripherals will be
  * enabled in the order they are present in pmx_dev array.
- * In case of conflicts last peripheral enabled will be present.
+ * In case of conflicts last peripheral enabled will remain present.
  * Returns -ve on Err otherwise 0
  */
 static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 {
-	u32 val, i, mask;
+	u32 val, i;
 
 	if (!count)
 		return -EINVAL;
 
-	val = readl(pmx->base + pmx->mux_reg.offset);
 	for (i = 0; i < count; i++) {
-		u8 j = 0;
+		u8 k, j = 0;
 
 		if (!devs[i]->name || !devs[i]->modes) {
 			printk(KERN_ERR "padmux: dev name or modes is null\n");
@@ -103,15 +100,18 @@ static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 		}
 
 		/* enable peripheral */
-		mask = devs[i]->modes[j].mask & pmx->mux_reg.mask;
-		if (devs[i]->enb_on_reset)
-			val &= ~mask;
-		else
-			val |= mask;
+		for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+			struct pmx_mux_reg *mux_reg =
+				&devs[i]->modes[j].mux_regs[k];
+
+			val = readl(pmx->base + mux_reg->offset);
+			val &= ~mux_reg->mask;
+			val |= mux_reg->value & mux_reg->mask;
+			writel(val, pmx->base + mux_reg->offset);
+		}
 
 		devs[i]->is_active = true;
 	}
-	writel(val, pmx->base + pmx->mux_reg.offset);
 	kfree(pmx);
 
 	/* this will ensure that multiplexing can't be changed now */
@@ -144,8 +144,6 @@ int pmx_register(struct pmx_driver *driver)
 	pmx->base = (u32)driver->base;
 	pmx->mode_reg.offset = driver->mode_reg.offset;
 	pmx->mode_reg.mask = driver->mode_reg.mask;
-	pmx->mux_reg.offset = driver->mux_reg.offset;
-	pmx->mux_reg.mask = driver->mux_reg.mask;
 
 	/* choose mode to enable */
 	if (driver->mode) {
