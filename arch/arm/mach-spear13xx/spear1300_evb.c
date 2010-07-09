@@ -44,6 +44,26 @@ static struct mtd_partition partition_info[] = {
 extern void __init spear1300_evb_init_lcd(void);
 #endif
 
+/* padmux devices to enable */
+static struct pmx_dev *pmx_devs[] = {
+	/* spear13xx specific devices */
+	&pmx_i2c,
+	&pmx_i2s1,
+	&pmx_i2s2,
+	&pmx_clcd1,
+	&pmx_clcd2,
+	&pmx_egpio_grp,
+	&pmx_gmii,
+	&pmx_keyboard,
+	&pmx_mcif,
+	&pmx_nand_8bit,
+	&pmx_smi_4_chips,
+	&pmx_ssp,
+	&pmx_uart0,
+
+	/* spear1300 specific devices */
+};
+
 static struct amba_device *amba_devs[] __initdata = {
 	&gpio_device[0],
 	&gpio_device[1],
@@ -123,6 +143,11 @@ static void __init spi_init(void)
 
 static void __init spear1300_evb_init(void)
 {
+	/* padmux initialization, must be done before spear1300_init */
+	pmx_driver.mode = NULL;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * 256KB (16KB/way), 16-way associativity, parity not

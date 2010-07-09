@@ -6,6 +6,7 @@
 obj-y	:= adc.o clock.o jpeg.o time.o smi.o pll_clk.o
 
 obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o
+obj-$(CONFIG_ARCH_SPEAR13XX)	+= padmux.o
 
 ifeq ($(CONFIG_PM),y)
 obj-$(CONFIG_ARCH_SPEAR3XX)	+= pm.o sleep.o
