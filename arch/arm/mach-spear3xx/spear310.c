@@ -21,14 +21,21 @@
 #include <plat/shirq.h>
 
 /* pad multiplexing support */
-/* muxing registers */
-#define PAD_MUX_CONFIG_REG	0x08
 
 /* devices */
-struct pmx_dev_mode pmx_emi_cs_0_1_4_5_modes[] = {
+/* Pad multiplexing for emi_cs_0_1_4_5 devices */
+static struct pmx_mux_reg pmx_emi_cs_0_1_4_5_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_emi_cs_0_1_4_5_modes[] = {
+	{
+		.mux_regs = pmx_emi_cs_0_1_4_5_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_cs_0_1_4_5_mux),
 	},
 };
 
@@ -36,13 +43,21 @@ struct pmx_dev pmx_emi_cs_0_1_4_5 = {
 	.name = "emi_cs_0_1_4_5",
 	.modes = pmx_emi_cs_0_1_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_cs_0_1_4_5_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_emi_cs_2_3_modes[] = {
+/* Pad multiplexing for emi_cs_2_3 devices */
+static struct pmx_mux_reg pmx_emi_cs_2_3_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_emi_cs_2_3_modes[] = {
+	{
+		.mux_regs = pmx_emi_cs_2_3_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_cs_2_3_mux),
 	},
 };
 
@@ -50,13 +65,21 @@ struct pmx_dev pmx_emi_cs_2_3 = {
 	.name = "emi_cs_2_3",
 	.modes = pmx_emi_cs_2_3_modes,
 	.mode_count = ARRAY_SIZE(pmx_emi_cs_2_3_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart1_modes[] = {
+/* Pad multiplexing for uart1 device */
+static struct pmx_mux_reg pmx_uart1_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart1_modes[] = {
+	{
+		.mux_regs = pmx_uart1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_mux),
 	},
 };
 
@@ -64,13 +87,21 @@ struct pmx_dev pmx_uart1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart2_modes[] = {
+/* Pad multiplexing for uart2 device */
+static struct pmx_mux_reg pmx_uart2_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart2_modes[] = {
+	{
+		.mux_regs = pmx_uart2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart2_mux),
 	},
 };
 
@@ -78,13 +109,21 @@ struct pmx_dev pmx_uart2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_uart3_4_5_modes[] = {
+/* Pad multiplexing for uart3_4_5 devices */
+static struct pmx_mux_reg pmx_uart3_4_5_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart3_4_5_modes[] = {
+	{
+		.mux_regs = pmx_uart3_4_5_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_4_5_mux),
 	},
 };
 
@@ -92,13 +131,21 @@ struct pmx_dev pmx_uart3_4_5 = {
 	.name = "uart3_4_5",
 	.modes = pmx_uart3_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart3_4_5_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_fsmc_modes[] = {
+/* Pad multiplexing for fsmc device */
+static struct pmx_mux_reg pmx_fsmc_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_fsmc_modes[] = {
+	{
+		.mux_regs = pmx_fsmc_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_mux),
 	},
 };
 
@@ -106,13 +153,21 @@ struct pmx_dev pmx_fsmc = {
 	.name = "fsmc",
 	.modes = pmx_fsmc_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_rs485_0_1_modes[] = {
+/* Pad multiplexing for rs485_0_1 devices */
+static struct pmx_mux_reg pmx_rs485_0_1_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_rs485_0_1_modes[] = {
+	{
+		.mux_regs = pmx_rs485_0_1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_rs485_0_1_mux),
 	},
 };
 
@@ -120,13 +175,21 @@ struct pmx_dev pmx_rs485_0_1 = {
 	.name = "rs485_0_1",
 	.modes = pmx_rs485_0_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_rs485_0_1_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_tdm0_modes[] = {
+/* Pad multiplexing for tdm0 device */
+static struct pmx_mux_reg pmx_tdm0_mux[] = {
 	{
-		.ids = 0x00,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_tdm0_modes[] = {
+	{
+		.mux_regs = pmx_tdm0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_tdm0_mux),
 	},
 };
 
@@ -134,13 +197,10 @@ struct pmx_dev pmx_tdm0 = {
 	.name = "tdm0",
 	.modes = pmx_tdm0_modes,
 	.mode_count = ARRAY_SIZE(pmx_tdm0_modes),
-	.enb_on_reset = 1,
 };
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver = {
-	.mux_reg = {.offset = PAD_MUX_CONFIG_REG, .mask = 0x00007fff},
-};
+struct pmx_driver pmx_driver;
 
 /* Add spear310 specific devices here */
 /* uart1 device registeration */

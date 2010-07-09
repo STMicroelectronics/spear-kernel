@@ -21,8 +21,6 @@
 #include <plat/shirq.h>
 
 /* pad multiplexing support */
-/* muxing registers */
-#define PAD_MUX_CONFIG_REG	0x00
 #define MODE_CONFIG_REG		0x04
 
 /* modes */
@@ -44,87 +42,97 @@
 struct pmx_mode nand_mode = {
 	.id = NAND_MODE,
 	.name = "nand mode",
-	.mask = 0x00,
+	.value = 0x00,
 };
 
 struct pmx_mode nor_mode = {
 	.id = NOR_MODE,
 	.name = "nor mode",
-	.mask = 0x01,
+	.value = 0x01,
 };
 
 struct pmx_mode photo_frame_mode = {
 	.id = PHOTO_FRAME_MODE,
 	.name = "photo frame mode",
-	.mask = 0x02,
+	.value = 0x02,
 };
 
 struct pmx_mode lend_ip_phone_mode = {
 	.id = LEND_IP_PHONE_MODE,
 	.name = "lend ip phone mode",
-	.mask = 0x03,
+	.value = 0x03,
 };
 
 struct pmx_mode hend_ip_phone_mode = {
 	.id = HEND_IP_PHONE_MODE,
 	.name = "hend ip phone mode",
-	.mask = 0x04,
+	.value = 0x04,
 };
 
 struct pmx_mode lend_wifi_phone_mode = {
 	.id = LEND_WIFI_PHONE_MODE,
 	.name = "lend wifi phone mode",
-	.mask = 0x05,
+	.value = 0x05,
 };
 
 struct pmx_mode hend_wifi_phone_mode = {
 	.id = HEND_WIFI_PHONE_MODE,
 	.name = "hend wifi phone mode",
-	.mask = 0x06,
+	.value = 0x06,
 };
 
 struct pmx_mode ata_pabx_wi2s_mode = {
 	.id = ATA_PABX_WI2S_MODE,
 	.name = "ata pabx wi2s mode",
-	.mask = 0x07,
+	.value = 0x07,
 };
 
 struct pmx_mode ata_pabx_i2s_mode = {
 	.id = ATA_PABX_I2S_MODE,
 	.name = "ata pabx i2s mode",
-	.mask = 0x08,
+	.value = 0x08,
 };
 
 struct pmx_mode caml_lcdw_mode = {
 	.id = CAML_LCDW_MODE,
 	.name = "caml lcdw mode",
-	.mask = 0x0C,
+	.value = 0x0C,
 };
 
 struct pmx_mode camu_lcd_mode = {
 	.id = CAMU_LCD_MODE,
 	.name = "camu lcd mode",
-	.mask = 0x0D,
+	.value = 0x0D,
 };
 
 struct pmx_mode camu_wlcd_mode = {
 	.id = CAMU_WLCD_MODE,
 	.name = "camu wlcd mode",
-	.mask = 0x0E,
+	.value = 0x0E,
 };
 
 struct pmx_mode caml_lcd_mode = {
 	.id = CAML_LCD_MODE,
 	.name = "caml lcd mode",
-	.mask = 0x0F,
+	.value = 0x0F,
 };
 
 /* devices */
-struct pmx_dev_mode pmx_fsmc_2_chips_modes[] = {
+/* Pad multiplexing for FSMC 2 NAND devices */
+static struct pmx_mux_reg pmx_fsmc_2_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_FIRDA_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_fsmc_2_chips_modes[] = {
 	{
 		.ids = NAND_MODE | NOR_MODE | PHOTO_FRAME_MODE |
 			ATA_PABX_WI2S_MODE | ATA_PABX_I2S_MODE,
-		.mask = PMX_FIRDA_MASK,
+		.mux_regs = pmx_fsmc_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_2_mux),
 	},
 };
 
@@ -132,14 +140,23 @@ struct pmx_dev pmx_fsmc_2_chips = {
 	.name = "fsmc_2_chips",
 	.modes = pmx_fsmc_2_chips_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_2_chips_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_fsmc_4_chips_modes[] = {
+/* Pad multiplexing for FSMC 4 NAND devices */
+static struct pmx_mux_reg pmx_fsmc_4_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_FIRDA_MASK | PMX_UART0_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_fsmc_4_chips_modes[] = {
 	{
 		.ids = NAND_MODE | NOR_MODE | PHOTO_FRAME_MODE |
 			ATA_PABX_WI2S_MODE | ATA_PABX_I2S_MODE,
-		.mask = PMX_FIRDA_MASK | PMX_UART0_MASK,
+		.mux_regs = pmx_fsmc_4_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_4_mux),
 	},
 };
 
@@ -147,16 +164,25 @@ struct pmx_dev pmx_fsmc_4_chips = {
 	.name = "fsmc_4_chips",
 	.modes = pmx_fsmc_4_chips_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_4_chips_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_keyboard_modes[] = {
+/* Pad multiplexing for Keyboard device */
+static struct pmx_mux_reg pmx_kbd_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = 0x0,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_keyboard_modes[] = {
 	{
 		.ids = LEND_IP_PHONE_MODE | HEND_IP_PHONE_MODE |
 			LEND_WIFI_PHONE_MODE | HEND_WIFI_PHONE_MODE |
 			CAML_LCDW_MODE | CAMU_LCD_MODE | CAMU_WLCD_MODE |
 			CAML_LCD_MODE,
-		.mask = 0x0,
+		.mux_regs = pmx_kbd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_kbd_mux),
 	},
 };
 
@@ -164,17 +190,35 @@ struct pmx_dev pmx_keyboard = {
 	.name = "keyboard",
 	.modes = pmx_keyboard_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_clcd_modes[] = {
+/* Pad multiplexing for CLCD device */
+static struct pmx_mux_reg pmx_clcd_pfmode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_clcd_lcdmode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_clcd_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE,
-		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK ,
+		.mux_regs = pmx_clcd_pfmode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd_pfmode_mux),
 	}, {
 		.ids = HEND_IP_PHONE_MODE | HEND_WIFI_PHONE_MODE |
 			CAMU_LCD_MODE | CAML_LCD_MODE,
-		.mask = PMX_TIMER_3_4_MASK,
+		.mux_regs = pmx_clcd_lcdmode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd_lcdmode_mux),
 	},
 };
 
@@ -182,26 +226,71 @@ struct pmx_dev pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_gpio_modes[] = {
+/* Pad multiplexing for Telecom GPIO device */
+static struct pmx_mux_reg pmx_gpio_lcdmode_mux[] = {
 	{
-		.ids = PHOTO_FRAME_MODE | CAMU_LCD_MODE | CAML_LCD_MODE,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
-	}, {
-		.ids = LEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_gpio_fonemode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
-	}, {
-		.ids = ATA_PABX_I2S_MODE | CAML_LCDW_MODE | CAMU_WLCD_MODE,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_gpio_atai2smode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_3_4_MASK,
-	}, {
-		.ids = HEND_IP_PHONE_MODE | HEND_WIFI_PHONE_MODE,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_gpio_lendfonemode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK,
-	}, {
-		.ids = ATA_PABX_WI2S_MODE,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_gpio_atawi2smode_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK
 			| PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_gpio_modes[] = {
+	{
+		.ids = PHOTO_FRAME_MODE | CAMU_LCD_MODE | CAML_LCD_MODE,
+		.mux_regs = pmx_gpio_lcdmode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio_lcdmode_mux),
+	}, {
+		.ids = LEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE,
+		.mux_regs = pmx_gpio_fonemode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio_fonemode_mux),
+	}, {
+		.ids = ATA_PABX_I2S_MODE | CAML_LCDW_MODE | CAMU_WLCD_MODE,
+		.mux_regs = pmx_gpio_atai2smode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio_atai2smode_mux),
+	}, {
+		.ids = HEND_IP_PHONE_MODE | HEND_WIFI_PHONE_MODE,
+		.mux_regs = pmx_gpio_lendfonemode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio_lendfonemode_mux),
+	}, {
+		.ids = ATA_PABX_WI2S_MODE,
+		.mux_regs = pmx_gpio_atawi2smode_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio_atawi2smode_mux),
 	},
 };
 
@@ -209,17 +298,26 @@ struct pmx_dev pmx_telecom_gpio = {
 	.name = "telecom_gpio",
 	.modes = pmx_telecom_gpio_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_gpio_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_tdm_modes[] = {
+/* Pad multiplexing for TDM device */
+static struct pmx_mux_reg pmx_tdm_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_UART0_MODEM_MASK | PMX_SSP_CS_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_tdm_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE | LEND_IP_PHONE_MODE |
 			HEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE
 			| HEND_WIFI_PHONE_MODE | ATA_PABX_WI2S_MODE
 			| ATA_PABX_I2S_MODE | CAML_LCDW_MODE | CAMU_LCD_MODE
 			| CAMU_WLCD_MODE | CAML_LCD_MODE,
-		.mask = PMX_UART0_MODEM_MASK | PMX_SSP_CS_MASK,
+		.mux_regs = pmx_tdm_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_tdm_mux),
 	},
 };
 
@@ -227,16 +325,25 @@ struct pmx_dev pmx_telecom_tdm = {
 	.name = "telecom_tdm",
 	.modes = pmx_telecom_tdm_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_tdm_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_spi_cs_i2c_clk_modes[] = {
+/* Pad multiplexing for spi cs i2c device */
+static struct pmx_mux_reg pmx_spi_cs_i2c_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_spi_cs_i2c_clk_modes[] = {
 	{
 		.ids = LEND_IP_PHONE_MODE | HEND_IP_PHONE_MODE |
 			LEND_WIFI_PHONE_MODE | HEND_WIFI_PHONE_MODE
 			| ATA_PABX_WI2S_MODE | ATA_PABX_I2S_MODE |
 			CAML_LCDW_MODE | CAML_LCD_MODE,
-		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.mux_regs = pmx_spi_cs_i2c_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_spi_cs_i2c_mux),
 	},
 };
 
@@ -244,16 +351,33 @@ struct pmx_dev pmx_telecom_spi_cs_i2c_clk = {
 	.name = "telecom_spi_cs_i2c_clk",
 	.modes = pmx_telecom_spi_cs_i2c_clk_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_spi_cs_i2c_clk_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_camera_modes[] = {
+static struct pmx_mux_reg pmx_caml_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_camu_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK | PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_camera_modes[] = {
 	{
 		.ids = CAML_LCDW_MODE | CAML_LCD_MODE,
-		.mask = PMX_MII_MASK,
+		.mux_regs = pmx_caml_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_caml_mux),
 	}, {
 		.ids = CAMU_LCD_MODE | CAMU_WLCD_MODE,
-		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK | PMX_MII_MASK,
+		.mux_regs = pmx_camu_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_camu_mux),
 	},
 };
 
@@ -261,14 +385,23 @@ struct pmx_dev pmx_telecom_camera = {
 	.name = "telecom_camera",
 	.modes = pmx_telecom_camera_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_camera_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_dac_modes[] = {
+/* Pad multiplexing for dac device */
+static struct pmx_mux_reg pmx_dac_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_TIMER_1_2_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_dac_modes[] = {
 	{
 		.ids = ATA_PABX_I2S_MODE | CAML_LCDW_MODE | CAMU_LCD_MODE
 			| CAMU_WLCD_MODE | CAML_LCD_MODE,
-		.mask = PMX_TIMER_1_2_MASK,
+		.mux_regs = pmx_dac_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_dac_mux),
 	},
 };
 
@@ -276,16 +409,25 @@ struct pmx_dev pmx_telecom_dac = {
 	.name = "telecom_dac",
 	.modes = pmx_telecom_dac_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_dac_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_i2s_modes[] = {
+/* Pad multiplexing for spi cs i2c device */
+static struct pmx_mux_reg pmx_i2s_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_i2s_modes[] = {
 	{
 		.ids = LEND_IP_PHONE_MODE | HEND_IP_PHONE_MODE
 			| LEND_WIFI_PHONE_MODE | HEND_WIFI_PHONE_MODE |
 			ATA_PABX_I2S_MODE | CAML_LCDW_MODE | CAMU_LCD_MODE
 			| CAMU_WLCD_MODE | CAML_LCD_MODE,
-		.mask = PMX_UART0_MODEM_MASK,
+		.mux_regs = pmx_i2s_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_mux),
 	},
 };
 
@@ -293,14 +435,23 @@ struct pmx_dev pmx_telecom_i2s = {
 	.name = "telecom_i2s",
 	.modes = pmx_telecom_i2s_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_i2s_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_boot_pins_modes[] = {
+/* Pad multiplexing for bootpins device */
+static struct pmx_mux_reg pmx_bootpins_mux[] = {
 	{
-		.ids = NAND_MODE | NOR_MODE,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK | PMX_TIMER_1_2_MASK |
 			PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_boot_pins_modes[] = {
+	{
+		.ids = NAND_MODE | NOR_MODE,
+		.mux_regs = pmx_bootpins_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_bootpins_mux),
 	},
 };
 
@@ -308,19 +459,28 @@ struct pmx_dev pmx_telecom_boot_pins = {
 	.name = "telecom_boot_pins",
 	.modes = pmx_telecom_boot_pins_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_boot_pins_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_sdhci_4bit_modes[] = {
+/* Pad multiplexing for sdhci 4bit device */
+static struct pmx_mux_reg pmx_sdhci_4bit_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
+			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
+			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_sdhci_4bit_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE | LEND_IP_PHONE_MODE |
 			HEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE |
 			HEND_WIFI_PHONE_MODE | CAML_LCDW_MODE | CAMU_LCD_MODE |
 			CAMU_WLCD_MODE | CAML_LCD_MODE | ATA_PABX_WI2S_MODE |
 			ATA_PABX_I2S_MODE,
-		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
-			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
-			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
+		.mux_regs = pmx_sdhci_4bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_4bit_mux),
 	},
 };
 
@@ -328,18 +488,27 @@ struct pmx_dev pmx_telecom_sdhci_4bit = {
 	.name = "telecom_sdhci_4bit",
 	.modes = pmx_telecom_sdhci_4bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_4bit_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_sdhci_8bit_modes[] = {
+/* Pad multiplexing for spi cs i2c device */
+static struct pmx_mux_reg pmx_sdhci_8bit_mux[] = {
+	{
+		.offset = PAD_MUX_CONFIG_REG,
+		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
+			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
+			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK | PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_telecom_sdhci_8bit_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE | LEND_IP_PHONE_MODE |
 			HEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE |
 			HEND_WIFI_PHONE_MODE | CAML_LCDW_MODE | CAMU_LCD_MODE |
 			CAMU_WLCD_MODE | CAML_LCD_MODE,
-		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
-			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
-			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK | PMX_MII_MASK,
+		.mux_regs = pmx_sdhci_8bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_8bit_mux),
 	},
 };
 
@@ -347,14 +516,23 @@ struct pmx_dev pmx_telecom_sdhci_8bit = {
 	.name = "telecom_sdhci_8bit",
 	.modes = pmx_telecom_sdhci_8bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_8bit_modes),
-	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_gpio1_modes[] = {
+/* Pad multiplexing for spi cs i2c device */
+static struct pmx_mux_reg pmx_gpio1_mux[] = {
 	{
-		.ids = PHOTO_FRAME_MODE,
+		.offset = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK | PMX_TIMER_1_2_MASK |
 			PMX_TIMER_3_4_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_gpio1_modes[] = {
+	{
+		.ids = PHOTO_FRAME_MODE,
+		.mux_regs = pmx_gpio1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gpio1_mux),
 	},
 };
 
@@ -362,13 +540,11 @@ struct pmx_dev pmx_gpio1 = {
 	.name = "arm gpio1",
 	.modes = pmx_gpio1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio1_modes),
-	.enb_on_reset = 1,
 };
 
 /* pmx driver structure */
 struct pmx_driver pmx_driver = {
 	.mode_reg = {.offset = MODE_CONFIG_REG, .mask = 0x0000000f},
-	.mux_reg = {.offset = PAD_MUX_CONFIG_REG, .mask = 0x00007fff},
 };
 
 /* Add spear300 specific devices here */
