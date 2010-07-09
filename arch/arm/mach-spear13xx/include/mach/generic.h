@@ -165,6 +165,7 @@
 /* pad mux devices */
 extern struct pmx_dev pmx_i2c;
 extern struct pmx_dev pmx_ssp;
+extern struct pmx_dev pmx_i2s1;
 extern struct pmx_dev pmx_i2s2;
 extern struct pmx_dev pmx_clcd1;
 extern struct pmx_dev pmx_clcd2;
