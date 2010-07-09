@@ -26,7 +26,7 @@
 /* Pad multiplexing for emi_cs_0_1_4_5 devices */
 static struct pmx_mux_reg pmx_emi_cs_0_1_4_5_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -48,7 +48,7 @@ struct pmx_dev pmx_emi_cs_0_1_4_5 = {
 /* Pad multiplexing for emi_cs_2_3 devices */
 static struct pmx_mux_reg pmx_emi_cs_2_3_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
 		.value = 0,
 	},
@@ -70,7 +70,7 @@ struct pmx_dev pmx_emi_cs_2_3 = {
 /* Pad multiplexing for uart1 device */
 static struct pmx_mux_reg pmx_uart1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
 		.value = 0,
 	},
@@ -92,7 +92,7 @@ struct pmx_dev pmx_uart1 = {
 /* Pad multiplexing for uart2 device */
 static struct pmx_mux_reg pmx_uart2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
 		.value = 0,
 	},
@@ -114,7 +114,7 @@ struct pmx_dev pmx_uart2 = {
 /* Pad multiplexing for uart3_4_5 devices */
 static struct pmx_mux_reg pmx_uart3_4_5_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -136,7 +136,7 @@ struct pmx_dev pmx_uart3_4_5 = {
 /* Pad multiplexing for fsmc device */
 static struct pmx_mux_reg pmx_fsmc_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -158,7 +158,7 @@ struct pmx_dev pmx_fsmc = {
 /* Pad multiplexing for rs485_0_1 devices */
 static struct pmx_mux_reg pmx_rs485_0_1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -180,7 +180,7 @@ struct pmx_dev pmx_rs485_0_1 = {
 /* Pad multiplexing for tdm0 device */
 static struct pmx_mux_reg pmx_tdm0_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -524,9 +524,7 @@ void __init spear310_init(void)
 	}
 
 	/* pmx initialization */
-	pmx_driver.base = base;
 	ret = pmx_register(&pmx_driver);
 	if (ret)
-		printk(KERN_ERR "padmux: registeration failed. err no: %d\n",
-				ret);
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
 }

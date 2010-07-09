@@ -88,9 +88,6 @@
 #define SPEAR13XX_MCIF_CF_BASE		UL(0xB2800000)
 #define SPEAR13XX_MCIF_SDHCI_BASE	UL(0xB3000000)
 
-/* Pad multiplexing base */
-#define SPEAR13XX_FUNC_ENB_BASE		UL(0xE0700650)
-
 /* Debug uart for linux, will be used for debug and uncompress messages */
 #define SPEAR_DBG_UART_BASE		SPEAR13XX_UART_BASE
 #define VA_SPEAR_DBG_UART_BASE		VA_SPEAR13XX_UART_BASE
