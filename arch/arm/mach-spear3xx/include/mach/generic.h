@@ -147,7 +147,10 @@ extern struct pmx_dev pmx_telecom_boot_pins;
 extern struct pmx_dev pmx_telecom_sdhci_4bit;
 extern struct pmx_dev pmx_telecom_sdhci_8bit;
 extern struct pmx_dev pmx_gpio1;
-#define PAD_MUX_CONFIG_REG	0x00
+
+/* pad multiplexing support */
+#define PAD_MUX_CONFIG_REG	0x99000000
+#define MODE_CONFIG_REG		0x99000004
 
 /* Add spear300 machine function declarations here */
 void __init spear300_init(void);
@@ -179,7 +182,7 @@ extern struct pmx_dev pmx_uart3_4_5;
 extern struct pmx_dev pmx_fsmc;
 extern struct pmx_dev pmx_rs485_0_1;
 extern struct pmx_dev pmx_tdm0;
-#define PAD_MUX_CONFIG_REG	0x08
+#define PAD_MUX_CONFIG_REG	0xB4000008
 
 /* Add spear310 machine function declarations here */
 void __init spear310_init(void);
@@ -229,7 +232,10 @@ extern struct pmx_dev pmx_mii1;
 extern struct pmx_dev pmx_smii0;
 extern struct pmx_dev pmx_smii1;
 extern struct pmx_dev pmx_i2c1;
-#define PAD_MUX_CONFIG_REG	0x0C
+
+/* pad multiplexing support */
+#define PAD_MUX_CONFIG_REG	0xB300000C
+#define MODE_CONFIG_REG		0xB3000010
 
 /* Add spear320 machine function declarations here */
 void __init spear320_init(void);

@@ -31,19 +31,24 @@ static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
 	&pmx_i2c,
 	&pmx_i2s1,
-	&pmx_i2s2,
-	&pmx_clcd1,
-	&pmx_clcd2,
 	&pmx_egpio_grp,
 	&pmx_gmii,
-	&pmx_keyboard,
+	&pmx_keyboard_6x6,
 	&pmx_mcif,
 	&pmx_nand_8bit,
-	&pmx_smi_4_chips,
-	&pmx_ssp,
+	&pmx_smi_2_chips,
 	&pmx_uart0,
 
 	/* spear1310 specific devices */
+	&pmx_can,
+	&pmx_i2c1,
+	&pmx_smii_0_1_2,
+	&pmx_fsmc16bit_4_chips,
+	&pmx_rs485_hdlc_1_2,
+	&pmx_tdm_hdlc_1_2,
+	&pmx_uart_1,
+	&pmx_uart_2,
+	&pmx_uart_3_4_5,
 };
 
 static struct amba_device *amba_devs[] __initdata = {

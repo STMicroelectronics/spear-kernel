@@ -23,9 +23,6 @@
 #include <plat/gpio.h>
 #include <plat/shirq.h>
 
-/* pad multiplexing support */
-#define MODE_CONFIG_REG		0x10
-
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)
 #define AUTO_NET_MII_MODE	(1 << 1)
@@ -61,7 +58,7 @@ struct pmx_mode small_printers_mode = {
 /* Pad multiplexing for CLCD device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -84,7 +81,7 @@ struct pmx_dev pmx_clcd = {
 /* Pad multiplexing for EMI (Parallel NOR flash) device */
 static struct pmx_mux_reg pmx_emi_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -107,7 +104,7 @@ struct pmx_dev pmx_emi = {
 /* Pad multiplexing for FSMC (NAND flash) device */
 static struct pmx_mux_reg pmx_fsmc_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -130,7 +127,7 @@ struct pmx_dev pmx_fsmc = {
 /* Pad multiplexing for SPP device */
 static struct pmx_mux_reg pmx_spp_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -153,7 +150,7 @@ struct pmx_dev pmx_spp = {
 /* Pad multiplexing for SDHCI device */
 static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -177,7 +174,7 @@ struct pmx_dev pmx_sdhci = {
 /* Pad multiplexing for I2S device */
 static struct pmx_mux_reg pmx_i2s_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -200,7 +197,7 @@ struct pmx_dev pmx_i2s = {
 /* Pad multiplexing for UART1 device */
 static struct pmx_mux_reg pmx_uart1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK,
 		.value = 0,
 	},
@@ -223,7 +220,7 @@ struct pmx_dev pmx_uart1 = {
 /* Pad multiplexing for UART1 Modem device */
 static struct pmx_mux_reg pmx_uart1_modem_autoexp_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK |
 			PMX_SSP_CS_MASK,
 		.value = 0,
@@ -232,7 +229,7 @@ static struct pmx_mux_reg pmx_uart1_modem_autoexp_mux[] = {
 
 static struct pmx_mux_reg pmx_uart1_modem_smallpri_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN3_MASK | PMX_GPIO_PIN4_MASK |
 			PMX_GPIO_PIN5_MASK | PMX_SSP_CS_MASK,
 		.value = 0,
@@ -260,7 +257,7 @@ struct pmx_dev pmx_uart1_modem = {
 /* Pad multiplexing for UART2 device */
 static struct pmx_mux_reg pmx_uart2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
 		.value = 0,
 	},
@@ -283,7 +280,7 @@ struct pmx_dev pmx_uart2 = {
 /* Pad multiplexing for Touchscreen device */
 static struct pmx_mux_reg pmx_touchscreen_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -306,7 +303,7 @@ struct pmx_dev pmx_touchscreen = {
 /* Pad multiplexing for CAN device */
 static struct pmx_mux_reg pmx_can_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
 			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
 		.value = 0,
@@ -330,7 +327,7 @@ struct pmx_dev pmx_can = {
 /* Pad multiplexing for SDHCI LED device */
 static struct pmx_mux_reg pmx_sdhci_led_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -353,7 +350,7 @@ struct pmx_dev pmx_sdhci_led = {
 /* Pad multiplexing for PWM0 device */
 static struct pmx_mux_reg pmx_pwm0_net_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -361,7 +358,7 @@ static struct pmx_mux_reg pmx_pwm0_net_mux[] = {
 
 static struct pmx_mux_reg pmx_pwm0_autoexpsmallpri_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -388,7 +385,7 @@ struct pmx_dev pmx_pwm0 = {
 /* Pad multiplexing for PWM1 device */
 static struct pmx_mux_reg pmx_pwm1_net_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -396,7 +393,7 @@ static struct pmx_mux_reg pmx_pwm1_net_mux[] = {
 
 static struct pmx_mux_reg pmx_pwm1_autoexpsmallpri_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -423,7 +420,7 @@ struct pmx_dev pmx_pwm1 = {
 /* Pad multiplexing for PWM2 device */
 static struct pmx_mux_reg pmx_pwm2_net_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -431,7 +428,7 @@ static struct pmx_mux_reg pmx_pwm2_net_mux[] = {
 
 static struct pmx_mux_reg pmx_pwm2_autoexpsmallpri_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -458,7 +455,7 @@ struct pmx_dev pmx_pwm2 = {
 /* Pad multiplexing for PWM3 device */
 static struct pmx_mux_reg pmx_pwm3_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -481,7 +478,7 @@ struct pmx_dev pmx_pwm3 = {
 /* Pad multiplexing for SSP1 device */
 static struct pmx_mux_reg pmx_ssp1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -504,7 +501,7 @@ struct pmx_dev pmx_ssp1 = {
 /* Pad multiplexing for SSP2 device */
 static struct pmx_mux_reg pmx_ssp2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -527,7 +524,7 @@ struct pmx_dev pmx_ssp2 = {
 /* Pad multiplexing for mii1 device */
 static struct pmx_mux_reg pmx_mii1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -550,7 +547,7 @@ struct pmx_dev pmx_mii1 = {
 /* Pad multiplexing for smii0 device */
 static struct pmx_mux_reg pmx_smii0_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -573,7 +570,7 @@ struct pmx_dev pmx_smii0 = {
 /* Pad multiplexing for smii1 device */
 static struct pmx_mux_reg pmx_smii1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -596,7 +593,7 @@ struct pmx_dev pmx_smii1 = {
 /* Pad multiplexing for i2c1 device */
 static struct pmx_mux_reg pmx_i2c1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG,
+		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -618,7 +615,7 @@ struct pmx_dev pmx_i2c1 = {
 
 /* pmx driver structure */
 struct pmx_driver pmx_driver = {
-	.mode_reg = {.offset = MODE_CONFIG_REG, .mask = 0x00000007},
+	.mode_reg = {.address = MODE_CONFIG_REG, .mask = 0x00000007},
 };
 
 /* Add spear320 specific devices here */
@@ -1019,9 +1016,7 @@ void __init spear320_init(void)
 	}
 
 	/* pmx initialization */
-	pmx_driver.base = base;
 	ret = pmx_register(&pmx_driver);
 	if (ret)
-		printk(KERN_ERR "padmux: registeration failed. err no: %d\n",
-				ret);
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
 }
