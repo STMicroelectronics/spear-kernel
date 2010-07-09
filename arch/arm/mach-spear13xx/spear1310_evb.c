@@ -26,6 +26,26 @@
 #include <mach/spear.h>
 #include <mach/pcie.h>
 
+/* padmux devices to enable */
+static struct pmx_dev *pmx_devs[] = {
+	/* spear13xx specific devices */
+	&pmx_i2c,
+	&pmx_i2s1,
+	&pmx_i2s2,
+	&pmx_clcd1,
+	&pmx_clcd2,
+	&pmx_egpio_grp,
+	&pmx_gmii,
+	&pmx_keyboard,
+	&pmx_mcif,
+	&pmx_nand_8bit,
+	&pmx_smi_4_chips,
+	&pmx_ssp,
+	&pmx_uart0,
+
+	/* spear1310 specific devices */
+};
+
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_gpio_device[0],
@@ -93,6 +113,11 @@ static int spear1310_pcie_port_is_host(int port)
 static void __init spear1310_evb_init(void)
 {
 	unsigned int i;
+
+	/* padmux initialization, must be done before spear1300_init */
+	pmx_driver.mode = NULL;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
