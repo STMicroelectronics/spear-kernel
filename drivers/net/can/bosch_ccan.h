@@ -96,6 +96,10 @@ enum ccan_regs {
 #define BTR_TSEG2_SHIFT		12
 #define BTR_TSEG2_MASK		(0x7<<BTR_TSEG2_SHIFT)
 
+/* brp extension register */
+#define BRP_EXT_BRPE_MASK	0x0f
+#define BRP_EXT_BRPE_SHIFT	0
+
 /* IFx command request */
 #define IF_COMR_BUSY		(1<<15)
 

@@ -18,7 +18,6 @@
  * http://www.semiconductors.bosch.de/pdf/Users_Manual_C_CAN.pdf
  *
  * TODO:
- * - BRP extension support to be added.
  * - Add support for IF2 in Basic mode.
  *
  * This file is licensed under the terms of the GNU General Public
@@ -55,7 +54,7 @@ static struct can_bittiming_const bosch_ccan_bittiming_const = {
 	.tseg2_max = 8,
 	.sjw_max = 4,
 	.brp_min = 1,
-	.brp_max = 64,		/* 6-bit BRP field */
+	.brp_max = 1024,	/* 6-bit BRP field + 4-bit BRPE field*/
 	.brp_inc = 1,
 };
 
@@ -237,29 +236,38 @@ static netdev_tx_t bosch_ccan_start_xmit(struct sk_buff *skb,
 
 static int bosch_ccan_set_bittiming(struct net_device *dev)
 {
-	unsigned int reg_timing, ctrl_save;
-	u8 brp, sjw, tseg1, tseg2;
+	unsigned int reg_btr, reg_brpe, ctrl_save;
+	u8 brp, brpe, ten_bit_brp, sjw, tseg1, tseg2;
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 	const struct can_bittiming *bt = &priv->can.bittiming;
 
-	brp = bt->brp - 1;
+	/* ccan provides a 6-bit brp and 4-bit brpe fields */
+	ten_bit_brp = bt->brp - 1;
+	brp = ten_bit_brp & BTR_BRP_MASK;
+	brpe = ten_bit_brp >> 6;
+
 	sjw = bt->sjw - 1;
 	tseg1 = bt->prop_seg + bt->phase_seg1 - 1;
 	tseg2 = bt->phase_seg2 - 1;
 
-	reg_timing = (brp & BTR_BRP_MASK) |
+	reg_btr = (brp) |
 		((sjw << BTR_SJW_SHIFT) & BTR_SJW_MASK) |
 		((tseg1 << BTR_TSEG1_SHIFT) & BTR_TSEG1_MASK) |
 		((tseg2 << BTR_TSEG2_SHIFT) & BTR_TSEG2_MASK);
 
-	dev_dbg(dev->dev.parent, "brp = %d, sjw = %d, seg1 = %d, seg2 = %d\n",
-			brp, sjw, tseg1, tseg2);
-	dev_dbg(dev->dev.parent, "setting BTR to %04x\n", reg_timing);
+	reg_brpe = brpe & BRP_EXT_BRPE_MASK;
+
+	dev_dbg(dev->dev.parent,
+			"brp = %d, brpe = %d, sjw = %d, seg1 = %d, seg2 = %d\n",
+			brp, brpe, sjw, tseg1, tseg2);
+	dev_dbg(dev->dev.parent, "setting BTR to %04x\n", reg_btr);
+	dev_dbg(dev->dev.parent, "setting BRPE to %04x\n", reg_brpe);
 
 	ctrl_save = priv->read_reg(priv, CAN_CONTROL);
 	priv->write_reg(priv, CAN_CONTROL,
 			ctrl_save | CONTROL_CCE | CONTROL_INIT);
-	priv->write_reg(priv, CAN_BTR, reg_timing);
+	priv->write_reg(priv, CAN_BTR, reg_btr);
+	priv->write_reg(priv, CAN_BRP_EXT, reg_brpe);
 	priv->write_reg(priv, CAN_CONTROL, ctrl_save);
 
 	return 0;
