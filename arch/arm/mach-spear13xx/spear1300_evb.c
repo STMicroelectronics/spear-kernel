@@ -84,6 +84,10 @@ static struct platform_device *plat_devs[] __initdata = {
 	&jpeg_device,
 	&kbd_device,
 	&nand_device,
+	&i2s0_device,
+#if 0
+	&i2s1_device,
+#endif
 	&ohci0_device,
 	&ohci1_device,
 	&phy0_device,
@@ -224,6 +228,10 @@ static void __init spear1300_evb_init(void)
 			SPEAR_NAND_BW8);
 	nand_mach_init(SPEAR_NAND_BW8);
 
+#ifdef CONFIG_SND_SOC_STA529
+	/* configure i2s configuration for dma xfer */
+	pcm_init(&dmac_device[0].dev);
+#endif
 	/* call spear1300 machine init function */
 	spear1300_init();
 

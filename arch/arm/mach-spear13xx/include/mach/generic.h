@@ -229,6 +229,8 @@ extern struct platform_device ehci0_device;
 extern struct platform_device ehci1_device;
 extern struct platform_device eth0_device;
 extern struct platform_device i2c_device;
+extern struct platform_device i2s0_device;
+extern struct platform_device i2s1_device;
 extern struct platform_device jpeg_device;
 extern struct platform_device kbd_device;
 extern struct platform_device nand_device;
@@ -245,6 +247,8 @@ extern struct platform_device pcie_gadget1_device;
 extern struct platform_device pcie_gadget2_device;
 extern struct sys_timer spear13xx_timer;
 
+/* Add spear1300 machine device structure declarations here */
+
 /* Add spear13xx family function declarations here */
 void __init spear13xx_clk_init(void);
 void __init i2c_register_board_devices(void);
@@ -259,7 +263,7 @@ void spear13xx_secondary_startup(void);
 #ifdef CONFIG_MACH_SPEAR1300
 /* Add spear1300 machine function declarations here */
 void __init spear1300_init(void);
-
+void pcm_init(struct device *dma_dev);
 #endif /* CONFIG_MACH_SPEAR1300 */
 
 /* spear1310 declarations */

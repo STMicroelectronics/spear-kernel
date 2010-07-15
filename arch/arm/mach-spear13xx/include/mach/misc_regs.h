@@ -161,8 +161,8 @@
 	#define UART_CLK_ENB		15
 	#define SSP_CLK_ENB		17
 	#define I2C_CLK_ENB		18
-	#define I2S0_CLK_ENB		19
-	#define I2S1_CLK_ENB		20
+	#define I2S1_CLK_ENB		19
+	#define I2S0_CLK_ENB		20
 	#define GPT0_CLK_ENB		21
 	#define GPT1_CLK_ENB		22
 	#define GPIO0_CLK_ENB		23

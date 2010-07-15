@@ -205,6 +205,62 @@ struct platform_device i2c_device = {
 	.resource = i2c_resources,
 };
 
+/* i2s0 device registeration */
+static struct resource i2s0_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S0_BASE,
+		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= IRQ_PLAY_I2S1 ,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= IRQ_REC_I2S0 ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device i2s0_device = {
+	.name = "spear13xx-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s0_resources),
+	.resource = i2s0_resources,
+};
+
+/* i2s1 device registeration */
+static struct resource i2s1_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S1_BASE,
+		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= IRQ_PLAY_I2S1 ,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= IRQ_REC_I2S1 ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device i2s1_device = {
+	.name = "spear13xx-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s1_resources),
+	.resource = i2s1_resources,
+};
+
 /* Ethernet device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,

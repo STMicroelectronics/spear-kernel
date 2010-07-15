@@ -1,0 +1,19 @@
+config SND_SPEAR_SOC
+	tristate "SoC Audio for the ST chip"
+	help
+	 Say Y or M if you want to add support for codecs attached to
+	 the I2S interface. You will also need
+	 to select the audio interfaces to support below.
+
+config SND_SPEAR_SOC_I2S
+	tristate
+
+config SND_SPEAR_SOC_EVM
+	tristate "SoC Audio support for Spear EVM"
+	depends on SND_SPEAR_SOC
+	select SND_SPEAR_SOC_I2S
+	select SND_SOC_STA529
+	help
+	 Say Y if you want to add support for SoC audio on ST SPEAR
+	 platform
+
