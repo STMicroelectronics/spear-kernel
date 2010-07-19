@@ -379,6 +379,7 @@ static int bosch_ccan_configure_msg_objects(struct net_device *dev)
  * Configure CCAN chip:
  * - enable/disable auto-retransmission
  * - set operating mode
+ * - configure message objects
  */
 static int bosch_ccan_chip_config(struct net_device *dev)
 {
@@ -395,6 +396,47 @@ static int bosch_ccan_chip_config(struct net_device *dev)
 	if (err)
 		return err;
 
+	/* configure message objects */
+	bosch_ccan_configure_msg_objects(dev);
+
+	return 0;
+}
+
+static int bosch_ccan_start(struct net_device *dev)
+{
+	int err;
+	unsigned int cntrl_save;
+	struct bosch_ccan_priv *priv = netdev_priv(dev);
+
+	/* enable status change, error and module interrupts */
+	cntrl_save = priv->read_reg(priv, CAN_CONTROL);
+	cntrl_save = (cntrl_save | (CONTROL_SIE | CONTROL_EIE | CONTROL_IE));
+	priv->write_reg(priv, CAN_CONTROL, cntrl_save);
+
+	/* basic ccan configuration */
+	err = bosch_ccan_chip_config(dev);
+	if (err)
+		return err;
+
+	priv->tx_object = 0;
+	priv->can.state = CAN_STATE_ERROR_ACTIVE;
+
+	return 0;
+}
+
+static int bosch_ccan_stop(struct net_device *dev)
+{
+	unsigned int cntrl_save;
+	struct bosch_ccan_priv *priv = netdev_priv(dev);
+
+	/* disable all interrupts */
+	cntrl_save = priv->read_reg(priv, CAN_CONTROL);
+	cntrl_save = ((((cntrl_save & ~CONTROL_EIE) & ~CONTROL_IE) &
+			~CONTROL_SIE));
+	priv->write_reg(priv, CAN_CONTROL, cntrl_save);
+
+	priv->can.state = CAN_STATE_STOPPED;
+
 	return 0;
 }
 
@@ -402,10 +444,11 @@ static int bosch_ccan_set_mode(struct net_device *dev, enum can_mode mode)
 {
 	switch (mode) {
 	case CAN_MODE_START:
-		bosch_ccan_configure_msg_objects(dev);
+		bosch_ccan_start(dev);
 		if (netif_queue_stopped(dev))
 			netif_wake_queue(dev);
-		dev_info(dev->dev.parent, "CAN_MODE_START requested\n");
+		dev_info(dev->dev.parent,
+				"bosch ccan CAN_MODE_START requested\n");
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -417,82 +460,188 @@ static int bosch_ccan_set_mode(struct net_device *dev, enum can_mode mode)
 static int bosch_ccan_get_state(const struct net_device *dev,
 				enum can_state *state)
 {
-	u32 reg_status;
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 
-	reg_status = priv->read_reg(priv, CAN_STATUS);
+	*state = priv->can.state;
 
-	if (reg_status & STATUS_EPASS)
-		*state = CAN_STATE_ERROR_PASSIVE;
-	else if (reg_status & STATUS_EWARN)
-		*state = CAN_STATE_ERROR_WARNING;
-	else if (reg_status & STATUS_BOFF)
-		*state = CAN_STATE_BUS_OFF;
-	else
-		*state = CAN_STATE_ERROR_ACTIVE;
+	return 0;
+}
+
+static int bosch_ccan_err(struct net_device *dev,
+				enum bosch_ccan_bus_error_types error_type,
+				int lec_type)
+{
+	unsigned int reg_err_counter = 0;
+	unsigned int rx_err_passive = 0;
+	unsigned int rx_err_counter = 0;
+	unsigned int tx_err_counter = 0;
+	struct bosch_ccan_priv *priv = netdev_priv(dev);
+	struct net_device_stats *stats = &dev->stats;
+	struct can_frame *cf;
+	struct sk_buff *skb;
+
+	/* propogate the error condition to the CAN stack */
+	skb = dev_alloc_skb(sizeof(struct can_frame));
+	if (skb == NULL)
+		return -ENOMEM;
+
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_CAN);
+	cf = (struct can_frame *)skb_put(skb, sizeof(struct can_frame));
+	memset(cf, 0, sizeof(struct can_frame));
+	cf->can_id = CAN_ERR_FLAG;
+	cf->can_dlc = CAN_ERR_DLC;
+
+	reg_err_counter = priv->read_reg(priv, CAN_ERROR);
+	rx_err_counter = ((reg_err_counter & ERR_COUNTER_REC_MASK) >>
+				ERR_COUNTER_REC_SHIFT);
+	tx_err_counter = (reg_err_counter & ERR_COUNTER_TEC_MASK);
+	rx_err_passive = ((reg_err_counter & ERR_COUNTER_RP_MASK) >>
+				ERR_COUNTER_RP_SHIFT);
+
+	if (error_type & CCAN_ERROR_WARNING) {
+		/* error warning state */
+		priv->can.can_stats.error_warning++;
+		priv->can.state = CAN_STATE_ERROR_WARNING;
+		cf->can_id |= CAN_ERR_CRTL;
+		if (rx_err_counter > 96)
+			cf->data[1] = CAN_ERR_CRTL_RX_WARNING;
+		if (tx_err_counter > 96)
+			cf->data[1] = CAN_ERR_CRTL_TX_WARNING;
+	}
+	if (error_type & CCAN_ERROR_PASSIVE) {
+		/* error passive state */
+		priv->can.can_stats.error_passive++;
+		priv->can.state = CAN_STATE_ERROR_PASSIVE;
+		cf->can_id |= CAN_ERR_CRTL;
+		if (rx_err_passive)
+			cf->data[1] = CAN_ERR_CRTL_RX_PASSIVE;
+		if (tx_err_counter > 127)
+			cf->data[1] = CAN_ERR_CRTL_TX_PASSIVE;
+	}
+	if (error_type & CCAN_BUS_OFF) {
+		/* bus-off state */
+		priv->can.state = CAN_STATE_BUS_OFF;
+		cf->can_id |= CAN_ERR_BUSOFF;
+		/* disable all interrupts in bus-off mode to ensure that
+		 * the CPU is not hogged down
+		 */
+		priv->write_reg(priv, CAN_CONTROL, 0);
+		can_bus_off(dev);
+	}
+
+	/* check for 'last error code' which tells us the
+	 * type of the last error to occur on the CAN bus
+	 */
+	if (lec_type) {
+		/* common for all type of bus errors */
+		priv->can.can_stats.bus_error++;
+		stats->rx_errors++;
+		cf->can_id |= CAN_ERR_PROT | CAN_ERR_BUSERROR;
+		cf->data[2] |= CAN_ERR_PROT_UNSPEC;
+
+		if (lec_type & LEC_STUFF_ERROR) {
+			dev_info(dev->dev.parent, "stuff error\n");
+			cf->data[2] |= CAN_ERR_PROT_STUFF;
+		}
+		if (lec_type & LEC_FORM_ERROR) {
+			dev_info(dev->dev.parent, "form error\n");
+			cf->data[2] |= CAN_ERR_PROT_FORM;
+		}
+		if (lec_type & LEC_ACK_ERROR) {
+			dev_info(dev->dev.parent, "ack error\n");
+			cf->data[2] |= (CAN_ERR_PROT_LOC_ACK |
+					CAN_ERR_PROT_LOC_ACK_DEL);
+		}
+		if (lec_type & LEC_BIT1_ERROR) {
+			dev_info(dev->dev.parent, "bit1 error\n");
+			cf->data[2] |= CAN_ERR_PROT_BIT1;
+		}
+		if (lec_type & LEC_BIT0_ERROR) {
+			dev_info(dev->dev.parent, "bit0 error\n");
+			cf->data[2] |= CAN_ERR_PROT_BIT0;
+		}
+		if (lec_type & LEC_CRC_ERROR) {
+			dev_info(dev->dev.parent, "CRC error\n");
+			cf->data[2] |= (CAN_ERR_PROT_LOC_CRC_SEQ |
+					CAN_ERR_PROT_LOC_CRC_DEL);
+		}
+	}
+
+	netif_rx(skb);
+	stats->rx_packets++;
+	stats->rx_bytes += cf->can_dlc;
 
 	return 0;
 }
 
 static int bosch_ccan_do_status_irq(struct net_device *dev)
 {
-	int status, diff;
+	int ret, lec_type = 0;
+	enum bosch_ccan_bus_error_types error_type = CCAN_NO_ERROR;
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 
-	status = priv->read_reg(priv, CAN_STATUS);
-	status &= ~(STATUS_TXOK | STATUS_RXOK);
-	diff = status ^ priv->last_status;
+	priv->current_status = priv->read_reg(priv, CAN_STATUS);
 
-	if (diff & STATUS_EPASS) {
-		if (status & STATUS_EPASS)
-			dev_info(dev->dev.parent,
-					"entered error passive state\n");
-		else
-			dev_info(dev->dev.parent,
-					"left error passive state\n");
+	/* handle Tx/Rx events */
+	if (priv->current_status & STATUS_TXOK) {
+		dev_dbg(dev->dev.parent,
+				"Trasmitted a msg successfully\n");
+		priv->write_reg(priv, CAN_STATUS,
+				(priv->current_status & ~STATUS_TXOK));
 	}
-	if (diff & STATUS_EWARN) {
-		if (status & STATUS_EWARN)
-			dev_info(dev->dev.parent,
-					"entered error warning state\n");
-		else
-			dev_info(dev->dev.parent,
-					"left error warning state\n");
-	}
-	if (diff & STATUS_BOFF) {
-		if (status & STATUS_BOFF)
-			dev_info(dev->dev.parent, "entered busoff state\n");
-		else
-			dev_info(dev->dev.parent, "left busoff state\n");
+	if (priv->current_status & STATUS_RXOK) {
+		dev_dbg(dev->dev.parent,
+				"Received a msg successfully\n");
+		priv->write_reg(priv, CAN_STATUS,
+				(priv->current_status & ~STATUS_RXOK));
 	}
 
-	if (diff & STATUS_LEC_MASK) {
-		switch (status & STATUS_LEC_MASK) {
-		case LEC_STUFF_ERROR:
-			dev_info(dev->dev.parent, "suffing error\n");
-			break;
-		case LEC_FORM_ERROR:
-			dev_info(dev->dev.parent, "form error\n");
-			break;
-		case LEC_ACK_ERROR:
-			dev_info(dev->dev.parent, "ack error\n");
-			break;
-		case LEC_BIT1_ERROR:
-			dev_info(dev->dev.parent, "bit1 error\n");
-			break;
-		case LEC_BIT0_ERROR:
-			dev_info(dev->dev.parent, "bit0 error\n");
-			break;
-		case LEC_CRC_ERROR:
-			dev_info(dev->dev.parent, "CRC error\n");
-			break;
-		}
+	/* handle bus error events */
+	if (priv->current_status & STATUS_EWARN) {
+		dev_info(dev->dev.parent,
+				"entered error warning state\n");
+		error_type = CCAN_ERROR_WARNING;
+	}
+	if ((priv->current_status & STATUS_EPASS) &&
+			(!(priv->last_status & STATUS_EPASS))) {
+		dev_info(dev->dev.parent,
+				"entered error passive state\n");
+		error_type = CCAN_ERROR_PASSIVE;
+	}
+	if ((priv->current_status & STATUS_BOFF) &&
+			(!(priv->last_status & STATUS_BOFF))) {
+		dev_info(dev->dev.parent,
+				"entered bus off state\n");
+		error_type = CCAN_BUS_OFF;
+	}
+	if (priv->current_status & STATUS_LEC_MASK)
+		lec_type = (priv->current_status & STATUS_LEC_MASK);
+
+	/* handle bus recovery events */
+	if ((!(priv->current_status & STATUS_EPASS)) &&
+			(priv->last_status & STATUS_EPASS)) {
+		dev_info(dev->dev.parent,
+				"left error passive state\n");
+		priv->can.state = CAN_STATE_ERROR_ACTIVE;
+	}
+	if ((!(priv->current_status & STATUS_BOFF)) &&
+			(priv->last_status & STATUS_BOFF)) {
+		dev_info(dev->dev.parent,
+				"left bus off state\n");
+		priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	}
 
-	priv->write_reg(priv, CAN_STATUS, 0);
-	priv->last_status = status;
+	priv->last_status = priv->current_status;
 
-	return diff ? 1 : 0;
+	/* handle error on the bus */
+	if (error_type != CCAN_NO_ERROR) {
+		ret = bosch_ccan_err(dev, error_type, lec_type);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static void bosch_ccan_do_object_irq(struct net_device *dev, u16 irqstatus)
@@ -523,20 +672,10 @@ static void bosch_ccan_do_object_irq(struct net_device *dev, u16 irqstatus)
 	}
 }
 
-static void do_statuspoll(struct work_struct *work)
-{
-	struct bosch_ccan_priv *priv = container_of(
-						((struct delayed_work *)work),
-						struct bosch_ccan_priv, work);
-
-	priv->write_reg(priv, CAN_CONTROL,
-			CONTROL_SIE | CONTROL_EIE | CONTROL_IE);
-}
-
 static irqreturn_t bosch_ccan_isr(int irq, void *dev_id)
 {
 	u16 irqstatus;
-	unsigned int cntrl_save;
+	int ret;
 	struct net_device *dev = (struct net_device *)dev_id;
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 
@@ -546,20 +685,10 @@ static irqreturn_t bosch_ccan_isr(int irq, void *dev_id)
 		return IRQ_NONE;
 	while (irqstatus) {
 		if (irqstatus == 0x8000) {
-			if (bosch_ccan_do_status_irq(dev)) {
-				/*
-				 * CCAN core tends to flood us with
-				 * interrupts when certain error states don't
-				 * disappear. Disable interrupts and see if it's
-				 * getting better later.
-				 */
-
-				cntrl_save = priv->read_reg(priv, CAN_CONTROL);
-				cntrl_save = ((cntrl_save & ~CONTROL_EIE) &
-						~CONTROL_IE);
-				priv->write_reg(priv, CAN_CONTROL, cntrl_save);
-
-				schedule_delayed_work(&priv->work, HZ / 10);
+			ret = bosch_ccan_do_status_irq(dev);
+			if (ret < 0) {
+				dev_err(dev->dev.parent,
+						"do_status_irq failed\n");
 				goto exit;
 			}
 		} else
@@ -592,16 +721,16 @@ static int bosch_ccan_open(struct net_device *dev)
 		goto exit_irq_fail;
 	}
 
-	/* set the desired chip configuration */
-	err = bosch_ccan_chip_config(dev);
+	/* start the ccan controller */
+	err = bosch_ccan_start(dev);
 	if (err)
-		goto exit_config_fail;
+		goto exit_start_fail;
 
 	netif_start_queue(dev);
 
 	return 0;
 
-exit_config_fail:
+exit_start_fail:
 	free_irq(dev->irq, dev);
 exit_irq_fail:
 	close_candev(dev);
@@ -610,16 +739,8 @@ exit_irq_fail:
 
 static int bosch_ccan_close(struct net_device *dev)
 {
-	struct bosch_ccan_priv *priv = netdev_priv(dev);
-
 	netif_stop_queue(dev);
-
-	cancel_delayed_work(&priv->work);
-	flush_scheduled_work();
-
-	/* mask all IRQs */
-	priv->write_reg(priv, CAN_CONTROL, 0);
-
+	bosch_ccan_stop(dev);
 	free_irq(dev->irq, dev);
 	close_candev(dev);
 
@@ -643,8 +764,6 @@ struct net_device *alloc_bosch_ccandev(int sizeof_priv)
 	priv->can.do_get_state = bosch_ccan_get_state;
 	priv->can.do_set_mode = bosch_ccan_set_mode;
 
-	priv->tx_object = 0;
-
 	return dev;
 }
 EXPORT_SYMBOL(alloc_bosch_ccandev);
@@ -663,15 +782,8 @@ static const struct net_device_ops bosch_ccan_netdev_ops = {
 
 int register_bosch_ccandev(struct net_device *dev)
 {
-	struct bosch_ccan_priv *priv = netdev_priv(dev);
-
-	/* set the desired chip configuration */
-	bosch_ccan_set_mode(dev, CAN_MODE_START);
-
 	dev->flags |= IFF_ECHO;	/* we support local echo */
 	dev->netdev_ops = &bosch_ccan_netdev_ops;
-
-	INIT_DELAYED_WORK(&priv->work, do_statuspoll);
 
 	return register_candev(dev);
 }
@@ -681,10 +793,8 @@ void unregister_bosch_ccandev(struct net_device *dev)
 {
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 
-	bosch_ccan_set_mode(dev, CAN_MODE_START);
-
-	cancel_delayed_work(&priv->work);
-	flush_scheduled_work();
+	/* disable all interrupts */
+	priv->write_reg(priv, CAN_CONTROL, 0);
 
 	unregister_candev(dev);
 }

@@ -78,13 +78,21 @@ enum ccan_regs {
 #define STATUS_EPASS		(1<<5)
 #define STATUS_RXOK		(1<<4)
 #define STATUS_TXOK		(1<<3)
-#define STATUS_LEC_MASK		(1<<2)
+#define STATUS_LEC_MASK		0x07
 #define LEC_STUFF_ERROR		1
 #define LEC_FORM_ERROR		2
 #define LEC_ACK_ERROR		3
 #define LEC_BIT1_ERROR		4
 #define LEC_BIT0_ERROR		5
 #define LEC_CRC_ERROR		6
+
+/* error counter register */
+#define ERR_COUNTER_TEC_MASK	0xff
+#define ERR_COUNTER_TEC_SHIFT	0x0
+#define ERR_COUNTER_REC_SHIFT	8
+#define ERR_COUNTER_REC_MASK	(0x7f<<ERR_COUNTER_REC_SHIFT)
+#define ERR_COUNTER_RP_SHIFT	15
+#define ERR_COUNTER_RP_MASK	(0x1<<ERR_COUNTER_RP_SHIFT)
 
 /* bit-timing register */
 #define BTR_BRP_MASK		0x3f
@@ -162,13 +170,24 @@ enum bosch_ccan_auto_tx_config {
 	CCAN_DISABLE_AUTO_RE_TRANSMIT
 };
 
+/*
+ * CCAN error types:
+ * Bus errors (BUS_OFF, ERROR_WARNING, ERROR_PASSIVE) are supported
+ */
+enum bosch_ccan_bus_error_types {
+	CCAN_NO_ERROR = 0,
+	CCAN_BUS_OFF,
+	CCAN_ERROR_WARNING,
+	CCAN_ERROR_PASSIVE
+};
+
 /* CCAN private data structure */
 struct bosch_ccan_priv {
 	struct can_priv can;	/* must be the first member */
 	struct net_device *dev;
 	int tx_object;
+	int current_status;
 	int last_status;
-	struct delayed_work work;
 	u16 (*read_reg) (const struct bosch_ccan_priv *priv,
 				enum ccan_regs reg);
 	void (*write_reg) (const struct bosch_ccan_priv *priv,
