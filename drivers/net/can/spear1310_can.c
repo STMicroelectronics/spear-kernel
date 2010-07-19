@@ -1,7 +1,7 @@
 /*
- * drivers/net/can/spear_can.c
+ * drivers/net/can/spear1310_can.c
  *
- * CAN bus driver for SPEAr SoC that houses two independent
+ * CAN bus driver for SPEAr1310 SoC that houses two independent
  * Bosch CCAN controllers.
  *
  * Copyright (C) 2010 ST Microelectronics
@@ -16,7 +16,6 @@
  *
  * TODO:
  * - Power Management support to be added
- * - Special handling of objects to be added to fix 'remote request' issue
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -35,27 +34,27 @@
 
 #include "bosch_ccan.h"
 
-#define DRV_NAME	"spear_can"
+#define DRV_NAME	"spear1310_can"
 #define CAN_ENABLE	0x0e
 
-static u16 spear_can_read_reg(const struct bosch_ccan_priv *priv,
+static u16 spear1310_can_read_reg(const struct bosch_ccan_priv *priv,
 				enum ccan_regs reg)
 {
 	u16 val;
 
-	/* shifting 1 place because 16 bit registers are word aligned */
-	val = readw(priv->reg_base + (reg << 1));
+	/* 16 bit registers are aligned at 16-bit boundary */
+	val = readw(priv->reg_base + reg);
 	return val;
 }
 
-static void spear_can_write_reg(const struct bosch_ccan_priv *priv,
+static void spear1310_can_write_reg(const struct bosch_ccan_priv *priv,
 				enum ccan_regs reg, u16 val)
 {
-	/* shifting 1 place because 16 bit registers are word aligned */
-	writew(val, priv->reg_base + (reg << 1));
+	/* 16 bit registers are aligned at 16-bit boundary */
+	writew(val, priv->reg_base + reg);
 }
 
-static int spear_can_drv_probe(struct platform_device *pdev)
+static int spear1310_can_drv_probe(struct platform_device *pdev)
 {
 	int ret;
 	void __iomem *addr;
@@ -106,15 +105,15 @@ static int spear_can_drv_probe(struct platform_device *pdev)
 	priv->irq_flags = irq->flags;
 	priv->reg_base = addr;
 	priv->can.clock.freq = clk_get_rate(clk);
-	priv->read_reg = spear_can_read_reg;
-	priv->write_reg = spear_can_write_reg;
+	priv->read_reg = spear1310_can_read_reg;
+	priv->write_reg = spear1310_can_write_reg;
 	priv->clk = clk;
 
 	platform_set_drvdata(pdev, dev);
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
 	/* register ccan */
-	spear_can_write_reg(priv, CAN_ENABLE, 1);
+	spear1310_can_write_reg(priv, CAN_ENABLE, 1);
 	ret = register_bosch_ccandev(dev);
 	if (ret) {
 		dev_err(&pdev->dev, "registering %s failed (err=%d)\n",
@@ -141,7 +140,7 @@ exit:
 	return ret;
 }
 
-static int spear_can_drv_remove(struct platform_device *pdev)
+static int spear1310_can_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
@@ -164,42 +163,42 @@ static int spear_can_drv_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int spear_can_drv_suspend(struct platform_device *pdev,
+static int spear1310_can_drv_suspend(struct platform_device *pdev,
 				pm_message_t state)
 {
 	return 0;
 }
 
-static int spear_can_drv_resume(struct platform_device *pdev)
+static int spear1310_can_drv_resume(struct platform_device *pdev)
 {
 	return 0;
 }
 #endif /* CONFIG_PM */
 
-static struct platform_driver spear_can_driver = {
+static struct platform_driver spear1310_can_driver = {
 	.driver		= {
 		.name	= DRV_NAME,
 	},
-	.probe		= spear_can_drv_probe,
-	.remove		= spear_can_drv_remove,
+	.probe		= spear1310_can_drv_probe,
+	.remove		= spear1310_can_drv_remove,
 #ifdef CONFIG_PM
-	.suspend	= spear_can_drv_suspend,
-	.resume		= spear_can_drv_resume,
+	.suspend	= spear1310_can_drv_suspend,
+	.resume		= spear1310_can_drv_resume,
 #endif	/* CONFIG_PM */
 };
 
-static int __init spear_can_init(void)
+static int __init spear1310_can_init(void)
 {
-	return platform_driver_register(&spear_can_driver);
+	return platform_driver_register(&spear1310_can_driver);
 }
-module_init(spear_can_init);
+module_init(spear1310_can_init);
 
-static void __exit spear_can_cleanup(void)
+static void __exit spear1310_can_cleanup(void)
 {
-	platform_driver_unregister(&spear_can_driver);
+	platform_driver_unregister(&spear1310_can_driver);
 }
-module_exit(spear_can_cleanup);
+module_exit(spear1310_can_cleanup);
 
 MODULE_AUTHOR("Bhupesh Sharma <bhupesh.sharma@st.com>");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("CAN bus driver for SPEAr SoC which has 2 CCAN controllers");
+MODULE_DESCRIPTION("CAN bus driver for SPEAr1310 which has 2 CCAN controllers");

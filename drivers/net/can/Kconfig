@@ -48,12 +48,20 @@ config CAN_BOSCH_CCAN
 	  If you say yes to this option, support will be included for the
 	  Bosch CCAN controller.
 
-config CAN_SPEAR
-	tristate "SPEAr CAN controller"
+config CAN_SPEAR320
+	tristate "SPEAr320 CAN controller"
 	depends on CAN_DEV && CAN_BOSCH_CCAN
 	---help---
 	  If you say yes to this option, support will be included for the
-	  SPEAr CAN controller which has two inbuilt CCAN controllers.
+	  SPEAr320 CAN controller which has two inbuilt CCAN controllers.
+	  This driver can also be built as a module.
+
+config CAN_SPEAR1310
+	tristate "SPEAr1310 CAN controller"
+	depends on CAN_DEV && CAN_BOSCH_CCAN
+	---help---
+	  If you say yes to this option, support will be included for the
+	  SPEAr1310 CAN controller which has two inbuilt CCAN controllers.
 	  This driver can also be built as a module.
 
 source "drivers/net/can/sja1000/Kconfig"
