@@ -350,6 +350,30 @@ config TOUCHSCREEN_QT602240
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called qt602240_ts.
+config TOUCHSCREEN_STMPE610
+	tristate "STMPE610 ST Microelectronics S-Touch Advance Touchscreen controller"
+	help
+	  ST Microelectronics S-Touch Advance Touchscreen controller with 6 bit
+	  port expander.
+
+	  To compile this driver as a module, choose M here
+
+choice
+	prompt "Select STMPE610 Interface"
+	default STMPE610_SPI
+	depends on TOUCHSCREEN_STMPE610
+
+config STMPE610_SPI
+	bool "STMPE610 SPI Inteface"
+	depends on SPI_MASTER
+	help
+	  This is used to enable SPI interface of STMPE610
+
+config STMPE610_I2C
+	bool "STMPE610 I2C Inteface"
+	help
+	  This is used to enable I2C interface of STMPE610
+endchoice
 
 config TOUCHSCREEN_MIGOR
 	tristate "Renesas MIGO-R touchscreen"
