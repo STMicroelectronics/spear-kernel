@@ -13,10 +13,12 @@
 
 #include <linux/types.h>
 #include <linux/gpio.h>
+#include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/stmpe610.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <plat/adc.h>
@@ -26,6 +28,7 @@
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/pcie.h>
 #include <mach/spear.h>
 
@@ -128,7 +131,54 @@ DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
 DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
 #endif
 
+/* spi0 touch screen Chip Select Control function, controlled by gpio pin */
+static struct stmpe610_pdata stmpe610_spi_pdata = {
+	.irq_gpio = GPIO1_6,
+	.irq_type = IRQ_TYPE_EDGE_FALLING,
+	.fifo_threshhold = 1,
+	.tracking_index = TI_0,
+	.operating_mode = XYZ_ACQUISITION,
+	.average_ctrl = SAMPLES_2,
+	.touch_det_delay = TD_500US,
+	.settling_time = ST_500US,
+	.x_min = 0x00,
+	.x_max = 0xFFF,
+	.y_min = 0x00,
+	.y_max = 0xFFF,
+	.sample_time = SAMP_TIME_80,
+	.mod_12b = MOD_12B,
+	.ref_sel = REF_SEL_INT,
+	.adc_freq = ADC_FREQ_3250K,
+	.fraction_z = 7,
+	.i_drive = IDRIVE_50_80MA,
+};
+
+DECLARE_SPI_CS_CONTROL(0, ts, GPIO1_7);
+/* spi0 touch screen Info structure */
+static struct pl022_config_chip spi0_ts_chip_info = {
+	.iface = SSP_INTERFACE_MOTOROLA_SPI,
+	.hierarchy = SSP_MASTER,
+	.slave_tx_disable = 0,
+	.com_mode = INTERRUPT_TRANSFER,
+	.rx_lev_trig = SSP_RX_1_OR_MORE_ELEM,
+	.tx_lev_trig = SSP_TX_1_OR_MORE_EMPTY_LOC,
+	.ctrl_len = SSP_BITS_8,
+	.wait_state = SSP_MWIRE_WAIT_ZERO,
+	.duplex = SSP_MICROWIRE_CHANNEL_FULL_DUPLEX,
+	.cs_control = spi0_ts_cs_control,
+};
+
 static struct spi_board_info __initdata spi_board_info[] = {
+	/* spi0 board info */
+	{
+		.modalias = "stmpe610-spi",
+		.platform_data = &stmpe610_spi_pdata,
+		.controller_data = &spi0_ts_chip_info,
+		.max_speed_hz = 1000000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_1,
+	},
 #if 0
 	/* spi0 board info */
 	{
