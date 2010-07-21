@@ -41,6 +41,7 @@
 #include <linux/if_vlan.h>
 #include <linux/dma-mapping.h>
 #include <linux/stmmac.h>
+#include <asm/mach-types.h>
 #include "stmmac.h"
 
 #define STMMAC_RESOURCE_NAME	"stmmaceth"
@@ -107,7 +108,7 @@ static int pause = PAUSE_TIME;
 module_param(pause, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(pause, "Flow Control Pause Time");
 
-#define TC_DEFAULT 64
+#define TC_DEFAULT 128
 static int tc = TC_DEFAULT;
 module_param(tc, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(tc, "DMA threshold control value");
@@ -971,11 +972,6 @@ static void stmmac_dma_interrupt(struct net_device *dev)
 				_stmmac_schedule(priv);
 	}
 
-	/* Optional hardware blocks, interrupts should be disabled */
-	if (unlikely(intr_status &
-		(DMA_STATUS_GPI | DMA_STATUS_GMI | DMA_STATUS_GLI)))
-		pr_info("%s: unexpected status %08x\n", __func__, intr_status);
-
 	/* Clear the interrupt by writing a logic 1 to the CSR5[15-0] */
 	writel((intr_status & 0x1ffff), ioaddr + DMA_STATUS);
 
@@ -1066,7 +1062,7 @@ static int stmmac_open(struct net_device *dev)
 	/* Copy the MAC addr into the HW */
 	priv->hw->ops->set_umac_addr(ioaddr, dev->dev_addr, 0);
 	/* Initialize the MAC Core */
-	priv->hw->ops->core_init(ioaddr, 0);
+	priv->hw->ops->core_init(ioaddr, 0, priv->csum_off_engine);
 
 	priv->shutdown = 0;
 
@@ -1439,7 +1435,9 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 
 		/* read the status of the incoming frame */
 		status = (priv->hw->desc->rx_status(&priv->dev->stats,
-							 &priv->xstats, p));
+					&priv->xstats, p,
+					priv->csum_off_engine));
+
 		if (unlikely(status == discard_frame))
 			priv->dev->stats.rx_errors++;
 		else {
@@ -1447,6 +1445,14 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 			/* Length should omit the CRC */
 			int frame_len =
 				priv->hw->desc->get_rx_frame_len(p) - 4;
+			/*
+			 * The check sum engine of type-1 have the
+			 * checksum appended at the end of the data
+			 * payload. Reduce the 2 bytes of checksum
+			 * data.
+			 */
+			if (priv->csum_off_engine == STMAC_TYPE_1)
+				frame_len -= 2;
 
 #ifdef STMMAC_RX_DEBUG
 			if (frame_len > ETH_FRAME_LEN)
@@ -1739,7 +1745,7 @@ static int stmmac_probe(struct net_device *dev)
 	stmmac_set_ethtool_ops(dev);
 
 	if (priv->tx_csum)
-		dev->features |= (NETIF_F_SG | NETIF_F_HW_CSUM);
+		dev->features |= NETIF_F_HW_CSUM;
 
 	dev->watchdog_timeo = msecs_to_jiffies(watchdog);
 #ifdef STMMAC_VLAN_TAG_USED
@@ -1889,6 +1895,8 @@ static int stmmac_associate_phy(struct device *dev, void *data)
  * @pdev: platform device pointer
  * Description: the driver is initialized through platform_device.
  */
+struct	clk *spear1310_sys_clk;
+
 static int stmmac_dvr_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1950,6 +1958,7 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	priv->is_gmac = plat_dat->has_gmac;	/* GMAC is on board */
 	priv->enh_desc = plat_dat->enh_desc;
 	priv->tx_csum = plat_dat->tx_csum;
+	priv->csum_off_engine = plat_dat->csum_off_engine;
 
 	platform_set_drvdata(pdev, ndev);
 	priv->stmmac_clk = clk_get(&pdev->dev, NULL);
@@ -1957,6 +1966,18 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get macb_clk\n");
 		ret = -ENODEV;
 		goto out;
+	}
+
+	/*
+	 * Following hack has been provided as a sepcial case for
+	 * spear1310 ethernet interfaces where mdio lines of eth0 is
+	 * shared by the rest of ethernet interfaces, hence we have to
+	 * do following in order to ensure that clock is enabled for the
+	 * shared mdio lines
+	 */
+	if (machine_is_spear1310() && (spear1310_sys_clk == NULL)) {
+		spear1310_sys_clk = priv->stmmac_clk;
+		clk_enable(spear1310_sys_clk);
 	}
 
 	clk_enable(priv->stmmac_clk);

@@ -26,12 +26,14 @@
 #include <linux/netdevice.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
+#include <asm/mach-types.h>
 
 #include "stmmac.h"
 
 #define MII_BUSY 0x00000001
 #define MII_WRITE 0x00000002
 
+u32 *mac1_bus;
 /**
  * stmmac_mdio_read
  * @bus: points to the mii_bus structure
@@ -44,14 +46,24 @@
  */
 static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned long ioaddr = ndev->base_addr;
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
-
 	int data;
-	u16 regValue = (((phyaddr << 11) & (0x0000F800)) |
+	u16 regValue;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	unsigned long ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
+
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (machine_is_spear1310() && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	ioaddr = ndev->base_addr;
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
+	regValue = (((phyaddr << 11) & (0x0000F800)) |
 			((phyreg << 6) & (0x000007C0)));
 	regValue |= MII_BUSY;	/* in case of GMAC */
 
@@ -76,13 +88,23 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 				u16 phydata)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned long ioaddr = ndev->base_addr;
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
+	u16 value;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	unsigned long ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
 
-	u16 value =
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (machine_is_spear1310() && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	ioaddr = ndev->base_addr;
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
+	value =
 		(((phyaddr << 11) & (0x0000F800)) |
 		 ((phyreg << 6) & (0x000007C0))) | MII_WRITE;
 	value |= MII_BUSY;
@@ -162,6 +184,10 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->irq = irqlist;
 	new_bus->phy_mask = priv->phy_mask;
 	new_bus->parent = priv->device;
+
+	if (machine_is_spear1310() && (priv->bus_id == 0))
+			mac1_bus = (u32 *)ndev;
+
 	err = mdiobus_register(new_bus);
 	if (err != 0) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
@@ -189,7 +215,6 @@ int stmmac_mdio_register(struct net_device *ndev)
 
 	if (!found)
 		pr_warning("%s: No PHY found\n", ndev->name);
-
 	return 0;
 bus_register_fail:
 	kfree(irqlist);

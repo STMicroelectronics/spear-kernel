@@ -539,7 +539,7 @@ static struct plat_stmmacenet_data ether1_platform_data = {
 	.bus_id = 1,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 1,
+	.tx_csum = 0,
 };
 
 static struct resource eth1_resources[] = {
@@ -600,7 +600,7 @@ static struct plat_stmmacenet_data ether2_platform_data = {
 	.bus_id = 2,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 1,
+	.tx_csum = 0,
 };
 
 static struct resource eth2_resources[] = {
@@ -661,7 +661,7 @@ static struct plat_stmmacenet_data ether3_platform_data = {
 	.bus_id = 3,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 1,
+	.tx_csum = 0,
 };
 
 static struct resource eth3_resources[] = {
@@ -722,7 +722,7 @@ static struct plat_stmmacenet_data ether4_platform_data = {
 	.bus_id = 4,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 1,
+	.tx_csum = 0,
 };
 
 static struct resource eth4_resources[] = {

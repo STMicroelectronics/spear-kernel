@@ -265,7 +265,7 @@ struct platform_device spear13xx_i2s1_device = {
 /* Ethernet device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,
-	.phy_addr = -1,
+	.phy_addr = 5,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_GMII,
 };
@@ -295,7 +295,7 @@ static struct plat_stmmacenet_data ether0_platform_data = {
 static struct resource eth0_resources[] = {
 	[0] = {
 		.start = SPEAR13XX_GETH0_BASE,
-		.end = SPEAR13XX_GETH0_BASE + SZ_8K - 1,
+		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
