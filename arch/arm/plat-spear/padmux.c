@@ -19,12 +19,10 @@
 /*
  * struct pmx: pmx definition structure
  *
- * base: base address of configuration registers
  * mode_reg: mode configurations
  * active_mode: pointer to current active mode
  */
 struct pmx {
-	u32 base;
 	struct pmx_reg mode_reg;
 	struct pmx_mode *active_mode;
 };
@@ -40,17 +38,22 @@ static struct pmx *pmx;
  */
 static int pmx_mode_set(struct pmx_mode *mode)
 {
-	u32 val;
+	u32 val, *address;
 
 	if (!mode->name)
 		return -EFAULT;
 
 	pmx->active_mode = mode;
 
-	val = readl(pmx->base + pmx->mode_reg.offset);
-	val &= ~pmx->mode_reg.mask;
-	val |= mode->value & pmx->mode_reg.mask;
-	writel(val, pmx->base + pmx->mode_reg.offset);
+	address = ioremap(pmx->mode_reg.address, SZ_16);
+	if (address) {
+		val = readl(address);
+		val &= ~pmx->mode_reg.mask;
+		val |= mode->value & pmx->mode_reg.mask;
+		writel(val, address);
+
+		iounmap(address);
+	}
 
 	return 0;
 }
@@ -70,6 +73,7 @@ static int pmx_mode_set(struct pmx_mode *mode)
 static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 {
 	u32 val, i;
+	u32 *address;
 
 	if (!count)
 		return -EINVAL;
@@ -104,10 +108,15 @@ static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 			struct pmx_mux_reg *mux_reg =
 				&devs[i]->modes[j].mux_regs[k];
 
-			val = readl(pmx->base + mux_reg->offset);
-			val &= ~mux_reg->mask;
-			val |= mux_reg->value & mux_reg->mask;
-			writel(val, pmx->base + mux_reg->offset);
+			address = ioremap(mux_reg->address, SZ_16);
+			if (address) {
+				val = readl(address);
+				val &= ~mux_reg->mask;
+				val |= mux_reg->value & mux_reg->mask;
+				writel(val, address);
+
+				iounmap(address);
+			}
 		}
 
 		devs[i]->is_active = true;
@@ -134,15 +143,14 @@ int pmx_register(struct pmx_driver *driver)
 
 	if (pmx)
 		return -EPERM;
-	if (!driver->base || !driver->devs)
+	if (!driver->devs)
 		return -EFAULT;
 
 	pmx = kzalloc(sizeof(*pmx), GFP_KERNEL);
 	if (!pmx)
 		return -ENOMEM;
 
-	pmx->base = (u32)driver->base;
-	pmx->mode_reg.offset = driver->mode_reg.offset;
+	pmx->mode_reg.address = driver->mode_reg.address;
 	pmx->mode_reg.mask = driver->mode_reg.mask;
 
 	/* choose mode to enable */

@@ -27,12 +27,7 @@ void __init spear1300_init(void)
 	spear13xx_init();
 
 	/* pmx initialization */
-	pmx_driver.base = ioremap(SPEAR13XX_FUNC_ENB_BASE, SZ_4K);
-	if (pmx_driver.base) {
-		ret = pmx_register(&pmx_driver);
-		if (ret)
-			pr_err("padmux: registeration failed. err no: %d\n",
-					ret);
-		iounmap(pmx_driver.base);
-	}
+	ret = pmx_register(&pmx_driver);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
 }

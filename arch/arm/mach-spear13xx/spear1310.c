@@ -106,7 +106,7 @@ struct pmx_driver pmx_driver;
 /* Pad multiplexing for uart1_modem device */
 static struct pmx_mux_reg pmx_uart1_modem_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_I2S1_MASK | PMX_SSP_MASK,
 		.value = 0,
 	},
@@ -128,7 +128,7 @@ struct pmx_dev pmx_uart1_modem = {
 /* Pad multiplexing for uart1 device */
 static struct pmx_mux_reg pmx_uart1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_SSP_MASK,
 		.value = 0,
 	},
@@ -141,7 +141,7 @@ static struct pmx_dev_mode pmx_uart1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart1 = {
+struct pmx_dev pmx_uart_1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
@@ -150,7 +150,7 @@ struct pmx_dev pmx_uart1 = {
 /* Pad multiplexing for uart2 device */
 static struct pmx_mux_reg pmx_uart2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_SSP_MASK | PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -163,7 +163,7 @@ static struct pmx_dev_mode pmx_uart2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart2 = {
+struct pmx_dev pmx_uart_2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
@@ -172,7 +172,7 @@ struct pmx_dev pmx_uart2 = {
 /* Pad multiplexing for uart_3_4_5 device */
 static struct pmx_mux_reg pmx_uart_3_4_5_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -194,7 +194,7 @@ struct pmx_dev pmx_uart_3_4_5 = {
 /* Pad multiplexing for rs485_hdlc_1_2 device */
 static struct pmx_mux_reg pmx_rs485_hdlc_1_2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -216,7 +216,7 @@ struct pmx_dev pmx_rs485_hdlc_1_2 = {
 /* Pad multiplexing for tdm_hdlc_1_2 device */
 static struct pmx_mux_reg pmx_tdm_hdlc_1_2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -235,32 +235,37 @@ struct pmx_dev pmx_tdm_hdlc_1_2 = {
 	.mode_count = ARRAY_SIZE(pmx_tdm_hdlc_1_2_modes),
 };
 
-/* Pad multiplexing for nand32bit device */
-static struct pmx_mux_reg pmx_nand32bit_mux[] = {
+/* Pad multiplexing for fsmc32bit device */
+static struct pmx_mux_reg pmx_fsmc32bit_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_EGPIO_0_GRP_MASK | PMX_SMI_MASK | PMX_NAND8_MASK,
+		.address = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_EGPIO_0_GRP_MASK | PMX_SMI_MASK | \
+			PMX_NAND16BIT4DEV_0_MASK | PMX_CLCD1_MASK,
+		.value = 0,
+	}, {
+		.address = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_KEYBOARD_6X6_MASK | PMX_NAND16BIT4DEV_1_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_dev_mode pmx_nand32bit_modes[] = {
+static struct pmx_dev_mode pmx_fsmc32bit_modes[] = {
 	{
-		.mux_regs = pmx_nand32bit_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_nand32bit_mux),
+		.mux_regs = pmx_fsmc32bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc32bit_mux),
 	},
 };
 
-struct pmx_dev pmx_nand32bit = {
-	.name = "nand32bit",
-	.modes = pmx_nand32bit_modes,
-	.mode_count = ARRAY_SIZE(pmx_nand32bit_modes),
+struct pmx_dev pmx_fsmc32bit_4_chips = {
+	.name = "fsmc32bit",
+	.modes = pmx_fsmc32bit_modes,
+	.mode_count = ARRAY_SIZE(pmx_fsmc32bit_modes),
 };
 
 /* Pad multiplexing for gmii1 device */
 static struct pmx_mux_reg pmx_gmii1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_GMII_MASK,
 		.value = 0,
 	},
@@ -282,7 +287,7 @@ struct pmx_dev pmx_gmii1 = {
 /* Pad multiplexing for rgmii device */
 static struct pmx_mux_reg pmx_rgmii_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_0,
+		.address = PAD_MUX_CONFIG_REG_0,
 		.mask = PMX_GMII_MASK,
 		.value = 0,
 	},
@@ -304,7 +309,7 @@ struct pmx_dev pmx_rgmii = {
 /* Pad multiplexing for i2c1 device */
 static struct pmx_mux_reg pmx_i2c1_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_1,
+		.address = PAD_MUX_CONFIG_REG_1,
 		.mask = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
 		.value = 0,
 	},
@@ -323,35 +328,68 @@ struct pmx_dev pmx_i2c1 = {
 	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
 };
 
-/* Pad multiplexing for pci1_smii_0_1_2 device */
-static struct pmx_mux_reg pmx_pci1_smii_0_1_2_mux[] = {
+/* Pad multiplexing for smii_0_1_2 device */
+static struct pmx_mux_reg pmx_smii_0_1_2_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_1,
+		.address = PAD_MUX_CONFIG_REG_1,
 		.mask = PMX_CLCD2_MASK | PMX_KBD_ROWCOL68_MASK | \
 			PMX_EGPIO_1_GRP_MASK | PMX_GPT0_TMR1_MASK | \
 			PMX_GPT0_TMR2_MASK | PMX_GPT1_TMR1_MASK | \
 			PMX_GPT1_TMR2_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1310_FUNC_CNTL_0,
+		.mask = PMX_SMII_MASK,
+		.value = PMX_SMII_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_pci1_smii_0_1_2_modes[] = {
+static struct pmx_dev_mode pmx_smii_0_1_2_modes[] = {
 	{
-		.mux_regs = pmx_pci1_smii_0_1_2_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pci1_smii_0_1_2_mux),
+		.mux_regs = pmx_smii_0_1_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smii_0_1_2_mux),
 	},
 };
 
-struct pmx_dev pmx_pci1_smii_0_1_2 = {
-	.name = "pci1_smii_0_1_2",
-	.modes = pmx_pci1_smii_0_1_2_modes,
-	.mode_count = ARRAY_SIZE(pmx_pci1_smii_0_1_2_modes),
+struct pmx_dev pmx_smii_0_1_2 = {
+	.name = "smii_0_1_2",
+	.modes = pmx_smii_0_1_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_smii_0_1_2_modes),
+};
+
+/* Pad multiplexing for pci1 device */
+static struct pmx_mux_reg pmx_pci1_mux[] = {
+	{
+		.address = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_CLCD2_MASK | PMX_KBD_ROWCOL68_MASK | \
+			PMX_EGPIO_1_GRP_MASK | PMX_GPT0_TMR1_MASK | \
+			PMX_GPT0_TMR2_MASK | PMX_GPT1_TMR1_MASK | \
+			PMX_GPT1_TMR2_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR1310_FUNC_CNTL_0,
+		.mask = PMX_SMII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pci1_modes[] = {
+	{
+		.mux_regs = pmx_pci1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pci1_mux),
+	},
+};
+
+struct pmx_dev pmx_pci1 = {
+	.name = "pci1",
+	.modes = pmx_pci1_modes,
+	.mode_count = ARRAY_SIZE(pmx_pci1_modes),
 };
 
 /* Pad multiplexing for can device */
 static struct pmx_mux_reg pmx_can_mux[] = {
 	{
-		.offset = PAD_MUX_CONFIG_REG_1,
+		.address = PAD_MUX_CONFIG_REG_1,
 		.mask = PMX_I2S2_MASK,
 		.value = 0,
 	},
@@ -662,12 +700,7 @@ void __init spear1310_init(void)
 	spear13xx_init();
 
 	/* pmx initialization */
-	pmx_driver.base = ioremap(SPEAR13XX_FUNC_ENB_BASE, SZ_4K);
-	if (pmx_driver.base) {
-		ret = pmx_register(&pmx_driver);
-		if (ret)
-			pr_err("padmux: registeration failed. err no: %d\n",
-					ret);
-		iounmap(pmx_driver.base);
-	}
+	ret = pmx_register(&pmx_driver);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
 }
