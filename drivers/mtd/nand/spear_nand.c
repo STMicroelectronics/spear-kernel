@@ -248,6 +248,8 @@ static void spear_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
 		}
 	}
 
+	mb();
+
 	if (cmd != NAND_CMD_NONE)
 		writeb(cmd, this->IO_ADDR_W);
 }
