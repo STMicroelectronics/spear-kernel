@@ -1025,6 +1025,40 @@ static struct clk gmac_phy4_clk = {
 	.recalc = &follow_parent,
 };
 
+/* uart1 clock */
+static struct clk uart1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk uart2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart3 clock */
+static struct clk uart3_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart4 clock */
+static struct clk uart4_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart5 clock */
+static struct clk uart5_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
 #endif
 
 static struct clk dummy_apb_pclk;
@@ -1138,6 +1172,11 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "stmmacphy.2",	.clk = &gmac_phy2_clk},
 	{.dev_id = "stmmacphy.3",	.clk = &gmac_phy3_clk},
 	{.dev_id = "stmmacphy.4",	.clk = &gmac_phy4_clk},
+	{.dev_id = "uart1",		.clk = &uart1_clk},
+	{.dev_id = "uart2",		.clk = &uart2_clk},
+	{.dev_id = "uart3",		.clk = &uart3_clk},
+	{.dev_id = "uart4",		.clk = &uart4_clk},
+	{.dev_id = "uart5",		.clk = &uart5_clk},
 };
 #endif
 
