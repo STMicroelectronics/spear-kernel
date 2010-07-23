@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
 #include <linux/ptrace.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
@@ -355,6 +356,70 @@ struct pmx_dev pmx_can = {
 };
 
 /* Add spear1310 specific devices here */
+/* uart1 device registeration */
+struct amba_device spear1310_uart1_device = {
+	.dev = {
+		.init_name = "uart1",
+	},
+	.res = {
+		.start = SPEAR1310_UART1_BASE,
+		.end = SPEAR1310_UART1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_UART1, NO_IRQ},
+};
+
+/* uart2 device registeration */
+struct amba_device spear1310_uart2_device = {
+	.dev = {
+		.init_name = "uart2",
+	},
+	.res = {
+		.start = SPEAR1310_UART2_BASE,
+		.end = SPEAR1310_UART2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_UART2, NO_IRQ},
+};
+
+/* uart3 device registeration */
+struct amba_device spear1310_uart3_device = {
+	.dev = {
+		.init_name = "uart3",
+	},
+	.res = {
+		.start = SPEAR1310_UART3_BASE,
+		.end = SPEAR1310_UART3_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_UART3, NO_IRQ},
+};
+
+/* uart4 device registeration */
+struct amba_device spear1310_uart4_device = {
+	.dev = {
+		.init_name = "uart4",
+	},
+	.res = {
+		.start = SPEAR1310_UART4_BASE,
+		.end = SPEAR1310_UART4_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_UART4, NO_IRQ},
+};
+
+/* uart5 device registeration */
+struct amba_device spear1310_uart5_device = {
+	.dev = {
+		.init_name = "uart5",
+	},
+	.res = {
+		.start = SPEAR1310_UART5_BASE,
+		.end = SPEAR1310_UART5_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_UART5, NO_IRQ},
+};
 
 /* CAN device registeration */
 static struct resource can0_resources[] = {
@@ -391,6 +456,28 @@ struct platform_device spear1310_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+};
+
+/* i2c1 device registeration */
+static struct resource i2c1_resources[] = {
+	{
+		.start = SPEAR1310_I2C1_BASE,
+		.end = SPEAR1310_I2C1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_I2C_CNTR,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_i2c1_device = {
+	.name = "i2c_designware",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2c1_resources),
+	.resource = i2c1_resources,
 };
 
 /* Following will create 1310 specific static virtual/physical mappings */

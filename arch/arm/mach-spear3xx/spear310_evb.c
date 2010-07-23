@@ -74,6 +74,11 @@ static struct amba_device *amba_devs[] __initdata = {
 	&spear3xx_wdt_device,
 
 	/* spear310 specific devices */
+	&spear310_uart1_device,
+	&spear310_uart2_device,
+	&spear310_uart3_device,
+	&spear310_uart4_device,
+	&spear310_uart5_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
