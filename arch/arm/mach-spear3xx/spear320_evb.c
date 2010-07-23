@@ -67,11 +67,16 @@ static struct pmx_dev *pmx_devs[] = {
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_gpio_device,
+	&spear3xx_ssp0_device,
 	&spear3xx_uart_device,
 	&spear3xx_wdt_device,
 
 	/* spear320 specific devices */
 	&spear320_clcd_device,
+	&spear320_ssp_device[0],
+	&spear320_ssp_device[1],
+	&spear320_uart1_device,
+	&spear320_uart2_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
@@ -85,6 +90,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
+	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
 	&spear320_plgpio_device,
