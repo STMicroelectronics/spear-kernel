@@ -34,7 +34,7 @@
 
 #include "bosch_ccan.h"
 
-#define DRV_NAME	"spear320_can"
+#define DRV_NAME	"spear_can"
 #define CAN_ENABLE	0x0e
 
 static u16 spear320_can_read_reg(const struct bosch_ccan_priv *priv,
