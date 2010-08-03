@@ -29,24 +29,27 @@ struct spear13xx_pcm_dma_params {
 	char *name;		/* stream identifier */
 	dma_addr_t dma_addr;	/* device physical address for DMA */
 };
+
 struct spear13xx_runtime_data {
 	struct device dev;
-	spinlock_t lock;
-	int period;		/* current DMA period */
-	dma_addr_t dma_addr;	/* device physical address for DMA */
-	struct spear13xx_pcm_dma_params *params;	/* DMA params */
-
-	/* DMA Transfer */
-	dma_addr_t txdma;
-	dma_addr_t rxdma;
-	struct tasklet_struct tasklet;
 	struct pcm_dma_data *slaves;
-	struct dma_chan *dma_chan[MAX_CHANNEL];
+	struct dma_chan *dma_chan[2];
+	struct tasklet_struct tasklet;
+	spinlock_t lock;
+	dma_addr_t txdma;
+	struct spear13xx_pcm_dma_params *params;	/* DMA params */
+	dma_addr_t rxdma;
 	dma_cap_mask_t mask;
-	struct scatterlist sg[MAX_CHANNEL];
-	u32 sg_len[MAX_CHANNEL];
-	dma_cookie_t cookie[MAX_CHANNEL];
-
+	int stream;
+	struct snd_pcm_substream *substream;
+	unsigned long pos;
+	dma_addr_t dma_addr;
+	unsigned long buffer_bytes;
+	unsigned long period_bytes;
+	unsigned long frag_bytes;
+	int frags;
+	int frag_count;
+	int dmacount;
 };
 
 extern struct snd_soc_platform spear13xx_soc_platform;

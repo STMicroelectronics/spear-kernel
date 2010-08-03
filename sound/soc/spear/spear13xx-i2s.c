@@ -380,11 +380,9 @@ spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
 	struct spear13xx_i2s_dev *dev = rtd->dai->cpu_dai->private_data;
 	int ret = 0;
 
-	spin_lock(&prtd->lock);
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		i2s_start(dev, substream);
@@ -401,7 +399,6 @@ spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		ret = -EINVAL;
 		break;
 	}
-	spin_unlock(&prtd->lock);
 	return ret;
 }
 
