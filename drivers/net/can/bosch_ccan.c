@@ -237,7 +237,8 @@ static netdev_tx_t bosch_ccan_start_xmit(struct sk_buff *skb,
 static int bosch_ccan_set_bittiming(struct net_device *dev)
 {
 	unsigned int reg_btr, reg_brpe, ctrl_save;
-	u8 brp, brpe, ten_bit_brp, sjw, tseg1, tseg2;
+	u8 brp, brpe, sjw, tseg1, tseg2;
+	u32 ten_bit_brp;
 	struct bosch_ccan_priv *priv = netdev_priv(dev);
 	const struct can_bittiming *bt = &priv->can.bittiming;
 
