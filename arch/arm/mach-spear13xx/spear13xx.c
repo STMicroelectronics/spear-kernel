@@ -215,11 +215,11 @@ static struct resource i2s0_resources[] = {
 	}, {
 
 		.name	= "play_irq",
-		.start	= IRQ_PLAY_I2S1 ,
+		.start	= IRQ_PLAY_I2S0,
 		.flags	= IORESOURCE_IRQ,
 	}, {
 		.name	= "record_irq",
-		.start	= IRQ_REC_I2S0 ,
+		.start	= IRQ_REC_I2S0,
 		.flags	= IORESOURCE_IRQ,
 	},
 };
@@ -243,11 +243,11 @@ static struct resource i2s1_resources[] = {
 	}, {
 
 		.name	= "play_irq",
-		.start	= IRQ_PLAY_I2S1 ,
+		.start	= IRQ_PLAY_I2S1,
 		.flags	= IORESOURCE_IRQ,
 	}, {
 		.name	= "record_irq",
-		.start	= IRQ_REC_I2S1 ,
+		.start	= IRQ_REC_I2S1,
 		.flags	= IORESOURCE_IRQ,
 	},
 };

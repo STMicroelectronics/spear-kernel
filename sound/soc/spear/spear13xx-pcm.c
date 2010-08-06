@@ -137,18 +137,23 @@ static struct dma_async_tx_descriptor *
 spear13xx_dma_submit(struct spear13xx_runtime_data *prtd,
 		dma_addr_t buf_dma_addr)
 {
-	struct dma_chan *chan = prtd->dma_chan[0];
+	struct dma_chan *chan;
 	struct dma_async_tx_descriptor *desc;
 	struct scatterlist sg;
+	struct snd_pcm_substream *substream = prtd->substream;
 
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		chan = prtd->dma_chan[0];
+	else
+		chan = prtd->dma_chan[1];
 	sg_init_table(&sg, 1);
 	sg_set_page(&sg, pfn_to_page(PFN_DOWN(buf_dma_addr)),
 			prtd->frag_bytes, buf_dma_addr & (PAGE_SIZE - 1));
 	sg_dma_address(&sg) = buf_dma_addr;
 	desc = chan->device->device_prep_slave_sg(chan, &sg, 1,
-		prtd->substream->stream == SNDRV_PCM_STREAM_PLAYBACK ?
-		DMA_TO_DEVICE : DMA_FROM_DEVICE,
-		DMA_PREP_INTERRUPT);
+			prtd->substream->stream == SNDRV_PCM_STREAM_PLAYBACK ?
+			DMA_TO_DEVICE : DMA_FROM_DEVICE,
+			DMA_PREP_INTERRUPT);
 	if (!desc) {
 		dev_err(&chan->dev->device, "cannot prepare slave dma\n");
 		return NULL;
@@ -165,20 +170,26 @@ static void spear13xx_dma_tasklet(unsigned long data)
 {
 	struct spear13xx_runtime_data *prtd =
 		(struct spear13xx_runtime_data *)data;
-	struct dma_chan *chan = prtd->dma_chan[0];
+	struct dma_chan *chan;
 	struct dma_async_tx_descriptor *desc;
 	struct snd_pcm_substream *substream = prtd->substream;
 	int i;
 	unsigned long flags;
 
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		chan = prtd->dma_chan[0];
+	else
+		chan = prtd->dma_chan[1];
+
 	spin_lock_irqsave(&prtd->lock, flags);
+
 	if (prtd->frag_count < 0) {
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		chan->device->device_terminate_all(chan);
 		/* first time */
 		for (i = 0; i < MAX_DMA_CHAIN; i++) {
 			desc = spear13xx_dma_submit(prtd,
-				prtd->dma_addr + i * prtd->frag_bytes);
+					prtd->dma_addr + i * prtd->frag_bytes);
 			if (!desc)
 				return;
 		}
@@ -189,13 +200,14 @@ static void spear13xx_dma_tasklet(unsigned long data)
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		return;
 	}
+
 	BUG_ON(prtd->dmacount >= MAX_DMA_CHAIN);
 	while (prtd->dmacount < MAX_DMA_CHAIN) {
 		prtd->dmacount++;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		desc = spear13xx_dma_submit(prtd,
-			prtd->dma_addr +
-			prtd->frag_count * prtd->frag_bytes);
+				prtd->dma_addr +
+				prtd->frag_count * prtd->frag_bytes);
 		if (!desc)
 			return;
 		chan->device->device_issue_pending(chan);
@@ -321,13 +333,31 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static void dma_stop(struct snd_pcm_substream *substream)
+{
+	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dma_release_channel(prtd->dma_chan[0]);
+	else
+		dma_release_channel(prtd->dma_chan[1]);
+
+}
+
 static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	struct dma_chan *chan = prtd->dma_chan[0];
+	struct dma_chan *chan;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		chan = prtd->dma_chan[0];
+	else
+		chan = prtd->dma_chan[1];
 
 	prtd->frag_count = -1;
 	chan->device->device_terminate_all(chan);
+	dma_stop(substream);
+	kfree(prtd);
 	return 0;
 }
 static int spear13xx_pcm_mmap(struct snd_pcm_substream *substream,

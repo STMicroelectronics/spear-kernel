@@ -196,7 +196,8 @@ err_clk:
 }
 
 void
-i2s_start(struct spear13xx_i2s_dev *dev, struct snd_pcm_substream *substream)
+i2s_start_play(struct spear13xx_i2s_dev *dev,
+		struct snd_pcm_substream *substream)
 {
 	u32 val; /*dma mode slection*/
 
@@ -238,12 +239,56 @@ i2s_start(struct spear13xx_i2s_dev *dev, struct snd_pcm_substream *substream)
 }
 
 void
+i2s_start_rec(struct spear13xx_i2s_dev *dev,
+		struct snd_pcm_substream *substream)
+{
+	u32 val; /*dma mode slection*/
+
+	val = readl(PERIP_CFG);
+	val &= ~0xFFFFFFFC;
+	i2s_write_reg(dev->i2s_base, IER, 1);
+	i2s_write_reg(dev->i2s_base, RER0, 0);
+	i2s_write_reg(dev->i2s_base, RER1, 0);
+
+	/* for 2.0 audio*/
+	if (dev->mode <= 2) {
+		i2s_write_reg(dev->i2s_base, CCR, 0x00);
+		if (!val) {
+			i2s_write_reg(dev->i2s_base, RCR0, 0x2);
+			i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
+			i2s_write_reg(dev->i2s_base, IMR0, 0x00);
+			i2s_write_reg(dev->i2s_base, RER0, 1);
+		} else {
+			i2s_write_reg(dev->i2s_base, RCR1, 0x2);
+			i2s_write_reg(dev->i2s_base, RFCR1, 0x07);
+			i2s_write_reg(dev->i2s_base, IMR1, 0x00);
+			i2s_write_reg(dev->i2s_base, TER1, 1);
+		}
+	} else { /*audio 2.0 onwards */
+		i2s_write_reg(dev->i2s_base, CCR, 0x10);
+		i2s_write_reg(dev->i2s_base, RCR0, 0x5);
+		i2s_write_reg(dev->i2s_base, RCR1, 0x5);
+
+		i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
+		i2s_write_reg(dev->i2s_base, RFCR1, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
+		i2s_write_reg(dev->i2s_base, IMR1, 0x00);
+		i2s_write_reg(dev->i2s_base, RER0, 1);
+		i2s_write_reg(dev->i2s_base, RER1, 1);
+	}
+
+	i2s_write_reg(dev->i2s_base, IRER, 1);
+	i2s_write_reg(dev->i2s_base, CER, 1);
+}
+
+void
 i2s_stop(struct spear13xx_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
 	i2s_write_reg(dev->i2s_base, IER, 0);
 	i2s_write_reg(dev->i2s_base, IMR0, 0x33);
 	i2s_write_reg(dev->i2s_base, IMR1, 0x33);
 	i2s_write_reg(dev->i2s_base, ITER, 0);
+	i2s_write_reg(dev->i2s_base, IRER, 0);
 	i2s_write_reg(dev->i2s_base, CER, 0);
 }
 
@@ -362,10 +407,13 @@ spear13xx_i2s_shutdown(struct snd_pcm_substream *substream,
 {
 	struct spear13xx_i2s_dev *dev = dai->private_data;
 
-	if (dev->play_irq)
-		free_irq(dev->play_irq, substream);
-	if (dev->capture_irq)
-		free_irq(dev->capture_irq, substream);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (dev->play_irq)
+			free_irq(dev->play_irq, substream);
+	} else {
+		if (dev->capture_irq)
+			free_irq(dev->capture_irq, substream);
+	}
 
 	/* mask i2s interrupt for channel 0 */
 	i2s_write_reg(dev->i2s_base, IMR0, 0x33);
@@ -385,7 +433,10 @@ spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
-		i2s_start(dev, substream);
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			i2s_start_play(dev, substream);
+		else
+			i2s_start_rec(dev, substream);
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		break;
@@ -482,7 +533,7 @@ spear13xx_i2s_probe(struct platform_device *pdev)
 		goto err_iounmap_i2s;
 	}
 
-	dev->capture_irq = platform_get_irq_byname(pdev, "capture_irq");
+	dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
 	if (!dev->capture_irq) {
 		dev_err(&pdev->dev, "record irq not defined\n");
 		ret = -EBUSY;
