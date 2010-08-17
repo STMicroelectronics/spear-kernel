@@ -371,6 +371,22 @@ struct pmx_driver pmx_driver = {
 };
 
 /* Add spear300 specific devices here */
+/* CLCD device registration */
+struct amba_device clcd_device = {
+	.dev = {
+		.init_name = "clcd",
+		.coherent_dma_mask = ~0,
+		.platform_data = &clcd_plat_data,
+	},
+	.res = {
+		.start = SPEAR300_CLCD_BASE,
+		.end = SPEAR300_CLCD_BASE + SPEAR300_CLCD_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.dma_mask = ~0,
+	.irq = {IRQ_CLCD, NO_IRQ},
+};
+
 /* arm gpio1 device registration */
 static struct pl061_platform_data gpio1_plat_data = {
 	.gpio_base	= 8,

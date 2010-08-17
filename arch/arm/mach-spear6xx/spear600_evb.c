@@ -17,6 +17,7 @@
 #include <mach/spear.h>
 
 static struct amba_device *amba_devs[] __initdata = {
+	&clcd_device,
 	&gpio_device[0],
 	&gpio_device[1],
 	&gpio_device[2],

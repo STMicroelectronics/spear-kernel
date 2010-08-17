@@ -23,6 +23,22 @@
 #include <mach/spear.h>
 
 /* Add spear6xx machines common devices here */
+/* CLCD device registration */
+struct amba_device clcd_device = {
+	.dev = {
+		.init_name = "clcd",
+		.coherent_dma_mask = ~0,
+		.platform_data = &clcd_plat_data,
+	},
+	.res = {
+		.start = SPEAR6XX_ICM3_CLCD_BASE,
+		.end = SPEAR6XX_ICM3_CLCD_BASE + SPEAR6XX_ICM3_CLCD_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.dma_mask = ~0,
+	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
+};
+
 /* uart device registration */
 struct amba_device uart_device[] = {
 	{

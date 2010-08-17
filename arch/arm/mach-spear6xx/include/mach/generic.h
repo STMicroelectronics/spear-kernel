@@ -29,6 +29,7 @@
 #define SPEAR_GPT0_CHAN1_IRQ	IRQ_CPU_GPT1_2
 
 /* Add spear6xx family device structure declarations here */
+extern struct amba_device clcd_device;
 extern struct amba_device gpio_device[];
 extern struct amba_device uart_device[];
 extern struct sys_timer spear6xx_timer;
@@ -42,5 +43,8 @@ void __init spear600_init(void);
 void __init clk_init(void);
 
 /* Add spear600 machine device structure declarations here */
+
+/* Add misc structure declarations here */
+extern struct clcd_board clcd_plat_data;
 
 #endif /* __MACH_GENERIC_H */
