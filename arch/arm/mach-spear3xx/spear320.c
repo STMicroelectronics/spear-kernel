@@ -386,6 +386,22 @@ struct pmx_driver pmx_driver = {
 
 /* Add spear320 specific devices here */
 
+/* CLCD device registration */
+struct amba_device clcd_device = {
+	.dev = {
+		.init_name = "clcd",
+		.coherent_dma_mask = ~0,
+		.platform_data = &clcd_plat_data,
+	},
+	.res = {
+		.start = SPEAR320_CLCD_BASE,
+		.end = SPEAR320_CLCD_BASE + SPEAR320_CLCD_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.dma_mask = ~0,
+	.irq = {VIRQ_CLCD, NO_IRQ},
+};
+
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
 	{
