@@ -66,30 +66,30 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear320 specific devices */
-	&clcd_device,
+	&spear320_clcd_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&ehci_device,
-	&i2c_device,
-	&nand_device,
-	&ohci0_device,
-	&ohci1_device,
-	&rtc_device,
+	&spear3xx_ehci_device,
+	&spear3xx_i2c_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_rtc_device,
 
 	/* spear320 specific devices */
-	&can0_device,
-	&can1_device,
-	&i2c1_device,
-	&plgpio_device,
-	&pwm_device,
-	&sdhci_device,
+	&spear320_can0_device,
+	&spear320_can1_device,
+	&spear320_i2c1_device,
+	&spear320_nand_device,
+	&spear320_plgpio_device,
+	&spear320_pwm_device,
+	&spear320_sdhci_device,
 };
 
 /* sdhci board specific information */
@@ -108,25 +108,27 @@ static void __init spear320_evb_init(void)
 	unsigned int i;
 
 	/* set sdhci device platform data */
-	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
+	sdhci_set_plat_data(&spear320_sdhci_device, &sdhci_plat_data);
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8);
+	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* call spear320 machine init function */
-	spear320_init(&auto_net_mii_mode, pmx_devs, ARRAY_SIZE(pmx_devs));
+	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,
+			ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
 
 	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&emi_nor_device, emi_nor_resources,
+	emi_init_board_info(&spear320_emi_nor_device, emi_nor_resources,
 			ARRAY_SIZE(emi_nor_resources), partition_info,
 			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH16);
 
 	/* Initialize emi regiters */
-	emi_init(&emi_nor_device, SPEAR320_EMI_CTRL_BASE, 0, EMI_FLASH_WIDTH16);
+	emi_init(&spear320_emi_nor_device, SPEAR320_EMI_CTRL_BASE, 0,
+			EMI_FLASH_WIDTH16);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

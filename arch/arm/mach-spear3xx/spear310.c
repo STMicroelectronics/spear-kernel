@@ -196,7 +196,7 @@ static struct pmx_driver pmx_driver;
 
 /* Add spear310 specific devices here */
 /* uart1 device registeration */
-struct amba_device uart1_device = {
+struct amba_device spear310_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
 	},
@@ -209,7 +209,7 @@ struct amba_device uart1_device = {
 };
 
 /* uart2 device registeration */
-struct amba_device uart2_device = {
+struct amba_device spear310_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
 	},
@@ -222,7 +222,7 @@ struct amba_device uart2_device = {
 };
 
 /* uart3 device registeration */
-struct amba_device uart3_device = {
+struct amba_device spear310_uart3_device = {
 	.dev = {
 		.init_name = "uart3",
 	},
@@ -235,7 +235,7 @@ struct amba_device uart3_device = {
 };
 
 /* uart4 device registeration */
-struct amba_device uart4_device = {
+struct amba_device spear310_uart4_device = {
 	.dev = {
 		.init_name = "uart4",
 	},
@@ -248,7 +248,7 @@ struct amba_device uart4_device = {
 };
 
 /* uart5 device registeration */
-struct amba_device uart5_device = {
+struct amba_device spear310_uart5_device = {
 	.dev = {
 		.init_name = "uart5",
 	},
@@ -277,7 +277,7 @@ static struct resource nand_resources[] = {
 	},
 };
 
-struct platform_device nand_device = {
+struct platform_device spear310_nand_device = {
 	.name = "fsmc-nand",
 	.id = -1,
 	.resource = nand_resources,
@@ -323,7 +323,7 @@ int spear300_o2p(int offset)
 
 /* emi nor flash device registeration */
 static struct physmap_flash_data emi_norflash_data;
-struct platform_device emi_nor_device = {
+struct platform_device spear310_emi_nor_device = {
 	.name	= "physmap-flash",
 	.id	= -1,
 	.dev.platform_data = &emi_norflash_data,
@@ -351,7 +351,7 @@ static struct resource plgpio_resources[] = {
 	},
 };
 
-struct platform_device plgpio_device = {
+struct platform_device spear310_plgpio_device = {
 	.name = "plgpio",
 	.id = -1,
 	.dev = {
