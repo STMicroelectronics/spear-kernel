@@ -15,6 +15,7 @@
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/io.h>
+#include <asm/mach-types.h>
 #include <mach/emi.h>
 
 int __init emi_init(struct platform_device *pdev, unsigned long base,
@@ -23,8 +24,23 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 	void __iomem *emi_reg_base;
 	struct clk *clk;
 	int ret;
+	u32 ack_reg, max_banks;
+	/* u32 timeout_reg, irq_reg; */
 
-	if (bank > (EMI_MAX_BANKS - 1))
+	/* fixing machine dependent values */
+	if (machine_is_spear310()) {
+		ack_reg = SPEAR310_ACK_REG;
+		max_banks = SPEAR310_EMI_MAX_BANKS;
+		/* timeout_reg = SPEAR310_TIMEOUT_REG; */
+		/* irq_reg = SPEAR310_IRQ_REG; */
+	} else {
+		ack_reg = SPEAR320_ACK_REG;
+		max_banks = SPEAR320_EMI_MAX_BANKS;
+		/* timeout_reg = SPEAR320_TIMEOUT_REG; */
+		/* irq_reg = SPEAR320_IRQ_REG; */
+	}
+
+	if (bank > (max_banks - 1))
 		return -EINVAL;
 
 	emi_reg_base = ioremap(base, EMI_REG_SIZE);

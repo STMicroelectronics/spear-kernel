@@ -22,11 +22,15 @@
 #include <linux/gpio.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <asm/mach-types.h>
 
 #define MAX_GPIO_PER_REG		32
 #define PIN_OFFSET(pin)			(pin % MAX_GPIO_PER_REG)
 #define REG_OFFSET(base, reg, pin)	(base + reg + (pin / MAX_GPIO_PER_REG)\
 		* sizeof(int *))
+
+static u32 plgpio_enb, plgpio_wdata, plgpio_dir, plgpio_rdata, plgpio_ie,
+	   plgpio_mis;
 
 /*
  * struct plgpio: plgpio driver specific structure
@@ -96,7 +100,7 @@ static int plgpio_direction_input(struct gpio_chip *chip, unsigned offset)
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_set(plgpio->base, offset, PLGPIO_DIR);
+	plgpio_reg_set(plgpio->base, offset, plgpio_dir);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 
 	return 0;
@@ -125,11 +129,11 @@ static int plgpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_reset(plgpio->base, dir_offset, PLGPIO_DIR);
+	plgpio_reg_reset(plgpio->base, dir_offset, plgpio_dir);
 	if (value)
-		plgpio_reg_set(plgpio->base, wdata_offset, PLGPIO_WDATA);
+		plgpio_reg_set(plgpio->base, wdata_offset, plgpio_wdata);
 	else
-		plgpio_reg_reset(plgpio->base, wdata_offset, PLGPIO_WDATA);
+		plgpio_reg_reset(plgpio->base, wdata_offset, plgpio_wdata);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 
 	return 0;
@@ -149,7 +153,7 @@ static int plgpio_get_value(struct gpio_chip *chip, unsigned offset)
 			return -EINVAL;
 	}
 
-	return is_plgpio_set(plgpio->base, offset, PLGPIO_RDATA);
+	return is_plgpio_set(plgpio->base, offset, plgpio_rdata);
 }
 
 static void plgpio_set_value(struct gpio_chip *chip, unsigned offset, int value)
@@ -167,9 +171,9 @@ static void plgpio_set_value(struct gpio_chip *chip, unsigned offset, int value)
 	}
 
 	if (value)
-		plgpio_reg_set(plgpio->base, offset, PLGPIO_WDATA);
+		plgpio_reg_set(plgpio->base, offset, plgpio_wdata);
 	else
-		plgpio_reg_reset(plgpio->base, offset, PLGPIO_WDATA);
+		plgpio_reg_reset(plgpio->base, offset, plgpio_wdata);
 }
 
 static int plgpio_request(struct gpio_chip *chip, unsigned offset)
@@ -196,7 +200,7 @@ static int plgpio_request(struct gpio_chip *chip, unsigned offset)
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_set(plgpio->base, offset, PLGPIO_ENB);
+	plgpio_reg_set(plgpio->base, offset, plgpio_enb);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 
 	return 0;
@@ -218,7 +222,7 @@ static void plgpio_free(struct gpio_chip *chip, unsigned offset)
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_reset(plgpio->base, offset, PLGPIO_ENB);
+	plgpio_reg_reset(plgpio->base, offset, plgpio_enb);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 }
 
@@ -247,7 +251,7 @@ static void plgpio_irq_mask(unsigned irq)
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_set(plgpio->base, offset, PLGPIO_IE);
+	plgpio_reg_set(plgpio->base, offset, plgpio_ie);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 }
 
@@ -265,7 +269,7 @@ static void plgpio_irq_unmask(unsigned irq)
 	}
 
 	spin_lock_irqsave(&plgpio->lock, flags);
-	plgpio_reg_reset(plgpio->base, offset, PLGPIO_IE);
+	plgpio_reg_reset(plgpio->base, offset, plgpio_ie);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 }
 
@@ -298,7 +302,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 
 	/* check all plgpio MIS registers for a possible interrupt */
 	for (; i < regs_count; i++) {
-		pending = readl(plgpio->base + PLGPIO_MIS + i * sizeof(int *));
+		pending = readl(plgpio->base + plgpio_mis + i * sizeof(int *));
 		if (!pending)
 			continue;
 
@@ -443,6 +447,24 @@ static struct platform_driver plgpio_driver = {
 
 static int __init plgpio_init(void)
 {
+	if (machine_is_spear310()) {
+		plgpio_enb = SPEAR310_PLGPIO_ENB;
+		plgpio_wdata = SPEAR310_PLGPIO_WDATA;
+		plgpio_dir = SPEAR310_PLGPIO_DIR;
+		plgpio_rdata = SPEAR310_PLGPIO_IE;
+		plgpio_ie = SPEAR310_PLGPIO_RDATA;
+		plgpio_mis = SPEAR310_PLGPIO_MIS;
+	} else if (machine_is_spear320()) {
+		plgpio_enb = SPEAR320_PLGPIO_ENB;
+		plgpio_wdata = SPEAR320_PLGPIO_WDATA;
+		plgpio_dir = SPEAR320_PLGPIO_DIR;
+		plgpio_rdata = SPEAR320_PLGPIO_IE;
+		plgpio_ie = SPEAR320_PLGPIO_RDATA;
+		plgpio_mis = SPEAR320_PLGPIO_MIS;
+	} else {
+		return 0;
+	}
+
 	return platform_driver_register(&plgpio_driver);
 }
 subsys_initcall(plgpio_init);
