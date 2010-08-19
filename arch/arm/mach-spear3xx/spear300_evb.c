@@ -43,28 +43,28 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&ssp0_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_ssp0_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear300 specific devices */
-	&clcd_device,
-	&gpio1_device,
+	&spear300_clcd_device,
+	&spear300_gpio1_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&ehci_device,
-	&i2c_device,
-	&nand0_device,
-	&ohci0_device,
-	&ohci1_device,
-	&rtc_device,
+	&spear3xx_ehci_device,
+	&spear3xx_i2c_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_rtc_device,
 
 	/* spear300 specific devices */
-	&kbd_device,
-	&sdhci_device,
+	&spear300_kbd_device,
+	&spear300_nand0_device,
+	&spear300_sdhci_device,
 };
 
 /* sdhci board specific information */
@@ -110,20 +110,21 @@ static void __init spear300_evb_init(void)
 	unsigned int i;
 
 	/* set keyboard plat data */
-	kbd_set_plat_data(&kbd_device, &kbd_data);
+	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
 
 	/* set nand0 device's plat data */
-	fsmc_nand_set_plat_data(&nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8);
+	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* set sdhci device platform data */
-	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
+	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);
 
 	/* Enable sdhci memory */
 	sdhci_i2s_mem_enable(SDHCI_MEM_ENB);
 
 	/* call spear300 machine init function */
-	spear300_init(&photo_frame_mode, pmx_devs, ARRAY_SIZE(pmx_devs));
+	spear300_init(&spear300_photo_frame_mode, pmx_devs,
+			ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();

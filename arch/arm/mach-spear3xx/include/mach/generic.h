@@ -31,15 +31,15 @@
 #define SPEAR_GPT0_CHAN1_IRQ	SPEAR3XX_IRQ_CPU_GPT1_2
 
 /* Add spear3xx family device structure declarations here */
-extern struct amba_device gpio_device;
-extern struct amba_device ssp0_device;
-extern struct amba_device uart_device;
-extern struct amba_device wdt_device;
-extern struct platform_device ehci_device;
-extern struct platform_device i2c_device;
-extern struct platform_device ohci0_device;
-extern struct platform_device ohci1_device;
-extern struct platform_device rtc_device;
+extern struct amba_device spear3xx_gpio_device;
+extern struct amba_device spear3xx_ssp0_device;
+extern struct amba_device spear3xx_uart_device;
+extern struct amba_device spear3xx_wdt_device;
+extern struct platform_device spear3xx_ehci_device;
+extern struct platform_device spear3xx_i2c_device;
+extern struct platform_device spear3xx_ohci0_device;
+extern struct platform_device spear3xx_ohci1_device;
+extern struct platform_device spear3xx_rtc_device;
 extern struct sys_timer spear3xx_timer;
 
 /* Add spear3xx family function declarations here */
@@ -87,49 +87,49 @@ extern struct pmx_dev spear3xx_pmx_timer_1_2;
 
 #if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
 /* padmux plgpio devices */
-extern struct pmx_dev pmx_plgpio_0_1;
-extern struct pmx_dev pmx_plgpio_2_3;
-extern struct pmx_dev pmx_plgpio_4_5;
-extern struct pmx_dev pmx_plgpio_6_9;
-extern struct pmx_dev pmx_plgpio_10_27;
-extern struct pmx_dev pmx_plgpio_28;
-extern struct pmx_dev pmx_plgpio_29;
-extern struct pmx_dev pmx_plgpio_30;
-extern struct pmx_dev pmx_plgpio_31;
-extern struct pmx_dev pmx_plgpio_32;
-extern struct pmx_dev pmx_plgpio_33;
-extern struct pmx_dev pmx_plgpio_34_36;
-extern struct pmx_dev pmx_plgpio_37_42;
-extern struct pmx_dev pmx_plgpio_43_44_47_48;
-extern struct pmx_dev pmx_plgpio_45_46_49_50;
+extern struct pmx_dev spear3xx_pmx_plgpio_0_1;
+extern struct pmx_dev spear3xx_pmx_plgpio_2_3;
+extern struct pmx_dev spear3xx_pmx_plgpio_4_5;
+extern struct pmx_dev spear3xx_pmx_plgpio_6_9;
+extern struct pmx_dev spear3xx_pmx_plgpio_10_27;
+extern struct pmx_dev spear3xx_pmx_plgpio_28;
+extern struct pmx_dev spear3xx_pmx_plgpio_29;
+extern struct pmx_dev spear3xx_pmx_plgpio_30;
+extern struct pmx_dev spear3xx_pmx_plgpio_31;
+extern struct pmx_dev spear3xx_pmx_plgpio_32;
+extern struct pmx_dev spear3xx_pmx_plgpio_33;
+extern struct pmx_dev spear3xx_pmx_plgpio_34_36;
+extern struct pmx_dev spear3xx_pmx_plgpio_37_42;
+extern struct pmx_dev spear3xx_pmx_plgpio_43_44_47_48;
+extern struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50;
 #endif
 
 /* spear300 declarations */
 #ifdef CONFIG_MACH_SPEAR300
 /* Add spear300 machine device structure declarations here */
-extern struct amba_device clcd_device;
-extern struct amba_device gpio1_device;
-extern struct platform_device kbd_device;
-extern struct platform_device nand0_device;
-extern struct platform_device nand1_device;
-extern struct platform_device nand2_device;
-extern struct platform_device nand3_device;
-extern struct platform_device sdhci_device;
+extern struct amba_device spear300_clcd_device;
+extern struct amba_device spear300_gpio1_device;
+extern struct platform_device spear300_kbd_device;
+extern struct platform_device spear300_nand0_device;
+extern struct platform_device spear300_nand1_device;
+extern struct platform_device spear300_nand2_device;
+extern struct platform_device spear300_nand3_device;
+extern struct platform_device spear300_sdhci_device;
 
 /* pad mux modes */
-extern struct pmx_mode nand_mode;
-extern struct pmx_mode nor_mode;
-extern struct pmx_mode photo_frame_mode;
-extern struct pmx_mode lend_ip_phone_mode;
-extern struct pmx_mode hend_ip_phone_mode;
-extern struct pmx_mode lend_wifi_phone_mode;
-extern struct pmx_mode hend_wifi_phone_mode;
-extern struct pmx_mode ata_pabx_wi2s_mode;
-extern struct pmx_mode ata_pabx_i2s_mode;
-extern struct pmx_mode caml_lcdw_mode;
-extern struct pmx_mode camu_lcd_mode;
-extern struct pmx_mode camu_wlcd_mode;
-extern struct pmx_mode caml_lcd_mode;
+extern struct pmx_mode spear300_nand_mode;
+extern struct pmx_mode spear300_nor_mode;
+extern struct pmx_mode spear300_photo_frame_mode;
+extern struct pmx_mode spear300_lend_ip_phone_mode;
+extern struct pmx_mode spear300_hend_ip_phone_mode;
+extern struct pmx_mode spear300_lend_wifi_phone_mode;
+extern struct pmx_mode spear300_hend_wifi_phone_mode;
+extern struct pmx_mode spear300_ata_pabx_wi2s_mode;
+extern struct pmx_mode spear300_ata_pabx_i2s_mode;
+extern struct pmx_mode spear300_caml_lcdw_mode;
+extern struct pmx_mode spear300_camu_lcd_mode;
+extern struct pmx_mode spear300_camu_wlcd_mode;
+extern struct pmx_mode spear300_caml_lcd_mode;
 
 /* pad mux devices */
 extern struct pmx_dev spear300_pmx_fsmc_2_chips;
@@ -165,14 +165,14 @@ extern struct clcd_board clcd_plat_data;
 /* spear310 declarations */
 #if defined(CONFIG_MACH_SPEAR310)
 /* Add spear310 machine device structure declarations here */
-extern struct amba_device uart1_device;
-extern struct amba_device uart2_device;
-extern struct amba_device uart3_device;
-extern struct amba_device uart4_device;
-extern struct amba_device uart5_device;
-extern struct platform_device emi_nor_device;
-extern struct platform_device plgpio_device;
-extern struct platform_device nand_device;
+extern struct amba_device spear310_uart1_device;
+extern struct amba_device spear310_uart2_device;
+extern struct amba_device spear310_uart3_device;
+extern struct amba_device spear310_uart4_device;
+extern struct amba_device spear310_uart5_device;
+extern struct platform_device spear310_emi_nor_device;
+extern struct platform_device spear310_plgpio_device;
+extern struct platform_device spear310_nand_device;
 
 /* pad mux devices */
 extern struct pmx_dev spear310_pmx_emi_cs_0_1_4_5;
@@ -193,24 +193,24 @@ void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 /* spear320 declarations */
 #if defined(CONFIG_MACH_SPEAR320)
 /* Add spear320 machine device structure declarations here */
-extern struct amba_device clcd_device;
-extern struct amba_device ssp_device[];
-extern struct amba_device uart1_device;
-extern struct amba_device uart2_device;
-extern struct platform_device can0_device;
-extern struct platform_device can1_device;
-extern struct platform_device emi_nor_device;
-extern struct platform_device i2c1_device;
-extern struct platform_device nand_device;
-extern struct platform_device plgpio_device;
-extern struct platform_device pwm_device;
-extern struct platform_device sdhci_device;
+extern struct amba_device spear320_clcd_device;
+extern struct amba_device spear320_ssp_device[];
+extern struct amba_device spear320_uart1_device;
+extern struct amba_device spear320_uart2_device;
+extern struct platform_device spear320_can0_device;
+extern struct platform_device spear320_can1_device;
+extern struct platform_device spear320_emi_nor_device;
+extern struct platform_device spear320_i2c1_device;
+extern struct platform_device spear320_nand_device;
+extern struct platform_device spear320_plgpio_device;
+extern struct platform_device spear320_pwm_device;
+extern struct platform_device spear320_sdhci_device;
 
 /* pad mux modes */
-extern struct pmx_mode auto_net_smii_mode;
-extern struct pmx_mode auto_net_mii_mode;
-extern struct pmx_mode auto_exp_mode;
-extern struct pmx_mode small_printers_mode;
+extern struct pmx_mode spear320_auto_net_smii_mode;
+extern struct pmx_mode spear320_auto_net_mii_mode;
+extern struct pmx_mode spear320_auto_exp_mode;
+extern struct pmx_mode spear320_small_printers_mode;
 
 /* pad mux devices */
 extern struct pmx_dev spear320_pmx_clcd;

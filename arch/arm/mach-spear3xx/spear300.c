@@ -36,79 +36,79 @@
 #define CAML_LCD_MODE			(1 << 12)
 #define ALL_MODES			0x1FFF
 
-struct pmx_mode nand_mode = {
+struct pmx_mode spear300_nand_mode = {
 	.id = NAND_MODE,
 	.name = "nand mode",
 	.value = 0x00,
 };
 
-struct pmx_mode nor_mode = {
+struct pmx_mode spear300_nor_mode = {
 	.id = NOR_MODE,
 	.name = "nor mode",
 	.value = 0x01,
 };
 
-struct pmx_mode photo_frame_mode = {
+struct pmx_mode spear300_photo_frame_mode = {
 	.id = PHOTO_FRAME_MODE,
 	.name = "photo frame mode",
 	.value = 0x02,
 };
 
-struct pmx_mode lend_ip_phone_mode = {
+struct pmx_mode spear300_lend_ip_phone_mode = {
 	.id = LEND_IP_PHONE_MODE,
 	.name = "lend ip phone mode",
 	.value = 0x03,
 };
 
-struct pmx_mode hend_ip_phone_mode = {
+struct pmx_mode spear300_hend_ip_phone_mode = {
 	.id = HEND_IP_PHONE_MODE,
 	.name = "hend ip phone mode",
 	.value = 0x04,
 };
 
-struct pmx_mode lend_wifi_phone_mode = {
+struct pmx_mode spear300_lend_wifi_phone_mode = {
 	.id = LEND_WIFI_PHONE_MODE,
 	.name = "lend wifi phone mode",
 	.value = 0x05,
 };
 
-struct pmx_mode hend_wifi_phone_mode = {
+struct pmx_mode spear300_hend_wifi_phone_mode = {
 	.id = HEND_WIFI_PHONE_MODE,
 	.name = "hend wifi phone mode",
 	.value = 0x06,
 };
 
-struct pmx_mode ata_pabx_wi2s_mode = {
+struct pmx_mode spear300_ata_pabx_wi2s_mode = {
 	.id = ATA_PABX_WI2S_MODE,
 	.name = "ata pabx wi2s mode",
 	.value = 0x07,
 };
 
-struct pmx_mode ata_pabx_i2s_mode = {
+struct pmx_mode spear300_ata_pabx_i2s_mode = {
 	.id = ATA_PABX_I2S_MODE,
 	.name = "ata pabx i2s mode",
 	.value = 0x08,
 };
 
-struct pmx_mode caml_lcdw_mode = {
+struct pmx_mode spear300_caml_lcdw_mode = {
 	.id = CAML_LCDW_MODE,
 	.name = "caml lcdw mode",
 	.value = 0x0C,
 };
 
-struct pmx_mode camu_lcd_mode = {
+struct pmx_mode spear300_camu_lcd_mode = {
 	.id = CAMU_LCD_MODE,
 	.name = "camu lcd mode",
 	.value = 0x0D,
 };
 
-struct pmx_mode camu_wlcd_mode = {
+struct pmx_mode spear300_camu_wlcd_mode = {
 	.id = CAMU_WLCD_MODE,
 	.name = "camu wlcd mode",
 	.value = 0x0E,
 };
 
-struct pmx_mode caml_lcd_mode = {
+struct pmx_mode spear300_caml_lcd_mode = {
 	.id = CAML_LCD_MODE,
 	.name = "caml lcd mode",
 	.value = 0x0F,
@@ -526,7 +526,7 @@ static struct pmx_driver pmx_driver = {
 /* Add spear300 specific devices here */
 
 /* CLCD device registration */
-struct amba_device clcd_device = {
+struct amba_device spear300_clcd_device = {
 	.dev = {
 		.init_name = "clcd",
 		.coherent_dma_mask = ~0,
@@ -547,7 +547,7 @@ static struct pl061_platform_data gpio1_plat_data = {
 	.irq_base	= SPEAR300_GPIO1_INT_BASE,
 };
 
-struct amba_device gpio1_device = {
+struct amba_device spear300_gpio1_device = {
 	.dev = {
 		.init_name = "gpio1",
 		.platform_data = &gpio1_plat_data,
@@ -572,7 +572,7 @@ static struct resource kbd_resources[] = {
 	},
 };
 
-struct platform_device kbd_device = {
+struct platform_device spear300_kbd_device = {
 	.name = "keyboard",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(kbd_resources),
@@ -596,7 +596,7 @@ static struct resource nand0_resources[] = {
 	},
 };
 
-struct platform_device nand0_device = {
+struct platform_device spear300_nand0_device = {
 	.name = "fsmc-nand",
 	.id = 0,
 	.resource = nand0_resources,
@@ -620,7 +620,7 @@ static struct resource nand1_resources[] = {
 	},
 };
 
-struct platform_device nand1_device = {
+struct platform_device spear300_nand1_device = {
 	.name = "fsmc-nand",
 	.id = 1,
 	.resource = nand1_resources,
@@ -644,7 +644,7 @@ static struct resource nand2_resources[] = {
 	},
 };
 
-struct platform_device nand2_device = {
+struct platform_device spear300_nand2_device = {
 	.name = "fsmc-nand",
 	.id = 2,
 	.resource = nand2_resources,
@@ -668,7 +668,7 @@ static struct resource nand3_resources[] = {
 	},
 };
 
-struct platform_device nand3_device = {
+struct platform_device spear300_nand3_device = {
 	.name = "fsmc-nand",
 	.id = 3,
 	.resource = nand3_resources,
@@ -688,7 +688,7 @@ static struct resource sdhci_resources[] = {
 	}
 };
 
-struct platform_device sdhci_device = {
+struct platform_device spear300_sdhci_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
 	},

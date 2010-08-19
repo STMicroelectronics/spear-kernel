@@ -68,26 +68,26 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&ssp0_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_ssp0_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear310 specific devices */
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&ehci_device,
-	&i2c_device,
-	&nand_device,
-	&ohci0_device,
-	&ohci1_device,
-	&rtc_device,
+	&spear3xx_ehci_device,
+	&spear3xx_i2c_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_rtc_device,
 
 	/* spear310 specific devices */
-	&emi_nor_device,
-	&plgpio_device,
+	&spear310_emi_nor_device,
+	&spear310_nand_device,
+	&spear310_plgpio_device,
 };
 
 /* spi board information */
@@ -125,8 +125,8 @@ static void __init spear310_evb_init(void)
 	unsigned int i;
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8);
+	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
@@ -135,12 +135,13 @@ static void __init spear310_evb_init(void)
 	i2c_register_default_devices();
 
 	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&emi_nor_device, emi_nor_resources,
+	emi_init_board_info(&spear310_emi_nor_device, emi_nor_resources,
 			ARRAY_SIZE(emi_nor_resources), partition_info,
 			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH32);
 
 	/* Initialize emi regiters */
-	emi_init(&emi_nor_device, SPEAR310_EMI_REG_BASE, 0, EMI_FLASH_WIDTH32);
+	emi_init(&spear310_emi_nor_device, SPEAR310_EMI_REG_BASE, 0,
+			EMI_FLASH_WIDTH32);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
