@@ -278,7 +278,6 @@ void __init spear3xx_map_io(void)
 /* Pad multiplexing for firda device */
 static struct pmx_mux_reg pmx_firda_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
 		.value = PMX_FIRDA_MASK,
 	},
@@ -301,7 +300,6 @@ struct pmx_dev pmx_firda = {
 /* Pad multiplexing for i2c device */
 static struct pmx_mux_reg pmx_i2c_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_I2C_MASK,
 		.value = PMX_I2C_MASK,
 	},
@@ -324,7 +322,6 @@ struct pmx_dev pmx_i2c = {
 /* Pad multiplexing for firda device */
 static struct pmx_mux_reg pmx_ssp_cs_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = PMX_SSP_CS_MASK,
 	},
@@ -347,7 +344,6 @@ struct pmx_dev pmx_ssp_cs = {
 /* Pad multiplexing for ssp device */
 static struct pmx_mux_reg pmx_ssp_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_MASK,
 		.value = PMX_SSP_MASK,
 	},
@@ -370,7 +366,6 @@ struct pmx_dev pmx_ssp = {
 /* Pad multiplexing for mii device */
 static struct pmx_mux_reg pmx_mii_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = PMX_MII_MASK,
 	},
@@ -393,7 +388,6 @@ struct pmx_dev pmx_mii = {
 /* Pad multiplexing for gpio pin0 device */
 static struct pmx_mux_reg pmx_gpio_pin0_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN0_MASK,
 		.value = PMX_GPIO_PIN0_MASK,
 	},
@@ -416,7 +410,6 @@ struct pmx_dev pmx_gpio_pin0 = {
 /* Pad multiplexing for gpio pin1 device */
 static struct pmx_mux_reg pmx_gpio_pin1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN1_MASK,
 		.value = PMX_GPIO_PIN1_MASK,
 	},
@@ -439,7 +432,6 @@ struct pmx_dev pmx_gpio_pin1 = {
 /* Pad multiplexing for gpio pin2 device */
 static struct pmx_mux_reg pmx_gpio_pin2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN2_MASK,
 		.value = PMX_GPIO_PIN2_MASK,
 	},
@@ -462,7 +454,6 @@ struct pmx_dev pmx_gpio_pin2 = {
 /* Pad multiplexing for gpio pin3 device */
 static struct pmx_mux_reg pmx_gpio_pin3_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN3_MASK,
 		.value = PMX_GPIO_PIN3_MASK,
 	},
@@ -485,7 +476,6 @@ struct pmx_dev pmx_gpio_pin3 = {
 /* Pad multiplexing for gpio pin4 device */
 static struct pmx_mux_reg pmx_gpio_pin4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN4_MASK,
 		.value = PMX_GPIO_PIN4_MASK,
 	},
@@ -508,7 +498,6 @@ struct pmx_dev pmx_gpio_pin4 = {
 /* Pad multiplexing for gpio pin5 device */
 static struct pmx_mux_reg pmx_gpio_pin5_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN5_MASK,
 		.value = PMX_GPIO_PIN5_MASK,
 	},
@@ -531,7 +520,6 @@ struct pmx_dev pmx_gpio_pin5 = {
 /* Pad multiplexing for uart0 modem device */
 static struct pmx_mux_reg pmx_uart0_modem_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = PMX_UART0_MODEM_MASK,
 	},
@@ -554,7 +542,6 @@ struct pmx_dev pmx_uart0_modem = {
 /* Pad multiplexing for uart0 device */
 static struct pmx_mux_reg pmx_uart0_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MASK,
 		.value = PMX_UART0_MASK,
 	},
@@ -577,7 +564,6 @@ struct pmx_dev pmx_uart0 = {
 /* Pad multiplexing for timer 3, 4 device */
 static struct pmx_mux_reg pmx_timer_3_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_3_4_MASK,
 		.value = PMX_TIMER_3_4_MASK,
 	},
@@ -600,7 +586,6 @@ struct pmx_dev pmx_timer_3_4 = {
 /* Pad multiplexing for gpio pin0 device */
 static struct pmx_mux_reg pmx_timer_1_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
 		.value = PMX_TIMER_1_2_MASK,
 	},
@@ -625,7 +610,6 @@ struct pmx_dev pmx_timer_1_2 = {
 /* Pad multiplexing for plgpio_0_1 devices */
 static struct pmx_mux_reg pmx_plgpio_0_1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
 		.value = 0,
 	},
@@ -648,7 +632,6 @@ struct pmx_dev pmx_plgpio_0_1 = {
 /* Pad multiplexing for plgpio_2_3 devices */
 static struct pmx_mux_reg pmx_plgpio_2_3_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MASK,
 		.value = 0,
 	},
@@ -671,7 +654,6 @@ struct pmx_dev pmx_plgpio_2_3 = {
 /* Pad multiplexing for plgpio_4_5 devices */
 static struct pmx_mux_reg pmx_plgpio_4_5_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_I2C_MASK,
 		.value = 0,
 	},
@@ -694,7 +676,6 @@ struct pmx_dev pmx_plgpio_4_5 = {
 /* Pad multiplexing for plgpio_6_9 devices */
 static struct pmx_mux_reg pmx_plgpio_6_9_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_MASK,
 		.value = 0,
 	},
@@ -717,7 +698,6 @@ struct pmx_dev pmx_plgpio_6_9 = {
 /* Pad multiplexing for plgpio_10_27 devices */
 static struct pmx_mux_reg pmx_plgpio_10_27_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -740,7 +720,6 @@ struct pmx_dev pmx_plgpio_10_27 = {
 /* Pad multiplexing for plgpio_28 devices */
 static struct pmx_mux_reg pmx_plgpio_28_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN0_MASK,
 		.value = 0,
 	},
@@ -763,7 +742,6 @@ struct pmx_dev pmx_plgpio_28 = {
 /* Pad multiplexing for plgpio_29 devices */
 static struct pmx_mux_reg pmx_plgpio_29_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN1_MASK,
 		.value = 0,
 	},
@@ -786,7 +764,6 @@ struct pmx_dev pmx_plgpio_29 = {
 /* Pad multiplexing for plgpio_30 device */
 static struct pmx_mux_reg pmx_plgpio_30_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN2_MASK,
 		.value = 0,
 	},
@@ -809,7 +786,6 @@ struct pmx_dev pmx_plgpio_30 = {
 /* Pad multiplexing for plgpio_31 device */
 static struct pmx_mux_reg pmx_plgpio_31_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN3_MASK,
 		.value = 0,
 	},
@@ -832,7 +808,6 @@ struct pmx_dev pmx_plgpio_31 = {
 /* Pad multiplexing for plgpio_32 device */
 static struct pmx_mux_reg pmx_plgpio_32_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN4_MASK,
 		.value = 0,
 	},
@@ -855,7 +830,6 @@ struct pmx_dev pmx_plgpio_32 = {
 /* Pad multiplexing for plgpio_33 device */
 static struct pmx_mux_reg pmx_plgpio_33_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN5_MASK,
 		.value = 0,
 	},
@@ -878,7 +852,6 @@ struct pmx_dev pmx_plgpio_33 = {
 /* Pad multiplexing for plgpio_34_36 device */
 static struct pmx_mux_reg pmx_plgpio_34_36_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -901,7 +874,6 @@ struct pmx_dev pmx_plgpio_34_36 = {
 /* Pad multiplexing for plgpio_37_42 device */
 static struct pmx_mux_reg pmx_plgpio_37_42_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -924,7 +896,6 @@ struct pmx_dev pmx_plgpio_37_42 = {
 /* Pad multiplexing for plgpio_43_44_47_48 device */
 static struct pmx_mux_reg pmx_plgpio_43_44_47_48_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
 		.value = 0,
 	},
@@ -947,7 +918,6 @@ struct pmx_dev pmx_plgpio_43_44_47_48 = {
 /* Pad multiplexing for plgpio_45_46_49_50 device */
 static struct pmx_mux_reg pmx_plgpio_45_46_49_50_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -998,3 +968,21 @@ static void __init spear3xx_timer_init(void)
 struct sys_timer spear3xx_timer = {
 	.init = spear3xx_timer_init,
 };
+
+/* This fixes addresses of all pmx devices for different machines */
+void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr)
+{
+	int i;
+	for (i = 0; i < driver->devs_count; i++) {
+		int j;
+		struct pmx_dev *pdev = driver->devs[i];
+
+		for (j = 0; j < pdev->mode_count; j++) {
+			int k;
+			struct pmx_dev_mode *mode = &pdev->modes[j];
+
+			for (k = 0; k < mode->mux_reg_cnt; k++)
+				mode->mux_regs[k].address = addr;
+		}
+	}
+}
