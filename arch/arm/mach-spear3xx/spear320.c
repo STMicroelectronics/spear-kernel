@@ -30,25 +30,25 @@
 #define SMALL_PRINTERS_MODE	(1 << 3)
 #define ALL_MODES		0xF
 
-struct pmx_mode auto_net_smii_mode = {
+struct pmx_mode spear320_auto_net_smii_mode = {
 	.id = AUTO_NET_SMII_MODE,
 	.name = "Automation Networking SMII Mode",
 	.value = 0x00,
 };
 
-struct pmx_mode auto_net_mii_mode = {
+struct pmx_mode spear320_auto_net_mii_mode = {
 	.id = AUTO_NET_MII_MODE,
 	.name = "Automation Networking MII Mode",
 	.value = 0x01,
 };
 
-struct pmx_mode auto_exp_mode = {
+struct pmx_mode spear320_auto_exp_mode = {
 	.id = AUTO_EXP_MODE,
 	.name = "Automation Expanded Mode",
 	.value = 0x02,
 };
 
-struct pmx_mode small_printers_mode = {
+struct pmx_mode spear320_small_printers_mode = {
 	.id = SMALL_PRINTERS_MODE,
 	.name = "Small Printers Mode",
 	.value = 0x03,
@@ -594,7 +594,7 @@ static struct pmx_driver pmx_driver = {
 
 /* Add spear320 specific devices here */
 /* CLCD device registration */
-struct amba_device clcd_device = {
+struct amba_device spear320_clcd_device = {
 	.dev = {
 		.init_name = "clcd",
 		.coherent_dma_mask = ~0,
@@ -622,7 +622,7 @@ static struct pl022_ssp_controller ssp_platform_data[] = {
 	}
 };
 
-struct amba_device ssp_device[] = {
+struct amba_device spear320_ssp_device[] = {
 	{
 		.dev = {
 			.coherent_dma_mask = ~0,
@@ -651,7 +651,7 @@ struct amba_device ssp_device[] = {
 };
 
 /* uart1 device registeration */
-struct amba_device uart1_device = {
+struct amba_device spear320_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
 	},
@@ -664,7 +664,7 @@ struct amba_device uart1_device = {
 };
 
 /* uart2 device registeration */
-struct amba_device uart2_device = {
+struct amba_device spear320_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
 	},
@@ -678,7 +678,7 @@ struct amba_device uart2_device = {
 
 /* emi nor flash device registeration */
 static struct physmap_flash_data emi_norflash_data;
-struct platform_device emi_nor_device = {
+struct platform_device spear320_emi_nor_device = {
 	.name	= "physmap-flash",
 	.id	= -1,
 	.dev.platform_data = &emi_norflash_data,
@@ -703,7 +703,7 @@ static struct resource can0_resources[] = {
 	},
 };
 
-struct platform_device can0_device = {
+struct platform_device spear320_can0_device = {
 	.name = "spear_can",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
@@ -721,7 +721,7 @@ static struct resource can1_resources[] = {
 	},
 };
 
-struct platform_device can1_device = {
+struct platform_device spear320_can1_device = {
 	.name = "spear_can",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
@@ -740,7 +740,7 @@ static struct resource i2c1_resources[] = {
 	},
 };
 
-struct platform_device i2c1_device = {
+struct platform_device spear320_i2c1_device = {
 	.name = "i2c_designware",
 	.id = 1,
 	.dev = {
@@ -767,7 +767,7 @@ static struct resource nand_resources[] = {
 	},
 };
 
-struct platform_device nand_device = {
+struct platform_device spear320_nand_device = {
 	.name = "nand",
 	.id = -1,
 	.resource = nand_resources,
@@ -786,7 +786,7 @@ static struct resource plgpio_resources[] = {
 	},
 };
 
-struct platform_device plgpio_device = {
+struct platform_device spear320_plgpio_device = {
 	.name = "plgpio",
 	.id = -1,
 	.dev = {
@@ -805,7 +805,7 @@ static struct resource pwm_resources[] = {
 	},
 };
 
-struct platform_device pwm_device = {
+struct platform_device spear320_pwm_device = {
 	.name = "pwm",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(pwm_resources),
@@ -824,7 +824,7 @@ static struct resource sdhci_resources[] = {
 	}
 };
 
-struct platform_device sdhci_device = {
+struct platform_device spear320_sdhci_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
 	},
