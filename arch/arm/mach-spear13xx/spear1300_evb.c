@@ -34,6 +34,7 @@
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/hardware.h>
+#include <mach/db9000fb_info.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
@@ -294,7 +295,6 @@ static void __init spear1300_evb_init(void)
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear1300_evb_init_lcd();
 #endif
-
 }
 
 MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")

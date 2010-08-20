@@ -40,35 +40,37 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 		.sync = 0,/* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
 	},
 	.bpp = 24,
-    .cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-           DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pctr = 0,
+	.dear = 0,
 
 };
 static struct db9000fb_mach_info spear1300_evb_sharp_lcd_info = {
-	.modes			= &sharp_LQ043T3DX0A_mode,
-	.num_modes		= 1,
-	.lcd_conn		= LCD_PCLK_EDGE_FALL,
+	.modes		= &sharp_LQ043T3DX0A_mode,
+	.num_modes	= 1,
+	.lcd_conn	= LCD_PCLK_EDGE_FALL,
+	.video_mem_size = 0,
+	.cmap_static    = 0,
+	.cmap_inverse   = 0,
 };
-
 #endif
 
 void __init db9000_register_device(struct platform_device *dev, void *data)
 {
 	int ret;
-
 	dev->dev.platform_data = data;
 	ret = platform_device_register(dev);
 	if (ret)
-	{
 		dev_err(&dev->dev, "unable to register device: %d\n", ret);
-	}
 }
 
 
 static struct resource db9000fb_resources[] = {
 	[0] = {
 		.start	= SPEAR13XX_DB9000_LCD_BASE,
-		.end	= SPEAR13XX_DB9000_LCD_BASE + SPEAR13XX_DB9000_LCD_SIZE - 1,
+		.end	= SPEAR13XX_DB9000_LCD_BASE +
+				SPEAR13XX_DB9000_LCD_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -82,11 +84,11 @@ static u64 fb_dma_mask = ~(u64)0;
 
 struct platform_device db9000_device_fb = {
 	.name		= "db9000-fb",
-	.id		    = 0,
+	.id		= 0,
 	.dev		= {
-	    .parent = NULL,
-		.dma_mask	= &fb_dma_mask,
-		.coherent_dma_mask = 0xffffffff,
+	.parent = NULL,
+	.dma_mask = &fb_dma_mask,
+	.coherent_dma_mask = 0xffffffff,
 	},
 	.num_resources	= ARRAY_SIZE(db9000fb_resources),
 	.resource	= db9000fb_resources,
@@ -114,36 +116,19 @@ static struct platform_pwm_backlight_data spear1300_evb_backlight_data = {
 };
 
 static struct platform_device spear1300_evb_backlight_device = {
-	.name		= "pwm-backlight",
-	.dev		= {
-//	   .parent = &pxa27x_device_pwm1.dev,
-	   .platform_data	= &spear1300_evb_backlight_data,
+	.name = "pwm-backlight",
+	.dev  = {
+/*	.parent = &pxa27x_device_pwm1.dev, */
+	.platform_data = &spear1300_evb_backlight_data,
 	},
 };
 #endif
 
 void __init spear1300_evb_init_lcd(void)
 {
-//	platform_device_register(&spear1300_evb_backlight_device);
+/*	platform_device_register(&spear1300_evb_backlight_device); */
 	set_db9000_fb_info(&spear1300_evb_sharp_lcd_info);
 }
 #else
 static inline void spear1300_evb_init_lcd(void) {}
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

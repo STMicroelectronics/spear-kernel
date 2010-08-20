@@ -1,0 +1,115 @@
+Driver for DB9000FB LCD controller
+================================
+
+The driver supports the following options, either via
+options=<OPTIONS> when modular or video=db9000fb:<OPTIONS> when built in.
+
+For example:
+	modprobe db9000fb options=vmem:2M,mode:480x272-24
+or on the kernel command line
+	video=db9000fb:vmem:2M,mode:480x272-24
+
+vmem: VIDEO_MEM_SIZE
+	Amount of video memory to allocate (can be suffixed with K or M
+	for kilobytes or megabytes)
+
+mode:XRESxYRES[-BPP]
+	XRES: Horizontal resolution, range: 16 to 4096 in units of 16 bytes.
+	YRES: Vertical resolution, range: 0 to 4096.
+	The number of horizontal lines on the display in pixels
+
+	BPP == The bit depth. Valid values are 1, 2, 4, 8, 16, 18 and 24.
+
+pixclock:PIXCLOCK
+	Pixel clock in picoseconds
+
+left:LEFT == left margin, aka Horizontal Back Porch: range: 0 to 255
+	in pixclock units
+right:RIGHT == right margin, aka Horizontal Front Porch: range: 0 to 255
+	in pixclock units
+hsynclen:HSYNC == horizonal sync width: range: 0 to 255,
+	program with desired width - 1, in pixclock units
+upper:UPPER == upper margin, aka Vertical Back Porch, range: 0 to 255
+lower:LOWER == lower margin, aka Vertical Front Porch, range: 0 to 255
+vsynclen:VSYNC == vertical sync length, range: 0 to 255
+
+hsync:HSYNC
+vsync:VSYNC
+	Horizontal and vertical sync. 0 => active low, 1 => active
+	high.
+
+pixclockpol:POLARITY
+	pixel clock polarity
+	0 => falling edge, 1 => rising edge
+
+fbp: PACKED == Frame buffer 24 bit mode packing
+	In 24 bpp mode, are the 24 bit words
+	packed or are arranged 32-bits for each 24-bit word.
+	0 => No packing, 24 bits per 32-bit word
+	1 => packing, 4 24-bit pixel words every 3 32-bit words
+
+dep:POLARITY
+	Data Enable Polarity. 0 => active low, 1 => active high
+
+dee: DMAENDEN
+	DMA End Address Enable: 0 => DMA End Address Register (DEAR)
+	not used.
+	1 => DMA End Address Register (DEAR) used to mark end of
+	pixel DMA buffer.
+
+dear: DMAEND
+    DMA End address Register: 32-bit decimal offset from beginning
+    of DMA Base Address Register used as end of frame buffer memory
+    by the core DMA controller.  Used if fbp parameter is set to 1, i.e.
+    packing mode.  If this parameter is not specified, then driver will
+    calculate dma end.  Include this parameter to override driver calculation.
+
+lps: PORTSELECT
+	0 => single LCD output port
+	1 => dual output port to LCD
+
+fdw: FIFODMAWORDS
+	0 => FIFO request for 4 bus xactions when FIFO has room for
+	4 words or more
+	1 => FIFO request for 8 bus xactions when FIFO has room for
+	8 words or more
+	2 => FIFO request for 16 bus xactions when FIFO has room for
+	16 words or more
+
+pss: PSRC
+	0 => palette loaded from internal palette registers
+	1 => palette loaded dynamically from frame buffer
+
+ops: PIXSEL, range: 0 to 3
+	0 => 16-bit format 5:6:5, data on msb's of 18-bit LCD interface
+	1 => 16-bit format 5:5:5, data on msb's of 18-bit LCD interface
+	2 => 16-bit format 5:6:5, data on msb's of 24-bit LCD interface
+	3 => 16-bit format 5:5:5, data on msb's of 24-bit LCD interface
+
+rgb: RGBBGR
+	0 => RGB format
+	1 => BGR format, red and blue pixels swapped
+
+epo: PIXENDIAN, little or big pixel ordering within each byte.
+	Valid only for 1, 2, or 4 bpp.
+	0 => little endian
+	1 => big endian
+
+ebo: ENDIAN, little or big endian byte ordering of pixel data
+	0 => little endian
+	1 => big endian
+
+pci: INPUTSEL, Pixel Clock Input Select
+	0 => Pixel clock derived from Master bus clock or pixel clock divider
+	1 => Pixel clock derived from PCLK_IN
+
+pcb: DIVBYPASS, Pixel Clock Divider Bypass
+	0 => Pixel clock comes from pixel clock divider
+	1 => Pixel clock comes from bus clock
+
+pcd: DIV, Pixel clock divider, range: 0 to 128
+	min divide is 2
+
+
+Overlay Support for DB9000FB LCD controller
+====================================================
