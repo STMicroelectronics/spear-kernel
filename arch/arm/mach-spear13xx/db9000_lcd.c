@@ -41,7 +41,7 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	},
 	.bpp = 24,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FBP,
 	.pctr = 0,
 	.dear = 0,
 
