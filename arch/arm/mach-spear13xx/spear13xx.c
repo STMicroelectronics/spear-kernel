@@ -268,6 +268,8 @@ static struct plat_stmmacenet_data ether0_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 1,
+	.pbl = 32,
+	.csum_off_engine = STMAC_TYPE_2,
 };
 
 static struct resource eth0_resources[] = {

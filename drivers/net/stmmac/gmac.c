@@ -28,6 +28,7 @@
 #include <linux/crc32.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
+#include <linux/stmmac.h>
 
 #include "stmmac.h"
 #include "gmac.h"
@@ -66,9 +67,8 @@ static int gmac_dma_init(unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx)
 	writel(value, ioaddr + DMA_BUS_MODE);
 	do {} while ((readl(ioaddr + DMA_BUS_MODE) & DMA_BUS_MODE_SFT_RESET));
 
-	value = /* DMA_BUS_MODE_FB | */ DMA_BUS_MODE_4PBL |
-		((pbl << DMA_BUS_MODE_PBL_SHIFT) |
-		 (pbl << DMA_BUS_MODE_RPBL_SHIFT));
+	value = DMA_BUS_MODE_FB | ((pbl << DMA_BUS_MODE_PBL_SHIFT) |
+			(pbl << DMA_BUS_MODE_RPBL_SHIFT));
 
 #ifdef CONFIG_STMMAC_DA
 	value |= DMA_BUS_MODE_DA;	/* Rx has priority over tx */
@@ -184,10 +184,18 @@ static void gmac_irq_status(unsigned long ioaddr)
 	return;
 }
 
-static void gmac_core_init(unsigned long ioaddr, int disable_readahead)
+static void gmac_core_init(unsigned long ioaddr, int disable_readahead,
+		int csum_engine)
 {
 	u32 value = readl(ioaddr + GMAC_CONTROL);
+
+	/*
+	 * Enable check sum offloading for
+	 * type-1/type-2 engines only
+	 */
 	value |= GMAC_CORE_INIT;
+	if (csum_engine != STMAC_TYPE_0)
+		value |= GMAC_CONTROL_ACS | GMAC_CONTROL_IPC;
 	writel(value, ioaddr + GMAC_CONTROL);
 
 	/* STBus Bridge Configuration */

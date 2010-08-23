@@ -23,6 +23,7 @@
  */
 
 #include <linux/netdevice.h>
+#include <linux/stmmac.h>
 #include "common.h"
 
 static int ndesc_get_tx_status(void *data, struct stmmac_extra_stats *x,
@@ -68,13 +69,20 @@ static int ndesc_get_tx_len(struct dma_desc *p)
 
 /* This function verifies if each incoming frame has some errors
  * and, if required, updates the multicast statistics.
- * In case of success, it returns csum_none becasue the device
- * is not able to compute the csum in HW. */
+ * In case of success, it returns good_frame becasue the device
+ * is able to compute the csum in HW. The frame_too_long bit serves
+ * the purpose of indiacting the csum error.
+ */
 static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-		struct dma_desc *p)
+		struct dma_desc *p, int csum_engine)
 {
-	int ret = csum_none;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
+	int ret;
+
+	if (csum_engine == STMAC_TYPE_0)
+		ret = csum_none;
+	else
+		ret = good_frame;
 
 	if (unlikely(p->des01.rx.last_descriptor == 0)) {
 		pr_warning("ndesc Error: Oversized Ethernet "

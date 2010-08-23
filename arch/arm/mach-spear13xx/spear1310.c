@@ -434,12 +434,14 @@ static struct plat_stmmacenet_data ether1_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
 };
 
 static struct resource eth1_resources[] = {
 	[0] = {
 		.start = SPEAR1310_GETH1_BASE,
-		.end = SPEAR1310_GETH1_BASE + SZ_8K - 1,
+		.end = SPEAR1310_GETH1_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -473,12 +475,14 @@ static struct plat_stmmacenet_data ether2_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
 };
 
 static struct resource eth2_resources[] = {
 	[0] = {
 		.start = SPEAR1310_GETH2_BASE,
-		.end = SPEAR1310_GETH2_BASE + SZ_8K - 1,
+		.end = SPEAR1310_GETH2_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -512,12 +516,14 @@ static struct plat_stmmacenet_data ether3_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
 };
 
 static struct resource eth3_resources[] = {
 	[0] = {
 		.start = SPEAR1310_GETH3_BASE,
-		.end = SPEAR1310_GETH3_BASE + SZ_8K - 1,
+		.end = SPEAR1310_GETH3_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -551,12 +557,14 @@ static struct plat_stmmacenet_data ether4_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_csum = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
 };
 
 static struct resource eth4_resources[] = {
 	[0] = {
 		.start = SPEAR1310_GETH4_BASE,
-		.end = SPEAR1310_GETH4_BASE + SZ_8K - 1,
+		.end = SPEAR1310_GETH4_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {

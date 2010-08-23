@@ -97,6 +97,7 @@ struct stmmac_priv {
 	struct vlan_group *vlgrp;
 #endif
 	struct clk *stmmac_clk;
+	int	csum_off_engine;
 };
 
 extern int stmmac_mdio_unregister(struct net_device *ndev);

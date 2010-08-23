@@ -272,13 +272,13 @@ struct stmmac_desc_ops {
 	int (*get_rx_frame_len) (struct dma_desc *p);
 	/* Return the reception status looking at the RDES1 */
 	int (*rx_status) (void *data, struct stmmac_extra_stats *x,
-			struct dma_desc *p);
+			struct dma_desc *p, int csum_engine);
 };
 
 struct stmmac_ops {
 	/* MAC core initialization */
-	void (*core_init) (unsigned long ioaddr, int disable_readahead)
-		____cacheline_aligned;
+	void (*core_init) (unsigned long ioaddr, int disable_readahead,
+			int csum_engine)____cacheline_aligned;
 	/* DMA core initialization */
 	int (*dma_init) (unsigned long ioaddr, int pbl, u32 dma_tx, u32 dma_rx);
 	/* Dump MAC registers */

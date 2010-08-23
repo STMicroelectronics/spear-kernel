@@ -23,6 +23,7 @@
  */
 
 #include <linux/netdevice.h>
+#include <linux/stmmac.h>
 #include "common.h"
 
 #undef ENH_DESC_DEBUG
@@ -144,11 +145,11 @@ static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
 		ret = csum_none;
 	} else if (status == 0x7) {
 		DBG(KERN_ERR
-		    "RX Des0 status: IPv4/6 Header and Payload Error.\n");
+			"RX Des0 status: IPv4/6 Header and Payload Error.\n");
 		ret = csum_none;
 	} else if (status == 0x1) {
 		DBG(KERN_ERR
-		    "RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
+			"RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
 		ret = csum_none;
 	} else if (status == 0x3) {
 		DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
@@ -158,14 +159,14 @@ static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
 }
 
 static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-				  struct dma_desc *p)
+				struct dma_desc *p, int csum_engine)
 {
 	int ret = good_frame;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
 
 	if (unlikely(p->des01.erx.error_summary)) {
 		DBG(KERN_ERR "GMAC RX Error Summary 0x%08x\n",
-				  p->des01.erx);
+				p->des01.erx);
 		if (unlikely(p->des01.erx.descriptor_error)) {
 			DBG(KERN_ERR "\tdescriptor error\n");
 			x->rx_desc++;
@@ -204,8 +205,12 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 	 * It doesn't match with the information reported into the databook.
 	 * At any rate, we need to understand if the CSUM hw computation is ok
 	 * and report this info to the upper layers. */
-	ret = enh_desc_coe_rdes0(p->des01.erx.ipc_csum_error,
-		p->des01.erx.frame_type, p->des01.erx.payload_csum_error);
+	if (csum_engine != STMAC_TYPE_0)
+		ret = enh_desc_coe_rdes0(p->des01.erx.ipc_csum_error,
+			p->des01.erx.frame_type,
+			p->des01.erx.payload_csum_error);
+	else
+		ret = csum_none;
 
 	if (unlikely(p->des01.erx.dribbling)) {
 		DBG(KERN_ERR "GMAC RX: dribbling error\n");

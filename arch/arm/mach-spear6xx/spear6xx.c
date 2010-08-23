@@ -253,12 +253,14 @@ static struct plat_stmmacenet_data eth_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 0,
 	.tx_csum = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_1,
 };
 
 static struct resource eth_resources[] = {
 	[0] = {
 		.start = SPEAR6XX_ICM4_GMAC_BASE,
-		.end = SPEAR6XX_ICM4_GMAC_BASE + SZ_8K - 1,
+		.end = SPEAR6XX_ICM4_GMAC_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
