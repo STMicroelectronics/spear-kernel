@@ -14,6 +14,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <mach/misc_regs.h>
+#include <asm/mach-types.h>
 #include <plat/clock.h>
 
 /* root clks */
@@ -740,5 +741,10 @@ static struct clk_lookup spear_clk_lookups[] = {
 /* machine clk init */
 void __init spear6xx_clk_init(void)
 {
-	clk_init(spear_clk_lookups, ARRAY_SIZE(spear_clk_lookups), &ddr_clk);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(spear_clk_lookups); i++)
+		clk_register(&spear_clk_lookups[i]);
+
+	clk_init(&ddr_clk);
 }

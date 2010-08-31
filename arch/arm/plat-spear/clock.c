@@ -966,14 +966,8 @@ void recalc_root_clocks(void)
 	spin_unlock_irqrestore(&clocks_lock, flags);
 }
 
-void __init
-clk_init(struct clk_lookup *clk_lookups, u32 count, struct clk *dclk)
+void __init clk_init(struct clk *dclk)
 {
-	int i;
-
-	for (i = 0; i < count; i++)
-		clk_register(&clk_lookups[i]);
-
 	recalc_root_clocks();
 
 	/* Mark all ancestors of DDR with special flag */
