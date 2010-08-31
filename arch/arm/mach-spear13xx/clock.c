@@ -1117,13 +1117,17 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
 	{.dev_id = "wdt",		.clk = &wdt_clk},
+};
 
-	/* spear1300 machine specific clock structures */
+/* array of all spear 1300 clock lookups */
 #ifdef CONFIG_MACH_SPEAR1300
+static struct clk_lookup spear1300_clk_lookups[] = {
+};
 #endif
 
-	/* spear1310 machine specific clock structures */
+/* array of all spear 1310 clock lookups */
 #ifdef CONFIG_MACH_SPEAR1310
+static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "c_can_platform.0",	.clk = &can0_clk},
 	{.dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{.dev_id = "stmmaceth.1",	.clk = &gmac_ras1_clk},
@@ -1134,11 +1138,28 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "stmmacphy.2",	.clk = &gmac_phy2_clk},
 	{.dev_id = "stmmacphy.3",	.clk = &gmac_phy3_clk},
 	{.dev_id = "stmmacphy.4",	.clk = &gmac_phy4_clk},
-#endif
 };
+#endif
 
 /* machine clk init */
 void __init spear13xx_clk_init(void)
 {
-	clk_init(spear_clk_lookups, ARRAY_SIZE(spear_clk_lookups), &ddr_clk);
+	int i, cnt;
+	struct clk_lookup *lookups;
+
+	if (machine_is_spear1300()) {
+		cnt = ARRAY_SIZE(spear1300_clk_lookups);
+		lookups = spear1300_clk_lookups;
+	} else {
+		cnt = ARRAY_SIZE(spear1310_clk_lookups);
+		lookups = spear1310_clk_lookups;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(spear_clk_lookups); i++)
+		clk_register(&spear_clk_lookups[i]);
+
+	for (i = 0; i < cnt; i++)
+		clk_register(&lookups[i]);
+
+	clk_init(&ddr_clk);
 }
