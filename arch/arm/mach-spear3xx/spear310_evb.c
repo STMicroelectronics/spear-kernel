@@ -11,10 +11,13 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/mtd/nand.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/fsmc.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -53,6 +56,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&ehci_device,
 	&i2c_device,
+	&nand_device,
 	&ohci0_device,
 	&ohci1_device,
 	&rtc_device,
@@ -69,6 +73,10 @@ static void __init spear310_evb_init(void)
 	pmx_driver.mode = NULL;
 	pmx_driver.devs = pmx_devs;
 	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
+
+	/* set nand device's plat data */
+	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+			FSMC_NAND_BW8);
 
 	/* call spear310 machine init function */
 	spear310_init();

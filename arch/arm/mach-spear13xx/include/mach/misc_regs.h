@@ -210,6 +210,16 @@
 	#define CF_MMC_ACTIVE	0x2
 	#define XD_MMC_ACTIVE	0x3
 #define FSMC_CFG		(MISC_BASE + 0x330)
+	/* FSMC_CFG register masks */
+	#define FSMC_MEMSEL_MASK	0x3
+	#define FSMC_MEMSEL_SHIFT	0
+	#define FSMC_MEM_NOR		0
+	#define FSMC_MEM_NAND		1
+	#define FSMC_MEM_SRAM		2
+	#define NAND_BANK_MASK		0x3
+	#define NAND_BANK_SHIFT		2
+	#define NAND_DEV_WIDTH16	4
+
 #define MPMC_CTR_STS		(MISC_BASE + 0x334)
 
 /* Inter-Processor Communication Registers */
