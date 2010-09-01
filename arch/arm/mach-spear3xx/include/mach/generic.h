@@ -110,6 +110,10 @@ extern struct pmx_driver pmx_driver;
 extern struct amba_device clcd_device;
 extern struct amba_device gpio1_device;
 extern struct platform_device kbd_device;
+extern struct platform_device nand0_device;
+extern struct platform_device nand1_device;
+extern struct platform_device nand2_device;
+extern struct platform_device nand3_device;
 
 /* pad mux modes */
 extern struct pmx_mode nand_mode;
@@ -147,12 +151,12 @@ void __init spear300_init(void);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
-#endif /* CONFIG_MACH_SPEAR300 */
 
 /* spear310 declarations */
-#ifdef CONFIG_MACH_SPEAR310
+#elif defined(CONFIG_MACH_SPEAR310)
 /* Add spear310 machine device structure declarations here */
 extern struct platform_device plgpio_device;
+extern struct platform_device nand_device;
 
 /* pad mux devices */
 extern struct pmx_dev pmx_emi_cs_0_1_4_5;
@@ -167,13 +171,12 @@ extern struct pmx_dev pmx_tdm0;
 /* Add spear310 machine function declarations here */
 void __init spear310_init(void);
 
-#endif /* CONFIG_MACH_SPEAR310 */
-
 /* spear320 declarations */
-#ifdef CONFIG_MACH_SPEAR320
+#elif defined(CONFIG_MACH_SPEAR320)
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
 extern struct platform_device i2c1_device;
+extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;
 extern struct platform_device pwm_device;
 
@@ -212,6 +215,6 @@ void __init spear320_init(void);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
-#endif /* CONFIG_MACH_SPEAR320 */
+#endif
 
 #endif /* __MACH_GENERIC_H */

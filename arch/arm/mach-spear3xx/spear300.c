@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
@@ -423,6 +424,103 @@ struct platform_device kbd_device = {
 	.id = -1,
 	.num_resources = ARRAY_SIZE(kbd_resources),
 	.resource = kbd_resources,
+};
+
+/* nand device registeration */
+static struct fsmc_nand_platform_data nand0_platform_data;
+
+static struct resource nand0_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR300_NAND_0_BASE,
+		.end = SPEAR300_NAND_0_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR300_FSMC_BASE,
+		.end = SPEAR300_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand0_device = {
+	.name = "fsmc-nand",
+	.id = 0,
+	.resource = nand0_resources,
+	.num_resources = ARRAY_SIZE(nand0_resources),
+	.dev.platform_data = &nand0_platform_data,
+};
+
+static struct fsmc_nand_platform_data nand1_platform_data;
+
+static struct resource nand1_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR300_NAND_1_BASE,
+		.end = SPEAR300_NAND_1_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR300_FSMC_BASE,
+		.end = SPEAR300_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand1_device = {
+	.name = "fsmc-nand",
+	.id = 1,
+	.resource = nand1_resources,
+	.num_resources = ARRAY_SIZE(nand1_resources),
+	.dev.platform_data = &nand1_platform_data,
+};
+
+static struct fsmc_nand_platform_data nand2_platform_data;
+
+static struct resource nand2_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR300_NAND_2_BASE,
+		.end = SPEAR300_NAND_2_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR300_FSMC_BASE,
+		.end = SPEAR300_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand2_device = {
+	.name = "fsmc-nand",
+	.id = 2,
+	.resource = nand2_resources,
+	.num_resources = ARRAY_SIZE(nand2_resources),
+	.dev.platform_data = &nand2_platform_data,
+};
+
+static struct fsmc_nand_platform_data nand3_platform_data;
+
+static struct resource nand3_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR300_NAND_3_BASE,
+		.end = SPEAR300_NAND_3_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR300_FSMC_BASE,
+		.end = SPEAR300_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand3_device = {
+	.name = "fsmc-nand",
+	.id = 3,
+	.resource = nand3_resources,
+	.num_resources = ARRAY_SIZE(nand3_resources),
+	.dev.platform_data = &nand3_platform_data,
 };
 
 /* spear3xx shared irq */
