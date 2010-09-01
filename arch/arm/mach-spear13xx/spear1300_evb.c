@@ -12,11 +12,14 @@
  */
 
 #include <linux/types.h>
+#include <linux/mtd/nand.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/keyboard.h>
+#include <plat/fsmc.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&spear13xx_gpio_device[0],
@@ -29,6 +32,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_i2c_device,
 	&spear13xx_kbd_device,
+	&spear13xx_nand_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
@@ -52,6 +56,11 @@ static void __init spear1300_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+
+	/* set nand device's plat data */
+	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+	nand_mach_init(FSMC_NAND_BW8);
 
 	/* call spear1300 machine init function */
 	spear1300_init();
