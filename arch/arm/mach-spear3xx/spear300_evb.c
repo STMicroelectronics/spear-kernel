@@ -15,6 +15,7 @@
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/keyboard.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -51,6 +52,19 @@ static struct platform_device *plat_devs[] __initdata = {
 	&rtc_device,
 
 	/* spear300 specific devices */
+	&kbd_device,
+};
+
+/* keyboard specific platform data */
+static DECLARE_KEYMAP(keymap);
+static struct matrix_keymap_data keymap_data = {
+	.keymap = keymap,
+	.keymap_size = ARRAY_SIZE(keymap),
+};
+
+static struct kbd_platform_data kbd_data = {
+	.keymap = &keymap_data,
+	.rep = 1,
 };
 
 static void __init spear300_evb_init(void)
@@ -61,6 +75,9 @@ static void __init spear300_evb_init(void)
 	pmx_driver.mode = &photo_frame_mode;
 	pmx_driver.devs = pmx_devs;
 	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
+
+	/* set keyboard plat data */
+	kbd_set_plat_data(&kbd_device, &kbd_data);
 
 	/* call spear300 machine init function */
 	spear300_init();

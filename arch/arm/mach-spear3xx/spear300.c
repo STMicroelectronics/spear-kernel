@@ -407,6 +407,25 @@ struct amba_device gpio1_device = {
 	.irq = {VIRQ_GPIO1, NO_IRQ},
 };
 
+/* keyboard device registration */
+static struct resource kbd_resources[] = {
+	{
+		.start = SPEAR300_KEYBOARD_BASE,
+		.end = SPEAR300_KEYBOARD_BASE + SZ_1K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = VIRQ_KEYBOARD,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device kbd_device = {
+	.name = "keyboard",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(kbd_resources),
+	.resource = kbd_resources,
+};
+
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
 	{
