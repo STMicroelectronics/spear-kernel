@@ -57,6 +57,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&i2c1_device,
 	&plgpio_device,
+	&pwm_device,
 };
 
 static void __init spear320_evb_init(void)

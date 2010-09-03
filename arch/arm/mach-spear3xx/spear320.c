@@ -452,6 +452,23 @@ struct platform_device plgpio_device = {
 	.resource = plgpio_resources,
 };
 
+/* pwm device registeration */
+static struct resource pwm_resources[] = {
+	{
+		.start = SPEAR320_PWM_BASE,
+		.end = SPEAR320_PWM_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device pwm_device = {
+	.name = "pwm",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(pwm_resources),
+	.resource = pwm_resources,
+};
+
+
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
 	{
