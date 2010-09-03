@@ -12,6 +12,7 @@
  */
 
 #include <linux/amba/pl022.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
 #include <linux/mmc/sdhci-spear.h>
@@ -471,6 +472,14 @@ struct amba_device uart2_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {VIRQ_UART2, NO_IRQ},
+};
+
+/* emi nor flash device registeration */
+static struct physmap_flash_data emi_norflash_data;
+struct platform_device emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.dev.platform_data = &emi_norflash_data,
 };
 
 /* plgpio device registeration */

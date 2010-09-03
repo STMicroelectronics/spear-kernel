@@ -24,3 +24,7 @@ obj-$(CONFIG_MACH_SPEAR320) += spear320.o
 
 # spear320 boards files
 obj-$(CONFIG_BOARD_SPEAR320_EVB) += spear320_evb.o
+
+# specific files
+obj-$(CONFIG_MACH_SPEAR310) += emi.o
+obj-$(CONFIG_MACH_SPEAR320) += emi.o
