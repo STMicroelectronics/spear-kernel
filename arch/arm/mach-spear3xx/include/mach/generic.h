@@ -33,11 +33,13 @@
 /* Add spear3xx family device structure declarations here */
 extern struct amba_device gpio_device;
 extern struct amba_device uart_device;
+extern struct platform_device i2c_device;
 extern struct platform_device rtc_device;
 extern struct sys_timer spear3xx_timer;
 
 /* Add spear3xx family function declarations here */
 void __init clk_init(void);
+void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
 void __init spear3xx_map_io(void);
 void __init spear3xx_init_irq(void);
@@ -166,6 +168,7 @@ void __init spear310_init(void);
 #ifdef CONFIG_MACH_SPEAR320
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
+extern struct platform_device i2c1_device;
 extern struct platform_device plgpio_device;
 
 /* pad mux modes */

@@ -402,6 +402,28 @@ struct amba_device clcd_device = {
 	.irq = {VIRQ_CLCD, NO_IRQ},
 };
 
+/* i2c1 device registeration */
+static struct resource i2c1_resources[] = {
+	{
+		.start = SPEAR320_I2C_BASE,
+		.end = SPEAR320_I2C_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = VIRQ_I2C1 ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device i2c1_device = {
+	.name = "i2c_designware",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2c1_resources),
+	.resource = i2c1_resources,
+};
+
 /* plgpio device registeration */
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,
@@ -535,7 +557,7 @@ struct shirq_dev_config shirq_intrcomm_ras_config[] = {
 		.status_mask = WAKEUP_MII1_SMII1_IRQ_MASK,
 		.clear_mask = WAKEUP_MII1_SMII1_IRQ_MASK,
 	}, {
-		.virq = VIRQ_I2C,
+		.virq = VIRQ_I2C1,
 		.status_mask = I2C1_IRQ_MASK,
 		.clear_mask = I2C1_IRQ_MASK,
 	},
