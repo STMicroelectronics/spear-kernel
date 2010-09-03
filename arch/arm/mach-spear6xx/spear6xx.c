@@ -12,6 +12,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
@@ -39,6 +40,73 @@ struct amba_device clcd_device = {
 	},
 	.dma_mask = ~0,
 	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
+};
+
+/* ssp device registration */
+static struct pl022_ssp_controller ssp_platform_data[] = {
+	{
+		.bus_id = 0,
+		.enable_dma = 0,
+		/*
+		 * This is number of spi devices that can be connected to spi.
+		 * There are two type of chipselects on which slave devices can
+		 * work. One is chip select provided by spi masters other is
+		 * controlled through external gpio's. We can't use chipselect
+		 * provided from spi master (because as soon as FIFO becomes
+		 * empty, CS is disabled and transfer ends). So this number now
+		 * depends on number of gpios available for spi. each slave on
+		 * each master requires a separate gpio pin.
+		 */
+		.num_chipselect = 2,
+	}, {
+		.bus_id = 1,
+		.enable_dma = 0,
+		.num_chipselect = 2,
+	}, {
+		.bus_id = 2,
+		.enable_dma = 0,
+		.num_chipselect = 2,
+	}
+};
+
+struct amba_device ssp_device[] = {
+	{
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.init_name = "ssp-pl022.0",
+			.platform_data = &ssp_platform_data[0],
+		},
+		.res = {
+			.start = SPEAR6XX_ICM1_SSP0_BASE,
+			.end = SPEAR6XX_ICM1_SSP0_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {IRQ_SSP_1, NO_IRQ},
+	}, {
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.init_name = "ssp-pl022.1",
+			.platform_data = &ssp_platform_data[1],
+		},
+		.res = {
+			.start = SPEAR6XX_ICM1_SSP1_BASE,
+			.end = SPEAR6XX_ICM1_SSP1_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {IRQ_SSP_2, NO_IRQ},
+	}, {
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.init_name = "ssp-pl022.2",
+			.platform_data = &ssp_platform_data[2],
+		},
+		.res = {
+			.start = SPEAR6XX_ICM2_SSP2_BASE,
+			.end = SPEAR6XX_ICM2_SSP2_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {IRQ_APPL_SSP, NO_IRQ},
+	}
 };
 
 /* uart device registration */
