@@ -32,6 +32,7 @@
 
 /* Add spear3xx family device structure declarations here */
 extern struct amba_device gpio_device;
+extern struct amba_device ssp0_device;
 extern struct amba_device uart_device;
 extern struct amba_device wdt_device;
 extern struct platform_device ehci_device;
@@ -175,6 +176,7 @@ void __init spear310_init(void);
 #elif defined(CONFIG_MACH_SPEAR320)
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
+extern struct amba_device ssp_device[];
 extern struct platform_device i2c1_device;
 extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;

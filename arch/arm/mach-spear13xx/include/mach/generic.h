@@ -30,6 +30,7 @@
 
 /* Add spear13xx family device structure declarations here */
 extern struct amba_device spear13xx_gpio_device[];
+extern struct amba_device spear13xx_ssp_device;
 extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;

@@ -15,9 +15,13 @@
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
+#include <plat/spi.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -65,6 +69,14 @@ static struct platform_device *plat_devs[] __initdata = {
 	&pwm_device,
 };
 
+static struct spi_board_info __initdata spi_board_info[] = {
+};
+
+static void __init spi_init(void)
+{
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+}
+
 static void __init spear320_evb_init(void)
 {
 	unsigned int i;
@@ -90,6 +102,8 @@ static void __init spear320_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_init();
 }
 
 MACHINE_START(SPEAR320, "ST-SPEAR320-EVB")

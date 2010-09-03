@@ -12,7 +12,10 @@
  */
 
 #include <linux/types.h>
+#include <linux/gpio.h>
 #include <linux/mtd/nand.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -21,10 +24,12 @@
 #include <mach/pcie.h>
 #include <plat/keyboard.h>
 #include <plat/fsmc.h>
+#include <plat/spi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&spear13xx_gpio_device[0],
 	&spear13xx_gpio_device[1],
+	&spear13xx_ssp_device,
 	&spear13xx_uart_device,
 };
 
@@ -50,6 +55,14 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 };
+
+static struct spi_board_info __initdata spi_board_info[] = {
+};
+
+static void __init spi_init(void)
+{
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+}
 
 #ifdef CONFIG_PCIEPORTBUS
 /* this function is needed for PCIE host and device driver. Same
@@ -105,6 +118,8 @@ static void __init spear1300_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_init();
 }
 
 MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")

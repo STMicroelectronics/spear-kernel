@@ -15,9 +15,13 @@
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
+#include <plat/spi.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -46,6 +50,7 @@ static struct pmx_dev *pmx_devs[] = {
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&gpio_device,
+	&ssp0_device,
 	&uart_device,
 	&wdt_device,
 
@@ -64,6 +69,41 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear310 specific devices */
 	&plgpio_device,
 };
+
+/* spi board information */
+/* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, flash, BASIC_GPIO_3);
+/* spi0 flash Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+
+/* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, dev, BASIC_GPIO_4);
+/* spi0 spidev Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+
+static struct spi_board_info __initdata spi_board_info[] = {
+	/* spi0 board info */
+	{
+		.modalias = "spidev",
+		.controller_data = &spi0_dev_chip_info,
+		.max_speed_hz = 10000000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_1,
+	}, {
+		.modalias = "m25p80",
+		.controller_data = &spi0_flash_chip_info,
+		.max_speed_hz = 400000,
+		.bus_num = 0,
+		.chip_select = 1,
+		.mode = SPI_MODE_1,
+	}
+};
+
+static void __init spi_init(void)
+{
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+}
 
 static void __init spear310_evb_init(void)
 {
@@ -90,6 +130,8 @@ static void __init spear310_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_init();
 }
 
 MACHINE_START(SPEAR310, "ST-SPEAR310-EVB")
