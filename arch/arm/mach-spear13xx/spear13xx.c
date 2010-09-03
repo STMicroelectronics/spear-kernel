@@ -24,6 +24,7 @@
 #include <mach/hardware.h>
 
 /* Add spear13xx machines common devices here */
+
 /* uart device registeration */
 struct amba_device spear13xx_uart_device = {
 	.dev = {
@@ -35,6 +36,28 @@ struct amba_device spear13xx_uart_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {IRQ_UART, NO_IRQ},
+};
+
+/* i2c device registeration */
+static struct resource i2c_resources[] = {
+	{
+		.start = SPEAR13XX_I2C_BASE,
+		.end = SPEAR13XX_I2C_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_I2C,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2c_device = {
+	.name = "i2c_designware",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2c_resources),
+	.resource = i2c_resources,
 };
 
 /* rtc device registration */
