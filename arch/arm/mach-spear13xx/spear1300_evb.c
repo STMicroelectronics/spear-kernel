@@ -22,7 +22,11 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&spear13xx_ehci0_device,
+	&spear13xx_ehci1_device,
 	&spear13xx_i2c_device,
+	&spear13xx_ohci0_device,
+	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
 };
 
