@@ -50,6 +50,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&rtc_device,
 
 	/* spear310 specific devices */
 	&plgpio_device,

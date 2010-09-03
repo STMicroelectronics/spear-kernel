@@ -120,6 +120,25 @@ struct amba_device gpio_device[] = {
 	}
 };
 
+/* rtc device registration */
+static struct resource rtc_resources[] = {
+	{
+		.start = SPEAR6XX_ICM3_RTC_BASE,
+		.end = SPEAR6XX_ICM3_RTC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_BASIC_RTC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device rtc_device = {
+	.name = "rtc-spear",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(rtc_resources),
+	.resource = rtc_resources,
+};
+
 /* This will add devices, and do machine specific tasks */
 void __init spear6xx_init(void)
 {
