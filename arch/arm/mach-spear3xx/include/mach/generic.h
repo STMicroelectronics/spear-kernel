@@ -33,7 +33,10 @@
 /* Add spear3xx family device structure declarations here */
 extern struct amba_device gpio_device;
 extern struct amba_device uart_device;
+extern struct platform_device ehci_device;
 extern struct platform_device i2c_device;
+extern struct platform_device ohci0_device;
+extern struct platform_device ohci1_device;
 extern struct platform_device rtc_device;
 extern struct sys_timer spear3xx_timer;
 

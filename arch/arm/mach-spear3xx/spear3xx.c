@@ -76,6 +76,86 @@ struct platform_device i2c_device = {
 	.resource = i2c_resources,
 };
 
+/* usb host device registeration */
+static struct resource ehci_resources[] = {
+	[0] = {
+		.start = SPEAR3XX_ICM4_USB_EHCI0_1_BASE,
+		.end = SPEAR3XX_ICM4_USB_EHCI0_1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_USB_H_EHCI_0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource ohci0_resources[] = {
+	[0] = {
+		.start = SPEAR3XX_ICM4_USB_OHCI0_BASE,
+		.end = SPEAR3XX_ICM4_USB_OHCI0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_USB_H_OHCI_0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource ohci1_resources[] = {
+	[0] = {
+		.start = SPEAR3XX_ICM4_USB_OHCI1_BASE,
+		.end = SPEAR3XX_ICM4_USB_OHCI1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_USB_H_OHCI_1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 ehci_dmamask = ~0;
+static int usbh_id = -1;
+
+struct platform_device ehci_device = {
+	.name = "spear-ehci",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &ehci_dmamask,
+		.platform_data = &usbh_id,
+	},
+	.num_resources = ARRAY_SIZE(ehci_resources),
+	.resource = ehci_resources,
+};
+
+static u64 ohci0_dmamask = ~0;
+
+struct platform_device ohci0_device = {
+	.name = "spear-ohci",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &ohci0_dmamask,
+		.platform_data = &usbh_id,
+	},
+	.num_resources = ARRAY_SIZE(ohci0_resources),
+	.resource = ohci0_resources,
+};
+
+static u64 ohci1_dmamask = ~0;
+
+struct platform_device ohci1_device = {
+	.name = "spear-ohci",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &ohci1_dmamask,
+		.platform_data = &usbh_id,
+	},
+	.num_resources = ARRAY_SIZE(ohci1_resources),
+	.resource = ohci1_resources,
+};
+
 /* rtc device registration */
 static struct resource rtc_resources[] = {
 	{
