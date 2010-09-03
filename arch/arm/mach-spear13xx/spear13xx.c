@@ -12,6 +12,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
@@ -62,6 +63,36 @@ struct amba_device spear13xx_gpio_device[] = {
 		},
 		.irq = {IRQ_GPIO1, NO_IRQ},
 	}
+};
+
+/* ssp device registeration */
+static struct pl022_ssp_controller ssp_platform_data = {
+	.bus_id = 0,
+	.enable_dma = 0,
+	/*
+	 * This is number of spi devices that can be connected to spi. There are
+	 * two type of chipselects on which slave devices can work. One is chip
+	 * select provided by spi masters other is controlled through external
+	 * gpio's. We can't use chipselect provided from spi master (because as
+	 * soon as FIFO becomes empty, CS is disabled and transfer ends). So
+	 * this number now depends on number of gpios available for spi. each
+	 * slave on each master requires a separate gpio pin.
+	 */
+	.num_chipselect = 2,
+};
+
+struct amba_device spear13xx_ssp_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.init_name = "ssp-pl022",
+		.platform_data = &ssp_platform_data,
+	},
+	.res = {
+		.start = SPEAR13XX_SSP_BASE,
+		.end = SPEAR13XX_SSP_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_SSP, NO_IRQ},
 };
 
 /* uart device registeration */

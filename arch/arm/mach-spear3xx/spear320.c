@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/amba/pl022.h>
 #include <linux/ptrace.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
@@ -401,6 +402,47 @@ struct amba_device clcd_device = {
 	},
 	.dma_mask = ~0,
 	.irq = {VIRQ_CLCD, NO_IRQ},
+};
+
+/* ssp device registeration */
+static struct pl022_ssp_controller ssp_platform_data[] = {
+	{
+		.bus_id = 1,
+		.enable_dma = 0,
+		.num_chipselect = 2,
+	}, {
+		.bus_id = 2,
+		.enable_dma = 0,
+		.num_chipselect = 2,
+	}
+};
+
+struct amba_device ssp_device[] = {
+	{
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.init_name = "ssp-pl022.1",
+			.platform_data = &ssp_platform_data[0],
+		},
+		.res = {
+			.start = SPEAR320_SSP0_BASE,
+			.end = SPEAR320_SSP0_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {VIRQ_SSP1, NO_IRQ},
+	}, {
+		.dev = {
+			.coherent_dma_mask = ~0,
+			.init_name = "ssp-pl022.2",
+			.platform_data = &ssp_platform_data[1],
+		},
+		.res = {
+			.start = SPEAR320_SSP1_BASE,
+			.end = SPEAR320_SSP1_BASE + SZ_4K - 1,
+			.flags = IORESOURCE_MEM,
+		},
+		.irq = {VIRQ_SSP2, NO_IRQ},
+	}
 };
 
 /* i2c1 device registeration */

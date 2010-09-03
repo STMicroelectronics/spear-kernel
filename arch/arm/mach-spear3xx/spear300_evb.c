@@ -11,14 +11,18 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
+#include <plat/spi.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -39,6 +43,7 @@ static struct pmx_dev *pmx_devs[] = {
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&gpio_device,
+	&ssp0_device,
 	&uart_device,
 	&wdt_device,
 
@@ -72,6 +77,24 @@ static struct kbd_platform_data kbd_data = {
 	.rep = 1,
 };
 
+/* spi board information */
+/* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
+DECLARE_SPI_CS_CONTROL(0, flash, RAS_GPIO_3);
+/* spi0 flash Chip Info structure */
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+
+static struct spi_board_info __initdata spi_board_info[] = {
+	/* spi0 board info */
+	{
+		.modalias = "m25p80",
+		.controller_data = &spi0_flash_chip_info,
+		.max_speed_hz = 25000000,
+		.bus_num = 0,
+		.chip_select = 1,
+		.mode = SPI_MODE_1,
+	}
+};
+
 static void __init spear300_evb_init(void)
 {
 	unsigned int i;
@@ -100,6 +123,8 @@ static void __init spear300_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(SPEAR300, "ST-SPEAR300-EVB")

@@ -11,19 +11,26 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
+#include <plat/spi.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
 	&gpio_device[0],
 	&gpio_device[1],
 	&gpio_device[2],
+	&ssp_device[0],
+	&ssp_device[1],
+	&ssp_device[2],
 	&uart_device[0],
 	&uart_device[1],
 	&wdt_device,
@@ -37,6 +44,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ohci1_device,
 	&nand_device,
 	&rtc_device,
+};
+
+static struct spi_board_info __initdata spi_board_info[] = {
 };
 
 static void __init spear600_evb_init(void)
@@ -59,6 +69,8 @@ static void __init spear600_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(SPEAR600, "ST-SPEAR600-EVB")
