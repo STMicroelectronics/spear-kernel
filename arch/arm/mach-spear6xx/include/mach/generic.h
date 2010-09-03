@@ -32,7 +32,11 @@
 extern struct amba_device clcd_device;
 extern struct amba_device gpio_device[];
 extern struct amba_device uart_device[];
+extern struct platform_device ehci0_device;
+extern struct platform_device ehci1_device;
 extern struct platform_device i2c_device;
+extern struct platform_device ohci0_device;
+extern struct platform_device ohci1_device;
 extern struct platform_device rtc_device;
 extern struct sys_timer spear6xx_timer;
 
