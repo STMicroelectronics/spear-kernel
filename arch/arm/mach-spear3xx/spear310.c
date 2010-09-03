@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
@@ -267,6 +268,14 @@ int spear300_o2p(int offset)
 	else
 		return offset + 2;
 }
+
+/* emi nor flash device registeration */
+static struct physmap_flash_data emi_norflash_data;
+struct platform_device emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.dev.platform_data = &emi_norflash_data,
+};
 
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,

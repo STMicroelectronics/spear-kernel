@@ -165,6 +165,7 @@ extern struct amba_device uart2_device;
 extern struct amba_device uart3_device;
 extern struct amba_device uart4_device;
 extern struct amba_device uart5_device;
+extern struct platform_device emi_nor_device;
 extern struct platform_device plgpio_device;
 extern struct platform_device nand_device;
 
@@ -190,6 +191,7 @@ extern struct amba_device uart1_device;
 extern struct amba_device uart2_device;
 extern struct platform_device can0_device;
 extern struct platform_device can1_device;
+extern struct platform_device emi_nor_device;
 extern struct platform_device i2c1_device;
 extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;

@@ -12,6 +12,7 @@
  */
 
 #include <linux/amba/pl022.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
 #include <linux/mmc/sdhci-spear.h>
@@ -508,6 +509,14 @@ struct platform_device can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+};
+
+/* emi nor flash device registeration */
+static struct physmap_flash_data emi_norflash_data;
+struct platform_device emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.dev.platform_data = &emi_norflash_data,
 };
 
 /* i2c1 device registeration */
