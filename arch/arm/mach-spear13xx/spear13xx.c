@@ -37,6 +37,25 @@ struct amba_device spear13xx_uart_device = {
 	.irq = {IRQ_UART, NO_IRQ},
 };
 
+/* rtc device registration */
+static struct resource rtc_resources[] = {
+	{
+		.start = SPEAR13XX_RTC_BASE,
+		.end = SPEAR13XX_RTC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_RTC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_rtc_device = {
+	.name = "rtc-spear",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(rtc_resources),
+	.resource = rtc_resources,
+};
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {

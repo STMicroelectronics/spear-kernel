@@ -22,6 +22,7 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	&spear13xx_rtc_device,
 };
 
 static void __init spear1300_evb_init(void)
