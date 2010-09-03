@@ -108,6 +108,7 @@ extern struct pmx_driver pmx_driver;
 /* Add spear300 machine device structure declarations here */
 extern struct amba_device clcd_device;
 extern struct amba_device gpio1_device;
+extern struct platform_device kbd_device;
 
 /* pad mux modes */
 extern struct pmx_mode nand_mode;
