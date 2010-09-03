@@ -32,10 +32,12 @@
 extern struct amba_device clcd_device;
 extern struct amba_device gpio_device[];
 extern struct amba_device uart_device[];
+extern struct platform_device i2c_device;
 extern struct platform_device rtc_device;
 extern struct sys_timer spear6xx_timer;
 
 /* Add spear6xx family function declarations here */
+void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
 void __init spear6xx_map_io(void);
 void __init spear6xx_init_irq(void);
