@@ -142,6 +142,96 @@ struct pmx_driver pmx_driver = {
 };
 
 /* Add spear310 specific devices here */
+/* uart1 device registeration */
+struct amba_device uart1_device = {
+	.dev = {
+		.init_name = "uart1",
+	},
+	.res = {
+		.start = SPEAR310_UART1_BASE,
+		.end = SPEAR310_UART1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART1, NO_IRQ},
+};
+
+/* uart2 device registeration */
+struct amba_device uart2_device = {
+	.dev = {
+		.init_name = "uart2",
+	},
+	.res = {
+		.start = SPEAR310_UART2_BASE,
+		.end = SPEAR310_UART2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART2, NO_IRQ},
+};
+
+/* uart3 device registeration */
+struct amba_device uart3_device = {
+	.dev = {
+		.init_name = "uart3",
+	},
+	.res = {
+		.start = SPEAR310_UART3_BASE,
+		.end = SPEAR310_UART3_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART3, NO_IRQ},
+};
+
+/* uart4 device registeration */
+struct amba_device uart4_device = {
+	.dev = {
+		.init_name = "uart4",
+	},
+	.res = {
+		.start = SPEAR310_UART4_BASE,
+		.end = SPEAR310_UART4_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART4, NO_IRQ},
+};
+
+/* uart5 device registeration */
+struct amba_device uart5_device = {
+	.dev = {
+		.init_name = "uart5",
+	},
+	.res = {
+		.start = SPEAR310_UART5_BASE,
+		.end = SPEAR310_UART5_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART5, NO_IRQ},
+};
+
+/* nand device registeration */
+static struct fsmc_nand_platform_data nand_platform_data;
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR310_NAND_BASE,
+		.end = SPEAR310_NAND_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR310_FSMC_BASE,
+		.end = SPEAR310_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device nand_device = {
+	.name = "fsmc-nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
+};
+
 /* plgpio device registeration */
 /*
  * pin to offset and offset to pin converter functions
@@ -177,31 +267,6 @@ int spear300_o2p(int offset)
 	else
 		return offset + 2;
 }
-
-/* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
-
-static struct resource nand_resources[] = {
-	{
-		.name = "nand_data",
-		.start = SPEAR310_NAND_BASE,
-		.end = SPEAR310_NAND_BASE + SZ_16 - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "fsmc_regs",
-		.start = SPEAR310_FSMC_BASE,
-		.end = SPEAR310_FSMC_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
-struct platform_device nand_device = {
-	.name = "fsmc-nand",
-	.id = -1,
-	.resource = nand_resources,
-	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
-};
 
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,
