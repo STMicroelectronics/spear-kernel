@@ -10,6 +10,7 @@ obj-$(CONFIG_MACH_SPEAR310)	+= plgpio.o
 obj-$(CONFIG_MACH_SPEAR320)	+= plgpio.o
 obj-$(CONFIG_SPEAR_PWM)		+= pwm.o
 
+obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= i2c_eval_board.o
 obj-$(CONFIG_BOARD_SPEAR1300_EVB)	+= i2c_eval_board.o
 obj-$(CONFIG_BOARD_SPEAR300_EVB)	+= i2c_eval_board.o
 obj-$(CONFIG_BOARD_SPEAR310_EVB)	+= i2c_eval_board.o

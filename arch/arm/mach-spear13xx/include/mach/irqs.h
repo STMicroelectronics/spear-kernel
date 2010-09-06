@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2010 ST Microelectronics
  * Shiraz Hashim <shiraz.hashim@st.com>
+ * Bhupesh Sharma <bhupesh.sharma@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -83,6 +84,42 @@
 #define IRQ_PCIE0		(IRQ_SHPI_START + 68)
 #define IRQ_PCIE1		(IRQ_SHPI_START + 69)
 #define IRQ_PCIE2		(IRQ_SHPI_START + 70)
+
+/* Add spear1310 specific IRQs here */
+#ifdef CONFIG_MACH_SPEAR1310
+#define IRQ_FSMC_PC1		(IRQ_SHPI_START + 76)
+#define IRQ_FSMC_PC2		(IRQ_SHPI_START + 77)
+#define IRQ_FSMC_PC3		(IRQ_SHPI_START + 78)
+#define IRQ_FSMC_PC4		(IRQ_SHPI_START + 79)
+#define IRQ_RS4850		(IRQ_SHPI_START + 80)
+#define IRQ_RS4851		(IRQ_SHPI_START + 81)
+#define IRQ_CCAN0		(IRQ_SHPI_START + 82)
+#define IRQ_CCAN1		(IRQ_SHPI_START + 83)
+#define IRQ_TDM0		(IRQ_SHPI_START + 84)
+#define IRQ_TDM1		(IRQ_SHPI_START + 85)
+#define IRQ_UART0		(IRQ_SHPI_START + 86)
+#define IRQ_UART1		(IRQ_SHPI_START + 87)
+#define IRQ_UART2		(IRQ_SHPI_START + 88)
+#define IRQ_UART3		(IRQ_SHPI_START + 89)
+#define IRQ_UART4		(IRQ_SHPI_START + 90)
+#define IRQ_I2C_CNTR		(IRQ_SHPI_START + 91)
+#define IRQ_GMAC0_SBD		(IRQ_SHPI_START + 92)
+#define IRQ_GMAC0_PMT		(IRQ_SHPI_START + 93)
+#define IRQ_GMAC1_SBD		(IRQ_SHPI_START + 94)
+#define IRQ_GMAC1_PMT		(IRQ_SHPI_START + 95)
+#define IRQ_GMAC2_SBD		(IRQ_SHPI_START + 96)
+#define IRQ_GMAC2_PMT		(IRQ_SHPI_START + 97)
+#define IRQ_GMAC3_SBD		(IRQ_SHPI_START + 98)
+#define IRQ_GMAC3_PMT		(IRQ_SHPI_START + 99)
+#define IRQ_GPIO		(IRQ_SHPI_START + 100)
+#define IRQ_PCI_BRDG_HOST_FATAL (IRQ_SHPI_START + 101)
+#define IRQ_PCI_INTA		(IRQ_SHPI_START + 102)
+#define IRQ_PCI_INTB		(IRQ_SHPI_START + 103)
+#define IRQ_PCI_INTC		(IRQ_SHPI_START + 104)
+#define IRQ_PCI_INTD		(IRQ_SHPI_START + 105)
+#define IRQ_PCI_ME_TO_ARM	(IRQ_SHPI_START + 106)
+#define IRQ_PCI_SERR_TO_ARM	(IRQ_SHPI_START + 107)
+#endif /* CONFIG_MACH_SPEAR1310 */
 
 #define IRQ_GIC_END		(IRQ_SHPI_START + 128)
 

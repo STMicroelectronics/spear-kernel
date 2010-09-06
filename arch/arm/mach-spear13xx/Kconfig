@@ -11,11 +11,22 @@ config BOARD_SPEAR1300_EVB
 	help
 	  Supports ST SPEAr1300 Evaluation Board
 
+config BOARD_SPEAR1310_EVB
+	bool "SPEAr1310 Evaluation Board"
+	select MACH_SPEAR1310
+	help
+	  Supports ST SPEAr1310 Evaluation Board
+
 endmenu
 
 config MACH_SPEAR1300
 	bool "SPEAr1300"
 	help
 	  Supports ST SPEAr1300 Machine
+
+config MACH_SPEAR1310
+	bool "SPEAr1310"
+	help
+	  Supports ST SPEAr1310 Machine
 
 endif #ARCH_SPEAR13XX

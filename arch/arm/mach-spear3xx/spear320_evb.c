@@ -65,6 +65,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&rtc_device,
 
 	/* spear320 specific devices */
+	&can0_device,
+	&can1_device,
 	&i2c1_device,
 	&plgpio_device,
 	&pwm_device,
