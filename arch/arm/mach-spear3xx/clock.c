@@ -713,7 +713,7 @@ static struct clk pwm_clk = {
 
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
-	{ .con_id = "apb_pclk",	.clk = &dummy_apb_pclk},
+	{ .con_id = "apb_pclk",		.clk = &dummy_apb_pclk},
 	/* root clks */
 	{ .con_id = "osc_32k_clk",	.clk = &osc_32k_clk},
 	{ .con_id = "osc_24m_clk",	.clk = &osc_24m_clk},
@@ -738,8 +738,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
 	{ .dev_id = "gpt2",		.clk = &gpt2_clk},
 	/* clock derived from pll3 clk */
+	{ .dev_id = "designware_udc",   .clk = &usbd_clk},
 	{ .con_id = "usbh_clk",		.clk = &usbh_clk},
-	{ .dev_id = "usbd",		.clk = &usbd_clk},
 	/* clock derived from ahb clk */
 	{ .con_id = "ahbmult2_clk",	.clk = &ahbmult2_clk},
 	{ .con_id = "ddr_clk",		.clk = &ddr_clk},
@@ -755,7 +755,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "ssp-pl022.0",	.clk = &ssp0_clk},
 	{ .dev_id = "gpio",		.clk = &gpio_clk},
 #if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
-	{ .dev_id = "physmap-flash",	.clk = &emi_clk},
+	{ .con_id = "emi",		.clk = &emi_clk},
 #endif
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
 	defined(CONFIG_MACH_SPEAR320)
