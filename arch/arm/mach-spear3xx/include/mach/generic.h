@@ -160,6 +160,11 @@ extern struct clcd_board clcd_plat_data;
 /* spear310 declarations */
 #elif defined(CONFIG_MACH_SPEAR310)
 /* Add spear310 machine device structure declarations here */
+extern struct amba_device uart1_device;
+extern struct amba_device uart2_device;
+extern struct amba_device uart3_device;
+extern struct amba_device uart4_device;
+extern struct amba_device uart5_device;
 extern struct platform_device plgpio_device;
 extern struct platform_device nand_device;
 
@@ -181,6 +186,8 @@ void __init spear310_init(void);
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device clcd_device;
 extern struct amba_device ssp_device[];
+extern struct amba_device uart1_device;
+extern struct amba_device uart2_device;
 extern struct platform_device i2c1_device;
 extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;
