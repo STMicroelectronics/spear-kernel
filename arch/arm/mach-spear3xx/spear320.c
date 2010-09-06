@@ -447,6 +447,32 @@ struct amba_device ssp_device[] = {
 	}
 };
 
+/* uart1 device registeration */
+struct amba_device uart1_device = {
+	.dev = {
+		.init_name = "uart1",
+	},
+	.res = {
+		.start = SPEAR320_UART1_BASE,
+		.end = SPEAR320_UART1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART1, NO_IRQ},
+};
+
+/* uart2 device registeration */
+struct amba_device uart2_device = {
+	.dev = {
+		.init_name = "uart2",
+	},
+	.res = {
+		.start = SPEAR320_UART2_BASE,
+		.end = SPEAR320_UART2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {VIRQ_UART2, NO_IRQ},
+};
+
 /* i2c1 device registeration */
 static struct resource i2c1_resources[] = {
 	{
