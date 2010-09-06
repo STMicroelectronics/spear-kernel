@@ -27,15 +27,16 @@
 
 #define NUM_PCIE_PORTS	3
 
+/* Sum of all these space can maximum be 256MB*/
 #define IN0_MEM_SIZE	(200 * 1024 * 1024 - 1)
 /* In current implementation address translation is done using IN0 only.
  * So IN1 start address and IN0 end address has been kept same
 */
 #define IN1_MEM_SIZE	(0 * 1024 * 1024 - 1)
 #define IN_IO_SIZE	(20 * 1024 * 1024 - 1)
-#define IN_CFG0_SIZE	(12 * 1024 * 1024 - 1)
-#define IN_CFG1_SIZE	(12 * 1024 * 1024 - 1)
-#define IN_MSG_SIZE	(12 * 1024 * 1024 - 1)
+#define IN_CFG0_SIZE	(1 * 1024 * 1024 - 1)
+#define IN_CFG1_SIZE	(1 * 1024 * 1024 - 1)
+#define IN_MSG_SIZE	(1 * 1024 * 1024 - 1)
 
 #define MAX_LINK_UP_WAIT_JIFFIES	10
 
@@ -248,7 +249,8 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	 * memory transaction on a downstream device
 	 */
 	spear_dbi_read_reg(pp, PCI_COMMAND, 2, &val);
-	val |= (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
+	val |= (PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER
+			| PCI_COMMAND_PARITY | PCI_COMMAND_SERR);
 	spear_dbi_write_reg(pp, PCI_COMMAND, 2, val);
 
 	/* Need to come back here*/
@@ -294,10 +296,8 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 va_address;
-	u32 address = readl(&app_reg->in_cfg0_addr_start)
-			| (PCI_FUNC(devfn) << 16)
-			| (where & 0xFFFC);
+	u32 address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
+		| (where & 0xFFFC);
 
 	writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
 			&app_reg->pom_cfg0_addr_start);
@@ -305,19 +305,13 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 			&app_reg->slv_armisc);
 	writel(readl(&app_reg->slv_armisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
 			&app_reg->slv_armisc);
-	va_address = (u32)ioremap(address, 4);
-	if (!va_address) {
-		pr_err("error with ioremap in function %s\n", __func__);
-		return -ENOMEM;
-	}
 
-	*val = readl(va_address);
+	*val = readl(address);
 	if (size == 1)
 		*val = (*val >> (8 * (where & 3))) & 0xff;
 	else if (size == 2)
 		*val = (*val >> (8 * (where & 3))) & 0xffff;
 
-	iounmap((void *)va_address);
 	writel(readl(&app_reg->slv_armisc) & ~(AXI_OP_TYPE_MASK),
 			&app_reg->slv_armisc);
 
@@ -348,9 +342,7 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 {
 	int ret = PCIBIOS_SUCCESSFUL;
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 va_address;
-	u32 address = readl(&app_reg->in_cfg0_addr_start)
-			| (PCI_FUNC(devfn) << 16)
+	u32 address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
 			| (where & 0xFFFC);
 
 	writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
@@ -359,22 +351,14 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 			&app_reg->slv_awmisc);
 	writel(readl(&app_reg->slv_awmisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
 			&app_reg->slv_awmisc);
-	va_address = (u32)ioremap(address, 4);
-	if (!va_address) {
-		pr_err("error with ioremap in function %s\n", __func__);
-		return -ENOMEM;
-	}
-
 	if (size == 4)
-		writel(val, va_address);
+		writel(val, address);
 	else if (size == 2)
-		writew(val, va_address + (where & 2));
+		writew(val, address + (where & 2));
 	else if (size == 1)
-		writeb(val, va_address + (where & 3));
+		writeb(val, address + (where & 3));
 	else
 		ret = PCIBIOS_BAD_REGISTER_NUMBER;
-
-	iounmap((void *)va_address);
 	writel(readl(&app_reg->slv_awmisc) & ~(AXI_OP_TYPE_MASK),
 			&app_reg->slv_awmisc);
 	return ret;
@@ -523,6 +507,7 @@ static void spear13xx_int_init(struct pcie_port *pp)
 static void __init add_pcie_port(int port, u32 base, u32 app_base)
 {
 	struct pcie_port *pp = &pcie_port[port];
+	struct pcie_app_reg *app_reg;
 
 	pp->port = port;
 	pp->root_bus_nr = -1;
@@ -547,6 +532,13 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 		pr_info("link down in bios\n");
 		spear13xx_pcie_host_init(pp);
 		spear13xx_int_init(pp);
+		app_reg = (struct pcie_app_reg *)pp->va_app_base;
+		pp->va_cfg0_base = (void __iomem *)
+			ioremap(app_reg->in_cfg0_addr_start, IN_CFG0_SIZE);
+		if (!pp->va_cfg0_base) {
+			pr_err("error with ioremap in function %s\n", __func__);
+			return;
+		}
 
 	}
 }
@@ -637,41 +629,29 @@ static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 {
 	struct pcie_port *pp = &pcie_port[irq - IRQ_PCIE0];
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
-	unsigned int status, type;
-	int i;
+	unsigned int status;
 
 	status = readl(&app_reg->int_sts);
 
 	desc->chip->ack(irq);
 
-	for (i = 0; i < 26; i++) {
-		type = status & (1 << i);
-		switch (type) {
-		case MSI_CTRL_INT:
-			handle_msi(pp);
-			writel(type, &app_reg->int_clr);
-			break;
-		case INTA_CTRL_INT:
-			generic_handle_irq(SPEAR_INTX0_BASE
-					+ pp->port * SPEAR_NUM_INTX_IRQS);
-			break;
-		case INTB_CTRL_INT:
-			generic_handle_irq(SPEAR_INTX0_BASE
-					+ pp->port * SPEAR_NUM_INTX_IRQS + 1);
-			break;
-		case INTC_CTRL_INT:
-			generic_handle_irq(SPEAR_INTX0_BASE
-					+ pp->port * SPEAR_NUM_INTX_IRQS + 2);
-			break;
-		case INTD_CTRL_INT:
-			generic_handle_irq(SPEAR_INTX0_BASE
-					+ pp->port * SPEAR_NUM_INTX_IRQS + 3);
-			break;
-		default:
-			writel(type, &app_reg->int_clr);
-			break;
-		}
-	}
+	if (status & MSI_CTRL_INT) {
+		handle_msi(pp);
+		writel(MSI_CTRL_INT, &app_reg->int_clr);
+	} else if (status & INTA_CTRL_INT)
+		generic_handle_irq(SPEAR_INTX0_BASE
+				+ pp->port * SPEAR_NUM_INTX_IRQS);
+	else if (status & INTB_CTRL_INT)
+		generic_handle_irq(SPEAR_INTX0_BASE
+				+ pp->port * SPEAR_NUM_INTX_IRQS + 1);
+	else if (status & INTC_CTRL_INT)
+		generic_handle_irq(SPEAR_INTX0_BASE
+				+ pp->port * SPEAR_NUM_INTX_IRQS + 2);
+	else if (status & INTD_CTRL_INT)
+		generic_handle_irq(SPEAR_INTX0_BASE
+				+ pp->port * SPEAR_NUM_INTX_IRQS + 3);
+	else
+		writel(status, &app_reg->int_clr);
 
 	desc->chip->unmask(irq);
 }
