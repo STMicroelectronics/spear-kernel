@@ -191,6 +191,25 @@
 	#define JPEG_SOF_RST		28
 #define PERIP2_SW_RST		(MISC_BASE + 0x280)
 #define RAS_CLK_ENB		(MISC_BASE + 0x284)
+	/* RAS_CLK_ENB register masks */
+	#define ACLK_CLK_ENB		0
+	#define PCLK_CLK_ENB		1
+	#define OSC1_CLK_ENB		2
+	#define OSC2_CLK_ENB		3
+	#define OSC3_CLK_ENB		4
+	#define C48_CLK_ENB		5
+	#define C30_CLK_ENB		6
+	#define C125_CLK_ENB		7
+	#define PLL2_CLK_ENB		8
+	#define PLL3_CLK_ENB		9
+	#define PCLK0_CLK_ENB		10
+	#define PCLK1_CLK_ENB		11
+	#define PCLK2_CLK_ENB		12
+	#define PCLK3_CLK_ENB		13
+	#define SYN0_CLK_ENB		14
+	#define SYN1_CLK_ENB		15
+	#define SYN2_CLK_ENB		16
+	#define SYN3_CLK_ENB		17
 #define RAS_SW_RST		(MISC_BASE + 0x288)
 #define PLL1_SYNT		(MISC_BASE + 0x28c)
 #define I2S_CLK_CFG		(MISC_BASE + 0x290)
