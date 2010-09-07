@@ -138,6 +138,7 @@
 #define WDW_BL_X	0x46	/* Window setup for bottom left X */
 #define WDW_BL_Y	0x48	/* Window setup for bottom left Y */
 	#define XY_MAX	0xFFF
+	#define Z_MAX	0xFF
 #define FIFO_TH		0x4A	/* FIFO level to generate interrupt */
 #define FIFO_STA	0x4B	/* Current status of FIFO */
 	#define RESET_FIFO		(1 << 0)
@@ -166,6 +167,7 @@ struct stmpe610 {
 	struct stmpe610_pdata	*pdata;
 	char			phys[32];
 	char			name[32];
+	u32			event_count;
 	u8			mode;
 #define DATAX			0x1
 #define DATAY			0x2

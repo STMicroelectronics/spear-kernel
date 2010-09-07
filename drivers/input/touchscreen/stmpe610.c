@@ -94,16 +94,29 @@ void set_operating_mode(struct stmpe610 *ts)
 static void stmpe_work(struct work_struct *work)
 {
 	struct stmpe610 *ts = container_of(work, struct stmpe610, work);
-	u32 x, y, z, status;
-	int size = 0;
+	u32 x = 0, y = 0, z = 0, xtmp, ytmp, status;
+	int size = 0, release = 0;
 
 	status = stmpe610_read(ts->idata, INT_STA);
-	stmpe610_write(ts->idata, INT_EN, 0x0);
 	if (!(status & 0x3)) {
-		stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT);
 		enable_irq(gpio_to_irq(ts->pdata->irq_gpio));
 		return;
 	}
+
+	/* Disable interrupts */
+	stmpe610_write(ts->idata, INT_EN, 0x0);
+
+	/* Return the 'Release' event */
+	if (ts->event_count != 0 && (status & TOUCH_INT)) {
+		/* Clear TOUCH_INT event */
+		stmpe610_write(ts->idata, INT_STA, TOUCH_INT);
+		release = 1;
+		ts->event_count = 0;
+	} else
+		ts->event_count++;
+
+	/* Clear FIFO_TH_INT event */
+	stmpe610_write(ts->idata, INT_STA, FIFO_TH_INT);
 
 	size = stmpe610_read(ts->idata, FIFO_SIZE);
 	while (size > 0) {
@@ -112,22 +125,31 @@ static void stmpe_work(struct work_struct *work)
 		stmpe610_block_read(ts->idata, TSC_DATA_XYZ, 4, data);
 		if (ts->mode & DATAX) {
 			x = (data[0] << 4) | (data[1] >> 4);
-			input_report_abs(ts->input, ABS_X, x);
+			xtmp = XY_MAX - x;
+			input_report_abs(ts->input, ABS_X, xtmp);
 		}
 		if (ts->mode & DATAY) {
 			y = ((data[1] & 0xf) << 8) | data[2];
-			input_report_abs(ts->input, ABS_Y, y);
+			ytmp = XY_MAX - y;
+			input_report_abs(ts->input, ABS_Y, ytmp);
 		}
 		if (ts->mode & DATAZ) {
 			z = data[3];
-			input_report_abs(ts->input, ABS_Z, z);
+			input_report_abs(ts->input, ABS_PRESSURE, z);
 		}
+
+		input_report_key(ts->input, BTN_TOUCH, 1);
 		size -= 4;
 	}
 
+	if (release) {
+		input_report_abs(ts->input, ABS_PRESSURE, 0);
+		input_report_key(ts->input, BTN_TOUCH, 0);
+	}
 	input_sync(ts->input);
-	stmpe610_write(ts->idata, INT_STA, 0xff);
-	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT);
+
+	/* Re-enable interrupts */
+	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT | TOUCH_INT);
 	reset_fifo(ts);
 	enable_irq(gpio_to_irq(ts->pdata->irq_gpio));
 }
@@ -164,8 +186,10 @@ void stmpe610_config(struct stmpe610 *ts)
 	/* Configure interrupts */
 	val = GLOBAL_INT_EN;
 	stmpe610_write(ts->idata, INT_CTRL, val);
-	/* set FIFO threshhold */
-	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT);
+
+	/* Configure Touch Detection & set FIFO threshhold */
+	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT | TOUCH_INT);
+
 	/* set average ctrl, settling time and touch det delay */
 	val = SETTLING_TIME(pd->settling_time) |
 		TOUCH_DET_DELAY(pd->touch_det_delay) |
@@ -254,11 +278,11 @@ struct stmpe610 *stmpe610_probe(struct device *dev)
 	ts->input->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	ts->input->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 	if (ts->mode & DATAX)
-		input_set_abs_params(ts->input, ABS_X, 0, 0xFF, 0, 0);
+		input_set_abs_params(ts->input, ABS_X, 0, XY_MAX, 0, 0);
 	if (ts->mode & DATAY)
-		input_set_abs_params(ts->input, ABS_Y, 0, 0xFF, 0, 0);
+		input_set_abs_params(ts->input, ABS_Y, 0, XY_MAX, 0, 0);
 	if (ts->mode & DATAZ)
-		input_set_abs_params(ts->input, ABS_PRESSURE, 0, 0xFF, 0, 0);
+		input_set_abs_params(ts->input, ABS_PRESSURE, 0, ~0, 0, 0);
 
 	ret = input_register_device(ts->input);
 	if (ret)
