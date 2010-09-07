@@ -118,7 +118,6 @@ struct pmx_mode caml_lcd_mode = {
 /* Pad multiplexing for FSMC 2 NAND devices */
 static struct pmx_mux_reg pmx_fsmc_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK,
 		.value = 0,
 	},
@@ -142,7 +141,6 @@ struct pmx_dev pmx_fsmc_2_chips = {
 /* Pad multiplexing for FSMC 4 NAND devices */
 static struct pmx_mux_reg pmx_fsmc_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_FIRDA_MASK | PMX_UART0_MASK,
 		.value = 0,
 	},
@@ -166,7 +164,6 @@ struct pmx_dev pmx_fsmc_4_chips = {
 /* Pad multiplexing for Keyboard device */
 static struct pmx_mux_reg pmx_kbd_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = 0x0,
 		.value = 0,
 	},
@@ -192,7 +189,6 @@ struct pmx_dev pmx_keyboard = {
 /* Pad multiplexing for CLCD device */
 static struct pmx_mux_reg pmx_clcd_pfmode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -200,7 +196,6 @@ static struct pmx_mux_reg pmx_clcd_pfmode_mux[] = {
 
 static struct pmx_mux_reg pmx_clcd_lcdmode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -228,7 +223,6 @@ struct pmx_dev pmx_clcd = {
 /* Pad multiplexing for Telecom GPIO device */
 static struct pmx_mux_reg pmx_gpio_lcdmode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -236,7 +230,6 @@ static struct pmx_mux_reg pmx_gpio_lcdmode_mux[] = {
 
 static struct pmx_mux_reg pmx_gpio_fonemode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -244,7 +237,6 @@ static struct pmx_mux_reg pmx_gpio_fonemode_mux[] = {
 
 static struct pmx_mux_reg pmx_gpio_atai2smode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -252,7 +244,6 @@ static struct pmx_mux_reg pmx_gpio_atai2smode_mux[] = {
 
 static struct pmx_mux_reg pmx_gpio_lendfonemode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK,
 		.value = 0,
 	},
@@ -260,7 +251,6 @@ static struct pmx_mux_reg pmx_gpio_lendfonemode_mux[] = {
 
 static struct pmx_mux_reg pmx_gpio_atawi2smode_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK | PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK
 			| PMX_UART0_MODEM_MASK,
 		.value = 0,
@@ -300,7 +290,6 @@ struct pmx_dev pmx_telecom_gpio = {
 /* Pad multiplexing for TDM device */
 static struct pmx_mux_reg pmx_tdm_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK | PMX_SSP_CS_MASK,
 		.value = 0,
 	},
@@ -327,7 +316,6 @@ struct pmx_dev pmx_telecom_tdm = {
 /* Pad multiplexing for spi cs i2c device */
 static struct pmx_mux_reg pmx_spi_cs_i2c_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
@@ -352,7 +340,6 @@ struct pmx_dev pmx_telecom_spi_cs_i2c_clk = {
 
 static struct pmx_mux_reg pmx_caml_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
@@ -360,7 +347,6 @@ static struct pmx_mux_reg pmx_caml_mux[] = {
 
 static struct pmx_mux_reg pmx_camu_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK | PMX_MII_MASK,
 		.value = 0,
 	},
@@ -387,7 +373,6 @@ struct pmx_dev pmx_telecom_camera = {
 /* Pad multiplexing for dac device */
 static struct pmx_mux_reg pmx_dac_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_TIMER_1_2_MASK,
 		.value = 0,
 	},
@@ -411,7 +396,6 @@ struct pmx_dev pmx_telecom_dac = {
 /* Pad multiplexing for spi cs i2c device */
 static struct pmx_mux_reg pmx_i2s_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
@@ -437,7 +421,6 @@ struct pmx_dev pmx_telecom_i2s = {
 /* Pad multiplexing for bootpins device */
 static struct pmx_mux_reg pmx_bootpins_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK | PMX_TIMER_1_2_MASK |
 			PMX_TIMER_3_4_MASK,
 		.value = 0,
@@ -461,7 +444,6 @@ struct pmx_dev pmx_telecom_boot_pins = {
 /* Pad multiplexing for sdhci 4bit device */
 static struct pmx_mux_reg pmx_sdhci_4bit_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
 			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
 			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
@@ -490,7 +472,6 @@ struct pmx_dev pmx_telecom_sdhci_4bit = {
 /* Pad multiplexing for spi cs i2c device */
 static struct pmx_mux_reg pmx_sdhci_8bit_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_GPIO_PIN0_MASK | PMX_GPIO_PIN1_MASK |
 			PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
 			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK | PMX_MII_MASK,
@@ -518,7 +499,6 @@ struct pmx_dev pmx_telecom_sdhci_8bit = {
 /* Pad multiplexing for spi cs i2c device */
 static struct pmx_mux_reg pmx_gpio1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG,
 		.mask = PMX_UART0_MODEM_MASK | PMX_TIMER_1_2_MASK |
 			PMX_TIMER_3_4_MASK,
 		.value = 0,
@@ -541,7 +521,7 @@ struct pmx_dev pmx_gpio1 = {
 
 /* pmx driver structure */
 struct pmx_driver pmx_driver = {
-	.mode_reg = {.address = MODE_CONFIG_REG, .mask = 0x0000000f},
+	.mode_reg = {.address = SPEAR300_MODE_CONFIG_REG, .mask = 0x0000000f},
 };
 
 /* Add spear300 specific devices here */
@@ -777,7 +757,7 @@ struct spear_shirq shirq_ras1 = {
 void sdhci_i2s_mem_enable(u8 mask)
 {
 	u32 val;
-	void __iomem *config = ioremap(MODE_CONFIG_REG, SZ_16);
+	void __iomem *config = ioremap(SPEAR300_MODE_CONFIG_REG, SZ_16);
 	if (!config) {
 		pr_debug("sdhci_i2s_enb: ioremap fail\n");
 		return;
@@ -808,6 +788,9 @@ void __init spear300_init(void)
 		if (ret)
 			printk(KERN_ERR "Error registering Shared IRQ\n");
 	}
+
+	/* This fixes addresses of all pmx devices for spear300 */
+	spear3xx_pmx_init_addr(&pmx_driver, SPEAR300_PAD_MUX_CONFIG_REG);
 
 	/* pmx initialization */
 	ret = pmx_register(&pmx_driver);
