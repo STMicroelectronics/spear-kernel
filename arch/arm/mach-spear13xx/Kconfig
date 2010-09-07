@@ -4,9 +4,20 @@
 
 if ARCH_SPEAR13XX
 
-choice
-	prompt "SPEAr13XX Family"
-	default MACH_SPEAR1300
+menu "SPEAr13xx Implementations"
+config BOARD_SPEAR1300_EVB
+	bool "SPEAr1300 Evaluation Board"
+	select MACH_SPEAR1300
+	help
+	  Supports ST SPEAr1300 Evaluation Board
+
+config BOARD_SPEAR1310_EVB
+	bool "SPEAr1310 Evaluation Board"
+	select MACH_SPEAR1310
+	help
+	  Supports ST SPEAr1310 Evaluation Board
+
+endmenu
 
 config MACH_SPEAR1300
 	bool "SPEAr1300"
@@ -18,15 +29,9 @@ config MACH_SPEAR1310
 	help
 	  Supports ST SPEAr1310 Machine
 
-endchoice
-
-# Adding SPEAr13XX machine specific configuration files
-source "arch/arm/mach-spear13xx/Kconfig1300"
-source "arch/arm/mach-spear13xx/Kconfig1310"
-
 config SPEAR_DB9000
 	bool "SPEAr DB9000 LCD"
-	depends on FB_DB9000 && (ARCH_SPEAR13XX)
+	depends on FB_DB9000
 	default y
 	help
 	  Support for DB9000 LCD device driver over SPEAr platform.
