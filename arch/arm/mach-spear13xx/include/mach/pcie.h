@@ -14,7 +14,7 @@
 #ifndef __MACH_PCIE_H
 #define __MACH_PCIE_H
 
-extern int spear13xx_pcie_port_is_host(int port);
+extern int (*pcie_port_is_host)(int port);
 extern int enable_pcie0_clk(void);
 
 
@@ -162,3 +162,8 @@ struct pcie_app_reg {
 
 /*BAR MASK registers*/
 #define PCIE_BAR0_MASK_REG	0x1010
+
+static inline void pcie_init(int (*fptr)(int port))
+{
+	pcie_port_is_host = fptr;
+}

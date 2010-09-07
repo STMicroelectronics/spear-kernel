@@ -39,6 +39,7 @@
 
 #define MAX_LINK_UP_WAIT_JIFFIES	10
 
+int (*pcie_port_is_host)(int port);
 static struct pcie_port pcie_port[NUM_PCIE_PORTS];
 static u32 spr_pcie_base[NUM_PCIE_PORTS] = {
 	SPEAR13XX_PCIE0_BASE,
@@ -200,7 +201,7 @@ static void __init spear13xx_pcie_preinit(void)
 		pp = pcie_port + i;
 		app_reg = (struct pcie_app_reg *) (pp->va_app_base);
 
-		if (!spear13xx_pcie_port_is_host(i))
+		if (!(*pcie_port_is_host)(i))
 			continue;
 		snprintf(pp->mem_space_name, sizeof(pp->mem_space_name),
 			"PCIe %d MEM", pp->port);
@@ -233,7 +234,7 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	if (nr >= NUM_PCIE_PORTS)
 		return 0;
 
-	if (!spear13xx_pcie_port_is_host(nr))
+	if (!(*pcie_port_is_host)(nr))
 		return 0;
 
 	pp = &pcie_port[nr];
@@ -265,7 +266,7 @@ static struct pcie_port *bus_to_port(int bus)
 
 	for (i = NUM_PCIE_PORTS - 1; i >= 0; i--) {
 		int rbus = pcie_port[i].root_bus_nr;
-		if (!spear13xx_pcie_port_is_host(i))
+		if (!(*pcie_port_is_host)(i))
 			continue;
 		if (rbus != -1 && rbus <= bus)
 			break;
@@ -406,7 +407,7 @@ spear13xx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 {
 	struct pci_bus *bus;
 
-	if ((nr < NUM_PCIE_PORTS) && spear13xx_pcie_port_is_host(nr)) {
+	if ((nr < NUM_PCIE_PORTS) && (*pcie_port_is_host)(nr)) {
 		bus = pci_scan_bus(sys->busnr, &pcie_ops, sys);
 	} else {
 		bus = NULL;
@@ -592,7 +593,7 @@ static int __init spear13xx_pcie_init(void)
 			}
 		}
 
-		if (spear13xx_pcie_port_is_host(port))
+		if ((*pcie_port_is_host)(port))
 			add_pcie_port(port, spr_pcie_base[port],
 					spr_pcie_app_base[port]);
 	}

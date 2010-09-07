@@ -208,6 +208,30 @@ static void __init spi_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
+#ifdef CONFIG_PCIEPORTBUS
+/* this function is needed for PCIE host and device driver. Same
+ * controller can not be programmed as host as well as device. So host
+ * driver must call this function and if this function returns 1 then
+ * only host should add that particular port as RC.
+ * A port to be added as device, one must also add device's information
+ * in plat_devs array defined in this file.
+ * it is the responsibility of calling function to not send port number
+ * greter than max no of controller(3)
+ */
+static int spear1310_pcie_port_is_host(int port)
+{
+	switch (port) {
+	case 0:
+		return 0;
+	case 1:
+		return 1;
+	case 2:
+		return 1;
+	}
+	return -EINVAL;
+}
+#endif
+
 static void __init spear1310_evb_init(void)
 {
 	/* padmux initialization, must be done before spear1300_init */
@@ -244,6 +268,7 @@ static void __init spear1310_evb_init(void)
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
+	pcie_init(&spear1310_pcie_port_is_host);
 #endif
 
 	/* Add Platform Devices */
@@ -262,30 +287,6 @@ static void __init spear1310_evb_init(void)
 #endif
 
 }
-
-#ifdef CONFIG_PCIEPORTBUS
-/* this function is needed for PCIE host and device driver. Same
- * controller can not be programmed as host as well as device. So host
- * driver must call this function and if this function returns 1 then
- * only host should add that particular port as RC.
- * A port to be added as device, one must also add device's information
- * in plat_devs array defined in this file.
- * it is the responsibility of calling function to not send port number
- * greter than max no of controller(3)
- */
-int spear13xx_pcie_port_is_host(int port)
-{
-	switch (port) {
-	case 0:
-		return 0;
-	case 1:
-		return 1;
-	case 2:
-		return 1;
-	}
-	return -EINVAL;
-}
-#endif
 
 MACHINE_START(SPEAR1310, "ST-SPEAR1310-EVB")
 	.boot_params	=	0x00000100,
