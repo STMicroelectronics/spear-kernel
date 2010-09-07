@@ -76,12 +76,13 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 	struct scatterlist *sg;
 
 	if (dev_type == JPEG_READ) {
-		addr = g_drv_data->read_buf[g_drv_data->current_rbuf];
+		addr = g_drv_data->read_dbuf[g_drv_data->current_rbuf];
 		sg = g_drv_data->sg[JPEG_READ];
 		sg_dma_address(sg) = addr;
-		sg_set_page(sg, virt_to_page(addr), 0, offset_in_page(addr));
+		sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT), 0,
+				offset_in_page(addr));
 	} else {
-		addr = g_drv_data->write_buf[g_drv_data->current_wbuf];
+		addr = g_drv_data->write_dbuf[g_drv_data->current_wbuf];
 		sg = g_drv_data->sg[JPEG_WRITE];
 
 		/* calculate the max transfer size supported by src device for
@@ -90,8 +91,8 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		while (size/max_xfer) {
 			sg_dma_address(sg) = addr;
-			sg_set_page(sg, virt_to_page(addr), max_xfer,
-					offset_in_page(addr));
+			sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT),
+					max_xfer, offset_in_page(addr));
 			addr += max_xfer;
 			size -= max_xfer;
 			sg++;
@@ -99,8 +100,9 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		if (size >> JPEG_WIDTH) {
 			sg_dma_address(sg) = addr;
-			sg_set_page(sg, virt_to_page(addr), (size >> JPEG_WIDTH)
-					<< JPEG_WIDTH, offset_in_page(addr));
+			sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT),
+					(size >> JPEG_WIDTH) << JPEG_WIDTH,
+					offset_in_page(addr));
 			addr += (size >> JPEG_WIDTH) << JPEG_WIDTH;
 			size -= (size >> JPEG_WIDTH) << JPEG_WIDTH;
 			sg++;
@@ -108,7 +110,7 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		if (size) {
 			sg_dma_address(sg) = addr;
-			sg_set_page(sg, virt_to_page(addr), size,
+			sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT), size,
 					offset_in_page(addr));
 		}
 	}
@@ -567,25 +569,13 @@ static void dma_read_callback(void *param)
 }
 
 /*
- * pages_req: returns order for allocating memory. no of pages = 2^order
- */
-static s32 pages_req(u32 size)
-{
-	u32 order = 0;
-
-	while (size > (PAGE_SIZE * (1 << order)))
-		order++;
-
-	return order;
-}
-
-/*
  * jfree: frees memory allocated with jmalloc.
  */
 static void jfree(enum jpeg_dev_type dev_type)
 {
-	u32 size, pg;
-	dma_addr_t buf;
+	u32 size;
+	dma_addr_t dma;
+	void *buf;
 
 	size = NUM_OF_BUF * g_drv_data->buf_size[dev_type];
 	if (dev_type == JPEG_READ) {
@@ -593,17 +583,20 @@ static void jfree(enum jpeg_dev_type dev_type)
 			return;
 
 		buf = g_drv_data->read_buf[0];
+		dma = g_drv_data->read_dbuf[0];
 		g_drv_data->read_buf[0] = g_drv_data->read_buf[1] = 0;
+		g_drv_data->read_dbuf[0] = g_drv_data->read_dbuf[1] = 0;
 	} else {
 		if (!g_drv_data->write_buf[0])
 			return;
 
 		buf = g_drv_data->write_buf[0];
+		dma = g_drv_data->write_dbuf[0];
 		g_drv_data->write_buf[0] = g_drv_data->write_buf[1] = 0;
+		g_drv_data->write_dbuf[0] = g_drv_data->write_dbuf[1] = 0;
 	}
 
-	pg = pages_req(size);
-	free_pages(buf, pg);
+	dma_free_writecombine(&g_drv_data->pdev->dev, size, buf, dma);
 	g_drv_data->buf_size[dev_type] = 0;
 }
 
@@ -612,8 +605,8 @@ static void jfree(enum jpeg_dev_type dev_type)
  */
 static s32 jmalloc(enum jpeg_dev_type dev_type, size_t size)
 {
-	s32 pg;
-	dma_addr_t buf;
+	void *buf;
+	dma_addr_t dbuf;
 
 	if (!g_drv_data->operation_complete)
 		return -EBUSY;
@@ -622,9 +615,8 @@ static s32 jmalloc(enum jpeg_dev_type dev_type, size_t size)
 	 ** nodes */
 	jfree(dev_type);
 
-	/* allocate pages required */
-	pg = pages_req(size);
-	buf = __get_free_pages(GFP_DMA, pg);
+	buf = dma_alloc_writecombine(&g_drv_data->pdev->dev, size, &dbuf,
+			GFP_KERNEL);
 	if (!buf) {
 		dev_err(&g_drv_data->pdev->dev, "%s buffer mem alloc fail\n",
 				dev_type == JPEG_WRITE ? "write" : "read");
@@ -637,9 +629,14 @@ static s32 jmalloc(enum jpeg_dev_type dev_type, size_t size)
 	if (dev_type == JPEG_READ) {
 		g_drv_data->read_buf[0] = buf;
 		g_drv_data->read_buf[1] = buf + size;
-	} else
+		g_drv_data->read_dbuf[0] = dbuf;
+		g_drv_data->read_dbuf[1] = dbuf + size;
+	} else {
 		g_drv_data->write_buf[0] = buf;
-	g_drv_data->write_buf[1] = buf + size;
+		g_drv_data->write_buf[1] = buf + size;
+		g_drv_data->write_dbuf[0] = dbuf;
+		g_drv_data->write_dbuf[1] = dbuf + size;
+	}
 
 	g_drv_data->buf_size[dev_type] = size;
 
@@ -649,23 +646,13 @@ static s32 jmalloc(enum jpeg_dev_type dev_type, size_t size)
 /*
  * jpeg_remap: remap physical memory in virtual space.
  */
-static s32 jpeg_remap(dma_addr_t phy_addr, struct vm_area_struct *vma)
+static s32 jpeg_remap(struct vm_area_struct *vma, dma_addr_t dma, void *buf)
 {
 	/* calculate size requested for mapping */
 	size_t size = vma->vm_end - vma->vm_start;
 
-	/* getting the page offset from the physical address of page */
-	vma->vm_pgoff = (__pa(phy_addr)) >> PAGE_SHIFT;
-
-	/* allocating uncached memory to user space */
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	/* remap-pfn-range will mark the range VM_IO and VM_RESERVED */
-	if (remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff, size,
-				vma->vm_page_prot))
-		return -EAGAIN;
-
-	return 0;
+	return dma_mmap_writecombine(&g_drv_data->pdev->dev, vma, buf, dma,
+			size);
 }
 
 /*
@@ -686,8 +673,7 @@ static s32 data_per_burst(u32 width, u32 burst)
 /* xfer data between jpeg controller and memory */
 static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 {
-	u32 dma_addr, ret;
-	dma_addr_t buf;
+	u32 ret;
 	struct dma_async_tx_descriptor *tx;
 	struct dma_chan *chan = g_drv_data->dma_chan[dev_type];
 	enum dma_data_direction direction;
@@ -700,15 +686,11 @@ static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 	if (dev_type == JPEG_READ) {
 		direction = DMA_FROM_DEVICE;
 		callback = dma_read_callback;
-		buf = g_drv_data->read_buf[g_drv_data->current_rbuf];
-		size = g_drv_data->buf_size[JPEG_READ];
 	} else {
 		direction = DMA_TO_DEVICE;
 		callback = dma_write_callback;
-		buf = g_drv_data->write_buf[g_drv_data->current_wbuf];
 	}
 
-	dma_addr = __pa(buf);
 	tx = chan->device->device_prep_slave_sg(chan, g_drv_data->sg[dev_type],
 			g_drv_data->sg_len[dev_type], direction,
 			DMA_PREP_INTERRUPT);
@@ -721,9 +703,8 @@ static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 	g_drv_data->cookie[dev_type] = tx->tx_submit(tx);
 
 	if (dma_submit_error(g_drv_data->cookie[dev_type])) {
-		dev_err(&g_drv_data->pdev->dev, "submit error %d with src=%x "
-				"size=0x%x\n", g_drv_data->cookie[dev_type],
-				buf, size);
+		dev_err(&g_drv_data->pdev->dev, "dma submit error %d\n",
+				g_drv_data->cookie[dev_type]);
 		return -EAGAIN;
 	}
 	chan->device->device_issue_pending(chan);
@@ -735,17 +716,7 @@ static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 static s32 dma_status(enum jpeg_dev_type dev_type, size_t size)
 {
 	s32 status;
-	dma_addr_t buf;
 	struct dma_chan *chan = g_drv_data->dma_chan[dev_type];
-	enum dma_data_direction direction;
-
-	if (dev_type == JPEG_READ) {
-		buf = g_drv_data->read_buf[g_drv_data->current_rbuf];
-		direction = DMA_FROM_DEVICE;
-	} else {
-		buf = g_drv_data->write_buf[g_drv_data->current_wbuf];
-		direction = DMA_TO_DEVICE;
-	}
 
 	put_sg(dev_type);
 	status = chan->device->device_is_tx_complete(chan,
@@ -942,8 +913,8 @@ s32 jpeg_get_data(u32 *len)
 
 		if ((g_drv_data->operation == JPEG_ENCODE) &&
 				!g_drv_data->hdr_enable) {
-			unsigned char *addr = (unsigned char *)
-				g_drv_data->read_buf[g_drv_data->current_rbuf];
+			unsigned char *addr;
+			addr = g_drv_data->read_buf[g_drv_data->current_rbuf];
 			/* we need to add EOF (ffd9) at the end of image */
 			if (*len + 2 <= g_drv_data->buf_size[JPEG_READ]) {
 				*(addr + *len) = 0xff;
@@ -1163,8 +1134,8 @@ static s32 desigware_jpeg_ioctl(struct inode *inode, struct file *file, u32 cmd,
 }
 
 /**
- * desigware_jpeg_rmmap - maps allocated memory from driver to user level for read
- * buffer.
+ * desigware_jpeg_rmmap - maps allocated memory from driver to user level for
+ * read buffer.
  * @file: represents a open file in kernel.
  * @vma: object having info of requested virtual memory region.
  *
@@ -1180,14 +1151,15 @@ static s32 desigware_jpeg_rmmap(struct file *file, struct vm_area_struct *vma)
 	 ** remaped */
 	status = jmalloc(JPEG_READ, size);
 	if (!status)
-		jpeg_remap(g_drv_data->read_buf[0], vma);
+		jpeg_remap(vma, g_drv_data->read_dbuf[0],
+				g_drv_data->read_buf[0]);
 
 	return status;
 }
 
 /**
- * desigware_jpeg_wmmap - maps allocated memory from driver to user level for wirte
- * buffer.
+ * desigware_jpeg_wmmap - maps allocated memory from driver to user level for
+ * write buffer.
  * @file: represents a open file in kernel.
  * @vma: object having info of requested virtual memory region.
  *
@@ -1203,7 +1175,8 @@ static s32 desigware_jpeg_wmmap(struct file *file, struct vm_area_struct *vma)
 	 ** remaped */
 	status = jmalloc(JPEG_WRITE, size);
 	if (!status)
-		jpeg_remap(g_drv_data->write_buf[0], vma);
+		jpeg_remap(vma, g_drv_data->write_dbuf[0],
+				g_drv_data->write_buf[0]);
 
 	return status;
 }

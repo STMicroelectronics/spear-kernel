@@ -204,8 +204,10 @@ struct jpeg_dev {
 
 	/*Read Write Buffers*/
 	u32 buf_size[MAX_DEV];
-	dma_addr_t read_buf[NUM_OF_BUF];
-	dma_addr_t write_buf[NUM_OF_BUF];
+	void *read_buf[NUM_OF_BUF];
+	void *write_buf[NUM_OF_BUF];
+	dma_addr_t read_dbuf[NUM_OF_BUF];
+	dma_addr_t write_dbuf[NUM_OF_BUF];
 	u32 img_size[MAX_DEV];
 	s32 current_wbuf;
 	s32 current_rbuf;
