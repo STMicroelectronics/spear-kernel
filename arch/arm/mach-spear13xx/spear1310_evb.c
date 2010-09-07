@@ -73,7 +73,15 @@ static struct amba_device *amba_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_gpio_device[0],
 	&spear13xx_gpio_device[1],
+	&spear13xx_ssp_device,
 	&spear13xx_uart_device,
+
+	/* spear1310 specific devices */
+	&spear1310_uart1_device,
+	&spear1310_uart2_device,
+	&spear1310_uart3_device,
+	&spear1310_uart4_device,
+	&spear1310_uart5_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
@@ -104,6 +112,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1310_eth2_device,
 	&spear1310_eth3_device,
 	&spear1310_eth4_device,
+	&spear1310_i2c1_device,
 	&spear1310_phy1_device,
 	&spear1310_phy2_device,
 	&spear1310_phy3_device,

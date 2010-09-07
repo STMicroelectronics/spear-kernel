@@ -268,12 +268,18 @@ void pcm_init(struct device *dma_dev);
 /* spear1310 declarations */
 #ifdef CONFIG_MACH_SPEAR1310
 /* Add spear1310 machine device structure declarations here */
+extern struct amba_device spear1310_uart1_device;
+extern struct amba_device spear1310_uart2_device;
+extern struct amba_device spear1310_uart3_device;
+extern struct amba_device spear1310_uart4_device;
+extern struct amba_device spear1310_uart5_device;
 extern struct platform_device spear1310_can0_device;
 extern struct platform_device spear1310_can1_device;
 extern struct platform_device spear1310_eth1_device;
 extern struct platform_device spear1310_eth2_device;
 extern struct platform_device spear1310_eth3_device;
 extern struct platform_device spear1310_eth4_device;
+extern struct platform_device spear1310_i2c1_device;
 extern struct platform_device spear1310_phy1_device;
 extern struct platform_device spear1310_phy2_device;
 extern struct platform_device spear1310_phy3_device;
