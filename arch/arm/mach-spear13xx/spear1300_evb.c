@@ -85,9 +85,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_kbd_device,
 	&spear13xx_nand_device,
 	&spear13xx_i2s0_device,
-#if 0
-	&spear13xx_i2s1_device,
-#endif
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_phy0_device,

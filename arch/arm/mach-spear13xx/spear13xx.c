@@ -253,7 +253,7 @@ static struct resource i2s1_resources[] = {
 
 struct platform_device spear13xx_i2s1_device = {
 	.name = "spear13xx-i2s",
-	.id = 0,
+	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
 	},
