@@ -61,32 +61,32 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&ssp0_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_ssp0_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear310 specific devices */
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&adc_device,
-	&dmac_device,
-	&ehci_device,
-	&emi_nor_device,
-	&eth_device,
-	&i2c_device,
-	&jpeg_device,
-	&nand_device,
-	&ohci0_device,
-	&ohci1_device,
-	&phy_device,
-	&rtc_device,
-	&smi_device,
+	&spear3xx_adc_device,
+	&spear3xx_dmac_device,
+	&spear3xx_ehci_device,
+	&spear3xx_eth_device,
+	&spear3xx_i2c_device,
+	&spear3xx_jpeg_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_phy_device,
+	&spear3xx_rtc_device,
+	&spear3xx_smi_device,
 
 	/* spear310 specific devices */
-	&plgpio_device,
+	&spear310_emi_nor_device,
+	&spear310_nand_device,
+	&spear310_plgpio_device,
 };
 
 /* spi board information */
@@ -127,13 +127,14 @@ static void __init spi_init(void)
 static void __init spear310_evb_init(void)
 {
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device.dev);
+	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
+			&spear3xx_dmac_device.dev);
 
 	/* set nand device's plat data */
-	nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+	nand_set_plat_data(&spear310_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			SPEAR_NAND_BW8);
 
 	/* call spear310 machine init function */
@@ -143,10 +144,10 @@ static void __init spear310_evb_init(void)
 	i2c_register_board_devices();
 
 	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&smi_device);
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&emi_nor_device, partition_info,
+	emi_init_board_info(&spear310_emi_nor_device, partition_info,
 			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH32);
 
 	/* Add Platform Devices */
@@ -156,7 +157,8 @@ static void __init spear310_evb_init(void)
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
 	/* Initialize emi regiters */
-	emi_init(&emi_nor_device, SPEAR310_EMI_REG_BASE, 0, EMI_FLASH_WIDTH32);
+	emi_init(&spear310_emi_nor_device, SPEAR310_EMI_REG_BASE, 0,
+			EMI_FLASH_WIDTH32);
 
 	spi_init();
 }

@@ -59,36 +59,36 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear320 specific devices */
-	&clcd_device,
+	&spear320_clcd_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&adc_device,
-	&dmac_device,
-	&ehci_device,
-	&eth_device,
-	&i2c_device,
-	&jpeg_device,
-	&nand_device,
-	&ohci0_device,
-	&ohci1_device,
-	&phy_device,
-	&rtc_device,
-	&smi_device,
+	&spear3xx_adc_device,
+	&spear3xx_dmac_device,
+	&spear3xx_ehci_device,
+	&spear3xx_eth_device,
+	&spear3xx_i2c_device,
+	&spear3xx_jpeg_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_phy_device,
+	&spear3xx_rtc_device,
+	&spear3xx_smi_device,
 
 	/* spear320 specific devices */
-	&can0_device,
-	&can1_device,
-	&i2c1_device,
-	&plgpio_device,
-	&pwm_device,
-	&sdhci_device,
+	&spear320_can0_device,
+	&spear320_can1_device,
+	&spear320_i2c1_device,
+	&spear320_nand_device,
+	&spear320_plgpio_device,
+	&spear320_pwm_device,
+	&spear320_sdhci_device,
 };
 
 /* sdhci board specific information */
@@ -142,29 +142,31 @@ static void __init spi_init(void)
 static void __init spear320_evb_init(void)
 {
 	/* set sdhci device platform data */
-	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
+	sdhci_set_plat_data(&spear320_sdhci_device, &sdhci_plat_data);
 
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device.dev);
+	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
+			&spear3xx_dmac_device.dev);
 
 	/* set nand device's plat data */
-	nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+	nand_set_plat_data(&spear320_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			SPEAR_NAND_BW8);
 
 	/* call spear320 machine init function */
-	spear320_init(&auto_net_mii_mode, pmx_devs, ARRAY_SIZE(pmx_devs));
+	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,
+			ARRAY_SIZE(pmx_devs));
 
 	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&smi_device);
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
 
 	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&emi_nor_device, partition_info,
+	emi_init_board_info(&spear320_emi_nor_device, partition_info,
 			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH16);
 
 	/* Add Platform Devices */
@@ -174,7 +176,8 @@ static void __init spear320_evb_init(void)
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
 	/* Initialize emi regiters */
-	emi_init(&emi_nor_device, SPEAR320_EMI_CTRL_BASE, 0, EMI_FLASH_WIDTH16);
+	emi_init(&spear320_emi_nor_device, SPEAR320_EMI_CTRL_BASE, 0,
+			EMI_FLASH_WIDTH16);
 
 	spi_init();
 }

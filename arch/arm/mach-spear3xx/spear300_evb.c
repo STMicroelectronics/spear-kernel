@@ -45,34 +45,34 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&gpio_device,
-	&ssp0_device,
-	&uart_device,
-	&wdt_device,
+	&spear3xx_gpio_device,
+	&spear3xx_ssp0_device,
+	&spear3xx_uart_device,
+	&spear3xx_wdt_device,
 
 	/* spear300 specific devices */
-	&clcd_device,
-	&gpio1_device,
+	&spear300_clcd_device,
+	&spear300_gpio1_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
-	&adc_device,
-	&dmac_device,
-	&ehci_device,
-	&eth_device,
-	&i2c_device,
-	&jpeg_device,
-	&nand0_device,
-	&ohci0_device,
-	&ohci1_device,
-	&phy_device,
-	&rtc_device,
-	&smi_device,
+	&spear3xx_adc_device,
+	&spear3xx_dmac_device,
+	&spear3xx_ehci_device,
+	&spear3xx_eth_device,
+	&spear3xx_i2c_device,
+	&spear3xx_jpeg_device,
+	&spear3xx_ohci0_device,
+	&spear3xx_ohci1_device,
+	&spear3xx_phy_device,
+	&spear3xx_rtc_device,
+	&spear3xx_smi_device,
 
 	/* spear300 specific devices */
-	&kbd_device,
-	&sdhci_device,
+	&spear300_kbd_device,
+	&spear300_nand0_device,
+	&spear300_sdhci_device,
 };
 
 /* sdhci board specific information */
@@ -138,32 +138,34 @@ static void __init spi_init(void)
 static void __init spear300_evb_init(void)
 {
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device.dev);
+	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
+			&spear3xx_dmac_device.dev);
 
 	/* set keyboard plat data */
-	kbd_set_plat_data(&kbd_device, &kbd_data);
+	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
 
 	/* set nand0 device's plat data */
-	nand_set_plat_data(&nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
+	nand_set_plat_data(&spear300_nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			SPEAR_NAND_BW8);
 
 	/* set sdhci device platform data */
-	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
+	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);
 
 	/* Enable sdhci memory */
 	sdhci_i2s_mem_enable(SDHCI_MEM_ENB);
 
 	/* call spear300 machine init function */
-	spear300_init(&photo_frame_mode, pmx_devs, ARRAY_SIZE(pmx_devs));
+	spear300_init(&spear300_photo_frame_mode, pmx_devs,
+			ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
 
 	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&smi_device);
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

@@ -55,7 +55,7 @@ static void spi##id##_##type##_cs_control(u32 control)	\
 
 /* This will define CHIP_INFO structure for a specific spi slave */
 #define DECLARE_SPI_CHIP_INFO(id, type, chip_select_control)	\
-struct pl022_config_chip spi##id##_##type##_chip_info = {	\
+static struct pl022_config_chip spi##id##_##type##_chip_info = {\
 	.lbm = LOOPBACK_DISABLED,			\
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,		\
 	.hierarchy = SSP_MASTER,			\

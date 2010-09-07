@@ -34,7 +34,7 @@ static struct pl061_platform_data gpio_plat_data = {
 	.irq_base	= SPEAR3XX_GPIO_INT_BASE,
 };
 
-struct amba_device gpio_device = {
+struct amba_device spear3xx_gpio_device = {
 	.dev = {
 		.init_name = "gpio",
 		.platform_data = &gpio_plat_data,
@@ -63,7 +63,7 @@ static struct pl022_ssp_controller ssp_platform_data = {
 	.num_chipselect = 2,
 };
 
-struct amba_device ssp0_device = {
+struct amba_device spear3xx_ssp0_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
 		.init_name = "ssp-pl022.0",
@@ -78,7 +78,7 @@ struct amba_device ssp0_device = {
 };
 
 /* uart device registeration */
-struct amba_device uart_device = {
+struct amba_device spear3xx_uart_device = {
 	.dev = {
 		.init_name = "uart",
 	},
@@ -91,7 +91,7 @@ struct amba_device uart_device = {
 };
 
 /* watchdog device registeration */
-struct amba_device wdt_device = {
+struct amba_device spear3xx_wdt_device = {
 	.dev = {
 		.init_name = "wdt",
 	},
@@ -109,12 +109,12 @@ static struct resource adc_resources[] = {
 		.end = SPEAR3XX_ICM1_ADC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_ADC,
+		.start = SPEAR3XX_IRQ_ADC,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device adc_device = {
+struct platform_device spear3xx_adc_device = {
 	.name = "adc",
 	.id = -1,
 	.dev = {
@@ -131,12 +131,12 @@ static struct resource dmac_resources[] = {
 		.end = SPEAR3XX_ICM3_DMA_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_BASIC_DMA,
+		.start = SPEAR3XX_IRQ_BASIC_DMA,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device dmac_device = {
+struct platform_device spear3xx_dmac_device = {
 	.name = "pl080_dmac",
 	.id = -1,
 	.dev = {
@@ -158,7 +158,7 @@ static struct resource i2c_resources[] = {
 	},
 };
 
-struct platform_device i2c_device = {
+struct platform_device spear3xx_i2c_device = {
 	.name = "i2c_designware",
 	.id = 0,
 	.dev = {
@@ -183,7 +183,7 @@ static struct resource phy_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy_device = {
+struct platform_device spear3xx_phy_device = {
 	.name = "stmmacphy",
 	.id = -1,
 	.num_resources = 1,
@@ -204,19 +204,19 @@ static struct resource eth_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_MAC_2,
+		.start = SPEAR3XX_IRQ_MAC_2,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_MAC_1,
+		.start = SPEAR3XX_IRQ_MAC_1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 eth_dma_mask = ~(u32) 0;
 
-struct platform_device eth_device = {
+struct platform_device spear3xx_eth_device = {
 	.name = "stmmaceth",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(eth_resources),
@@ -268,7 +268,7 @@ static struct resource ohci1_resources[] = {
 static u64 ehci_dmamask = ~0;
 static int usbh_id = -1;
 
-struct platform_device ehci_device = {
+struct platform_device spear3xx_ehci_device = {
 	.name = "spear-ehci",
 	.id = -1,
 	.dev = {
@@ -282,7 +282,7 @@ struct platform_device ehci_device = {
 
 static u64 ohci0_dmamask = ~0;
 
-struct platform_device ohci0_device = {
+struct platform_device spear3xx_ohci0_device = {
 	.name = "spear-ohci",
 	.id = 0,
 	.dev = {
@@ -296,7 +296,7 @@ struct platform_device ohci0_device = {
 
 static u64 ohci1_dmamask = ~0;
 
-struct platform_device ohci1_device = {
+struct platform_device spear3xx_ohci1_device = {
 	.name = "spear-ohci",
 	.id = 1,
 	.dev = {
@@ -315,12 +315,12 @@ static struct resource jpeg_resources[] = {
 		.end = SPEAR3XX_ICM1_JPEG_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_JPEG,
+		.start = SPEAR3XX_IRQ_JPEG,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device jpeg_device = {
+struct platform_device spear3xx_jpeg_device = {
 	.name = "jpeg-designware",
 	.id = -1,
 	.dev = {
@@ -342,7 +342,7 @@ static struct resource rtc_resources[] = {
 	},
 };
 
-struct platform_device rtc_device = {
+struct platform_device spear3xx_rtc_device = {
 	.name = "rtc-spear",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(rtc_resources),
@@ -361,7 +361,7 @@ static struct resource smi_resources[] = {
 	},
 };
 
-struct platform_device smi_device = {
+struct platform_device spear3xx_smi_device = {
 	.name = "smi",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(smi_resources),
