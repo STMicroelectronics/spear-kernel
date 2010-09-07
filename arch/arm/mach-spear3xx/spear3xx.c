@@ -24,13 +24,14 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 
-#define SPEAR3XX_WKUP_SRCS	(1 << IRQ_MAC_1 | 1 << IRQ_USB_DEV | \
-				1 << IRQ_BASIC_RTC | 1 << IRQ_BASIC_GPIO)
+#define SPEAR3XX_WKUP_SRCS	(1 << SPEAR3XX_IRQ_MAC_1 | 1 << \
+		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
+		SPEAR3XX_IRQ_BASIC_GPIO)
 /* Add spear3xx machines common devices here */
 /* gpio device registeration */
 static struct pl061_platform_data gpio_plat_data = {
 	.gpio_base	= 0,
-	.irq_base	= SPEAR_GPIO_INT_BASE,
+	.irq_base	= SPEAR3XX_GPIO_INT_BASE,
 };
 
 struct amba_device gpio_device = {
@@ -43,7 +44,7 @@ struct amba_device gpio_device = {
 		.end = SPEAR3XX_ICM3_GPIO_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_BASIC_GPIO, NO_IRQ},
+	.irq = {SPEAR3XX_IRQ_BASIC_GPIO, NO_IRQ},
 };
 
 /* ssp device registeration */
@@ -73,7 +74,7 @@ struct amba_device ssp0_device = {
 		.end = SPEAR3XX_ICM1_SSP_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_SSP, NO_IRQ},
+	.irq = {SPEAR3XX_IRQ_SSP, NO_IRQ},
 };
 
 /* uart device registeration */
@@ -86,7 +87,7 @@ struct amba_device uart_device = {
 		.end = SPEAR3XX_ICM1_UART_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART, NO_IRQ},
+	.irq = {SPEAR3XX_IRQ_UART, NO_IRQ},
 };
 
 /* watchdog device registeration */
@@ -152,7 +153,7 @@ static struct resource i2c_resources[] = {
 		.end = SPEAR3XX_ICM1_I2C_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_I2C,
+		.start = SPEAR3XX_IRQ_I2C,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -235,7 +236,7 @@ static struct resource ehci_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USB_H_EHCI_0,
+		.start = SPEAR3XX_IRQ_USB_H_EHCI_0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -247,7 +248,7 @@ static struct resource ohci0_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USB_H_OHCI_0,
+		.start = SPEAR3XX_IRQ_USB_H_OHCI_0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -259,7 +260,7 @@ static struct resource ohci1_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USB_H_OHCI_1,
+		.start = SPEAR3XX_IRQ_USB_H_OHCI_1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -336,7 +337,7 @@ static struct resource rtc_resources[] = {
 		.end = SPEAR3XX_ICM3_RTC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_BASIC_RTC,
+		.start = SPEAR3XX_IRQ_BASIC_RTC,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -355,7 +356,7 @@ static struct resource smi_resources[] = {
 		.end = SPEAR3XX_ICM3_SMI_CTRL_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_BASIC_SMI,
+		.start = SPEAR3XX_IRQ_BASIC_SMI,
 		.flags = IORESOURCE_IRQ,
 	},
 };
