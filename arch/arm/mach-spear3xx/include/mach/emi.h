@@ -33,18 +33,19 @@
 #define CTRL_REG		(0x14)
 
 #if defined(CONFIG_MACH_SPEAR310)
-#define TIMEOUT_REG		(0x90)
-#define ACK_REG			(0x94)
-#define IRQ_REG			(0x98)
+#define SPEAR310_TIMEOUT_REG	(0x90)
+#define SPEAR310_ACK_REG	(0x94)
+#define SPEAR310_IRQ_REG	(0x98)
 
-#define EMI_MAX_BANKS		6
+#define SPEAR310_EMI_MAX_BANKS	6
+#endif
 
-#elif defined(CONFIG_MACH_SPEAR320)
-#define TIMEOUT_REG		(0x60)
-#define ACK_REG			(0x64)
-#define IRQ_REG			(0x68)
+#if defined(CONFIG_MACH_SPEAR320)
+#define SPEAR320_TIMEOUT_REG	(0x60)
+#define SPEAR320_ACK_REG	(0x64)
+#define SPEAR320_IRQ_REG	(0x68)
 
-#define EMI_MAX_BANKS		4
+#define SPEAR320_EMI_MAX_BANKS	4
 
 #endif
 
