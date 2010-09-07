@@ -241,7 +241,7 @@ struct ddr_rate_tbl {
  * Actually before changing rate of DDRs ancestor, we must put ddr in refresh
  * state and then change parent.
  */
-void clk_init(struct clk_lookup *clk_lookups, u32 count, struct clk *dclk);
+void clk_init(struct clk *dclk);
 void clk_register(struct clk_lookup *cl);
 void recalc_root_clocks(void);
 
