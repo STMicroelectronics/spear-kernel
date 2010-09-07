@@ -1111,15 +1111,15 @@ static struct pclk_info phy_pclk_info[] = {
 static struct pclk_sel phy_pclk_sel = {
 	.pclk_info = phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(phy_pclk_info),
-	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(RAS_CTRL_REG1)),
-	.pclk_sel_mask = PHY_CLK_MASK,
+	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
+	.pclk_sel_mask = SPEAR1310_PHY_CLK_MASK,
 };
 
 /* Phy 1 Clock */
 struct clk gmac_phy1_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_pclk_sel,
-	.pclk_sel_shift = PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1127,7 +1127,7 @@ struct clk gmac_phy1_clk = {
 static struct clk gmac_phy2_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_pclk_sel,
-	.pclk_sel_shift = PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1135,7 +1135,7 @@ static struct clk gmac_phy2_clk = {
 static struct clk gmac_phy3_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_pclk_sel,
-	.pclk_sel_shift = PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1143,7 +1143,7 @@ static struct clk gmac_phy3_clk = {
 static struct clk gmac_phy4_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_pclk_sel,
-	.pclk_sel_shift = PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 

@@ -44,7 +44,7 @@ static struct pl061_platform_data gpio_plat_data[] = {
 	},
 };
 
-struct amba_device gpio_device[] = {
+struct amba_device spear13xx_gpio_device[] = {
 	{
 		.dev = {
 			.init_name = "gpio0",
@@ -86,7 +86,7 @@ static struct pl022_ssp_controller ssp_platform_data = {
 	.num_chipselect = 2,
 };
 
-struct amba_device ssp_device = {
+struct amba_device spear13xx_ssp_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
 		.init_name = "ssp-pl022",
@@ -101,7 +101,7 @@ struct amba_device ssp_device = {
 };
 
 /* uart device registeration */
-struct amba_device uart_device = {
+struct amba_device spear13xx_uart_device = {
 	.dev = {
 		.init_name = "uart",
 	},
@@ -125,7 +125,7 @@ static struct resource adc_resources[] = {
 	},
 };
 
-struct platform_device adc_device = {
+struct platform_device spear13xx_adc_device = {
 	.name = "adc",
 	.id = -1,
 	.dev = {
@@ -160,7 +160,7 @@ static struct resource dmac_resources[][2] = {
 	},
 };
 
-struct platform_device dmac_device[] = {
+struct platform_device spear13xx_dmac_device[] = {
 	[0] = {
 		.name = "dw_dmac",
 		.id = 0,
@@ -195,7 +195,7 @@ static struct resource i2c_resources[] = {
 	},
 };
 
-struct platform_device i2c_device = {
+struct platform_device spear13xx_i2c_device = {
 	.name = "i2c_designware",
 	.id = 0,
 	.dev = {
@@ -223,7 +223,7 @@ static struct resource i2s0_resources[] = {
 	},
 };
 
-struct platform_device i2s0_device = {
+struct platform_device spear13xx_i2s0_device = {
 	.name = "spear13xx-i2s",
 	.id = 0,
 	.dev = {
@@ -251,7 +251,7 @@ static struct resource i2s1_resources[] = {
 	},
 };
 
-struct platform_device i2s1_device = {
+struct platform_device spear13xx_i2s1_device = {
 	.name = "spear13xx-i2s",
 	.id = 0,
 	.dev = {
@@ -276,7 +276,7 @@ static struct resource phy0_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy0_device = {
+struct platform_device spear13xx_phy0_device = {
 	.name		= "stmmacphy",
 	.id		= 0,
 	.num_resources	= 1,
@@ -310,7 +310,7 @@ static struct resource eth0_resources[] = {
 
 static u64 eth0_dma_mask = ~(u32) 0;
 
-struct platform_device eth0_device = {
+struct platform_device spear13xx_eth0_device = {
 	.name = "stmmaceth",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(eth0_resources),
@@ -333,7 +333,7 @@ static struct resource fsmc_nor_resources[] = {
 	},
 };
 
-struct platform_device fsmc_nor_device = {
+struct platform_device spear13xx_fsmc_nor_device = {
 	.name	= "physmap-flash",
 	.id	= -1,
 	.resource = fsmc_nor_resources,
@@ -389,7 +389,7 @@ static struct resource nand_resources[] = {
 	},
 };
 
-struct platform_device nand_device = {
+struct platform_device spear13xx_nand_device = {
 	.name = "nand",
 	.id = -1,
 	.resource = nand_resources,
@@ -450,7 +450,7 @@ static int usbh0_id;
 static int usbh1_id = 1;
 static u64 ehci0_dmamask = ~0;
 
-struct platform_device ehci0_device = {
+struct platform_device spear13xx_ehci0_device = {
 	.name = "spear-ehci",
 	.id = 0,
 	.dev = {
@@ -464,7 +464,7 @@ struct platform_device ehci0_device = {
 
 static u64 ehci1_dmamask = ~0;
 
-struct platform_device ehci1_device = {
+struct platform_device spear13xx_ehci1_device = {
 	.name = "spear-ehci",
 	.id = 1,
 	.dev = {
@@ -478,7 +478,7 @@ struct platform_device ehci1_device = {
 
 static u64 ohci0_dmamask = ~0;
 
-struct platform_device ohci0_device = {
+struct platform_device spear13xx_ohci0_device = {
 	.name = "spear-ohci",
 	.id = 0,
 	.dev = {
@@ -491,7 +491,7 @@ struct platform_device ohci0_device = {
 };
 
 static u64 ohci1_dmamask = ~0;
-struct platform_device ohci1_device = {
+struct platform_device spear13xx_ohci1_device = {
 	.name = "spear-ohci",
 	.id = 1,
 	.dev = {
@@ -515,7 +515,7 @@ static struct resource jpeg_resources[] = {
 	},
 };
 
-struct platform_device jpeg_device = {
+struct platform_device spear13xx_jpeg_device = {
 	.name = "jpeg-designware",
 	.id = -1,
 	.dev = {
@@ -537,7 +537,7 @@ static struct resource kbd_resources[] = {
 	},
 };
 
-struct platform_device kbd_device = {
+struct platform_device spear13xx_kbd_device = {
 	.name = "keyboard",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(kbd_resources),
@@ -556,7 +556,7 @@ static struct resource rtc_resources[] = {
 	},
 };
 
-struct platform_device rtc_device = {
+struct platform_device spear13xx_rtc_device = {
 	.name = "rtc-spear",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(rtc_resources),
@@ -575,7 +575,7 @@ static struct resource smi_resources[] = {
 	},
 };
 
-struct platform_device smi_device = {
+struct platform_device spear13xx_smi_device = {
 	.name = "smi",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(smi_resources),
@@ -591,7 +591,7 @@ static struct resource wdt_resources[] = {
 	},
 };
 
-struct platform_device wdt_device = {
+struct platform_device spear13xx_wdt_device = {
 	.name = "cortexa9-wdt",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(wdt_resources),
@@ -610,7 +610,7 @@ static struct resource sdhci_resources[] = {
 	}
 };
 
-struct platform_device sdhci_device = {
+struct platform_device spear13xx_sdhci_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
 	},
@@ -640,7 +640,7 @@ static struct resource pcie_gadget0_resources[] = {
 static int pcie_gadget0_id;
 static u64 pcie_gadget0_dmamask = ~0;
 
-struct platform_device pcie_gadget0_device = {
+struct platform_device spear13xx_pcie_gadget0_device = {
 	.name = "pcie-gadget-spear",
 	.id = 0,
 	.dev = {
@@ -671,7 +671,7 @@ static struct resource pcie_gadget1_resources[] = {
 static int pcie_gadget1_id;
 static u64 pcie_gadget1_dmamask = ~0;
 
-struct platform_device pcie_gadget1_device = {
+struct platform_device spear13xx_pcie_gadget1_device = {
 	.name = "pcie-gadget-spear",
 	.id = 1,
 	.dev = {
@@ -702,7 +702,7 @@ static struct resource pcie_gadget2_resources[] = {
 static int pcie_gadget2_id;
 static u64 pcie_gadget2_dmamask = ~0;
 
-struct platform_device pcie_gadget2_device = {
+struct platform_device spear13xx_pcie_gadget2_device = {
 	.name = "pcie-gadget-spear",
 	.id = 2,
 	.dev = {

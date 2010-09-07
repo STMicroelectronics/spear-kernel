@@ -71,43 +71,43 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear13xx specific devices */
-	&gpio_device[0],
-	&gpio_device[1],
-	&uart_device,
+	&spear13xx_gpio_device[0],
+	&spear13xx_gpio_device[1],
+	&spear13xx_uart_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
-	&adc_device,
-	&dmac_device[0],
-	&dmac_device[1],
-	&ehci0_device,
-	&ehci1_device,
-	&eth0_device,
-	&i2c_device,
-	&jpeg_device,
-	&kbd_device,
-	&nand_device,
-	&ohci0_device,
-	&ohci1_device,
-	&phy0_device,
-	&rtc_device,
-	&sdhci_device,
-	&smi_device,
-	&wdt_device,
-	&pcie_gadget0_device,
+	&spear13xx_adc_device,
+	&spear13xx_dmac_device[0],
+	&spear13xx_dmac_device[1],
+	&spear13xx_ehci0_device,
+	&spear13xx_ehci1_device,
+	&spear13xx_eth0_device,
+	&spear13xx_i2c_device,
+	&spear13xx_jpeg_device,
+	&spear13xx_kbd_device,
+	&spear13xx_nand_device,
+	&spear13xx_ohci0_device,
+	&spear13xx_ohci1_device,
+	&spear13xx_phy0_device,
+	&spear13xx_rtc_device,
+	&spear13xx_sdhci_device,
+	&spear13xx_smi_device,
+	&spear13xx_wdt_device,
+	&spear13xx_pcie_gadget0_device,
 
 	/* spear1310 specific devices */
-	&can0_device,
-	&can1_device,
-	&eth1_device,
-	&eth2_device,
-	&eth3_device,
-	&eth4_device,
-	&phy1_device,
-	&phy2_device,
-	&phy3_device,
-	&phy4_device,
+	&spear1310_can0_device,
+	&spear1310_can1_device,
+	&spear1310_eth1_device,
+	&spear1310_eth2_device,
+	&spear1310_eth3_device,
+	&spear1310_eth4_device,
+	&spear1310_phy1_device,
+	&spear1310_phy2_device,
+	&spear1310_phy3_device,
+	&spear1310_phy4_device,
 };
 
 /* keyboard specific platform data */
@@ -134,7 +134,7 @@ DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
 #endif
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
-struct stmpe610_pdata stmpe610_spi_pdata = {
+static struct stmpe610_pdata stmpe610_spi_pdata = {
 	.irq_gpio = GPIO1_6,
 	.irq_type = IRQ_TYPE_EDGE_FALLING,
 	.fifo_threshhold = 1,
@@ -157,7 +157,7 @@ struct stmpe610_pdata stmpe610_spi_pdata = {
 
 DECLARE_SPI_CS_CONTROL(0, ts, GPIO1_7);
 /* spi0 touch screen Info structure */
-struct pl022_config_chip spi0_ts_chip_info = {
+static struct pl022_config_chip spi0_ts_chip_info = {
 	.lbm = LOOPBACK_DISABLED,
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
 	.hierarchy = SSP_MASTER,
@@ -234,35 +234,31 @@ static int spear1310_pcie_port_is_host(int port)
 
 static void __init spear1310_evb_init(void)
 {
-	/* padmux initialization, must be done before spear1300_init */
-	pmx_driver.mode = NULL;
-	pmx_driver.devs = pmx_devs;
-	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
-
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device[0].dev);
+	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
 
 	/* set keyboard plat data */
-	kbd_set_plat_data(&kbd_device, &kbd_data);
+	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device[0].dev);
+	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
+			&spear13xx_dmac_device[0].dev);
 
 	/* set nand device's plat data */
-	nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+	nand_set_plat_data(&spear13xx_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			SPEAR_NAND_BW8);
 	nand_mach_init(SPEAR_NAND_BW8);
 
 	/* call spear1310 machine init function */
-	spear1310_init();
+	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();
 
 	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&smi_device);
+	smi_init_board_info(&spear13xx_smi_device);
 	/* initialize fsmc related data in fsmc plat data */
-	fsmc_init_board_info(&fsmc_nor_device, partition_info,
+	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
 			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
 
 #ifdef CONFIG_PCIEPORTBUS
@@ -278,12 +274,12 @@ static void __init spear1310_evb_init(void)
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
 	/* Initialize fsmc regiters */
-	fsmc_nor_init(&fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
 
 	spi_init();
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-   spear1300_evb_init_lcd();
+	spear1300_evb_init_lcd();
 #endif
 
 }

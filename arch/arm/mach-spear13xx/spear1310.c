@@ -32,7 +32,7 @@ static int phy_clk_cfg(void *data)
 {
 	struct platform_device *pdev = (struct platform_device *)data;
 	struct plat_stmmacphy_data *plat_dat = dev_get_platdata(&pdev->dev);
-	void __iomem *addr = __io_address(RAS_CTRL_REG1);
+	void __iomem *addr = __io_address(SPEAR1310_RAS_CTRL_REG1);
 	char *pclk_name[] = {
 		"ras_pll2_clk",
 		"ras_tx125_clk",
@@ -101,7 +101,7 @@ fail_get_phy_clk:
 }
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver;
+static struct pmx_driver pmx_driver;
 
 /* Pad multiplexing for uart1_modem device */
 static struct pmx_mux_reg pmx_uart1_modem_mux[] = {
@@ -422,7 +422,7 @@ static struct resource can0_resources[] = {
 	},
 };
 
-struct platform_device can0_device = {
+struct platform_device spear1310_can0_device = {
 	.name = "spear_can",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
@@ -440,7 +440,7 @@ static struct resource can1_resources[] = {
 	},
 };
 
-struct platform_device can1_device = {
+struct platform_device spear1310_can1_device = {
 	.name = "spear_can",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
@@ -463,7 +463,7 @@ static struct resource phy1_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy1_device = {
+struct platform_device spear1310_phy1_device = {
 	.name = "stmmacphy",
 	.id = 1,
 	.num_resources = 1,
@@ -497,7 +497,7 @@ static struct resource eth1_resources[] = {
 
 static u64 eth1_dma_mask = ~(u32) 0;
 
-struct platform_device eth1_device = {
+struct platform_device spear1310_eth1_device = {
 	.name = "stmmaceth",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(eth1_resources),
@@ -524,7 +524,7 @@ static struct resource phy2_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy2_device = {
+struct platform_device spear1310_phy2_device = {
 	.name = "stmmacphy",
 	.id = 2,
 	.num_resources = 1,
@@ -558,7 +558,7 @@ static struct resource eth2_resources[] = {
 
 static u64 eth2_dma_mask = ~(u32) 0;
 
-struct platform_device eth2_device = {
+struct platform_device spear1310_eth2_device = {
 	.name = "stmmaceth",
 	.id = 2,
 	.num_resources = ARRAY_SIZE(eth2_resources),
@@ -585,7 +585,7 @@ static struct resource phy3_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy3_device = {
+struct platform_device spear1310_phy3_device = {
 	.name = "stmmacphy",
 	.id = 3,
 	.num_resources = 1,
@@ -619,7 +619,7 @@ static struct resource eth3_resources[] = {
 
 static u64 eth3_dma_mask = ~(u32) 0;
 
-struct platform_device eth3_device = {
+struct platform_device spear1310_eth3_device = {
 	.name = "stmmaceth",
 	.id = 3,
 	.num_resources = ARRAY_SIZE(eth3_resources),
@@ -646,7 +646,7 @@ static struct resource phy4_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device phy4_device = {
+struct platform_device spear1310_phy4_device = {
 	.name = "stmmacphy",
 	.id = 4,
 	.num_resources = 1,
@@ -680,7 +680,7 @@ static struct resource eth4_resources[] = {
 
 static u64 eth4_dma_mask = ~(u32) 0;
 
-struct platform_device eth4_device = {
+struct platform_device spear1310_eth4_device = {
 	.name = "stmmaceth",
 	.id = 4,
 	.num_resources = ARRAY_SIZE(eth4_resources),
@@ -692,7 +692,8 @@ struct platform_device eth4_device = {
 	},
 };
 
-void __init spear1310_init(void)
+void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count)
 {
 	int ret;
 
@@ -700,6 +701,10 @@ void __init spear1310_init(void)
 	spear13xx_init();
 
 	/* pmx initialization */
+	pmx_driver.mode = pmx_mode;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = pmx_dev_count;
+
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
