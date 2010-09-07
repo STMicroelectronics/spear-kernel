@@ -131,7 +131,7 @@ static struct pmx_dev_mode pmx_fsmc_2_chips_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_fsmc_2_chips = {
+struct pmx_dev spear300_pmx_fsmc_2_chips = {
 	.name = "fsmc_2_chips",
 	.modes = pmx_fsmc_2_chips_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_2_chips_modes),
@@ -154,7 +154,7 @@ static struct pmx_dev_mode pmx_fsmc_4_chips_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_fsmc_4_chips = {
+struct pmx_dev spear300_pmx_fsmc_4_chips = {
 	.name = "fsmc_4_chips",
 	.modes = pmx_fsmc_4_chips_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_4_chips_modes),
@@ -179,7 +179,7 @@ static struct pmx_dev_mode pmx_keyboard_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_keyboard = {
+struct pmx_dev spear300_pmx_keyboard = {
 	.name = "keyboard",
 	.modes = pmx_keyboard_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_modes),
@@ -213,7 +213,7 @@ static struct pmx_dev_mode pmx_clcd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd = {
+struct pmx_dev spear300_pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
@@ -280,7 +280,7 @@ static struct pmx_dev_mode pmx_telecom_gpio_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_gpio = {
+struct pmx_dev spear300_pmx_telecom_gpio = {
 	.name = "telecom_gpio",
 	.modes = pmx_telecom_gpio_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_gpio_modes),
@@ -306,7 +306,7 @@ static struct pmx_dev_mode pmx_telecom_tdm_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_tdm = {
+struct pmx_dev spear300_pmx_telecom_tdm = {
 	.name = "telecom_tdm",
 	.modes = pmx_telecom_tdm_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_tdm_modes),
@@ -331,7 +331,7 @@ static struct pmx_dev_mode pmx_telecom_spi_cs_i2c_clk_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_spi_cs_i2c_clk = {
+struct pmx_dev spear300_pmx_telecom_spi_cs_i2c_clk = {
 	.name = "telecom_spi_cs_i2c_clk",
 	.modes = pmx_telecom_spi_cs_i2c_clk_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_spi_cs_i2c_clk_modes),
@@ -363,7 +363,7 @@ static struct pmx_dev_mode pmx_telecom_camera_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_camera = {
+struct pmx_dev spear300_pmx_telecom_camera = {
 	.name = "telecom_camera",
 	.modes = pmx_telecom_camera_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_camera_modes),
@@ -386,7 +386,7 @@ static struct pmx_dev_mode pmx_telecom_dac_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_dac = {
+struct pmx_dev spear300_pmx_telecom_dac = {
 	.name = "telecom_dac",
 	.modes = pmx_telecom_dac_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_dac_modes),
@@ -411,7 +411,7 @@ static struct pmx_dev_mode pmx_telecom_i2s_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_i2s = {
+struct pmx_dev spear300_pmx_telecom_i2s = {
 	.name = "telecom_i2s",
 	.modes = pmx_telecom_i2s_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_i2s_modes),
@@ -434,7 +434,7 @@ static struct pmx_dev_mode pmx_telecom_boot_pins_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_boot_pins = {
+struct pmx_dev spear300_pmx_telecom_boot_pins = {
 	.name = "telecom_boot_pins",
 	.modes = pmx_telecom_boot_pins_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_boot_pins_modes),
@@ -462,7 +462,7 @@ static struct pmx_dev_mode pmx_telecom_sdhci_4bit_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_sdhci_4bit = {
+struct pmx_dev spear300_pmx_telecom_sdhci_4bit = {
 	.name = "telecom_sdhci_4bit",
 	.modes = pmx_telecom_sdhci_4bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_4bit_modes),
@@ -489,7 +489,7 @@ static struct pmx_dev_mode pmx_telecom_sdhci_8bit_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_sdhci_8bit = {
+struct pmx_dev spear300_pmx_telecom_sdhci_8bit = {
 	.name = "telecom_sdhci_8bit",
 	.modes = pmx_telecom_sdhci_8bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_8bit_modes),
@@ -512,14 +512,14 @@ static struct pmx_dev_mode pmx_gpio1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio1 = {
+struct pmx_dev spear300_pmx_gpio1 = {
 	.name = "arm gpio1",
 	.modes = pmx_gpio1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio1_modes),
 };
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver = {
+static struct pmx_driver pmx_driver = {
 	.mode_reg = {.address = SPEAR300_MODE_CONFIG_REG, .mask = 0x0000000f},
 };
 
@@ -773,7 +773,8 @@ void sdhci_i2s_mem_enable(u8 mask)
 }
 
 /* spear300 routines */
-void __init spear300_init(void)
+void __init spear300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count)
 {
 	int ret = 0;
 
@@ -788,10 +789,13 @@ void __init spear300_init(void)
 			printk(KERN_ERR "Error registering Shared IRQ\n");
 	}
 
+	/* pmx initialization */
+	pmx_driver.mode = pmx_mode;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = pmx_dev_count;
+
 	/* This fixes addresses of all pmx devices for spear300 */
 	spear3xx_pmx_init_addr(&pmx_driver, SPEAR300_PAD_MUX_CONFIG_REG);
-
-	/* pmx initialization */
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);

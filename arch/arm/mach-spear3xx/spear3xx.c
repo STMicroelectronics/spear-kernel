@@ -438,7 +438,7 @@ static struct pmx_dev_mode pmx_firda_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_firda = {
+struct pmx_dev spear3xx_pmx_firda = {
 	.name = "firda",
 	.modes = pmx_firda_modes,
 	.mode_count = ARRAY_SIZE(pmx_firda_modes),
@@ -460,7 +460,7 @@ static struct pmx_dev_mode pmx_i2c_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2c = {
+struct pmx_dev spear3xx_pmx_i2c = {
 	.name = "i2c",
 	.modes = pmx_i2c_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c_modes),
@@ -482,7 +482,7 @@ static struct pmx_dev_mode pmx_ssp_cs_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp_cs = {
+struct pmx_dev spear3xx_pmx_ssp_cs = {
 	.name = "ssp_chip_selects",
 	.modes = pmx_ssp_cs_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp_cs_modes),
@@ -504,7 +504,7 @@ static struct pmx_dev_mode pmx_ssp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp = {
+struct pmx_dev spear3xx_pmx_ssp = {
 	.name = "ssp",
 	.modes = pmx_ssp_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp_modes),
@@ -526,7 +526,7 @@ static struct pmx_dev_mode pmx_mii_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_mii = {
+struct pmx_dev spear3xx_pmx_mii = {
 	.name = "mii",
 	.modes = pmx_mii_modes,
 	.mode_count = ARRAY_SIZE(pmx_mii_modes),
@@ -548,7 +548,7 @@ static struct pmx_dev_mode pmx_gpio_pin0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin0 = {
+struct pmx_dev spear3xx_pmx_gpio_pin0 = {
 	.name = "gpio_pin0",
 	.modes = pmx_gpio_pin0_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin0_modes),
@@ -570,7 +570,7 @@ static struct pmx_dev_mode pmx_gpio_pin1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin1 = {
+struct pmx_dev spear3xx_pmx_gpio_pin1 = {
 	.name = "gpio_pin1",
 	.modes = pmx_gpio_pin1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin1_modes),
@@ -592,7 +592,7 @@ static struct pmx_dev_mode pmx_gpio_pin2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin2 = {
+struct pmx_dev spear3xx_pmx_gpio_pin2 = {
 	.name = "gpio_pin2",
 	.modes = pmx_gpio_pin2_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin2_modes),
@@ -614,7 +614,7 @@ static struct pmx_dev_mode pmx_gpio_pin3_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin3 = {
+struct pmx_dev spear3xx_pmx_gpio_pin3 = {
 	.name = "gpio_pin3",
 	.modes = pmx_gpio_pin3_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin3_modes),
@@ -636,7 +636,7 @@ static struct pmx_dev_mode pmx_gpio_pin4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin4 = {
+struct pmx_dev spear3xx_pmx_gpio_pin4 = {
 	.name = "gpio_pin4",
 	.modes = pmx_gpio_pin4_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin4_modes),
@@ -658,7 +658,7 @@ static struct pmx_dev_mode pmx_gpio_pin5_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpio_pin5 = {
+struct pmx_dev spear3xx_pmx_gpio_pin5 = {
 	.name = "gpio_pin5",
 	.modes = pmx_gpio_pin5_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpio_pin5_modes),
@@ -680,7 +680,7 @@ static struct pmx_dev_mode pmx_uart0_modem_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0_modem = {
+struct pmx_dev spear3xx_pmx_uart0_modem = {
 	.name = "uart0_modem",
 	.modes = pmx_uart0_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modem_modes),
@@ -702,7 +702,7 @@ static struct pmx_dev_mode pmx_uart0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0 = {
+struct pmx_dev spear3xx_pmx_uart0 = {
 	.name = "uart0",
 	.modes = pmx_uart0_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modes),
@@ -724,7 +724,7 @@ static struct pmx_dev_mode pmx_timer_3_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_timer_3_4 = {
+struct pmx_dev spear3xx_pmx_timer_3_4 = {
 	.name = "timer_3_4",
 	.modes = pmx_timer_3_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_timer_3_4_modes),
@@ -746,7 +746,7 @@ static struct pmx_dev_mode pmx_timer_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_timer_1_2 = {
+struct pmx_dev spear3xx_pmx_timer_1_2 = {
 	.name = "timer_1_2",
 	.modes = pmx_timer_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_timer_1_2_modes),
@@ -769,7 +769,7 @@ static struct pmx_dev_mode pmx_plgpio_0_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_0_1 = {
+struct pmx_dev spear3xx_pmx_plgpio_0_1 = {
 	.name = "plgpio 0 and 1",
 	.modes = pmx_plgpio_0_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_0_1_modes),
@@ -791,7 +791,7 @@ static struct pmx_dev_mode pmx_plgpio_2_3_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_2_3 = {
+struct pmx_dev spear3xx_pmx_plgpio_2_3 = {
 	.name = "plgpio 2 and 3",
 	.modes = pmx_plgpio_2_3_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_2_3_modes),
@@ -813,7 +813,7 @@ static struct pmx_dev_mode pmx_plgpio_4_5_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_4_5 = {
+struct pmx_dev spear3xx_pmx_plgpio_4_5 = {
 	.name = "plgpio 4 and 5",
 	.modes = pmx_plgpio_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_4_5_modes),
@@ -835,7 +835,7 @@ static struct pmx_dev_mode pmx_plgpio_6_9_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_6_9 = {
+struct pmx_dev spear3xx_pmx_plgpio_6_9 = {
 	.name = "plgpio 6 to 9",
 	.modes = pmx_plgpio_6_9_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_6_9_modes),
@@ -857,7 +857,7 @@ static struct pmx_dev_mode pmx_plgpio_10_27_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_10_27 = {
+struct pmx_dev spear3xx_pmx_plgpio_10_27 = {
 	.name = "plgpio 10 to 27",
 	.modes = pmx_plgpio_10_27_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_10_27_modes),
@@ -879,7 +879,7 @@ static struct pmx_dev_mode pmx_plgpio_28_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_28 = {
+struct pmx_dev spear3xx_pmx_plgpio_28 = {
 	.name = "plgpio 28",
 	.modes = pmx_plgpio_28_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_28_modes),
@@ -901,7 +901,7 @@ static struct pmx_dev_mode pmx_plgpio_29_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_29 = {
+struct pmx_dev spear3xx_pmx_plgpio_29 = {
 	.name = "plgpio 29",
 	.modes = pmx_plgpio_29_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_29_modes),
@@ -923,7 +923,7 @@ static struct pmx_dev_mode pmx_plgpio_30_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_30 = {
+struct pmx_dev spear3xx_pmx_plgpio_30 = {
 	.name = "plgpio 30",
 	.modes = pmx_plgpio_30_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_30_modes),
@@ -945,7 +945,7 @@ static struct pmx_dev_mode pmx_plgpio_31_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_31 = {
+struct pmx_dev spear3xx_pmx_plgpio_31 = {
 	.name = "plgpio 31",
 	.modes = pmx_plgpio_31_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_31_modes),
@@ -967,7 +967,7 @@ static struct pmx_dev_mode pmx_plgpio_32_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_32 = {
+struct pmx_dev spear3xx_pmx_plgpio_32 = {
 	.name = "plgpio 32",
 	.modes = pmx_plgpio_32_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_32_modes),
@@ -989,7 +989,7 @@ static struct pmx_dev_mode pmx_plgpio_33_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_33 = {
+struct pmx_dev spear3xx_pmx_plgpio_33 = {
 	.name = "plgpio 33",
 	.modes = pmx_plgpio_33_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_33_modes),
@@ -1011,7 +1011,7 @@ static struct pmx_dev_mode pmx_plgpio_34_36_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_34_36 = {
+struct pmx_dev spear3xx_pmx_plgpio_34_36 = {
 	.name = "plgpio 34 to 36",
 	.modes = pmx_plgpio_34_36_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_34_36_modes),
@@ -1033,7 +1033,7 @@ static struct pmx_dev_mode pmx_plgpio_37_42_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_37_42 = {
+struct pmx_dev spear3xx_pmx_plgpio_37_42 = {
 	.name = "plgpio 37 to 42",
 	.modes = pmx_plgpio_37_42_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_37_42_modes),
@@ -1055,7 +1055,7 @@ static struct pmx_dev_mode pmx_plgpio_43_44_47_48_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_43_44_47_48 = {
+struct pmx_dev spear3xx_pmx_plgpio_43_44_47_48 = {
 	.name = "plgpio 43, 44, 47 and 48",
 	.modes = pmx_plgpio_43_44_47_48_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_43_44_47_48_modes),
@@ -1077,7 +1077,7 @@ static struct pmx_dev_mode pmx_plgpio_45_46_49_50_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_plgpio_45_46_49_50 = {
+struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 	.name = "plgpio 45, 46, 49 and 50",
 	.modes = pmx_plgpio_45_46_49_50_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
