@@ -286,4 +286,12 @@ void __init spear1310_map_io(void);
 
 #endif /* CONFIG_MACH_SPEAR1310 */
 
+/* spear900 declarations */
+#ifdef CONFIG_MACH_SPEAR900
+/* Add spear900 machine function declarations here */
+void __init spear900_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
+
+#endif /* CONFIG_MACH_SPEAR900 */
+
 #endif /* __MACH_GENERIC_H */

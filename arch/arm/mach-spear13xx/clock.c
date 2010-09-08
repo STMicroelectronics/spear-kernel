@@ -1313,6 +1313,12 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 };
 #endif
 
+/* array of all spear 900 clock lookups */
+#ifdef CONFIG_MACH_SPEAR900
+static struct clk_lookup spear900_clk_lookups[] = {
+};
+#endif
+
 /* machine clk init */
 void __init spear13xx_clk_init(void)
 {
@@ -1322,9 +1328,12 @@ void __init spear13xx_clk_init(void)
 	if (machine_is_spear1300()) {
 		cnt = ARRAY_SIZE(spear1300_clk_lookups);
 		lookups = spear1300_clk_lookups;
-	} else {
+	} else if (machine_is_spear1310()) {
 		cnt = ARRAY_SIZE(spear1310_clk_lookups);
 		lookups = spear1310_clk_lookups;
+	} else {
+		cnt = ARRAY_SIZE(spear900_clk_lookups);
+		lookups = spear900_clk_lookups;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(spear_clk_lookups); i++)

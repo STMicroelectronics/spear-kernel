@@ -22,3 +22,8 @@ obj-$(CONFIG_MACH_SPEAR1310)		+= spear1310.o
 
 # spear1310 boards files
 obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= spear1310_evb.o
+
+# spear900 specific files
+obj-$(CONFIG_MACH_SPEAR900)		+= spear900.o
+# spear900 boards files
+obj-$(CONFIG_BOARD_SPEAR900_EVB)	+= spear900_evb.o
