@@ -221,6 +221,7 @@ extern struct amba_device spear13xx_gpio_device[];
 extern struct amba_device spear13xx_ssp_device;
 extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_adc_device;
+extern struct platform_device spear13xx_db9000_clcd_device;
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
@@ -245,6 +246,7 @@ extern struct platform_device spear13xx_pcie_gadget2_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear1300 machine device structure declarations here */
+extern struct db9000fb_mach_info sharp_lcd_info;
 
 /* Add spear13xx family function declarations here */
 void __init spear13xx_clk_init(void);
@@ -255,10 +257,6 @@ void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
-
-#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-extern void __init spear1300_evb_init_lcd(void);
-#endif
 
 /* spear1300 declarations */
 #ifdef CONFIG_MACH_SPEAR1300

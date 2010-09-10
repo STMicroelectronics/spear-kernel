@@ -34,6 +34,7 @@
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/hardware.h>
+#include <mach/db9000fb_info.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
@@ -95,6 +96,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_adc_device,
+	&spear13xx_db9000_clcd_device,
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
@@ -248,6 +250,9 @@ static void __init spear900_evb_init(void)
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 
+	/* db9000_clcd plat data */
+	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
+
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
 			&spear13xx_dmac_device[0].dev);
@@ -291,10 +296,6 @@ static void __init spear900_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 
 	spi_init();
-#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	spear1300_evb_init_lcd();
-#endif
-
 }
 
 MACHINE_START(SPEAR900, "ST-SPEAR900-EVB")

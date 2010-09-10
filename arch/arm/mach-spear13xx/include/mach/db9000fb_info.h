@@ -64,4 +64,5 @@ struct db9000fb_mach_info {
 };
 unsigned long db9000fb_get_hsync_time(struct device *dev);
 
-void __init spear1300_evb_init_lcd(void);
+void __init clcd_set_plat_data(struct platform_device *pdev,
+		struct db9000fb_mach_info *data);
