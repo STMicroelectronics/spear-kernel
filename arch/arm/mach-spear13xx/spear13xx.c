@@ -24,6 +24,7 @@
 #include <asm/irq.h>
 #include <asm/localtimer.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
 #include <mach/dma.h>
 #include <mach/irqs.h>
@@ -765,6 +766,17 @@ int enable_pcie0_clk(void)
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
+#ifdef CONFIG_CACHE_L2X0
+	/*
+	 * 256KB (16KB/way), 16-way associativity, parity not
+	 * supported
+	 * TODO: 0x249, picked from nomadik, to be analyzed
+	 * Comment from nomadik:
+	 * At full speed latency must be >=2, so 0x249 in low bits
+	 */
+	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+#endif
+
 	dmac_setup();
 	sdhci_enable();
 }
