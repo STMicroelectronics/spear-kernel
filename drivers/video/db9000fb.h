@@ -153,7 +153,7 @@ struct db9000fb_info {
 #define C_ENABLE_PM		(6)
 #define C_STARTUP		(7)
 
-#define DB9000FB_NAME	"DB9000FB"
+#define DB9000FB_NAME	"CLCD-DB9000"
 
 /*
  * Minimum X and Y resolutions

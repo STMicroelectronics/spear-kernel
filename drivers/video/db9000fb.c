@@ -1599,14 +1599,14 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto failed_fbi;
 	}
 
-	r = request_mem_region(r->start, r->end - r->start + 1, pdev->name);
+	r = request_mem_region(r->start, resource_size(r), pdev->name);
 	if (r == NULL) {
 		dev_err(&pdev->dev, "failed to request I/O memory\n");
 		ret = -EBUSY;
 		goto failed_fbi;
 	}
 
-	fbi->mmio_base = ioremap(r->start, r->end - r->start + 1);
+	fbi->mmio_base = ioremap(r->start, resource_size(r));
 	if (fbi->mmio_base == NULL) {
 		dev_err(&pdev->dev, "failed to map I/O memory\n");
 		ret = -EBUSY;
@@ -1721,7 +1721,7 @@ failed_free_mem:
 failed_free_io:
 	iounmap(fbi->mmio_base);
 failed_free_res:
-	release_mem_region(r->start, r->end - r->start + 1);
+	release_mem_region(r->start, resource_size(r));
 failed_fbi:
 	clk_put(fbi->clk);
 	platform_set_drvdata(pdev, NULL);
@@ -1758,7 +1758,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	iounmap(fbi->mmio_base);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	release_mem_region(r->start, r->end - r->start + 1);
+	release_mem_region(r->start, resource_size(r));
 
 	clk_put(fbi->clk);
 	kfree(fbi);
