@@ -1617,8 +1617,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (clk_enable(fbi->clk)) {
 		dev_err(&pdev->dev, "failed to enable clock\n");
 		ret= -EBUSY;
-		goto failed_free_irq;
-
+		goto failed_fbi;
+	}
 	/* Read the core version register and print it out */
 	db9000_reg = lcd_readl(fbi, DB9000_CIR);
 	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
@@ -1752,9 +1752,8 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, fbi);
-
-	dma_free_writecombine(&pdev->dev, fbi->map_size,
-					fbi->map_cpu, fbi->map_dma);
+	dma_free_writecombine(&pdev->dev, fbi->video_mem_size,
+			fbi->video_mem, fbi->fb.fix.smem_start);
 
 	iounmap(fbi->mmio_base);
 
