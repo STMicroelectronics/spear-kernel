@@ -1248,7 +1248,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "i2s_sclk_clk",		.clk = &i2s_sclk_clk},
 
 	/* clocks having multiple parent source from above clocks */
-	{.dev_id = "clcd",		.clk = &clcd_clk},
+	{.dev_id = "clcd-db9000",	.clk = &clcd_clk},
 	{.dev_id = "gpt0",		.clk = &gpt0_clk},
 	{.dev_id = "gpt1",		.clk = &gpt1_clk},
 	{.dev_id = "gpt2",		.clk = &gpt2_clk},
