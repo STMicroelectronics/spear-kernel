@@ -369,7 +369,7 @@ static void db9000fb_setmode(struct fb_var_screeninfo *var,
 	var->lower_margin	= mode->mode.lower_margin;
 	var->sync		= mode->mode.sync;
 	var->grayscale		= mode->cmap_greyscale;
-	var->xres_virtual 	= var->xres;
+	var->xres_virtual	= var->xres;
 	var->yres_virtual	= var->yres;
 }
 
@@ -513,7 +513,7 @@ static int db9000fb_set_par(struct fb_info *info)
 /*
  * db9000fb_blank():
  *	Blank the display by setting all palette values to zero.  Note, the
- * 	16 bpp mode does not really use the palette, so this will not
+ *	16 bpp mode does not really use the palette, so this will not
  *      blank the display in all modes.
  */
 static int db9000fb_blank(int blank, struct fb_info *info)
@@ -1616,7 +1616,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	/* Enable the clocks for the DB9000 core */
 	if (clk_enable(fbi->clk)) {
 		dev_err(&pdev->dev, "failed to enable clock\n");
-		ret= -EBUSY;
+		ret = -EBUSY;
 		goto failed_fbi;
 	}
 	/* Read the core version register and print it out */
@@ -1768,7 +1768,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 static struct platform_driver db9000fb_driver = {
 	.probe		= db9000fb_probe,
-	.remove 	= db9000fb_remove,
+	.remove		= db9000fb_remove,
 	.suspend	= db9000fb_suspend,
 	.resume		= db9000fb_resume,
 	.driver		= {
