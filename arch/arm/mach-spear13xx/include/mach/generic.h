@@ -220,8 +220,6 @@ extern struct pmx_dev pmx_uart1_modem;
 #define SPEAR_GPT0_CHAN0_IRQ	IRQ_GPT0_TMR0
 #define SPEAR_GPT0_CHAN1_IRQ	IRQ_GPT0_TMR1
 
-extern struct pmx_driver pmx_driver;
-
 /* Add spear13xx family device structure declarations here */
 extern struct amba_device spear13xx_gpio_device[];
 extern struct amba_device spear13xx_ssp_device;
@@ -250,7 +248,8 @@ void spear13xx_secondary_startup(void);
 /* spear1300 declarations */
 #ifdef CONFIG_MACH_SPEAR1300
 /* Add spear1300 machine function declarations here */
-void __init spear1300_init(void);
+void __init spear1300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
 
 #endif /* CONFIG_MACH_SPEAR1300 */
 
@@ -261,7 +260,8 @@ extern struct platform_device spear1310_can0_device;
 extern struct platform_device spear1310_can1_device;
 
 /* Add spear1310 machine function declarations here */
-void __init spear1310_init(void);
+void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
 void __init spear1310_map_io(void);
 
 #endif /* CONFIG_MACH_SPEAR1310 */

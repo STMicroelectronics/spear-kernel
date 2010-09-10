@@ -107,11 +107,6 @@ static void __init spear1300_evb_init(void)
 {
 	unsigned int i;
 
-	/* padmux initialization, must be done before spear1300_init */
-	pmx_driver.mode = NULL;
-	pmx_driver.devs = pmx_devs;
-	pmx_driver.devs_count = ARRAY_SIZE(pmx_devs);
-
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 
@@ -121,7 +116,7 @@ static void __init spear1300_evb_init(void)
 	nand_mach_init(FSMC_NAND_BW8);
 
 	/* call spear1300 machine init function */
-	spear1300_init();
+	spear1300_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();

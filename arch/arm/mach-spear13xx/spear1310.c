@@ -17,7 +17,7 @@
 #include <mach/hardware.h>
 
 /* pmx driver structure */
-struct pmx_driver pmx_driver;
+static struct pmx_driver pmx_driver;
 
 /* Pad multiplexing for uart1_modem device */
 static struct pmx_mux_reg pmx_uart1_modem_mux[] = {
@@ -410,7 +410,8 @@ void __init spear1310_map_io(void)
 	iotable_init(spear1310_io_desc, ARRAY_SIZE(spear1310_io_desc));
 }
 
-void __init spear1310_init(void)
+void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count)
 {
 	int ret;
 
@@ -418,6 +419,10 @@ void __init spear1310_init(void)
 	spear13xx_init();
 
 	/* pmx initialization */
+	pmx_driver.mode = pmx_mode;
+	pmx_driver.devs = pmx_devs;
+	pmx_driver.devs_count = pmx_dev_count;
+
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
