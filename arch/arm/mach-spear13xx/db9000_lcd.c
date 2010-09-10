@@ -46,7 +46,7 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.dear = 0,
 
 };
-static struct db9000fb_mach_info spear1300_evb_sharp_lcd_info = {
+struct db9000fb_mach_info sharp_lcd_info = {
 	.modes		= &sharp_LQ043T3DX0A_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
@@ -56,79 +56,13 @@ static struct db9000fb_mach_info spear1300_evb_sharp_lcd_info = {
 };
 #endif
 
-void __init db9000_register_device(struct platform_device *dev, void *data)
-{
-	int ret;
-	dev->dev.platform_data = data;
-	ret = platform_device_register(dev);
-	if (ret)
-		dev_err(&dev->dev, "unable to register device: %d\n", ret);
-}
-
-
-static struct resource db9000fb_resources[] = {
-	[0] = {
-		.start	= SPEAR13XX_DB9000_LCD_BASE,
-		.end	= SPEAR13XX_DB9000_LCD_BASE +
-				SPEAR13XX_DB9000_LCD_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IRQ_CLCD,
-		.end	= IRQ_CLCD,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-static u64 fb_dma_mask = ~(u64)0;
-
-struct platform_device db9000_device_fb = {
-	.name		= "db9000-fb",
-	.id		= 0,
-	.dev		= {
-	.parent = NULL,
-	.dma_mask = &fb_dma_mask,
-	.coherent_dma_mask = 0xffffffff,
-	},
-	.num_resources	= ARRAY_SIZE(db9000fb_resources),
-	.resource	= db9000fb_resources,
-};
-
-void __init set_db9000_fb_info(struct db9000fb_mach_info *info)
-{
-	db9000_register_device(&db9000_device_fb, info);
-}
-
-void __init set_db9000_fb_parent(struct device *parent_dev)
-{
-	db9000_device_fb.dev.parent = parent_dev;
-}
-
-
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-
-#if 0
-static struct platform_pwm_backlight_data spear1300_evb_backlight_data = {
-	.pwm_id		= 3,
-	.max_brightness	= 100,
-	.dft_brightness	= 100,
-	.pwm_period_ns	= 10000,
-};
-
-static struct platform_device spear1300_evb_backlight_device = {
-	.name = "pwm-backlight",
-	.dev  = {
-/*	.parent = &pxa27x_device_pwm1.dev, */
-	.platform_data = &spear1300_evb_backlight_data,
-	},
-};
-#endif
-
-void __init spear1300_evb_init_lcd(void)
+void clcd_set_plat_data(struct platform_device *pdev,
+		struct db9000fb_mach_info *data)
 {
-/*	platform_device_register(&spear1300_evb_backlight_device); */
-	set_db9000_fb_info(&spear1300_evb_sharp_lcd_info);
+	pdev->dev.platform_data = data;
 }
 #else
-static inline void spear1300_evb_init_lcd(void) {}
+static inline void clcd_set_plat_data(struct platform_device *pdev,
+		struct db9000fb_mach_info *data) {}
 #endif

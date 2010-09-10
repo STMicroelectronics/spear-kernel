@@ -486,6 +486,34 @@ struct platform_device spear13xx_kbd_device = {
 	.resource = kbd_resources,
 };
 
+/* clcd db9000 devide registration */
+static struct resource db9000fb_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_DB9000_LCD_BASE,
+		.end = SPEAR13XX_DB9000_LCD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_CLCD,
+		.end = IRQ_CLCD,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 fb_dma_mask = ~(u64)0;
+
+struct platform_device spear13xx_db9000_clcd_device = {
+	.name = "clcd-db9000",
+	.id = -1,
+	.dev = {
+		.parent = NULL,
+		.dma_mask = &fb_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(db9000fb_resources),
+	.resource = db9000fb_resources,
+};
+
 /* rtc device registration */
 static struct resource rtc_resources[] = {
 	{

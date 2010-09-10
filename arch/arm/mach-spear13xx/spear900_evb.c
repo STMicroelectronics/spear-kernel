@@ -73,6 +73,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
+	&spear13xx_db9000_clcd_device,
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
@@ -217,6 +218,9 @@ static void __init spear900_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
+
+	/* db9000_clcd plat data */
+	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
 
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,

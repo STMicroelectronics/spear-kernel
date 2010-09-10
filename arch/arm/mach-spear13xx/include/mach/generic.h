@@ -225,6 +225,7 @@ extern struct amba_device spear13xx_gpio_device[];
 extern struct amba_device spear13xx_ssp_device;
 extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_adc_device;
+extern struct platform_device spear13xx_db9000_clcd_device;
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
@@ -246,6 +247,9 @@ extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
 extern struct platform_device spear13xx_wdt_device;
 extern struct sys_timer spear13xx_timer;
+
+/* Add spear13xx structure declarations here */
+extern struct db9000fb_mach_info sharp_lcd_info;
 
 /* Add spear13xx family function declarations here */
 void __init spear13xx_clk_init(void);
