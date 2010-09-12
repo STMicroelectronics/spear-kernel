@@ -262,6 +262,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&pmx_can,
 	&pmx_i2c1,
 	&pmx_smii_0_1_2,
+	&pmx_fsmc16bit_4_chips,
 	&pmx_rs485_hdlc_1_2,
 	&pmx_tdm_hdlc_1_2,
 	&pmx_uart_1,
@@ -296,7 +297,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_i2c_device,
 	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
-	&spear13xx_nand_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
@@ -322,6 +322,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1310_tdm_hdlc_1_device,
 	&spear1310_rs485_0_device,
 	&spear1310_rs485_1_device,
+	&spear1310_ras_fsmc_nor_device,
 };
 
 /* keyboard specific platform data */
@@ -446,6 +447,23 @@ static int spear1310_pcie_port_is_host(int port)
 }
 #endif
 
+static void  __init ras_fsmc_config(u32 mode, u32 width)
+{
+	u32 val, *address;
+
+	address = ioremap(SPEAR1310_RAS_CTRL_REG0, SZ_16);
+
+	val = readl(address);
+	val &= ~(RAS_FSMC_MODE_MASK | RAS_FSMC_WIDTH_MASK);
+	val |= mode;
+	val |= width;
+	val |= RAS_FSMC_CS_SPLIT;
+
+	writel(val, address);
+
+	iounmap(address);
+}
+
 static void __init spear1310_evb_init(void)
 {
 	/* set adc platform data */
@@ -477,6 +495,8 @@ static void __init spear1310_evb_init(void)
 	/* initialize fsmc related data in fsmc plat data */
 	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
 			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
+	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
+			0, FSMC_FLASH_WIDTH16);
 
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
@@ -493,6 +513,11 @@ static void __init spear1310_evb_init(void)
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
+
+	/* ras fsmc init */
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);
+	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 3,
+			FSMC_FLASH_WIDTH16);
 
 	spi_init();
 }

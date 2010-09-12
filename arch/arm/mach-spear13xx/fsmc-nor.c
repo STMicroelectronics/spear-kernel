@@ -59,6 +59,10 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 		ctrl |= WIDTH_16;
 		break;
 
+	case FSMC_FLASH_WIDTH32:
+		ctrl |= WIDTH_32;
+		break;
+
 	default:
 		ctrl |= WIDTH_8;
 		break;

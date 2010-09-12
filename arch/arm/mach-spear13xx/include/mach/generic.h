@@ -27,6 +27,7 @@
  */
 /* Pad multiplexing base */
 #define SPEAR13XX_FUNC_ENB_BASE		UL(0xE0700650)
+#define SPEAR13XX_PCM_CFG_BASE		UL(0xE0700100)
 
 #define PAD_MUX_CONFIG_REG_0	UL(0xE0700650)
 #define PAD_MUX_CONFIG_REG_1	UL(0xE0700654)
@@ -36,6 +37,7 @@
 #if defined(CONFIG_MACH_SPEAR1310)
 #define SPEAR1310_FUNC_CNTL_0	UL(0x6C800000)
 #define PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
+#define PMX_EGPIO7_MASK		(1 << 2)	/* Pcm cfg reg */
 #endif
 
 /* pad mux declarations */
@@ -200,6 +202,8 @@ extern struct pmx_dev pmx_uart_3_4_5;
 extern struct pmx_dev pmx_rs485_hdlc_1_2;
 extern struct pmx_dev pmx_tdm_hdlc_1_2;
 extern struct pmx_dev pmx_nand32bit;
+extern struct pmx_dev pmx_fsmc16bit_4_chips;
+extern struct pmx_dev pmx_fsmc32bit_4_chips;
 extern struct pmx_dev pmx_gmii1;
 extern struct pmx_dev pmx_rgmii;
 extern struct pmx_dev pmx_i2c1;
@@ -290,6 +294,7 @@ extern struct platform_device spear1310_tdm_hdlc_0_device;
 extern struct platform_device spear1310_tdm_hdlc_1_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
+extern struct platform_device spear1310_ras_fsmc_nor_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,

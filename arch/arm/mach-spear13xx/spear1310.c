@@ -11,6 +11,8 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/stmmac.h>
 #include <asm/irq.h>
@@ -167,6 +169,10 @@ static struct pmx_mux_reg pmx_fsmc32bit_mux[] = {
 		.address = PAD_MUX_CONFIG_REG_1,
 		.mask = PMX_KEYBOARD_6X6_MASK | PMX_NAND16BIT4DEV_1_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR13XX_PCM_CFG_BASE,
+		.mask = PMX_EGPIO7_MASK,
+		.value = 0,
 	},
 };
 
@@ -181,6 +187,32 @@ struct pmx_dev pmx_fsmc32bit_4_chips = {
 	.name = "fsmc32bit",
 	.modes = pmx_fsmc32bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc32bit_modes),
+};
+
+/* Pad multiplexing for fsmc16bit device */
+static struct pmx_mux_reg pmx_fsmc16bit_mux[] = {
+	{
+		.address = PAD_MUX_CONFIG_REG_0,
+		.mask = PMX_NAND16BIT4DEV_0_MASK,
+		.value = 0,
+	}, {
+		.address = PAD_MUX_CONFIG_REG_1,
+		.mask = PMX_KEYBOARD_6X6_MASK | PMX_NAND16BIT4DEV_1_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_fsmc16bit_modes[] = {
+	{
+		.mux_regs = pmx_fsmc16bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc16bit_mux),
+	},
+};
+
+struct pmx_dev pmx_fsmc16bit_4_chips = {
+	.name = "fsmc16bit",
+	.modes = pmx_fsmc16bit_modes,
+	.mode_count = ARRAY_SIZE(pmx_fsmc16bit_modes),
 };
 
 /* Pad multiplexing for gmii1 device */
@@ -730,6 +762,25 @@ struct platform_device spear1310_rs485_1_device = {
 	},
 	.num_resources = ARRAY_SIZE(rs485_1_resources),
 	.resource = rs485_1_resources,
+};
+
+/* fsmc nor flash device registeration */
+static struct physmap_flash_data ras_fsmc_norflash_data;
+
+static struct resource ras_fsmc_nor_resources[] = {
+	{
+		.start	= SPEAR1310_FSMC1_CS3_BASE,
+		.end	= SPEAR1310_FSMC1_CS3_BASE + SZ_64M - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1310_ras_fsmc_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = ras_fsmc_nor_resources,
+	.num_resources = ARRAY_SIZE(ras_fsmc_nor_resources),
+	.dev.platform_data = &ras_fsmc_norflash_data,
 };
 
 static void tdm_hdlc_setup(void)
