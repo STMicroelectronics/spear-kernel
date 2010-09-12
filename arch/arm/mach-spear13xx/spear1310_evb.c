@@ -23,6 +23,7 @@
 #include <asm/mach-types.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
+#include <plat/hdlc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
@@ -249,6 +250,27 @@ static void __init ras_fsmc_config(u32 mode, u32 width)
 	iounmap(address);
 }
 
+/*
+ * select_e1_interface: config CPLD to enable select E1 interface
+ *
+ * By default, TDM is selected. To switch the hardware connection, SW should
+ * call this function in machine init routine to enable E1 interface
+ */
+#if 0
+static void __init select_e1_interface(struct platform_device *pdev)
+{
+	/*
+	 * selection is through CPLD which is connected on FSMC bus
+	 * before config, initialize FSMC controller here
+	 */
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_8);
+	fsmc_nor_init(NULL, SPEAR1310_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
+
+	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + (pdev->id * 0x100), 0);
+	tdm_hdlc_set_plat_data(pdev, 32);
+}
+#endif
+
 static void __init spear1310_evb_init(void)
 {
 	unsigned int i;
@@ -331,6 +353,12 @@ static void __init spear1310_evb_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear1310_tdm_hdlc_0_device); */
+	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
 }
 
 MACHINE_START(SPEAR1310, "ST-SPEAR1310-EVB")

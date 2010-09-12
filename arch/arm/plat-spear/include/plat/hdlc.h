@@ -37,4 +37,11 @@ struct rs485_hdlc_platform_data {
 
 int e1phy_init(u32 base, int shift);
 
+static inline void tdm_hdlc_set_plat_data(struct platform_device *pdev, int tsn)
+{
+	struct tdm_hdlc_platform_data *pdata = dev_get_platdata(&pdev->dev);
+
+	pdata->nr_timeslot = tsn;
+}
+
 #endif /* __PLAT_HDLC_H */

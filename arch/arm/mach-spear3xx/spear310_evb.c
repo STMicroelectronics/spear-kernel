@@ -20,6 +20,7 @@
 #include <asm/mach-types.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
+#include <plat/hdlc.h>
 #include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
@@ -105,6 +106,26 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_rs485_1_device,
 };
 
+/*
+ * select_e1_interface: config CPLD to enable select E1 interface
+ *
+ * By default, TDM is selected. To switch the hardware connection, SW should
+ * call this function in machine init routine to enable E1 interface
+ */
+#if 0
+static void __init select_e1_interface(struct platform_device *pdev)
+{
+	/*
+	 * selection is through CPLD which is connected on EMI bus
+	 * before config, initialize EMI controller here
+	 */
+	emi_init(&spear310_tdm_hdlc_device, SPEAR310_EMI_REG_BASE, 2, EMI_FLASH_WIDTH8);
+
+	e1phy_init(SPEAR310_EMI_MEM_2_BASE, 2);
+	tdm_hdlc_set_plat_data(pdev, 32);
+}
+#endif
+
 /* spi board information */
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
 DECLARE_SPI_CS_CONTROL(0, flash, BASIC_GPIO_3);
@@ -176,6 +197,11 @@ static void __init spear310_evb_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 }
 
 MACHINE_START(SPEAR310, "ST-SPEAR310-EVB")

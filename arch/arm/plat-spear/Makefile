@@ -10,6 +10,7 @@ obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o
 obj-$(CONFIG_MACH_SPEAR310)	+= plgpio.o
 obj-$(CONFIG_MACH_SPEAR320)	+= plgpio.o
+obj-$(CONFIG_SPEAR_HDLC)	+= e1phy.o
 obj-$(CONFIG_SPEAR_PWM)		+= pwm.o
 
 obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= i2c_eval_board.o
