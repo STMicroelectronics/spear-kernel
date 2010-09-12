@@ -27,3 +27,5 @@ obj-$(CONFIG_SPEAR_CLCD)	+= clcd.o
 obj-$(CONFIG_SPEAR_PWM)		+= pwm.o
 
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o
+
+obj-$(CONFIG_SPEAR_HDLC)	+= e1phy.o

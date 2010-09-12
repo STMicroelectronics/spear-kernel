@@ -376,7 +376,11 @@ struct platform_device spear310_plgpio_device = {
 static struct tdm_hdlc_platform_data tdm_hdlc_plat_data = {
 	.ip_type = SPEAR310_TDM_HDLC,
 	.nr_channel = 2,
+#ifndef CONFIG_ENABLE_E1_INTERFACE
 	.nr_timeslot = 128,
+#else
+	.nr_timeslot = 32,
+#endif
 };
 
 static struct resource tdm_hdlc_resources[] = {

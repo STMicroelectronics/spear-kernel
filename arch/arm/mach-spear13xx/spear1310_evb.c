@@ -37,6 +37,7 @@
 #include <plat/spi.h>
 #include <mach/hardware.h>
 #include <mach/db9000fb_info.h>
+#include <plat/hdlc.h>
 
 #define GETH1_PHY_INTF_MASK	(0x7 << 4)
 #define GETH2_PHY_INTF_MASK	(0x7 << 7)
@@ -45,6 +46,7 @@
 #define PHY_INTF_MODE_RGMII	0x1
 #define PHY_INTF_MODE_RMII	0x4
 #define PHY_INTF_MODE_SMII	0x6
+
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
 static struct mtd_partition partition_info[] = {
@@ -513,6 +515,17 @@ static void __init spear1310_evb_init(void)
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
+
+#if defined(CONFIG_ENABLE_E1_INTERFACE_A) || defined(CONFIG_ENABLE_E1_INTERFACE_B)
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_8);
+	fsmc_nor_init(NULL, SPEAR1310_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
+#ifdef CONFIG_ENABLE_E1_INTERFACE_A
+	e1phy_init(SPEAR1310_FSMC1_CS2_BASE, 0);
+#endif
+#ifdef CONFIG_ENABLE_E1_INTERFACE_B
+	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + 0x100, 0);
+#endif
+#endif
 
 	/* ras fsmc init */
 	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);

@@ -653,7 +653,11 @@ struct platform_device spear1310_i2c1_device = {
 static struct tdm_hdlc_platform_data tdm_hdlc_0_plat_data = {
 	.ip_type = SPEAR1310_TDM_HDLC,
 	.nr_channel = 2,
+#ifndef CONFIG_ENABLE_E1_INTERFACE_A
 	.nr_timeslot = 128,
+#else
+	.nr_timeslot = 32,
+#endif
 };
 
 static struct resource tdm_hdlc_0_resources[] = {
@@ -681,7 +685,11 @@ struct platform_device spear1310_tdm_hdlc_0_device = {
 static struct tdm_hdlc_platform_data tdm_hdlc_1_plat_data = {
 	.ip_type = SPEAR1310_TDM_HDLC,
 	.nr_channel = 2,
+#ifndef CONFIG_ENABLE_E1_INTERFACE_B
 	.nr_timeslot = 128,
+#else
+	.nr_timeslot = 32,
+#endif
 };
 
 static struct resource tdm_hdlc_1_resources[] = {

@@ -17,6 +17,10 @@ config BOARD_SPEAR310_EVB
 	help
 	  Supports ST SPEAr310 Evaluation Board
 
+config ENABLE_E1_INTERFACE
+	depends on BOARD_SPEAR310_EVB
+	bool "Enable onboard E1 interface"
+
 config BOARD_SPEAR320_EVB
 	bool "SPEAr320 Evaluation Board"
 	select MACH_SPEAR320

@@ -194,6 +194,12 @@ static void __init spear310_evb_init(void)
 	emi_init(&spear310_emi_nor_device, SPEAR310_EMI_REG_BASE, 0,
 			EMI_FLASH_WIDTH32);
 
+	/* Initialize E1 interface */
+#ifdef CONFIG_ENABLE_E1_INTERFACE
+	emi_init(&spear310_tdm_hdlc_device, SPEAR310_EMI_REG_BASE, 2, EMI_FLASH_WIDTH8);
+	e1phy_init(SPEAR310_EMI_MEM_2_BASE, 2);
+#endif
+
 	spi_init();
 }
 
