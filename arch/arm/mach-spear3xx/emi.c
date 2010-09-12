@@ -47,7 +47,7 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 	if (!emi_reg_base)
 		return -ENOMEM;
 
-	clk = clk_get(&pdev->dev, NULL);
+	clk = clk_get(NULL, "emi");
 	if (IS_ERR(clk)) {
 		iounmap(emi_reg_base);
 		return PTR_ERR(clk);

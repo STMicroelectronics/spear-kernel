@@ -768,7 +768,7 @@ static struct clk_lookup spear300_clk_lookups[] = {
 #ifdef CONFIG_MACH_SPEAR310
 static struct clk_lookup spear310_clk_lookups[] = {
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
-	{ .dev_id = "physmap-flash",	.clk = &emi_clk},
+	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "uart1",		.clk = &uart1_clk},
 	{ .dev_id = "uart2",		.clk = &uart2_clk},
 	{ .dev_id = "uart3",		.clk = &uart3_clk},
@@ -783,7 +783,7 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
-	{ .dev_id = "physmap-flash",	.clk = &emi_clk},
+	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
 	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
 	{ .dev_id = "spear_can.0",	.clk = &can0_clk},
