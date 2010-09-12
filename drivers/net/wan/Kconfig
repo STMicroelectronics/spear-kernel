@@ -501,4 +501,10 @@ config SBNI_MULTILINE
 
 	  If unsure, say N.
 
+config SPEAR_HDLC
+	tristate "SPEArxx HDLC controller support"
+	depends on HDLC
+	---help---
+	  Driver for for SPEAr serial Soc HDLC controller.
+
 endif # WAN
