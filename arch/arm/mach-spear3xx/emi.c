@@ -87,7 +87,7 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 		emi_reg_base + (EMI_BANK_REG_SIZE * bank) + CTRL_REG);
 
 	/* disable all the acks */
-	writel(0x3f << bank, emi_reg_base + ack_reg);
+	writel(0x3f, emi_reg_base + ack_reg);
 
 	iounmap(emi_reg_base);
 
