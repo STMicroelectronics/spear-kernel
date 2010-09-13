@@ -14,9 +14,11 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <linux/mtd/nand.h>
+#include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
@@ -34,6 +36,29 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
 	PARTITION("Kernel", 0x80000, 24 * 0x20000),
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+
+/* ethernet phy device */
+static struct plat_stmmacphy_data phy_private_data = {
+	.bus_id = 0,
+	.phy_addr = -1,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_MII,
+};
+
+static struct resource phy_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+struct platform_device spear320_phy_device = {
+	.name = "stmmacphy",
+	.id = -1,
+	.num_resources = 1,
+	.resource = &phy_resources,
+	.dev.platform_data = &phy_private_data,
 };
 
 /* padmux devices to enable */
@@ -82,7 +107,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_jpeg_device,
 	&spear3xx_ohci0_device,
 	&spear3xx_ohci1_device,
-	&spear3xx_phy_device,
 	&spear3xx_rtc_device,
 	&spear3xx_smi_device,
 
@@ -92,6 +116,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
+	&spear320_phy_device,
 	&spear320_plgpio_device,
 	&spear320_pwm_device,
 	&spear320_sdhci_device,

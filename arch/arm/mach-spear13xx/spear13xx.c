@@ -263,28 +263,6 @@ struct platform_device spear13xx_i2s1_device = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacphy_data phy0_private_data = {
-	.bus_id = 0,
-	.phy_addr = 5,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_GMII,
-};
-
-static struct resource phy0_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-struct platform_device spear13xx_phy0_device = {
-	.name		= "stmmacphy",
-	.id		= 0,
-	.num_resources	= 1,
-	.resource	= &phy0_resources,
-	.dev.platform_data = &phy0_private_data,
-};
-
 static struct plat_stmmacenet_data ether0_platform_data = {
 	.bus_id = 0,
 	.has_gmac = 1,

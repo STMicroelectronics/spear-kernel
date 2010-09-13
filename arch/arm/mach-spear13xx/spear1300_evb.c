@@ -15,8 +15,10 @@
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
+#include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <linux/stmpe610.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -40,6 +42,29 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
 	PARTITION("Kernel", 0x80000, 24 * 0x20000),
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+
+/* Ethernet phy device registeration */
+static struct plat_stmmacphy_data phy0_private_data = {
+	.bus_id = 0,
+	.phy_addr = 5,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_GMII,
+};
+
+static struct resource phy0_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+struct platform_device spear1300_phy0_device = {
+	.name		= "stmmacphy",
+	.id		= 0,
+	.num_resources	= 1,
+	.resource	= &phy0_resources,
+	.dev.platform_data = &phy0_private_data,
 };
 
 /* padmux devices to enable */
@@ -69,6 +94,7 @@ static struct amba_device *amba_devs[] __initdata = {
 };
 
 static struct platform_device *plat_devs[] __initdata = {
+	/* spear13xx specific devices */
 	&spear13xx_adc_device,
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
@@ -82,12 +108,14 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_i2s0_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
-	&spear13xx_phy0_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
 	&spear13xx_wdt_device,
 	&spear13xx_pcie_gadget0_device,
+
+	/* spear1300 specific devices */
+	&spear1300_phy0_device,
 };
 
 /* keyboard specific platform data */

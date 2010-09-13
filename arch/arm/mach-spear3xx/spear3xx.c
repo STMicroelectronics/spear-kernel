@@ -17,7 +17,6 @@
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/stmmac.h>
-#include <linux/phy.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
@@ -169,28 +168,6 @@ struct platform_device spear3xx_i2c_device = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacphy_data phy_private_data = {
-	.bus_id = 0,
-	.phy_addr = -1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
-};
-
-static struct resource phy_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-struct platform_device spear3xx_phy_device = {
-	.name = "stmmacphy",
-	.id = -1,
-	.num_resources = 1,
-	.resource = &phy_resources,
-	.dev.platform_data = &phy_private_data,
-};
-
 static struct plat_stmmacenet_data ether_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
