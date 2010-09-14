@@ -125,6 +125,13 @@ config PARPORT_GSC
 	default GSC
 	select PARPORT_NOT_PC
 
+config PARPORT_SPEAR
+	tristate "SPEAr Parallel Port"
+	select PARPORT_NOT_PC
+	help
+	  Say Y here if you need support for the parallel port hardware on
+	  the SPEAr320 industrial chip.
+
 config PARPORT_SUNBPP
 	tristate "Sparc hardware (EXPERIMENTAL)"
 	depends on SBUS && EXPERIMENTAL
