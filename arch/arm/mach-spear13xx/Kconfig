@@ -18,12 +18,12 @@ config BOARD_SPEAR1310_EVB
 	  Supports ST SPEAr1310 Evaluation Board
 
 config ENABLE_E1_INTERFACE_A
-	depends on BOARD_SPEAR1310_EVB
-	bool "Enalbe onboard E1 interface A"
+	depends on BOARD_SPEAR1310_EVB && SPEAR_HDLC
+	bool "Enable onboard E1 interface A"
 
 config ENABLE_E1_INTERFACE_B
-	depends on BOARD_SPEAR1310_EVB
-	bool "Enalbe onboard E1 interface B"
+	depends on BOARD_SPEAR1310_EVB && SPEAR_HDLC
+	bool "Enable onboard E1 interface B"
 
 config BOARD_SPEAR900_EVB
 	bool "SPEAr900 Evaluation Board"
