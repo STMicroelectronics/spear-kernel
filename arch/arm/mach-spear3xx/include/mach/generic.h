@@ -212,6 +212,7 @@ extern struct platform_device spear320_nand_device;
 extern struct platform_device spear320_plgpio_device;
 extern struct platform_device spear320_pwm_device;
 extern struct platform_device spear320_sdhci_device;
+extern struct platform_device spear320_spp_device;
 
 /* pad mux modes */
 extern struct pmx_mode spear320_auto_net_smii_mode;

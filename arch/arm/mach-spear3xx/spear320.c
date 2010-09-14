@@ -834,6 +834,26 @@ struct platform_device spear320_sdhci_device = {
 	.resource = sdhci_resources,
 };
 
+/* standard parallel port device */
+static struct resource spp_resources[] = {
+	[0] = {
+		.start = SPEAR320_PAR_PORT_BASE,
+		.end = SPEAR320_PAR_PORT_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR320_VIRQ_SPP,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_spp_device = {
+	.name = "spear-spp",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(spp_resources),
+	.resource = spp_resources,
+};
+
 /* spear3xx shared irq */
 static struct shirq_dev_config shirq_ras1_config[] = {
 	{
