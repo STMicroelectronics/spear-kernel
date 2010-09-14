@@ -250,8 +250,10 @@ static void __init spear1300_evb_init(void)
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	/* db9000_clcd plat data */
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
+#endif
 
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
