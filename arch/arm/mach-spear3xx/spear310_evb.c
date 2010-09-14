@@ -100,6 +100,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_emi_nor_device,
 	&spear310_nand_device,
 	&spear310_plgpio_device,
+	&spear310_tdm_hdlc_device,
+	&spear310_rs485_0_device,
+	&spear310_rs485_1_device,
 };
 
 /* spi board information */

@@ -177,6 +177,9 @@ extern struct amba_device spear310_uart5_device;
 extern struct platform_device spear310_emi_nor_device;
 extern struct platform_device spear310_plgpio_device;
 extern struct platform_device spear310_nand_device;
+extern struct platform_device spear310_tdm_hdlc_device;
+extern struct platform_device spear310_rs485_0_device;
+extern struct platform_device spear310_rs485_1_device;
 
 /* pad mux devices */
 extern struct pmx_dev spear310_pmx_emi_cs_0_1_4_5;

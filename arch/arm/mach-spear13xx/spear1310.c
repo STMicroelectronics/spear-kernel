@@ -15,8 +15,11 @@
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <asm/irq.h>
+#include <asm/delay.h>
+#include <plat/hdlc.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -499,6 +502,147 @@ struct platform_device spear1310_ras_fsmc_nor_device = {
 	.dev.platform_data = &ras_fsmc_norflash_data,
 };
 
+static struct tdm_hdlc_platform_data tdm_hdlc_0_plat_data = {
+	.ip_type = SPEAR1310_TDM_HDLC,
+	.nr_channel = 2,
+	.nr_timeslot = 128,
+};
+
+static struct resource tdm_hdlc_0_resources[] = {
+	{
+		.start = SPEAR1310_TDM_E1_0_BASE,
+		.end = SPEAR1310_TDM_E1_0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_TDM0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_tdm_hdlc_0_device = {
+	.name = "tdm_hdlc",
+	.id = 0,
+	.dev = {
+		.platform_data = &tdm_hdlc_0_plat_data,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(tdm_hdlc_0_resources),
+	.resource = tdm_hdlc_0_resources,
+};
+
+static struct tdm_hdlc_platform_data tdm_hdlc_1_plat_data = {
+	.ip_type = SPEAR1310_TDM_HDLC,
+	.nr_channel = 2,
+	.nr_timeslot = 128,
+};
+
+static struct resource tdm_hdlc_1_resources[] = {
+	{
+		.start = SPEAR1310_TDM_E1_1_BASE,
+		.end = SPEAR1310_TDM_E1_1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_TDM1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_tdm_hdlc_1_device = {
+	.name = "tdm_hdlc",
+	.id = 1,
+	.dev = {
+		.platform_data = &tdm_hdlc_1_plat_data,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(tdm_hdlc_1_resources),
+	.resource = tdm_hdlc_1_resources,
+};
+
+static struct rs485_hdlc_platform_data rs485_0_plat_data = {
+	.tx_falling_edge = 1,
+	.rx_rising_edge = 1,
+	.cts_enable = 1,
+	.cts_delay = 50,
+};
+
+static struct rs485_hdlc_platform_data rs485_1_plat_data = {
+	.tx_falling_edge = 1,
+	.rx_rising_edge = 1,
+	.cts_enable = 1,
+	.cts_delay = 50,
+};
+
+static struct resource rs485_0_resources[] = {
+	{
+		.start = SPEAR1310_RS485_0_BASE,
+		.end = SPEAR1310_RS485_0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_RS4850,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource rs485_1_resources[] = {
+	{
+		.start = SPEAR1310_RS485_1_BASE,
+		.end = SPEAR1310_RS485_1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_RS4851,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_rs485_0_device = {
+	.name = "rs485_hdlc",
+	.id = 0,
+	.dev = {
+		.platform_data = &rs485_0_plat_data,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(rs485_0_resources),
+	.resource = rs485_0_resources,
+};
+
+struct platform_device spear1310_rs485_1_device = {
+	.name = "rs485_hdlc",
+	.id = 1,
+	.dev = {
+		.platform_data = &rs485_1_plat_data,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(rs485_1_resources),
+	.resource = rs485_1_resources,
+};
+
+static void tdm_hdlc_setup(void)
+{
+	unsigned long val;
+
+	/* use vcodiv4 source for ras_clk_synt1 */
+	val = readl(PLL_CFG);
+	val &= ~0x18000000;
+	writel(val, PLL_CFG);
+
+	writel(0x80004000, RAS_CLK_SYNT1);	/* generate 250MHz clock */
+
+	udelay(2000);
+
+	/* enable proper clock going to RAS */
+	val = readl(RAS_CLK_ENB);
+	val |= (1 << SYN1_CLK_ENB);
+	writel(val, RAS_CLK_ENB);
+
+	val = readl(RAS_SW_RST);
+	val &= ~(1 << SYN1_CLK_ENB);
+	writel(val, RAS_SW_RST);
+
+	val = readl(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0));
+	val |= 0x02000000;
+	writel(val, IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0));
+}
+
 /* Following will create 1310 specific static virtual/physical mappings */
 struct map_desc spear1310_io_desc[] __initdata = {
 	{
@@ -523,6 +667,8 @@ void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 
 	/* call spear13xx family common init function */
 	spear13xx_init();
+
+	tdm_hdlc_setup();
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
