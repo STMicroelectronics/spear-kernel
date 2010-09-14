@@ -318,6 +318,10 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1310_phy2_device,
 	&spear1310_phy3_device,
 	&spear1310_phy4_device,
+	&spear1310_tdm_hdlc_0_device,
+	&spear1310_tdm_hdlc_1_device,
+	&spear1310_rs485_0_device,
+	&spear1310_rs485_1_device,
 };
 
 /* keyboard specific platform data */
