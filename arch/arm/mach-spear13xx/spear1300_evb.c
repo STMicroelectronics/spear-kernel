@@ -220,7 +220,9 @@ static void __init spear1300_evb_init(void)
 	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
 
 	/* db9000_clcd plat data */
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
+#endif
 
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,

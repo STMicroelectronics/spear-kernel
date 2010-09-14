@@ -56,13 +56,8 @@ struct db9000fb_mach_info sharp_lcd_info = {
 };
 #endif
 
-#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
 	pdev->dev.platform_data = data;
 }
-#else
-static inline void clcd_set_plat_data(struct platform_device *pdev,
-		struct db9000fb_mach_info *data) {}
-#endif
