@@ -89,7 +89,7 @@ static void show_out_chain(struct dw_udc_ep *ep)
 
 static void show_in_chain(struct dw_udc_ep *ep)
 {
-	 struct dw_udc_bulkd *tmp_desc;
+	struct dw_udc_bulkd *tmp_desc;
 
 	DW_UDC_DBG(DBG_REGISTERS, "In Chain for ep %s:\n", ep->ep.name);
 	tmp_desc = ep->desc_in_ptr;
@@ -435,9 +435,9 @@ static void udc_config_dma(struct dw_udc_ep *ep)
 		ep->desc_out_ptr = desc;
 
 		/*
-		* set NULL descriptor for in stage packet
-		* will be set when required
-		*/
+		 * set NULL descriptor for in stage packet
+		 * will be set when required
+		 */
 		writel(0, &in_regs->desc_ptr);
 		ep->desc_in_ptr = NULL;
 
@@ -809,9 +809,9 @@ kick_dma(struct dw_udc_ep *ep, struct dw_udc_request *req,
 }
 
 /*
-* Cancel all USB request still pending for every endpoint and
-* disconnect the gadget driver.
-*/
+ * Cancel all USB request still pending for every endpoint and
+ * disconnect the gadget driver.
+ */
 static void
 stop_activity(struct dw_udc_dev *dev, struct usb_gadget_driver *driver)
 {
@@ -938,20 +938,19 @@ static int dw_ep_disable(struct usb_ep *_ep)
 		writel(tmp, &ep->out_regs->control);
 
 		/*
-		* Verify, will this raise an interrupt
-		* so that we should call intr handler
-		*/
+		 * Verify, will this raise an interrupt
+		 * so that we should call intr handler
+		 */
 		udc_handle_epn_out_int(ep);
 	} else {
 		/* flush TX FIFO */
 		tmp = readl(&ep->in_regs->control);
 		tmp |= ENDP_CNTL_FLUSH;
 		writel(tmp, &ep->in_regs->control);
-
 		/*
-		* Verify, will this raise an interrupt
-		* so that we should call intr handler
-		*/
+		 * Verify, will this raise an interrupt
+		 * so that we should call intr handler
+		 */
 		udc_handle_epn_in_int(ep);
 	}
 
@@ -1040,6 +1039,7 @@ static int dw_ep_queue(struct usb_ep *_ep,
 {
 	struct dw_udc_epout_regs *out_regs;
 	struct dw_udc_epin_regs *in_regs;
+	struct dw_udc_glob_regs *glob;
 	struct dw_udc_dev *dev;
 	struct dw_udc_request *req;
 	struct dw_udc_ep *ep;
@@ -1055,6 +1055,7 @@ static int dw_ep_queue(struct usb_ep *_ep,
 	out_regs = ep->out_regs;
 	is_in = is_ep_in(ep);
 	dev = ep->dev;
+	glob = dev->glob_base;
 
 	if (_req->status == -EINPROGRESS)
 		return -EINPROGRESS;
@@ -1068,9 +1069,9 @@ static int dw_ep_queue(struct usb_ep *_ep,
 	_req->actual = 0;
 
 	/*
-	* We can keep only 1 request at a given time in control endpoint.
-	* Free if something already queued
-	*/
+	 * We can keep only 1 request at a given time in control endpoint.
+	 * Free if something already queued
+	 */
 
 	if ((ep->attrib == USB_ENDPOINT_XFER_CONTROL) &&
 			!list_empty(&ep->queue)) {
@@ -1107,6 +1108,32 @@ static int dw_ep_queue(struct usb_ep *_ep,
 					req = 0;
 				}
 				break;
+			case EP0_ACK_SETCONF_INTER_DELAYED:
+				if (req->req.length == 0) {
+					spin_unlock_irqrestore(&dev->lock,
+							flags);
+					req_done(ep, req, 0);
+					spin_lock_irqsave(&dev->lock, flags);
+					/* send ack to the host */
+					tmp = readl(&glob->dev_control);
+					tmp |= DEV_CNTL_CSR_DONE;
+					writel(tmp, &glob->dev_control);
+					dev->ep0state = EP0_CTRL_IDLE;
+					dev->int_cmd = 0;
+
+					spin_unlock_irqrestore(&dev->lock,
+							flags);
+
+					return 0;
+				} else {
+					pr_err("got a request while in state \
+					EP0_ACK_SETCONF_INTER_DELAYED of \
+					%d\n", req->req.length);
+					list_del_init(&req->queue);
+					return -EINVAL;
+				}
+				break;
+
 			default:
 				pr_err("Queued request while in state %d\n",
 						dev->ep0state);
@@ -1238,10 +1265,10 @@ static int dw_ep_set_halt(struct usb_ep *_ep, int halt)
 		}
 	} else {
 		/*
-		* on reception of clear feature the udc subsystem clears
-		* the stall bit and set the NAK bit.
-		* when clear_halt is issued by gadget the NAK bit gets cleared
-		*/
+		 * on reception of clear feature the udc subsystem clears
+		 * the stall bit and set the NAK bit.
+		 * when clear_halt is issued by gadget the NAK bit gets cleared
+		 */
 		if (is_ep_in(ep)) {
 			tmp = readl(&inregs->control);
 			tmp |= ENDP_CNTL_CNAK;
@@ -1283,7 +1310,7 @@ static void dw_ep_fifo_flush(struct usb_ep *_ep)
 	}
 }
 
-	static int
+static int
 dw_ep_enable(struct usb_ep *_ep, const struct usb_endpoint_descriptor *desc)
 {
 	struct dw_udc_ep *ep;
@@ -1384,7 +1411,6 @@ static void
 udc_handle_internal_cmds(struct dw_udc_dev *dev,
 		struct usb_ctrlrequest u_ctrl_req)
 {
-	unsigned int stopped;
 	struct dw_udc_ep *ep0 = &(dev->ep[0]);
 	/*
 	 * Manage pending ints. We are sure that no more requests are issued
@@ -1397,33 +1423,18 @@ udc_handle_internal_cmds(struct dw_udc_dev *dev,
 	cancel_all_req(ep0, -EPROTO);
 
 	/* The STATUS_IN transaction will be discarded. */
-	dev->ep0state = EP0_CTRL_IDLE;
 	DW_UDC_DBG(DBG_EP0STATE, "ep0state = %d\n", dev->ep0state);
 
-	stopped = ep0->stopped;
-	ep0->stopped = 1;
-	if (dev->driver != NULL && dev->driver->setup != NULL) {
-		/* LINUX_TBD: if setup() returns error, we have to stall ep0 */
-		dev->driver->setup(&dev->gadget, &u_ctrl_req);
-	}
-	ep0->stopped = stopped;
-
 	/*
-	 * "Eat" request queued by setup() while ep0 stopped
-	 * because UDC subsystem has itslef acked to these requests
+	 * change the state of ep0 as EP0_ACK_SETCONF_INTER_DELAYED when
+	 * set interface or set configuration command received.
+	 * DEV_CNTL_CSR_DONE bit is not set here so that udc will not
+	 * sent ack.we would complete the request from ep_queue
 	 */
-	if (!list_empty(&ep0->queue)) {
-		struct dw_udc_request *req;
 
-		req = list_entry(ep0->queue.next, struct dw_udc_request,
-					queue);
-
-		if (req->req.length == 0)
-			req_done(ep0, req, 0);
-		else
-			pr_err("Non zero-len packet queued\n");
-	}
-	dev->int_cmd = 0;
+	dev->ep0state = EP0_ACK_SETCONF_INTER_DELAYED;
+	if (dev->driver != NULL && dev->driver->setup != NULL)
+		dev->driver->setup(&dev->gadget, &u_ctrl_req);
 }
 
 static void udc_rescan_isoc_desc(struct dw_udc_ep *ep)
@@ -1632,7 +1643,7 @@ again:
 		writel(0, &(ep0_oregs->desc_ptr));
 
 		pr_err("OUT req rcvd while list empty for ep %d, \
-			 data discarded\n", ep - &dev->ep[0]);
+				data discarded\n", ep - &dev->ep[0]);
 		goto req_err;
 	}
 	req = list_entry(ep0->queue.next, struct dw_udc_request, queue);
@@ -1749,7 +1760,7 @@ static void udc_handle_ep0_setup(struct dw_udc_ep *ep)
 		if (dev->ep0state != EP0_CTRL_IDLE) {
 			/* STALL the endpoint */
 			pr_err("Setup packet received while not idle:"
-				 "stall ep0\n");
+					"stall ep0\n");
 			udc_stall_ep(ep0);
 			return;
 		}
@@ -1764,7 +1775,7 @@ static void udc_handle_ep0_setup(struct dw_udc_ep *ep)
 		if (u_ctrl_req.wLength == 0) {
 			/*
 			 * This is because Status IN is handled internally
-			*/
+			 */
 			dev->ep0state = EP0_CTRL_IDLE;
 		}
 
@@ -2076,11 +2087,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *dev)
 		 */
 
 		mod_timer(&dev->out_ep_timer, jiffies + HZ);
-
-		/* send ack to the host */
-		tmp = readl(&glob->dev_control);
-		tmp |= DEV_CNTL_CSR_DONE;
-		writel(tmp, &glob->dev_control);
 	}
 
 	if (dev_int & DEV_INT_SETINTF) {
@@ -2109,10 +2115,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *dev)
 				u_ctrl_req.wLength);
 
 		udc_handle_internal_cmds(dev, u_ctrl_req);
-
-		tmp = readl(&glob->dev_control);
-		tmp |= DEV_CNTL_CSR_DONE;
-		writel(tmp, &glob->dev_control);
 	}
 
 	if (dev_int & DEV_INT_SUSPUSB)
@@ -2243,7 +2245,7 @@ static int dw_udc_set_selfpowered(struct usb_gadget *gadget, int selfpowered)
 	return 0;
 }
 
-	static int
+static int
 dw_udc_ioctl(struct usb_gadget *gadget, unsigned code, unsigned long param)
 {
 	struct usb_descriptor_header **function;
@@ -2303,6 +2305,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 {
 	struct dw_udc_dev *dev = &the_controller;
 	int retval;
+	unsigned long flags;
 
 	/* Paranoid */
 	if (!driver || driver->speed < USB_SPEED_FULL || !driver->bind ||
@@ -2345,7 +2348,10 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 	dev->out_ep_timer.data = (unsigned long)dev;
 
 	DW_UDC_DBG(DBG_ADDRESS, "dev = %p\n", dev);
+
+	spin_lock_irqsave(&dev->lock, flags);
 	udc_enable(dev);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	pr_info("registered gadget driver '%s'\n", driver->driver.name);
 
@@ -2715,9 +2721,9 @@ static int __init dw_udc_probe(struct platform_device *pdev)
 
 	dev->epin_base = (struct dw_udc_epin_regs __iomem *)(dev->csr_base);
 	dev->epout_base = (struct dw_udc_epout_regs __iomem *)(dev->csr_base +
-						     UDC_EP_OUT_REG_OFF);
+			UDC_EP_OUT_REG_OFF);
 	dev->glob_base = (struct dw_udc_glob_regs __iomem *)(dev->csr_base +
-						    UDC_GLOB_REG_OFF);
+			UDC_GLOB_REG_OFF);
 
 	dev->num_ep = pdata->num_ep;
 	dev->ep = kzalloc(pdata->num_ep * sizeof(struct dw_udc_ep), GFP_ATOMIC);
@@ -2760,8 +2766,9 @@ static int __init dw_udc_probe(struct platform_device *pdev)
 #endif
 
 	/* Restore a known hardware state */
-	udc_reinit(dev);
+
 	udc_disconnect(dev);
+	udc_reinit(dev);
 
 	retval = desc_pool_init(dev);
 	if (retval != 0) {

@@ -17,9 +17,10 @@
 #include <asm-generic/ioctl.h>
 
 #undef DEBUG
+#define DEBUG
 #define	DRIVER_DESC		"Designware USB Device Controller driver"
 
-#define dw_udc_debug_flags	0
+#define dw_udc_debug_flags	(DBG_INTS | DBG_REQUESTS)
 
 #ifdef DEBUG
 #define DW_UDC_DBG(type, fmt, args...)					\
@@ -91,8 +92,8 @@ struct dw_udc_glob_regs {
 #define DEV_CNTL_DMAMODE	(0x1 << 9)
 #define DEV_CNTL_SD		(0x1 << 10)
 #define DEV_CNTL_SCALEDOWN	(0x1 << 11)
-#define DEV_CNTL_BURSTLENU	(0x1 << 12)
 #define DEV_CNTL_CSR_DONE	(0x1 << 13)
+#define DEV_CNTL_BURSTLENU	(0x1 << 16)
 #define DEV_CNTL_BURSTLENMSK	(0xff << 16)
 #define DEV_CNTL_TSHLDLENU	(0x1 << 24)
 #define DEV_CNTL_TSHLDLENMSK	(0xff << 24)
@@ -251,7 +252,8 @@ enum ep0_state {
 	EP0_DATA_IN_STAGE = 1,
 	EP0_DATA_OUT_STAGE = 2,
 	EP0_STATUS_IN_STAGE = 3,
-	EP0_STATUS_OUT_STAGE = 4
+	EP0_STATUS_OUT_STAGE = 4,
+	EP0_ACK_SETCONF_INTER_DELAYED = 5,
 };
 
 struct dw_udc_request {
