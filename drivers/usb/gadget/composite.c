@@ -27,7 +27,7 @@
 #include <linux/utsname.h>
 
 #include <linux/usb/composite.h>
-
+#include "designware_udc.h"
 
 /*
  * The code in this file is utility code, used to build a gadget driver
@@ -461,6 +461,9 @@ static int set_config(struct usb_composite_dev *cdev,
 			reset_config(cdev);
 			goto done;
 		}
+		usb_gadget_ioctl(gadget, UDC_SET_CONFIG,
+				(unsigned long)(descriptors));
+
 	}
 
 	/* when we return, be sure our power usage is valid */
