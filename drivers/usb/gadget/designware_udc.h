@@ -17,10 +17,9 @@
 #include <asm-generic/ioctl.h>
 
 #undef DEBUG
-#define DEBUG
 #define	DRIVER_DESC		"Designware USB Device Controller driver"
 
-#define dw_udc_debug_flags	(DBG_INTS | DBG_REQUESTS)
+#define dw_udc_debug_flags	0
 
 #ifdef DEBUG
 #define DW_UDC_DBG(type, fmt, args...)					\
