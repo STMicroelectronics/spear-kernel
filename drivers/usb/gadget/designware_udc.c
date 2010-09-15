@@ -917,14 +917,15 @@ static int dw_ep_disable(struct usb_ep *_ep)
 	struct dw_udc_dev *dev;
 	struct dw_udc_glob_regs *glob;
 	struct dw_udc_epin_regs *epregs;
-	unsigned int epn;
-	unsigned int tmp;
+	unsigned int epn, tmp, stopped;
 
 	ep = container_of(_ep, struct dw_udc_ep, ep);
 	dev = ep->dev;
 	glob = dev->glob_base;
 	epregs = ep->in_regs;
 	epn = ep->addr & ~USB_DIR_IN;
+	stopped = ep->stopped;
+	ep->stopped = 1;
 
 	if (!_ep || !ep->desc) {
 		pr_err("%s, %s not enabled\n", __func__,
@@ -943,10 +944,18 @@ static int dw_ep_disable(struct usb_ep *_ep)
 		 */
 		udc_handle_epn_out_int(ep);
 	} else {
-		/* flush TX FIFO */
-		tmp = readl(&ep->in_regs->control);
-		tmp |= ENDP_CNTL_FLUSH;
-		writel(tmp, &ep->in_regs->control);
+		/*
+		 * When ep_disable is called with partially served IN descriptor
+		 * chain, the TxFIFO must be flushed till DMA completely serves
+		 * the chain, otherwise DMA would be in in-consistent state.
+		 */
+
+		while (readl(&(epregs->control)) & ENDP_CNTL_POLL) {
+			/* flush TX FIFO */
+			tmp = readl(&ep->in_regs->control);
+			tmp |= ENDP_CNTL_FLUSH;
+			writel(tmp, &ep->in_regs->control);
+		}
 		/*
 		 * Verify, will this raise an interrupt
 		 * so that we should call intr handler
@@ -958,7 +967,7 @@ static int dw_ep_disable(struct usb_ep *_ep)
 
 	spin_lock_irqsave(&ep->dev->lock, flags);
 	ep->desc = 0;
-	ep->stopped = 1;
+	ep->stopped = stopped;
 	ep->config_req = 0;
 
 	if (is_ep_in(ep)) {
