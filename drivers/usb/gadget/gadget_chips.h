@@ -27,6 +27,12 @@
 #define	gadget_is_amd5536udc(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_DESIGNWARE
+#define	gadget_is_designware(g)	(!strcmp("designware_udc", (g)->name))
+#else
+#define	gadget_is_designware(g)	0
+#endif
+
 #ifdef CONFIG_USB_GADGET_DUMMY_HCD
 #define	gadget_is_dummy(g)	!strcmp("dummy_udc", (g)->name)
 #else
@@ -247,6 +253,8 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x24;
 	else if (gadget_is_r8a66597(gadget))
 		return 0x25;
+	else if (gadget_is_designware(gadget))
+		return 0x26;
 	return -ENOENT;
 }
 
