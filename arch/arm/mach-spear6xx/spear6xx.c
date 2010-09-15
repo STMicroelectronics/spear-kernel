@@ -24,6 +24,7 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/nand.h>
+#include <plat/udc.h>
 
 /* The wake sources are routed through vic-2 */
 #define SPEAR6XX_WKUP_SRCS_VIC2		(1 << (IRQ_GMAC_1 - 32) | \
@@ -503,10 +504,38 @@ struct platform_device smi_device = {
 	.resource = smi_resources,
 };
 
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR6XX_ICM4_USBD_CSR_BASE,
+		.end = SPEAR6XX_ICM4_USBD_CSR_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR6XX_ICM4_USBD_PLDT_BASE,
+		.end = SPEAR6XX_ICM4_USBD_PLDT_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[3] = {
+		.start = IRQ_USB_DEV,
+		.end = IRQ_USB_DEV,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+struct platform_device udc_device = {
+	.name = "designware_udc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
+};
+
 /* This will add devices, and do machine specific tasks */
 void __init spear6xx_init(void)
 {
-	/* nothing to do for now */
+	set_udc_plat_data(&udc_device);
 }
 
 /* This will initialize vic */
