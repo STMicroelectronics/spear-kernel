@@ -26,7 +26,7 @@
 #include <linux/device.h>
 
 #include <linux/usb/composite.h>
-
+#include "designware_udc.h"
 
 /*
  * The code in this file is utility code, used to build a gadget driver
@@ -418,10 +418,14 @@ static int set_config(struct usb_composite_dev *cdev,
 	/* Initialize all interfaces by setting them to altsetting zero. */
 	for (tmp = 0; tmp < MAX_CONFIG_INTERFACES; tmp++) {
 		struct usb_function	*f = c->interface[tmp];
+		struct usb_descriptor_header **f_descriptors;
 
 		if (!f)
 			break;
 
+		/* must for spear udc device */
+		f_descriptors = (gadget->speed == USB_SPEED_FULL) ?
+			f->descriptors : f->hs_descriptors;
 		result = f->set_alt(f, tmp, 0);
 		if (result < 0) {
 			DBG(cdev, "interface %d (%s/%p) alt 0 --> %d\n",
@@ -430,6 +434,9 @@ static int set_config(struct usb_composite_dev *cdev,
 			reset_config(cdev);
 			goto done;
 		}
+		usb_gadget_ioctl(gadget, UDC_SET_CONFIG,
+				(unsigned long)(f_descriptors));
+
 	}
 
 	/* when we return, be sure our power usage is valid */
