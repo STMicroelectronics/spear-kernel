@@ -32,6 +32,7 @@
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <plat/nand.h>
+#include <plat/udc.h>
 
 /* Add spear13xx machines common devices here */
 /* gpio device registeration */
@@ -607,6 +608,34 @@ struct platform_device spear13xx_wdt_device = {
 	.resource = wdt_resources,
 };
 
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_UDC_BASE,
+		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR13XX_UPD_BASE,
+		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[3] = {
+		.start = IRQ_UDC,
+		.end = IRQ_UDC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+struct platform_device spear13xx_udc_device = {
+	.name = "designware_udc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
+};
+
 /* sdhci (sdio) device declaration */
 static struct resource sdhci_resources[] = {
 	{
@@ -787,6 +816,7 @@ void __init spear13xx_init(void)
 
 	dmac_setup();
 	sdhci_enable();
+	set_udc_plat_data(&spear13xx_udc_device);
 }
 
 /* This will initialize vic */
