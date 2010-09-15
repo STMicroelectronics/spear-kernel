@@ -51,6 +51,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&nand_device,
 	&rtc_device,
 	&smi_device,
+	&udc_device,
 };
 
 /* Currently no gpios are free on eval board so it is kept commented */

@@ -25,6 +25,7 @@
 #include <asm/mach/arch.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <plat/udc.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -700,6 +701,35 @@ struct platform_device spear13xx_smi_device = {
 	.resource = smi_resources,
 };
 
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_UDC_BASE,
+		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR13XX_UPD_BASE,
+		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[3] = {
+		.start = IRQ_UDC,
+		.end = IRQ_UDC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_udc_device = {
+	.name = "designware_udc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
+};
+
 /* wdt device registration */
 static struct resource wdt_resources[] = {
 	{
@@ -795,6 +825,7 @@ void __init spear13xx_init(void)
 
 	sdhci_enable();
 	dmac_setup();
+	set_udc_plat_data(&spear13xx_udc_device);
 }
 
 /* This will initialize vic */

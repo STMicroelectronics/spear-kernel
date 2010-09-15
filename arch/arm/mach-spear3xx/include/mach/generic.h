@@ -44,6 +44,7 @@ extern struct platform_device spear3xx_ohci0_device;
 extern struct platform_device spear3xx_ohci1_device;
 extern struct platform_device spear3xx_rtc_device;
 extern struct platform_device spear3xx_smi_device;
+extern struct platform_device spear3xx_udc_device;
 extern struct sys_timer spear3xx_timer;
 
 /* Add spear3xx family function declarations here */

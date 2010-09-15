@@ -245,6 +245,7 @@ extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
+extern struct platform_device spear13xx_udc_device;
 extern struct platform_device spear13xx_wdt_device;
 extern struct sys_timer spear13xx_timer;
 

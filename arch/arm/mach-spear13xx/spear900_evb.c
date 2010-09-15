@@ -90,6 +90,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
+	&spear13xx_udc_device,
 	&spear13xx_wdt_device,
 
 	/* spear900 specific devices */

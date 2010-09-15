@@ -21,6 +21,7 @@
 #include <asm/mach/arch.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/udc.h>
 
 #define SPEAR3XX_WKUP_SRCS	(1 << SPEAR3XX_IRQ_MAC_1 | 1 << \
 		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
@@ -306,10 +307,38 @@ struct platform_device spear3xx_smi_device = {
 	.resource = smi_resources,
 };
 
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR3XX_ICM4_USBD_CSR_BASE,
+		.end = SPEAR3XX_ICM4_USBD_CSR_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR3XX_ICM4_USBD_PLDT_BASE,
+		.end = SPEAR3XX_ICM4_USBD_PLDT_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[3] = {
+		.start = SPEAR3XX_IRQ_USB_DEV,
+		.end = SPEAR3XX_IRQ_USB_DEV,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+struct platform_device spear3xx_udc_device = {
+	.name = "designware_udc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
+};
+
 /* Do spear3xx familiy common initialization part here */
 void __init spear3xx_init(void)
 {
-	/* nothing to do for now */
+	set_udc_plat_data(&spear3xx_udc_device);
 }
 
 /* This will initialize vic */
