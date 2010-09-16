@@ -204,7 +204,7 @@ static struct plat_stmmacphy_data phy3_private_data = {
 	.bus_id = 3,
 	.phy_addr = 3,
 	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
+	.interface = PHY_INTERFACE_MODE_RMII,
 	.phy_clk_cfg = phy_clk_cfg,
 };
 
