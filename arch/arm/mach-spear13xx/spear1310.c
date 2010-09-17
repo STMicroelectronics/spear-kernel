@@ -794,21 +794,13 @@ struct platform_device spear1310_ras_fsmc_nor_device = {
 static void tdm_hdlc_setup(void)
 {
 	unsigned long val;
-	struct clk *pll3_clk;
 
-	/* get pll3 clk */
-	pll3_clk = clk_get(NULL, "pll3_clk");
-
-	/* set pll3 clk to 500M */
-	clk_set_rate(pll3_clk, 500000000);
-
-	/* use pll3 source for ras_clk_synt1 */
+	/* use vcodiv4 source for ras_clk_synt1 */
 	val = readl(PLL_CFG);
 	val &= ~0x18000000;
-	val |= 0x10000000;
 	writel(val, PLL_CFG);
 
-	writel(0x80001000, RAS_CLK_SYNT1);	/* generate 250MHz clock */
+	writel(0x80004000, RAS_CLK_SYNT1);	/* generate 250MHz clock */
 
 	udelay(2000);
 
