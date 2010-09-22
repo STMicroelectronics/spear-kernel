@@ -30,6 +30,10 @@
 #include <asm/unaligned.h>
 #include <plat/udc.h>
 
+#ifdef CONFIG_ARCH_SPEAR13XX
+#include <mach/misc_regs.h>
+#endif
+
 #include "designware_udc.h"
 
 static const char driver_name[] = "designware_udc";
@@ -343,6 +347,9 @@ void udc_set_config(struct dw_udc_dev *dev,
 				->bmAttributes & 0x3;
 
 			udc_prog_udc20_regs(dev, ep);
+#ifdef CONFIG_ARCH_SPEAR13XX
+			udelay(1);
+#endif
 			break;
 		default:
 			;
@@ -617,7 +624,7 @@ static void udc_connect(struct dw_udc_dev *dev)
  */
 static void udc_enable(struct dw_udc_dev *dev)
 {
-	u32 tmp, status;
+	u32 tmp, status, val;
 	struct dw_udc_glob_regs *glob = dev->glob_base;
 	struct usb_gadget_driver *driver;
 
@@ -627,6 +634,18 @@ static void udc_enable(struct dw_udc_dev *dev)
 	writel(~0, &glob->dev_int_mask);
 	writel(~0, &glob->endp_int_mask);
 
+#ifdef CONFIG_ARCH_SPEAR13XX
+	/* UDC RESET */
+	val = readl(PERIP1_SW_RST);
+	val |= (1 << 11);
+	writel(val, PERIP1_SW_RST);
+
+	udelay(10);
+
+	val = readl(PERIP1_SW_RST);
+	val &= ~(1 << 11);
+	writel(val, PERIP1_SW_RST);
+#endif
 	tmp = 0;
 	tmp = DEV_CONF_HS_SPEED | DEV_CONF_REMWAKEUP |
 		DEV_CONF_PHYINT_16 | DEV_CONF_CSR_PRG;
