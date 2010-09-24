@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
@@ -129,6 +130,24 @@ struct platform_device spear13xx_i2c_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c_resources),
 	.resource = i2c_resources,
+};
+
+/* fsmc nor flash device registeration */
+static struct physmap_flash_data fsmc_norflash_data;
+static struct resource fsmc_nor_resources[] = {
+	{
+		.start	= SPEAR13XX_FSMC_MEM_BASE,
+		.end	= SPEAR13XX_FSMC_MEM_BASE + SZ_16M - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear13xx_fsmc_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = fsmc_nor_resources,
+	.num_resources = ARRAY_SIZE(fsmc_nor_resources),
+	.dev.platform_data = &fsmc_norflash_data,
 };
 
 /* nand device registeration */

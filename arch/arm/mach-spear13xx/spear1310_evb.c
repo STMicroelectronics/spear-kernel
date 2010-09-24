@@ -26,6 +26,17 @@
 #include <mach/spear.h>
 #include <mach/pcie.h>
 
+/* fsmc nor partition info */
+#if 0
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+#endif
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
@@ -35,7 +46,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&pmx_gmii,
 	&pmx_keyboard_6x6,
 	&pmx_mcif,
-	&pmx_nand_8bit,
 	&pmx_smi_2_chips,
 	&pmx_uart0,
 
@@ -72,7 +82,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_i2c_device,
 	&spear13xx_kbd_device,
-	&spear13xx_nand_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_rtc_device,
@@ -82,6 +91,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1310_can0_device,
 	&spear1310_can1_device,
 	&spear1310_i2c1_device,
+	&spear1310_ras_fsmc_nor_device,
 };
 
 /* keyboard specific platform data */
@@ -123,6 +133,24 @@ static int spear1310_pcie_port_is_host(int port)
 }
 #endif
 
+/* spear1310 ras misc configurations */
+static void __init ras_fsmc_config(u32 mode, u32 width)
+{
+	u32 val, *address;
+
+	address = ioremap(SPEAR1310_RAS_CTRL_REG0, SZ_16);
+
+	val = readl(address);
+	val &= ~(RAS_FSMC_MODE_MASK | RAS_FSMC_WIDTH_MASK);
+	val |= mode;
+	val |= width;
+	val |= RAS_FSMC_CS_SPLIT;
+
+	writel(val, address);
+
+	iounmap(address);
+}
+
 static void __init spear1310_evb_init(void)
 {
 	unsigned int i;
@@ -130,16 +158,48 @@ static void __init spear1310_evb_init(void)
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 
+	/*
+	 * SPEAr1310 FSMC cannot used as NOR and NAND at the same time
+	 * For the moment, disable NAND and use NOR only
+	 * If NAND is needed, enable the following code and disable all code for
+	 * NOR. Also enable nand in padmux configuration to use it.
+	 */
+	/* set nand device's plat data */
+#if 0
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
+#endif
 
 	/* call spear1310 machine init function */
 	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
+
+	/*
+	 * Only one of Fixed or RAS part FSMC can be used at one time.
+	 * Default selection is RAS part FSMC for NOR.
+	 */
+#if 0
+	/* fixed part fsmc nor device */
+	/* initialize fsmc related data in fsmc plat data */
+	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+			FSMC_FLASH_WIDTH8);
+#endif
+
+	/* ras part fsmc nor device */
+	/* initialize fsmc related data in fsmc plat data */
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, FSMC_FLASH_WIDTH16);
+	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
+			0, FSMC_FLASH_WIDTH16);
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 0,
+			FSMC_FLASH_WIDTH16);
 
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */

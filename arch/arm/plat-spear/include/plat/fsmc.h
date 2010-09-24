@@ -14,6 +14,7 @@
 #ifndef __PLAT_FSMC_H
 #define __PLAT_FSMC_H
 
+#include <linux/mtd/physmap.h>
 #include <linux/mtd/fsmc.h>
 
 /* This function is used to set platform data field of pdev->dev */
@@ -33,4 +34,18 @@ static inline void fsmc_nand_set_plat_data(struct platform_device *pdev,
 	plat_data->width = width;
 }
 
+static inline void fsmc_nor_set_plat_data(struct platform_device *pdev,
+		struct mtd_partition *partitions, unsigned int nr_partitions,
+		unsigned int width)
+{
+	struct physmap_flash_data *plat_data;
+	plat_data = dev_get_platdata(&pdev->dev);
+
+	if (partitions) {
+		plat_data->parts = partitions;
+		plat_data->nr_parts = nr_partitions;
+	}
+
+	plat_data->width = width;
+}
 #endif /* __PLAT_FSMC_H */

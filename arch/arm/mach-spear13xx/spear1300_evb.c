@@ -26,6 +26,17 @@
 #include <plat/fsmc.h>
 #include <plat/spi.h>
 
+/* fsmc nor partition info */
+#if 0
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+#endif
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
@@ -114,6 +125,22 @@ static void __init spear1300_evb_init(void)
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
+
+	/*
+	 * FSMC cannot used as NOR and NAND at the same time For the moment,
+	 * disable NOR and use NAND only. If NOR is needed, enable the following
+	 * code and disable all code for NAND. Also enable nand in padmux
+	 * configuration to use it
+	 */
+#if 0
+	/* initialize fsmc related data in fsmc plat data */
+	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
+
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+			FSMC_FLASH_WIDTH8);
+#endif
 
 	/* call spear1300 machine init function */
 	spear1300_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));

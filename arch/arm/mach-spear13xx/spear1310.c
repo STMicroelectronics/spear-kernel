@@ -12,6 +12,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
@@ -478,6 +479,24 @@ struct platform_device spear1310_i2c1_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
+};
+
+/* fsmc nor flash device registeration */
+static struct physmap_flash_data ras_fsmc_norflash_data;
+static struct resource ras_fsmc_nor_resources[] = {
+	{
+		.start	= SPEAR1310_FSMC1_CS3_BASE,
+		.end	= SPEAR1310_FSMC1_CS3_BASE + SZ_64M - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1310_ras_fsmc_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = ras_fsmc_nor_resources,
+	.num_resources = ARRAY_SIZE(ras_fsmc_nor_resources),
+	.dev.platform_data = &ras_fsmc_norflash_data,
 };
 
 /* Following will create 1310 specific static virtual/physical mappings */
