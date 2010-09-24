@@ -34,6 +34,7 @@ extern struct amba_device spear13xx_ssp_device;
 extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
+extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
 extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;

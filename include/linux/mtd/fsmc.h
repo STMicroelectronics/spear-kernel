@@ -44,6 +44,7 @@
 
 #define FSMC_FLASH_WIDTH8	1
 #define FSMC_FLASH_WIDTH16	2
+#define FSMC_FLASH_WIDTH32	4
 
 struct fsmc_nor_bank_regs {
 	uint32_t ctrl;
@@ -56,6 +57,7 @@ struct fsmc_nor_bank_regs {
 #define NOR_DEV			(2 << 2)
 #define WIDTH_8			(0 << 4)
 #define WIDTH_16		(1 << 4)
+#define WIDTH_32		(2 << 4)
 #define RSTPWRDWN		(1 << 6)
 #define WPROT			(1 << 7)
 #define WRT_ENABLE		(1 << 12)

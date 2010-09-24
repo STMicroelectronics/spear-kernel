@@ -26,6 +26,15 @@
 #include <plat/fsmc.h>
 #include <plat/spi.h>
 
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 1 * 0x20000),
+	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
+	PARTITION("Kernel", 0x80000, 24 * 0x20000),
+	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_gpio_device[0],
@@ -118,6 +127,14 @@ static void __init spear1310_evb_init(void)
 			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
 	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
 			0, FSMC_FLASH_WIDTH16);
+
+	/* Initialize fsmc regiters */
+	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
+			FSMC_FLASH_WIDTH8);
+
+	/* initialize fsmc related data in fsmc plat data */
+	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
+			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
 
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,

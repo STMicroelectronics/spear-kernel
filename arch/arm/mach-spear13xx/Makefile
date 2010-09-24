@@ -3,7 +3,7 @@
 #
 
 # common files
-obj-y					+= spear13xx.o clock.o
+obj-y					+= spear13xx.o clock.o fsmc-nor.o
 obj-$(CONFIG_SMP)			+= platsmp.o headsmp.o
 obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_PCIEPORTBUS)		+= pcie.o
