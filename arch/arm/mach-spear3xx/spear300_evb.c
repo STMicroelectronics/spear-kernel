@@ -73,6 +73,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear300_kbd_device,
 	&spear300_nand0_device,
 	&spear300_sdhci_device,
+	&spear300_touchscreen_device,
 };
 
 /* sdhci board specific information */

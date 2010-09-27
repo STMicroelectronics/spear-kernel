@@ -17,12 +17,15 @@
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/spear_adc_usr.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
+#include <plat/touchscreen.h>
 #include <plat/udc.h>
 #include <mach/irqs.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/spear.h>
 
 /* The wake sources are routed through vic-2 */
@@ -46,6 +49,24 @@ struct amba_device clcd_device = {
 	},
 	.dma_mask = ~0,
 	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
+};
+
+/* touchscreen Device registration */
+static struct spear_touchscreen touchscreen_info = {
+	.adc_channel_x = ADC_CHANNEL5,
+	.adc_channel_y = ADC_CHANNEL6,
+	.gpio_pin = APPL_GPIO_7,
+};
+
+struct platform_device touchscreen_device = {
+	.name = "spear-ts",
+	.id = -1,
+	.dev = {
+		.platform_data = &touchscreen_info,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = 0,
+	.resource = NULL,
 };
 
 /* ssp device registration */

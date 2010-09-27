@@ -120,6 +120,7 @@ extern struct platform_device spear300_nand1_device;
 extern struct platform_device spear300_nand2_device;
 extern struct platform_device spear300_nand3_device;
 extern struct platform_device spear300_sdhci_device;
+extern struct platform_device spear300_touchscreen_device;
 
 /* pad mux modes */
 extern struct pmx_mode spear300_nand_mode;
