@@ -48,6 +48,7 @@ extern struct platform_device phy_device;
 extern struct platform_device jpeg_device;
 extern struct platform_device rtc_device;
 extern struct platform_device smi_device;
+extern struct platform_device touchscreen_device;
 extern struct platform_device udc_device;
 extern struct sys_timer spear6xx_timer;
 

@@ -14,11 +14,14 @@
 #include <linux/types.h>
 #include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
+#include <linux/spear_adc_usr.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/spear.h>
 #include <plat/nand.h>
 #include <plat/shirq.h>
+#include <plat/touchscreen.h>
 
 /* modes */
 #define NAND_MODE			(1 << 0)
@@ -540,6 +543,26 @@ struct amba_device spear300_clcd_device = {
 	.dma_mask = ~0,
 	.irq = {SPEAR300_IRQ_CLCD, NO_IRQ},
 };
+
+/* touchscreen device registration */
+
+static struct spear_touchscreen touchscreen_info = {
+	.adc_channel_x = ADC_CHANNEL5,
+	.adc_channel_y = ADC_CHANNEL6,
+	.gpio_pin = RAS_GPIO_7,
+};
+
+struct platform_device spear300_touchscreen_device = {
+	.name = "spear-ts",
+	.id = -1,
+	.dev = {
+		.platform_data = &touchscreen_info,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = 0,
+	.resource = NULL,
+};
+
 
 /* arm gpio1 device registeration */
 static struct pl061_platform_data gpio1_plat_data = {
