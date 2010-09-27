@@ -26,6 +26,7 @@ obj-$(CONFIG_TOUCHSCREEN_HP7XX)		+= jornada720_ts.o
 obj-$(CONFIG_TOUCHSCREEN_HTCPEN)	+= htcpen.o
 obj-$(CONFIG_TOUCHSCREEN_USB_COMPOSITE)	+= usbtouchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_PENMOUNT)	+= penmount.o
+obj-$(CONFIG_TOUCHSCREEN_SPEAR)		+= spear_touchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_STMPE610)	+= stmpe610.o
 obj-$(CONFIG_STMPE610_SPI)		+= stmpe610-spi.o
 obj-$(CONFIG_TOUCHSCREEN_TOUCHIT213)	+= touchit213.o

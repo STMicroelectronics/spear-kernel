@@ -555,4 +555,13 @@ config TOUCHSCREEN_PCAP
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_ts.
+
+config TOUCHSCREEN_SPEAR
+       tristate "Touchscreen for SPEAr based platforms."
+       depends on FB_ARMCLCD && SPEAR_ADC && (ARCH_SPEAR6XX || ARCH_SPEAR3XX)
+       help
+          Say Y here if you want to enable support for spear
+	  touchscreen.
+          To compile this driver as a module, choose M here: the
+          module will be called spear_touchscreen.
 endif
