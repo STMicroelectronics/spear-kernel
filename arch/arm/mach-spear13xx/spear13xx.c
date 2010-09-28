@@ -805,8 +805,8 @@ void __init spear13xx_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
 	/*
-	 * 256KB (16KB/way), 16-way associativity, parity not
-	 * supported
+	 * 512KB (64KB/way), 8-way associativity, parity supported
+	 *
 	 * TODO: 0x249, picked from nomadik, to be analyzed
 	 * Comment from nomadik:
 	 * At full speed latency must be >=2, so 0x249 in low bits
