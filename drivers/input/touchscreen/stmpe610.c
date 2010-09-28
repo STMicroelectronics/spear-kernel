@@ -149,8 +149,10 @@ static void stmpe_work(struct work_struct *work)
 	input_sync(ts->input);
 
 	/* Re-enable interrupts */
-	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT | TOUCH_INT);
 	reset_fifo(ts);
+
+	msleep(10);
+	stmpe610_write(ts->idata, INT_EN, FIFO_TH_INT | TOUCH_INT);
 	enable_irq(gpio_to_irq(ts->pdata->irq_gpio));
 }
 
