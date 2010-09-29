@@ -35,8 +35,8 @@
 /* NOTE:  DMS+SMS is system-specific. We should get this information
  * from the platform code somehow.
  */
-#define DWC_DEFAULT_CTLLO	(DWC_CTLL_DST_MSIZE(0)		\
-				| DWC_CTLL_SRC_MSIZE(0)		\
+#define DWC_DEFAULT_CTLLO	(DWC_CTLL_DST_MSIZE(3)		\
+				| DWC_CTLL_SRC_MSIZE(3)		\
 				| DWC_CTLL_DMS(1)		\
 				| DWC_CTLL_SMS(0)		\
 				| DWC_CTLL_LLP_D_EN		\
@@ -54,7 +54,7 @@
  *
  * This parameter is also system-specific.
  */
-#define DWC_MAX_COUNT	2048U
+#define DWC_MAX_COUNT	4095U
 
 /*
  * Number of descriptors to allocate for each channel. This should be
