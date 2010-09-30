@@ -18,6 +18,7 @@
 #include <asm/mach-types.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/fsmc.h>
@@ -36,7 +37,7 @@ static struct pmx_dev *pmx_devs[] = {
 	/* spear300 specific devices */
 	&pmx_fsmc_2_chips,
 	&pmx_clcd,
-	&pmx_telecom_sdio_4bit,
+	&pmx_telecom_sdhci_4bit,
 	&pmx_gpio1,
 };
 
@@ -63,6 +64,15 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear300 specific devices */
 	&kbd_device,
+	&sdhci_device,
+};
+
+/* sdhci board specific information */
+static struct sdhci_plat_data sdhci_plat_data = {
+	.card_power_gpio = RAS_GPIO_2,
+	.power_active_high = 0,
+	.power_always_enb = 0,
+	.card_int_gpio = RAS_GPIO_0,
 };
 
 /* keyboard specific platform data */
@@ -110,6 +120,12 @@ static void __init spear300_evb_init(void)
 	/* set nand0 device's plat data */
 	fsmc_nand_set_plat_data(&nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			FSMC_NAND_BW8);
+
+	/* set sdhci device platform data */
+	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
+
+	/* Enable sdhci memory */
+	sdhci_i2s_mem_enable(SDHCI_MEM_ENB);
 
 	/* call spear300 machine init function */
 	spear300_init();

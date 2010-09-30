@@ -311,7 +311,7 @@ struct pmx_dev pmx_telecom_boot_pins = {
 	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_sdio_4bit_modes[] = {
+struct pmx_dev_mode pmx_telecom_sdhci_4bit_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE | LEND_IP_PHONE_MODE |
 			HEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE |
@@ -324,14 +324,14 @@ struct pmx_dev_mode pmx_telecom_sdio_4bit_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_sdio_4bit = {
-	.name = "telecom_sdio_4bit",
-	.modes = pmx_telecom_sdio_4bit_modes,
-	.mode_count = ARRAY_SIZE(pmx_telecom_sdio_4bit_modes),
+struct pmx_dev pmx_telecom_sdhci_4bit = {
+	.name = "telecom_sdhci_4bit",
+	.modes = pmx_telecom_sdhci_4bit_modes,
+	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_4bit_modes),
 	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_telecom_sdio_8bit_modes[] = {
+struct pmx_dev_mode pmx_telecom_sdhci_8bit_modes[] = {
 	{
 		.ids = PHOTO_FRAME_MODE | LEND_IP_PHONE_MODE |
 			HEND_IP_PHONE_MODE | LEND_WIFI_PHONE_MODE |
@@ -343,10 +343,10 @@ struct pmx_dev_mode pmx_telecom_sdio_8bit_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_telecom_sdio_8bit = {
-	.name = "telecom_sdio_8bit",
-	.modes = pmx_telecom_sdio_8bit_modes,
-	.mode_count = ARRAY_SIZE(pmx_telecom_sdio_8bit_modes),
+struct pmx_dev pmx_telecom_sdhci_8bit = {
+	.name = "telecom_sdhci_8bit",
+	.modes = pmx_telecom_sdhci_8bit_modes,
+	.mode_count = ARRAY_SIZE(pmx_telecom_sdhci_8bit_modes),
 	.enb_on_reset = 1,
 };
 
@@ -523,6 +523,28 @@ struct platform_device nand3_device = {
 	.dev.platform_data = &nand3_platform_data,
 };
 
+/* sdhci (sdio) device declaration */
+static struct resource sdhci_resources[] = {
+	{
+		.start	= SPEAR300_SDHCI_BASE,
+		.end	= SPEAR300_SDHCI_BASE + SZ_256 - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+		.start	= IRQ_SDHCI,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device sdhci_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.name = "sdhci",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(sdhci_resources),
+	.resource = sdhci_resources,
+};
+
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
 	{
@@ -575,6 +597,26 @@ struct spear_shirq shirq_ras1 = {
 		.clear_reg = -1,
 	},
 };
+
+/* Function handling sdhci and i2s memory sharing */
+#define SDHCI_MEM_SELECT	0x20000000
+void sdhci_i2s_mem_enable(u8 mask)
+{
+	u32 val;
+	void __iomem *base = ioremap(SPEAR300_SOC_CONFIG_BASE,
+			SPEAR300_SOC_CONFIG_SIZE);
+	if (!base) {
+		pr_debug("sdhci_i2s_enb: ioremap fail\n");
+		return;
+	}
+
+	val = readl(base + MODE_CONFIG_REG);
+	if (mask == SDHCI_MEM_ENB)
+		val |= SDHCI_MEM_SELECT;
+	else
+		val &= ~SDHCI_MEM_SELECT;
+	writel(val, base + MODE_CONFIG_REG);
+}
 
 /* spear300 routines */
 void __init spear300_init(void)

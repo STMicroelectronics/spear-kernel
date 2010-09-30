@@ -17,6 +17,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <linux/spi/flash.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <linux/spi/spi.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
@@ -33,7 +34,7 @@ static struct pmx_dev *pmx_devs[] = {
 
 	/* spear320 specific devices */
 	&pmx_fsmc,
-	&pmx_sdio,
+	&pmx_sdhci,
 	&pmx_i2s,
 	&pmx_uart1,
 	&pmx_uart2,
@@ -67,6 +68,15 @@ static struct platform_device *plat_devs[] __initdata = {
 	&i2c1_device,
 	&plgpio_device,
 	&pwm_device,
+	&sdhci_device,
+};
+
+/* sdhci board specific information */
+static struct sdhci_plat_data sdhci_plat_data = {
+	.card_power_gpio = PLGPIO_61,
+	.power_active_high = 0,
+	.power_always_enb = 1,
+	.card_int_gpio = -1,
 };
 
 static struct spi_board_info __initdata spi_board_info[] = {
@@ -75,6 +85,9 @@ static struct spi_board_info __initdata spi_board_info[] = {
 static void __init spear320_evb_init(void)
 {
 	unsigned int i;
+
+	/* set sdhci device platform data */
+	sdhci_set_plat_data(&sdhci_device, &sdhci_plat_data);
 
 	/* padmux initialization, must be done before spear320_init */
 	pmx_driver.mode = &auto_net_mii_mode;
