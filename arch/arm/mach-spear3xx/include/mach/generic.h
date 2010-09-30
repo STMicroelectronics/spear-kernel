@@ -115,6 +115,7 @@ extern struct platform_device nand0_device;
 extern struct platform_device nand1_device;
 extern struct platform_device nand2_device;
 extern struct platform_device nand3_device;
+extern struct platform_device sdhci_device;
 
 /* pad mux modes */
 extern struct pmx_mode nand_mode;
@@ -143,12 +144,15 @@ extern struct pmx_dev pmx_telecom_camera;
 extern struct pmx_dev pmx_telecom_dac;
 extern struct pmx_dev pmx_telecom_i2s;
 extern struct pmx_dev pmx_telecom_boot_pins;
-extern struct pmx_dev pmx_telecom_sdio_4bit;
-extern struct pmx_dev pmx_telecom_sdio_8bit;
+extern struct pmx_dev pmx_telecom_sdhci_4bit;
+extern struct pmx_dev pmx_telecom_sdhci_8bit;
 extern struct pmx_dev pmx_gpio1;
 
 /* Add spear300 machine function declarations here */
 void __init spear300_init(void);
+#define SDHCI_MEM_ENB	0x1
+#define I2S_MEM_ENB	0x2
+void sdhci_i2s_mem_enable(u8 mask);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
@@ -181,6 +185,7 @@ extern struct platform_device i2c1_device;
 extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;
 extern struct platform_device pwm_device;
+extern struct platform_device sdhci_device;
 
 /* pad mux modes */
 extern struct pmx_mode auto_net_smii_mode;
@@ -193,14 +198,14 @@ extern struct pmx_dev pmx_clcd;
 extern struct pmx_dev pmx_emi;
 extern struct pmx_dev pmx_fsmc;
 extern struct pmx_dev pmx_spp;
-extern struct pmx_dev pmx_sdio;
+extern struct pmx_dev pmx_sdhci;
 extern struct pmx_dev pmx_i2s;
 extern struct pmx_dev pmx_uart1;
 extern struct pmx_dev pmx_uart1_modem;
 extern struct pmx_dev pmx_uart2;
 extern struct pmx_dev pmx_touchscreen;
 extern struct pmx_dev pmx_can;
-extern struct pmx_dev pmx_sdio_led;
+extern struct pmx_dev pmx_sdhci_led;
 extern struct pmx_dev pmx_pwm0;
 extern struct pmx_dev pmx_pwm1;
 extern struct pmx_dev pmx_pwm2;

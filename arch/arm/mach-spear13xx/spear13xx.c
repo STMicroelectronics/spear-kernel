@@ -330,6 +330,16 @@ struct platform_device spear13xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
+static void sdhci_enable(void)
+{
+	unsigned val = readl(PERIP_CFG);
+
+	/* This function enables SD/MMC interface out of SD/MMC, CF, XD */
+	val &= ~(MCIF_SEL_MASK << MCIF_SEL_SHIFT);
+	val |= SD_MMC_ACTIVE << MCIF_SEL_SHIFT;
+	writel(val, PERIP_CFG);
+}
+
 #ifdef CONFIG_PCIEPORTBUS
 /* PCIE0 clock always needs to be enabled if any of the three PCIE port
  * have to be used. So call this function from the board initilization
@@ -358,10 +368,32 @@ int enable_pcie0_clk(void)
 }
 #endif
 
+/* sdhci (sdio) device declaration */
+static struct resource sdhci_resources[] = {
+	{
+		.start	= SPEAR13XX_MCIF_SDHCI_BASE,
+		.end	= SPEAR13XX_MCIF_SDHCI_BASE + SZ_256 - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+		.start	= IRQ_SDHCI,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device spear13xx_sdhci_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.name = "sdhci",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(sdhci_resources),
+	.resource = sdhci_resources,
+};
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
-	/* nothing to do for now */
+	sdhci_enable();
 }
 
 /* This will initialize vic */

@@ -40,6 +40,7 @@ extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
 extern struct platform_device spear13xx_rtc_device;
+extern struct platform_device spear13xx_sdhci_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear1300 machine device structure declarations here */
