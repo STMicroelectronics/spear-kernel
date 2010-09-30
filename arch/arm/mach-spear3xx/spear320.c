@@ -13,6 +13,8 @@
 
 #include <linux/amba/pl022.h>
 #include <linux/ptrace.h>
+#include <linux/types.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <mach/generic.h>
@@ -113,7 +115,7 @@ struct pmx_dev pmx_spp = {
 	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_sdio_modes[] = {
+struct pmx_dev_mode pmx_sdhci_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |
 			SMALL_PRINTERS_MODE,
@@ -121,10 +123,10 @@ struct pmx_dev_mode pmx_sdio_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_sdio = {
-	.name = "sdio",
-	.modes = pmx_sdio_modes,
-	.mode_count = ARRAY_SIZE(pmx_sdio_modes),
+struct pmx_dev pmx_sdhci = {
+	.name = "sdhci",
+	.modes = pmx_sdhci_modes,
+	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
 	.enb_on_reset = 1,
 };
 
@@ -218,17 +220,17 @@ struct pmx_dev pmx_can = {
 	.enb_on_reset = 1,
 };
 
-struct pmx_dev_mode pmx_sdio_led_modes[] = {
+struct pmx_dev_mode pmx_sdhci_led_modes[] = {
 	{
 		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
 		.mask = PMX_SSP_CS_MASK,
 	},
 };
 
-struct pmx_dev pmx_sdio_led = {
-	.name = "sdio_led",
-	.modes = pmx_sdio_led_modes,
-	.mode_count = ARRAY_SIZE(pmx_sdio_led_modes),
+struct pmx_dev pmx_sdhci_led = {
+	.name = "sdhci_led",
+	.modes = pmx_sdhci_led_modes,
+	.mode_count = ARRAY_SIZE(pmx_sdhci_led_modes),
 	.enb_on_reset = 1,
 };
 
@@ -536,6 +538,27 @@ struct platform_device pwm_device = {
 	.resource = pwm_resources,
 };
 
+/* sdhci (sdio) device registeration */
+static struct resource sdhci_resources[] = {
+	{
+		.start	= SPEAR320_SDHCI_BASE,
+		.end	= SPEAR320_SDHCI_BASE + SZ_256 - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+		.start	= IRQ_SDHCI,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device sdhci_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.name = "sdhci",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(sdhci_resources),
+	.resource = sdhci_resources,
+};
 
 /* spear3xx shared irq */
 struct shirq_dev_config shirq_ras1_config[] = {
