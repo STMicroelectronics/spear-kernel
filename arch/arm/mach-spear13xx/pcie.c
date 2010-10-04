@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
+#include <linux/pci_regs.h>
 #include <linux/msi.h>
 #include <linux/mbus.h>
 #include <linux/sched.h>
@@ -129,6 +130,85 @@ static void spear_dbi_write_reg(struct pcie_port *pp, int where, int size,
 	disable_dbi_access(app_reg);
 }
 
+#define PCI_FIND_CAP_TTL	48
+
+static int pci_find_own_next_cap_ttl(struct pcie_port *pp,
+		u32 pos, int cap, int *ttl)
+{
+	u32 id;
+
+	while ((*ttl)--) {
+		spear_dbi_read_reg(pp, pos, 1, &pos);
+		if (pos < 0x40)
+			break;
+		pos &= ~3;
+		spear_dbi_read_reg(pp, pos + PCI_CAP_LIST_ID, 1, &id);
+		if (id == 0xff)
+			break;
+		if (id == cap)
+			return pos;
+		pos += PCI_CAP_LIST_NEXT;
+	}
+	return 0;
+}
+
+static int pci_find_own_next_cap(struct pcie_port *pp, u32 pos, int cap)
+{
+	int ttl = PCI_FIND_CAP_TTL;
+
+	return pci_find_own_next_cap_ttl(pp, pos, cap, &ttl);
+}
+
+static int pci_find_own_cap_start(struct pcie_port *pp, u8 hdr_type)
+{
+	u32 status;
+
+	spear_dbi_read_reg(pp, PCI_STATUS, 2, &status);
+	if (!(status & PCI_STATUS_CAP_LIST))
+		return 0;
+
+	switch (hdr_type) {
+	case PCI_HEADER_TYPE_NORMAL:
+	case PCI_HEADER_TYPE_BRIDGE:
+		return PCI_CAPABILITY_LIST;
+	case PCI_HEADER_TYPE_CARDBUS:
+		return PCI_CB_CAPABILITY_LIST;
+	default:
+		return 0;
+	}
+
+	return 0;
+}
+
+/**
+ * Tell if a device supports a given PCI capability.
+ * Returns the address of the requested capability structure within the
+ * device's PCI configuration space or 0 in case the device does not
+ * support it. Possible values for @cap:
+ *
+ * %PCI_CAP_ID_PM	Power Management
+ * %PCI_CAP_ID_AGP	Accelerated Graphics Port
+ * %PCI_CAP_ID_VPD	Vital Product Data
+ * %PCI_CAP_ID_SLOTID	Slot Identification
+ * %PCI_CAP_ID_MSI	Message Signalled Interrupts
+ * %PCI_CAP_ID_CHSWP	CompactPCI HotSwap
+ * %PCI_CAP_ID_PCIX	PCI-X
+ * %PCI_CAP_ID_EXP	PCI Express
+ */
+static int pci_find_own_capability(struct pcie_port *pp, int cap)
+{
+	u32 pos;
+	u32 hdr_type;
+
+	spear_dbi_read_reg(pp, PCI_HEADER_TYPE, 1, &hdr_type);
+
+	pos = pci_find_own_cap_start(pp, hdr_type);
+	if (pos)
+		pos = pci_find_own_next_cap(pp, pos, cap);
+
+	return pos;
+}
+
 static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) va_app_base;
@@ -148,6 +228,7 @@ static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 static void spear13xx_pcie_host_init(struct pcie_port *pp)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *)pp->va_app_base;
+	u32 cap, val;
 
 	/*setup registers for outbound translation */
 
@@ -185,6 +266,15 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 	writel(0x0, &app_reg->pim_io_addr_start);
 	writel(0x0, &app_reg->pim_io_addr_start);
 	writel(0x0, &app_reg->pim_rom_addr_start);
+
+	cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
+	/*this controller support only 128 bytes read size, however its
+	 * default value in capability register is 512 bytes. So force
+	 * it to 128 here */
+
+	spear_dbi_read_reg(pp, cap + PCI_EXP_DEVCTL, 4, &val);
+	val &= ~PCI_EXP_DEVCTL_READRQ;
+	spear_dbi_write_reg(pp, cap + PCI_EXP_DEVCTL, 4, val);
 
 	writel(DEVICE_TYPE_RC | (1 << MISCTRL_EN_ID)
 			| (1 << APP_LTSSM_ENABLE_ID)
@@ -225,6 +315,102 @@ static void __init spear13xx_pcie_preinit(void)
 			panic("can't allocate PCIe I/O space");
 		if (request_resource(&iomem_resource, &pp->res[1]))
 			panic("can't allocate PCIe MEM space");
+	}
+}
+
+static struct hw_pci spear13xx_pci;
+static struct pcie_port *bus_to_port(int bus);
+
+static int pcie_get_payload(struct pci_dev *dev)
+{
+	int ret, cap;
+	u16 ctl;
+
+	cap = pci_find_capability(dev, PCI_CAP_ID_EXP);
+	if (!cap)
+		return -EINVAL;
+
+	ret = pci_read_config_word(dev, cap + PCI_EXP_DEVCTL, &ctl);
+	if (!ret)
+		ret = 128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5);
+
+	return ret;
+}
+
+static int pcie_set_payload(struct pci_dev *dev, int rq)
+{
+	int cap, err = -EINVAL;
+	u16 ctl, v;
+
+	if (rq < 128 || rq > 4096 || !is_power_of_2(rq))
+		goto out;
+
+	v = (ffs(rq) - 8) << 5;
+
+	cap = pci_find_capability(dev, PCI_CAP_ID_EXP);
+	if (!cap)
+		goto out;
+
+	err = pci_read_config_word(dev, cap + PCI_EXP_DEVCTL, &ctl);
+	if (err)
+		goto out;
+
+	if ((ctl & PCI_EXP_DEVCTL_PAYLOAD) != v) {
+		ctl &= ~PCI_EXP_DEVCTL_PAYLOAD;
+		ctl |= v;
+		err = pci_write_config_dword(dev, cap + PCI_EXP_DEVCTL, ctl);
+	}
+
+out:
+	return err;
+}
+static void __init spear13xx_pcie_postinit(void)
+{
+	struct hw_pci *hw = &spear13xx_pci;
+	struct pci_sys_data *sys;
+	struct pci_dev *dev;
+	int cap, ctl, payload;
+	int max_payload = 4096;
+	struct pci_bus *bus;
+	struct pcie_port *pp;
+
+	/* allign Max_Payload_Size for all devices to the minimum
+	 * Max_Payload_Size of any of the device in tree.
+	 * Max_Read_Request_Size of any of the DS device should be less
+	 * than or equal to that of RC's Max_Read_Request_Size*/
+
+	list_for_each_entry(sys, &hw->buses, node) {
+		bus = sys->bus;
+		pp = bus_to_port(bus->number);
+		cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
+		spear_dbi_read_reg(pp, cap + PCI_EXP_DEVCTL, 2, &ctl);
+		payload = 128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5);
+		if (payload < max_payload)
+			max_payload = payload;
+		ctl = 128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12);
+
+		list_for_each_entry(dev, &bus->devices, bus_list) {
+			if (ctl < pcie_get_readrq(dev))
+				pcie_set_readrq(dev, ctl);
+			payload = pcie_get_payload(dev);
+			if (payload < max_payload)
+				max_payload = payload;
+		}
+	}
+	/* now set max_payload for all devices */
+	list_for_each_entry(sys, &hw->buses, node) {
+		bus = sys->bus;
+		pp = bus_to_port(bus->number);
+		cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
+		spear_dbi_read_reg(pp, cap + PCI_EXP_DEVCTL, 2, &ctl);
+		payload = (ffs(max_payload) - 8) << 5;
+		if ((ctl & PCI_EXP_DEVCTL_PAYLOAD) != max_payload) {
+			ctl &= ~PCI_EXP_DEVCTL_PAYLOAD;
+			ctl |= payload;
+			spear_dbi_write_reg(pp, cap + PCI_EXP_DEVCTL, 2, ctl);
+		}
+		list_for_each_entry(dev, &bus->devices, bus_list)
+			pcie_set_payload(dev, max_payload);
 	}
 }
 
@@ -413,6 +599,7 @@ static int __init spear13xx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
 static struct hw_pci spear13xx_pci __initdata = {
 	.nr_controllers	= NUM_PCIE_PORTS,
 	.preinit	= spear13xx_pcie_preinit,
+	.postinit	= spear13xx_pcie_postinit,
 	.swizzle	= pci_std_swizzle,
 	.setup		= spear13xx_pcie_setup,
 	.scan		= spear13xx_pcie_scan_bus,
