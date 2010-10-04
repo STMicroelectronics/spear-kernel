@@ -14,9 +14,12 @@
 #ifndef __MACH_PCIE_H
 #define __MACH_PCIE_H
 
-extern int (*pcie_port_is_host)(int port);
 extern int enable_pcie0_clk(void);
 
+struct pcie_port_info {
+	u8	is_host;
+};
+extern struct pcie_port_info *(*pcie_port_init)(int port);
 
 struct pcie_port {
 	u8			port;
@@ -30,6 +33,7 @@ struct pcie_port {
 	char			mem_space_name[16];
 	char			io_space_name[16];
 	struct resource		res[2];
+	struct pcie_port_info	config;
 };
 
 struct pcie_app_reg {
@@ -164,7 +168,7 @@ struct pcie_app_reg {
 /*BAR MASK registers*/
 #define PCIE_BAR0_MASK_REG	0x1010
 
-static inline void pcie_init(int (*fptr)(int port))
+static inline void pcie_init(struct pcie_port_info * (*fptr)(int port))
 {
-	pcie_port_is_host = fptr;
+	pcie_port_init = fptr;
 }
