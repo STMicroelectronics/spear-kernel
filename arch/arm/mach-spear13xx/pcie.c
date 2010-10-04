@@ -41,7 +41,7 @@
 
 #define MAX_LINK_UP_WAIT_JIFFIES	10
 
-int (*pcie_port_is_host)(int port);
+struct pcie_port_info *(*pcie_port_init)(int port);
 static struct pcie_port pcie_port[NUM_PCIE_PORTS];
 static u32 spr_pcie_base[NUM_PCIE_PORTS] = {
 	SPEAR13XX_PCIE0_BASE,
@@ -292,8 +292,7 @@ static void __init spear13xx_pcie_preinit(void)
 		pp = pcie_port + i;
 		app_reg = (struct pcie_app_reg *) (pp->va_app_base);
 
-		/* init hosts only */
-		if ((*pcie_port_is_host)(i) != 1)
+		if (!(pp->config.is_host))
 			continue;
 		snprintf(pp->mem_space_name, sizeof(pp->mem_space_name),
 			"PCIe %d MEM", pp->port);
@@ -422,10 +421,10 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	if (nr >= NUM_PCIE_PORTS)
 		return 0;
 
-	if ((*pcie_port_is_host)(nr) != 1)
+	pp = &pcie_port[nr];
+	if (!(pp->config.is_host))
 		return 0;
 
-	pp = &pcie_port[nr];
 	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
 		return 0;
 	pp->root_bus_nr = sys->busnr;
@@ -455,7 +454,7 @@ static struct pcie_port *bus_to_port(int bus)
 
 	for (i = NUM_PCIE_PORTS - 1; i >= 0; i--) {
 		int rbus = pcie_port[i].root_bus_nr;
-		if ((*pcie_port_is_host)(i) != 1)
+		if (!(pcie_port[i].config.is_host))
 			continue;
 		if (rbus != -1 && rbus <= bus)
 			break;
@@ -578,7 +577,7 @@ spear13xx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 {
 	struct pci_bus *bus;
 
-	if ((nr < NUM_PCIE_PORTS) && ((*pcie_port_is_host)(nr)) == 1) {
+	if ((nr < NUM_PCIE_PORTS) && pcie_port[nr].config.is_host) {
 		bus = pci_scan_bus(sys->busnr, &pcie_ops, sys);
 	} else {
 		bus = NULL;
@@ -735,6 +734,7 @@ static int __init spear13xx_pcie_init(void)
 {
 	int port;
 	struct clk *clk;
+	struct pcie_port_info *config;
 
 	for (port = 0; port < NUM_PCIE_PORTS; port++) {
 		/* do not enable clock if it is PCIE0. Ideally , all controller
@@ -773,7 +773,11 @@ static int __init spear13xx_pcie_init(void)
 			}
 		}
 
-		if ((*pcie_port_is_host)(port) == 1)
+		config = (*pcie_port_init)(port);
+		memcpy((void *)&pcie_port[port].config, (void *)config,
+				(sizeof(struct pcie_port_info)));
+
+		if (pcie_port[port].config.is_host)
 			add_pcie_port(port, spr_pcie_base[port],
 					spr_pcie_app_base[port]);
 	}

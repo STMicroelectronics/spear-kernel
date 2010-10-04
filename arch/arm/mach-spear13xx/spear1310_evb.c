@@ -210,26 +210,34 @@ static struct spi_board_info __initdata spi_board_info[] = {
 };
 
 #ifdef CONFIG_PCIEPORTBUS
+static struct pcie_port_info __initdata pcie_port_info[] = {
+	/*pcie0 port info*/
+	{
+		.is_host = 0,
+	}, {
+	/*pcie1 port info*/
+		.is_host = 1,
+	}, {
+	/*pcie2 port info*/
+		.is_host = 1,
+	}
+};
+
 /*
  * This function is needed for PCIE host and device driver. Same
  * controller can not be programmed as host as well as device. So host
- * driver must call this function and if this function returns 1 then
- * only host should add that particular port as RC.
- * A port to be added as device, one must also add device's information
+ * driver must call this function and if this function returns a
+ * configuration structure which tells that this port should be a host, then
+ * only host controller driver should add that particular port as RC.
+ * For a port to be added as device, one must also add device's information
  * in plat_devs array defined in this file.
  */
-static int spear1310_pcie_port_is_host(int port)
+static struct pcie_port_info *spear1300_pcie_port_init(int port)
 {
-	switch (port) {
-	case 0:
-		return 0;
-	case 1:
-		return 1;
-	case 2:
-		return 1;
-	}
-
-	return -EINVAL;
+	if (port < 3)
+		return &pcie_port_info[port];
+	else
+		return NULL;
 }
 #endif
 
@@ -345,7 +353,7 @@ static void __init spear1310_evb_init(void)
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear1310_pcie_port_is_host);
+	pcie_init(spear1300_pcie_port_init);
 #endif
 
 	/* Add Platform Devices */
