@@ -312,9 +312,9 @@ static void __init spear13xx_pcie_preinit(void)
 		pp->res[1].flags = IORESOURCE_IO;
 
 		if (request_resource(&iomem_resource, &pp->res[0]))
-			panic("can't allocate PCIe I/O space");
-		if (request_resource(&iomem_resource, &pp->res[1]))
-			panic("can't allocate PCIe MEM space");
+			panic("can't allocate PCIe Mem space");
+		if (request_resource(&ioport_resource, &pp->res[1]))
+			panic("can't allocate PCIe IO space");
 	}
 }
 
