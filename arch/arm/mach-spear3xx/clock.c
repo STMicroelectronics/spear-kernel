@@ -77,7 +77,7 @@ static struct clk pll1_clk = {
 	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
 	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 1},
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
 	.private_data = &pll1_config,
 };
 
@@ -97,7 +97,7 @@ static struct clk pll2_clk = {
 	.calc_rate = &pll_calc_rate,
 	.recalc = &pll_clk_recalc,
 	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 1},
+	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
 	.private_data = &pll2_config,
 };
 
