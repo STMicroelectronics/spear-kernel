@@ -108,15 +108,16 @@ static void stmpe_work(struct work_struct *work)
 
 	/* Return the 'Release' event */
 	if (ts->event_count != 0 && (status & TOUCH_INT)) {
-		/* Clear TOUCH_INT event */
-		stmpe610_write(ts->idata, INT_STA, TOUCH_INT);
 		release = 1;
 		ts->event_count = 0;
-	} else
+	} else {
 		ts->event_count++;
+		if (ts->event_count == 1)
+			input_report_key(ts->input, BTN_TOUCH, 1);
+	}
 
-	/* Clear FIFO_TH_INT event */
-	stmpe610_write(ts->idata, INT_STA, FIFO_TH_INT);
+	/* Clear FIFO_TH_INT and TOUCH_INT Status event */
+	stmpe610_write(ts->idata, INT_STA, FIFO_TH_INT | TOUCH_INT);
 
 	size = stmpe610_read(ts->idata, FIFO_SIZE);
 	while (size > 0) {
@@ -138,15 +139,15 @@ static void stmpe_work(struct work_struct *work)
 			input_report_abs(ts->input, ABS_PRESSURE, z);
 		}
 
-		input_report_key(ts->input, BTN_TOUCH, 1);
+		input_sync(ts->input);
 		size -= 4;
 	}
 
 	if (release) {
 		input_report_abs(ts->input, ABS_PRESSURE, 0);
 		input_report_key(ts->input, BTN_TOUCH, 0);
+		input_sync(ts->input);
 	}
-	input_sync(ts->input);
 
 	/* Re-enable interrupts */
 	reset_fifo(ts);
