@@ -355,7 +355,8 @@ static struct aux_clk_config uart_synth_config = {
 /* aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1div2 = 500 MHz */
-	{.xscale = 5, .yscale = 204, .eq = 1}, /* for i2s_ref: 12.29 MHz */
+	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
+	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
 	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
 	{.xscale = 1, .yscale = 4, .eq = 1}, /* 125 MHz */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
@@ -370,7 +371,7 @@ static struct clk uart_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
 	.private_data = &uart_synth_config,
 };
 
@@ -416,7 +417,7 @@ static struct clk sdhci_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 0},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
 	.private_data = &sdhci_synth_config,
 };
 
@@ -442,7 +443,7 @@ static struct clk cfxd_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 0},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
 	.private_data = &cfxd_synth_config,
 };
 
@@ -468,7 +469,7 @@ static struct clk c3_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
 	.private_data = &c3_synth_config,
 };
 
