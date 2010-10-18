@@ -157,9 +157,8 @@ config USB_ATMEL_USBA
 config USB_GADGET_DESIGNWARE
 	boolean "Synopsys designware Usb Device Controller"
 	select USB_GADGET_DUALSPEED
-	depends on PLAT_SPEAR
 	help
-	  This driver supports the synopsys controller on SPEAr platform.
+	  This driver supports the usb device synopsys controller.
 	  Say "y" to link the driver statically, or "m" to build a
 	  dynamically linked module called "spear_udc" and force all
 	  gadget drivers to also be dynamically linked.

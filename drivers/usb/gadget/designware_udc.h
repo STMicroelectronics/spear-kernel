@@ -2,7 +2,7 @@
  * drivers/usb/gadget/designware_udc.h
  *
  * Copyright (C) 2010 ST Microelectronics
- * Rajeev Kumar<rajeev-dlh.kumar@st.com>
+ * Rajeev Kumar <rajeev-dlh.kumar@st.com>
  * Shiraz HAshim <shiraz.hashim@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -17,9 +17,9 @@
 #include <asm-generic/ioctl.h>
 
 #undef DEBUG
-#define	DRIVER_DESC		"Designware USB Device Controller driver"
+#define DRIVER_DESC		"Designware USB Device Controller driver"
 
-#define dw_udc_debug_flags	0
+#define dw_udc_debug_flags	(DBG_INTS | DBG_REQUESTS)
 
 #ifdef DEBUG
 #define DW_UDC_DBG(type, fmt, args...)					\
@@ -187,7 +187,7 @@ struct dw_udc_plug_regs {
 
 #define PLUG_INTPEND			(0x1 << 0)
 
-/* DMA Descriptors */
+/* DMA Descriptors: in/out */
 struct dw_udc_bulkd {
 	__le32 status;
 	__le32 reserved;
@@ -212,6 +212,7 @@ struct dw_udc_bulkd {
 #define	DMAUSB_LASTDESCR	(0x1 << 27)
 #define	DMAUSB_LEN_MASK		(0xFFFF << 0)
 
+/* setup data structure */
 struct dw_udc_setupd {
 	__le32 status;
 	__le32 reserved;
@@ -219,9 +220,10 @@ struct dw_udc_setupd {
 	__le32 data2;
 } __attribute__ ((aligned(16), packed));
 
+/* endpoint specific structure */
 struct dw_udc_ep {
 	struct usb_ep ep;
-	struct dw_udc_dev *dev;
+	struct dw_udc_dev *udev;
 	struct dw_udc_epin_regs __iomem *in_regs;
 	struct dw_udc_epout_regs __iomem *out_regs;
 	const struct usb_endpoint_descriptor *desc;
