@@ -224,7 +224,7 @@ struct clcd_clk_config {
 
 /* clcd clk rate config structure */
 struct clcd_rate_tbl {
-	u16 div;
+	u32 div;
 };
 
 /* ddr min, max clk rate table */
