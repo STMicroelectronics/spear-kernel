@@ -340,33 +340,28 @@ static int stmmac_init_phy(struct net_device *dev)
 	return 0;
 }
 
-static inline void stmmac_mac_enable_rx(unsigned long ioaddr)
+/*
+ * If you have to enable both tx and rx better to do it in a single
+ * write, to avoid to wait 4 phy_clk cycles (1.6us at 10Mbps) between the
+ * two writes.
+ */
+static inline void stmmac_mac_enable_tx_rx(unsigned long ioaddr)
 {
 	u32 value = readl(ioaddr + MAC_CTRL_REG);
-	value |= MAC_RNABLE_RX;
-	/* Set the RE (receive enable bit into the MAC CTRL register). */
-	writel(value, ioaddr + MAC_CTRL_REG);
-}
-
-static inline void stmmac_mac_enable_tx(unsigned long ioaddr)
-{
-	u32 value = readl(ioaddr + MAC_CTRL_REG);
-	value |= MAC_ENABLE_TX;
+	value |= MAC_ENABLE_TX | MAC_RNABLE_RX;
 	/* Set the TE (transmit enable bit into the MAC CTRL register). */
 	writel(value, ioaddr + MAC_CTRL_REG);
 }
 
-static inline void stmmac_mac_disable_rx(unsigned long ioaddr)
+/*
+ * If you have to disable both tx and rx better to do it in a single
+ * write, to avoid to wait 4 phy_clk cycles (1.6us at 10Mbps) between the
+ * two writes.
+ */
+static inline void stmmac_mac_disable_tx_rx(unsigned long ioaddr)
 {
 	u32 value = readl(ioaddr + MAC_CTRL_REG);
-	value &= ~MAC_RNABLE_RX;
-	writel(value, ioaddr + MAC_CTRL_REG);
-}
-
-static inline void stmmac_mac_disable_tx(unsigned long ioaddr)
-{
-	u32 value = readl(ioaddr + MAC_CTRL_REG);
-	value &= ~MAC_ENABLE_TX;
+	value &= ~(MAC_ENABLE_TX | MAC_RNABLE_RX);
 	writel(value, ioaddr + MAC_CTRL_REG);
 }
 
@@ -1071,8 +1066,7 @@ static int stmmac_open(struct net_device *dev)
 	writel(0xffffffff, ioaddr + MMC_LOW_INTR_MASK);
 
 	/* Enable the MAC Rx/Tx */
-	stmmac_mac_enable_rx(ioaddr);
-	stmmac_mac_enable_tx(ioaddr);
+	stmmac_mac_enable_tx_rx(ioaddr);
 
 	/* Set the HW DMA mode and the COE */
 	stmmac_dma_operation_mode(priv);
@@ -1102,8 +1096,7 @@ static int stmmac_open(struct net_device *dev)
 	netif_start_queue(dev);
 	return 0;
 dma_init_fail:
-	stmmac_mac_disable_tx(dev->base_addr);
-	stmmac_mac_disable_rx(dev->base_addr);
+	stmmac_mac_disable_tx_rx(dev->base_addr);
 #ifdef CONFIG_STMMAC_TIMER
 mem_alloc_fail:
 	free_irq(dev->irq, dev);
@@ -1153,8 +1146,7 @@ static int stmmac_release(struct net_device *dev)
 	free_dma_desc_resources(priv);
 
 	/* Disable the MAC core */
-	stmmac_mac_disable_tx(dev->base_addr);
-	stmmac_mac_disable_rx(dev->base_addr);
+	stmmac_mac_disable_tx_rx(dev->base_addr);
 
 	netif_carrier_off(dev);
 	clk_disable(priv->stmmac_clk);
@@ -2048,8 +2040,7 @@ static int stmmac_dvr_remove(struct platform_device *pdev)
 	stmmac_dma_stop_rx(ndev->base_addr);
 	stmmac_dma_stop_tx(ndev->base_addr);
 
-	stmmac_mac_disable_rx(ndev->base_addr);
-	stmmac_mac_disable_tx(ndev->base_addr);
+	stmmac_mac_disable_tx_rx(ndev->base_addr);
 
 	netif_carrier_off(ndev);
 	clk_put(priv->stmmac_clk);
@@ -2105,8 +2096,6 @@ static int stmmac_suspend(struct platform_device *pdev, pm_message_t state)
 		priv->hw->desc->init_tx_desc(priv->dma_tx,
 						priv->dma_tx_size);
 
-		stmmac_mac_disable_tx(dev->base_addr);
-
 		if (device_may_wakeup(&(pdev->dev))) {
 			/* Enable Power down mode by programming the PMT regs */
 			if (priv->wolenabled == PMT_SUPPORTED)
@@ -2116,7 +2105,7 @@ static int stmmac_suspend(struct platform_device *pdev, pm_message_t state)
 			if (irq_eth_wake)
 				enable_irq_wake(irq_eth_wake);
 		} else {
-			stmmac_mac_disable_rx(dev->base_addr);
+			stmmac_mac_disable_tx_rx(dev->base_addr);
 		}
 	} else {
 		priv->shutdown = 1;
@@ -2165,8 +2154,7 @@ static int stmmac_resume(struct platform_device *pdev)
 	netif_device_attach(dev);
 
 	/* Enable the MAC and DMA */
-	stmmac_mac_enable_rx(ioaddr);
-	stmmac_mac_enable_tx(ioaddr);
+	stmmac_mac_enable_tx_rx(ioaddr);
 	stmmac_dma_start_tx(ioaddr);
 	stmmac_dma_start_rx(ioaddr);
 
