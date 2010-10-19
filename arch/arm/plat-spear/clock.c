@@ -844,42 +844,37 @@ int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 }
 
 /*
- * Calculates clcd clk rate for different values of div
- *
  * Fout from synthesizer can be given from below equation:
  * Fout= Fin/2*div (division factor)
  * div is 17 bits:-
  *	0-13 (fractional part)
  *	14-16 (integer part)
- * To calculate Fout we left shift val by 14 bits and divide Fin by
- * complete div (including fractional part) and then right shift the
- * result by 14 places.
+ *	div is (16-14 bits).(13-0 bits) (in binary)
+ *
+ *	Fout = Fin/(2 * div)
+ *	Fout = ((Fin / 10000)/(2 * div)) * 10000
+ *	Fout = (2^14 * (Fin / 10000)/(2^14 * (2 * div))) * 10000
+ *	Fout = (((Fin / 10000) << 14)/(2 * (div << 14))) * 10000
+ *
+ * div << 14 simply 17 bit value written at register.
+ * Max error due to scaling down by 10000 is 10 KHz
  */
+
+/* Calculates clcd clk rate for different values of div */
 unsigned long clcd_calc_rate(struct clk *clk, int index)
 {
 	unsigned long rate = clk->pclk->rate;
 	struct clcd_rate_tbl *tbls = clk->rate_config.tbls;
 
-	rate /= 1000;
-	rate <<= 12;
+	rate /= 10000;
+	rate <<= 14;
 	rate /= (2 * tbls[index].div);
-	rate >>= 12;
-	rate *= 1000;
+	rate *= 10000;
 
 	return rate;
 }
 
-/*
- * calculates current programmed rate of clcd synthesizer
- * Fout from synthesizer can be given from below equation:
- * Fout= Fin/2*div (division factor)
- * div is 17 bits:-
- *	0-13 (fractional part)
- *	14-16 (integer part)
- * To calculate Fout we left shift val by 14 bits and divide Fin by
- * complete div (including fractional part) and then right shift the
- * result by 14 places.
- */
+/* calculates current programmed rate of clcd synthesizer */
 int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
 	struct clcd_clk_config *config = clk->private_data;
@@ -893,10 +888,10 @@ int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 	if (!div)
 		return -EINVAL;
 
-	prate = prate / 1000; /* first level division, make it KHz */
+	prate = prate / 10000;
 
-	*rate = (((unsigned long)prate << 12) / (2 * div)) >> 12;
-	*rate *= 1000;
+	*rate = ((unsigned long)prate << 14) / (2 * div);
+	*rate *= 10000;
 	return 0;
 }
 

@@ -621,8 +621,8 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 /* clcd rate configuration table, in ascending order of rates */
 struct clcd_rate_tbl clcd_rtbl[] = {
 	/* For pll1div4 = 250 MHz */
-	{.div = 0x4000}, /* 62.5 MHz */
-	{.div = 0x2000}, /* 125 MHz */
+	{.div = 0x08480}, /* 60 MHz */
+	{.div = 0x04240}, /* 120 MHz */
 };
 
 /* clcd synth clock */
