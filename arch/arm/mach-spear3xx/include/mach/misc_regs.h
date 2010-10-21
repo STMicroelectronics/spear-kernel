@@ -167,5 +167,7 @@
 #define BIST4_STS_RES		((unsigned int *)(MISC_BASE + 0x114))
 #define BIST5_STS_RES		((unsigned int *)(MISC_BASE + 0x118))
 #define SYSERR_CFG_CTR		((unsigned int *)(MISC_BASE + 0x11C))
+#define PLGPIO3_PAD_PRG		((unsigned int *)(MISC_BASE + 0x13C))
+#define PLGPIO4_PAD_PRG		((unsigned int *)(MISC_BASE + 0x140))
 
 #endif /* __MACH_MISC_REGS_H */
