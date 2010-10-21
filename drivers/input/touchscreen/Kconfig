@@ -543,6 +543,7 @@ config TOUCHSCREEN_USB_COMPOSITE
 	  - GoTop Super_Q2/GogoPen/PenPower tablets
 	  - JASTEC USB Touch Controller/DigiTech DTR-02U
 	  - Zytronic controllers
+	  - EasyTouch USB Touch Controller from DataModul
 
 	  Have a look at <http://linux.chapter7.ch/touchkit/> for
 	  a usage description and the required user-space stuff.
@@ -620,6 +621,11 @@ config TOUCHSCREEN_USB_GOTOP
 config TOUCHSCREEN_USB_JASTEC
 	default y
 	bool "JASTEC/DigiTech DTR-02U USB touch controller device support" if EMBEDDED
+	depends on TOUCHSCREEN_USB_COMPOSITE
+
+config TOUCHSCREEN_USB_EASYTOUCH
+	default y
+	bool "EasyTouch USB Touch controller device support" if EMBEDDED
 	depends on TOUCHSCREEN_USB_COMPOSITE
 
 config TOUCHSCREEN_USB_E2I

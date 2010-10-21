@@ -134,6 +134,7 @@ enum {
 	DEVTYPE_GENERAL_TOUCH,
 	DEVTYPE_GOTOP,
 	DEVTYPE_JASTEC,
+	DEVTYPE_ETOUCH,
 	DEVTYPE_E2I,
 	DEVTYPE_ZYTRONIC,
 	DEVTYPE_TC45USB,
@@ -214,6 +215,10 @@ static const struct usb_device_id usbtouch_devices[] = {
 
 #ifdef CONFIG_TOUCHSCREEN_USB_JASTEC
 	{USB_DEVICE(0x0f92, 0x0001), .driver_info = DEVTYPE_JASTEC},
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
+	{USB_DEVICE(0x7374, 0x0001), .driver_info = DEVTYPE_ETOUCH},
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_USB_E2I
@@ -320,6 +325,98 @@ static int egalax_get_pkt_len(unsigned char *buf, int len)
 }
 #endif
 
+/*****************************************************************************
+ * EasyTouch part
+ */
+
+#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
+
+#define EGALAX_PKT_TYPE_MASK		0xFE
+#define EGALAX_PKT_TYPE_REPT		0x80
+#define EGALAX_PKT_TYPE_REPT2		0xB0
+#define EGALAX_PKT_TYPE_DIAG		0x0A
+
+static int etouch_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
+{
+	if ((pkt[0] & EGALAX_PKT_TYPE_MASK) != EGALAX_PKT_TYPE_REPT &&
+	    (pkt[0] & EGALAX_PKT_TYPE_MASK) != EGALAX_PKT_TYPE_REPT2)
+		return 0;
+
+	dev->x = ((pkt[3] & 0x0F) << 7) | (pkt[4] & 0x7F);
+	dev->y = ((pkt[1] & 0x0F) << 7) | (pkt[2] & 0x7F);
+	dev->touch = pkt[0] & 0x01;
+
+	return 1;
+}
+
+static int etouch_get_pkt_len(unsigned char *buf, int len)
+{
+	switch (buf[0] & EGALAX_PKT_TYPE_MASK) {
+	case EGALAX_PKT_TYPE_REPT:
+	case EGALAX_PKT_TYPE_REPT2:
+		return 5;
+
+	case EGALAX_PKT_TYPE_DIAG:
+		if (len < 2)
+			return -1;
+
+		return buf[1] + 2;
+	}
+
+	return 0;
+}
+
+static void etouch_process_pkt(struct usbtouch_usb *usbtouch,
+				unsigned char *pkt, int len)
+{
+	struct usbtouch_device_info *type = usbtouch->type;
+	int pkt_len, pos;
+
+	/* loop over the received packet, process */
+	pos = 0;
+	do {
+		/* get packet len */
+		pkt_len = type->get_pkt_len(pkt + pos, len - pos);
+
+		/* unknown packet: skip one byte */
+		if (unlikely(!pkt_len)) {
+			pos++;
+			continue;
+		}
+
+		/* full packet: process */
+		if (likely((pkt_len > 0) && (pkt_len <= len - pos))) {
+			if (!type->read_data(usbtouch, pkt + pos))
+				goto sync_and_ret;
+
+			/* multi-touch */
+			if (usbtouch->touch) {
+				input_report_abs(usbtouch->input,
+					ABS_MT_POSITION_X, usbtouch->x);
+				input_report_abs(usbtouch->input,
+					ABS_MT_POSITION_Y, usbtouch->y);
+			}
+			input_mt_sync(usbtouch->input);
+		}
+		pos += pkt_len;
+	} while (pos < len);
+
+sync_and_ret:
+	input_sync(usbtouch->input);
+	return;
+}
+
+static int etouch_init(struct usbtouch_usb *usbtouch)
+{
+	/* Enable ABS params for MT events */
+	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_X,
+							0, 0xffff, 0, 0);
+	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_Y,
+							0, 0xffff, 0, 0);
+
+	return 0;
+}
+#endif
 
 /*****************************************************************************
  * PanJit Part
@@ -1091,6 +1188,20 @@ static struct usbtouch_device_info usbtouch_dev_info[] = {
 		.max_yc		= 0x0fff,
 		.rept_size	= 4,
 		.read_data	= jastec_read_data,
+	},
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
+	[DEVTYPE_ETOUCH] = {
+		.min_xc		= 0x0,
+		.max_xc		= 0x07ff,
+		.min_yc		= 0x0,
+		.max_yc		= 0x07ff,
+		.rept_size	= 16,
+		.process_pkt	= etouch_process_pkt,
+		.get_pkt_len	= etouch_get_pkt_len,
+		.read_data	= etouch_read_data,
+		.init		= etouch_init,
 	},
 #endif
 
