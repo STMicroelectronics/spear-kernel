@@ -13,6 +13,7 @@
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <linux/io.h>
 #include <linux/mtd/nand.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
@@ -22,6 +23,8 @@
 #include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
+#include <mach/macb_eth.h>
+#include <mach/misc_regs.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
 #include <plat/jpeg.h>
@@ -59,6 +62,14 @@ struct platform_device spear320_phy_device = {
 	.num_resources = 1,
 	.resource = &phy_resources,
 	.dev.platform_data = &phy_private_data,
+};
+
+/* Ethernet Private data */
+static struct macb_base_data spear320_macb_data = {
+	.phy_mask = 0,
+	.gpio_num = PLGPIO_76,
+	.phy_addr = 0x2,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
 };
 
 /* padmux devices to enable */
@@ -114,6 +125,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
+	&spear320_eth_macb1_mii_device,
 	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
@@ -171,6 +183,38 @@ static void __init spi_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
+#define SPEAR320_CONFIG_REG	0x10
+#define SPEAR_CFG_MII		0x20
+#define ENABLE_MEM_CLK		0x1
+static void macb_init_board_info(struct platform_device *pdev)
+{
+	void __iomem *io_base;
+	u32 tmp;
+
+	macb_set_plat_data(pdev, &spear320_macb_data);
+	/*
+	 * Select the MDIO Muxed configuration for the MII interface.
+	 * The RAS control register should have the following cfg
+	 * For SMII-0 interface
+	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
+	 *
+	 * For SMII-1/MII interface
+	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
+	 *
+	 * This needs to be done at run time. At present the SMII
+	 * interfaces are not functional, hence has been kept static for
+	 * the MII interface only.
+	 */
+	io_base = ioremap(SPEAR320_SOC_CONFIG_BASE, 0x80);
+	tmp = readl(io_base + SPEAR320_CONFIG_REG) | SPEAR_CFG_MII;
+	writel(tmp, io_base + SPEAR320_CONFIG_REG);
+	iounmap(io_base);
+
+	/* Enable memory Port-1 clock */
+	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, AMEM_CLK_CFG);
+}
+
 static void __init spear320_evb_init(void)
 {
 	/* set sdhci device platform data */
@@ -193,6 +237,9 @@ static void __init spear320_evb_init(void)
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear3xx_smi_device);
+
+	/* initialize macb related data in macb plat data */
+	macb_init_board_info(&spear320_eth_macb1_mii_device);
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_board_devices();

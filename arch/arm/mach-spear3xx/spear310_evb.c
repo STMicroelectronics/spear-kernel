@@ -21,6 +21,8 @@
 #include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
+#include <mach/macb_eth.h>
+#include <mach/misc_regs.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
 #include <plat/jpeg.h>
@@ -38,7 +40,7 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
 
-/* ethernet phy device */
+/* ethernet device */
 static struct plat_stmmacphy_data phy_private_data = {
 	.bus_id = 0,
 	.phy_addr = -1,
@@ -53,12 +55,40 @@ static struct resource phy_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device spear310_phy_device = {
+static struct platform_device spear310_phy0_device = {
 	.name = "stmmacphy",
 	.id = -1,
 	.num_resources = 1,
 	.resource = &phy_resources,
 	.dev.platform_data = &phy_private_data,
+};
+
+static struct macb_base_data spear310_macb1_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x1,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+};
+
+static struct macb_base_data spear310_macb2_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x3,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x22, 0x22, 0x22},
+};
+
+static struct macb_base_data spear310_macb3_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x5,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x34, 0x56, 0x78},
+};
+
+static struct macb_base_data spear310_macb4_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x7,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x11, 0x11, 0x11},
 };
 
 /* padmux devices to enable */
@@ -116,8 +146,12 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear310 specific devices */
 	&spear310_emi_nor_device,
+	&spear310_eth_macb1_device,
+	&spear310_eth_macb2_device,
+	&spear310_eth_macb3_device,
+	&spear310_eth_macb4_device,
 	&spear310_nand_device,
-	&spear310_phy_device,
+	&spear310_phy0_device,
 	&spear310_plgpio_device,
 	&spear310_tdm_hdlc_device,
 	&spear310_rs485_0_device,
@@ -159,6 +193,25 @@ static void __init spi_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
+#define ENABLE_MEM_CLK	1
+static void macb_enable_mem_clk(void)
+{
+	u32 tmp;
+
+	/* Enable memory Port-1 clock */
+	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, AMEM_CLK_CFG);
+
+	/*
+	 * Program the pad strengths of PLGPIO to drive the IO's
+	 * The Magic number being used have direct correlations
+	 * with the driving capabilities of the IO pads.
+	 */
+	writel(0x2f7bc210, PLGPIO3_PAD_PRG);
+	writel(0x017bdef6, PLGPIO4_PAD_PRG);
+
+}
+
 static void __init spear310_evb_init(void)
 {
 	/* set adc platform data */
@@ -180,6 +233,13 @@ static void __init spear310_evb_init(void)
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear3xx_smi_device);
+
+	/* initialize macb related data in macb plat data */
+	macb_enable_mem_clk();
+	macb_set_plat_data(&spear310_eth_macb1_device, &spear310_macb1_data);
+	macb_set_plat_data(&spear310_eth_macb2_device, &spear310_macb2_data);
+	macb_set_plat_data(&spear310_eth_macb3_device, &spear310_macb3_data);
+	macb_set_plat_data(&spear310_eth_macb4_device, &spear310_macb4_data);
 
 	/* initialize emi related data in emi plat data */
 	emi_init_board_info(&spear310_emi_nor_device, partition_info,
