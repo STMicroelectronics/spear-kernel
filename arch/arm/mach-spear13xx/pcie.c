@@ -39,7 +39,7 @@
 #define IN_CFG1_SIZE	(1 * 1024 * 1024 - 1)
 #define IN_MSG_SIZE	(1 * 1024 * 1024 - 1)
 
-#define MAX_LINK_UP_WAIT_JIFFIES	10
+#define MAX_LINK_UP_WAIT_MS	2
 
 struct pcie_port_info *(*pcie_port_init)(int port);
 static struct pcie_port pcie_port[NUM_PCIE_PORTS];
@@ -212,15 +212,15 @@ static int pci_find_own_capability(struct pcie_port *pp, int cap)
 static int spear13xx_pcie_link_up(void __iomem *va_app_base)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) va_app_base;
-	unsigned long deadline = jiffies + MAX_LINK_UP_WAIT_JIFFIES;
+	int ucount = 0;
 
 	do {
 		if (readl(&app_reg->app_status_1) &
 				((u32)1 << XMLH_LINK_UP_ID))
 			return 1;
-
-		cond_resched();
-	} while (!time_after_eq(jiffies, deadline));
+		ucount++;
+		udelay(1);
+	} while (ucount <= MAX_LINK_UP_WAIT_MS * 1000);
 
 	return 0;
 }
@@ -275,6 +275,12 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 	spear_dbi_read_reg(pp, cap + PCI_EXP_DEVCTL, 4, &val);
 	val &= ~PCI_EXP_DEVCTL_READRQ;
 	spear_dbi_write_reg(pp, cap + PCI_EXP_DEVCTL, 4, val);
+
+	/*program correct class for RC*/
+	spear_dbi_read_reg(pp, PCI_CLASS_REVISION, 4, &val);
+	val &= 0xFFFF;
+	val |= (PCI_CLASS_BRIDGE_PCI << 16);
+	spear_dbi_write_reg(pp, PCI_CLASS_REVISION, 4, val);
 
 	writel(DEVICE_TYPE_RC | (1 << MISCTRL_EN_ID)
 			| (1 << APP_LTSSM_ENABLE_ID)
@@ -363,14 +369,54 @@ static int pcie_set_payload(struct pci_dev *dev, int rq)
 out:
 	return err;
 }
+
+static void set_readrq(struct pci_bus *bus, int rq)
+{
+	struct pci_dev *dev;
+
+	list_for_each_entry(dev, &bus->devices, bus_list) {
+		if (rq < pcie_get_readrq(dev))
+			pcie_set_readrq(dev, rq);
+		if (dev->subordinate)
+			set_readrq(dev->subordinate, rq);
+	}
+}
+
+static int get_max_payload(struct pci_bus *bus, int rq)
+{
+	struct pci_dev *dev;
+	int payload;
+	int max_payload = rq;
+
+	list_for_each_entry(dev, &bus->devices, bus_list) {
+		payload = pcie_get_payload(dev);
+		if (payload < max_payload)
+			max_payload = payload;
+		if (dev->subordinate)
+			max_payload = get_max_payload(dev->subordinate,
+					max_payload);
+	}
+	return max_payload;
+}
+
+static void set_payload(struct pci_bus *bus, int rq)
+{
+	struct pci_dev *dev;
+
+	list_for_each_entry(dev, &bus->devices, bus_list) {
+		pcie_set_payload(dev, rq);
+		if (dev->subordinate)
+			set_payload(dev->subordinate, rq);
+	}
+}
+
 static void __init spear13xx_pcie_postinit(void)
 {
 	struct hw_pci *hw = &spear13xx_pci;
 	struct pci_sys_data *sys;
-	struct pci_dev *dev;
-	int cap, ctl, payload;
-	int max_payload = 4096;
 	struct pci_bus *bus;
+	int cap, ctl, payload, readrq;
+	int max_payload = 4096;
 	struct pcie_port *pp;
 
 	/* allign Max_Payload_Size for all devices to the minimum
@@ -386,37 +432,17 @@ static void __init spear13xx_pcie_postinit(void)
 		payload = 128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5);
 		if (payload < max_payload)
 			max_payload = payload;
-		ctl = 128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12);
-
-		list_for_each_entry(dev, &bus->devices, bus_list) {
-			if (ctl < pcie_get_readrq(dev))
-				pcie_set_readrq(dev, ctl);
-			payload = pcie_get_payload(dev);
-			if (payload < max_payload)
-				max_payload = payload;
-		}
-	}
-	/* now set max_payload for all devices */
-	list_for_each_entry(sys, &hw->buses, node) {
-		bus = sys->bus;
-		pp = bus_to_port(bus->number);
-		cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
-		spear_dbi_read_reg(pp, cap + PCI_EXP_DEVCTL, 2, &ctl);
-		payload = (ffs(max_payload) - 8) << 5;
-		if ((ctl & PCI_EXP_DEVCTL_PAYLOAD) != max_payload) {
-			ctl &= ~PCI_EXP_DEVCTL_PAYLOAD;
-			ctl |= payload;
-			spear_dbi_write_reg(pp, cap + PCI_EXP_DEVCTL, 2, ctl);
-		}
-		list_for_each_entry(dev, &bus->devices, bus_list)
-			pcie_set_payload(dev, max_payload);
+		readrq = 128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12);
+		max_payload = get_max_payload(bus, max_payload);
+		set_payload(bus, max_payload);
+		set_readrq(bus, readrq);
 	}
 }
 
 static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct pcie_port *pp;
-	u32 val = 0;
+	/*u32 val = 0;*/
 
 	if (nr >= NUM_PCIE_PORTS)
 		return 0;
@@ -425,8 +451,8 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	if (!(pp->config.is_host))
 		return 0;
 
-	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
-		return 0;
+/*	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
+		return 0;*/
 	pp->root_bus_nr = sys->busnr;
 
 	/* Generic PCIe unit setup.*/
@@ -434,10 +460,10 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	/* Enable own BME. It is necessary to enable own BME to do a
 	 * memory transaction on a downstream device
 	 */
-	spear_dbi_read_reg(pp, PCI_COMMAND, 2, &val);
+/*	spear_dbi_read_reg(pp, PCI_COMMAND, 2, &val);
 	val |= (PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER
 			| PCI_COMMAND_PARITY | PCI_COMMAND_SERR);
-	spear_dbi_write_reg(pp, PCI_COMMAND, 2, val);
+	spear_dbi_write_reg(pp, PCI_COMMAND, 2, val);*/
 
 	/* Need to come back here*/
 
@@ -463,18 +489,26 @@ static struct pcie_port *bus_to_port(int bus)
 	return i >= 0 ? pcie_port + i : NULL;
 }
 
-static int pcie_valid_config(struct pcie_port *pp, int bus, int dev)
+static int pcie_valid_config(struct pcie_port *pp, struct pci_bus *bus, int dev)
 {
 	/*If there is no link, then there is no device*/
-	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
-		return 0;
+	if (bus->number != pp->root_bus_nr) {
+		if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
+			return 0;
+	}
 	/*
 	 * Don't go out when trying to access nonexisting devices
 	 * on the local bus.
 	 * we have only one slot on each root port.
 	 */
-	if (bus == pp->root_bus_nr && dev > 0)
+	if (bus->number == pp->root_bus_nr && dev > 0)
 		return 0;
+
+	/*do not read more than one device on the bus directly attached
+	 * to RC's (Virtual Bridge's) DS side*/
+	if (bus->primary == pp->root_bus_nr && dev > 0)
+		return 0;
+
 	return 1;
 }
 
@@ -491,7 +525,7 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 			&app_reg->slv_armisc);
 	writel(readl(&app_reg->slv_armisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
 			&app_reg->slv_armisc);
-
+	udelay(1);
 	*val = readl(address);
 	if (size == 1)
 		*val = (*val >> (8 * (where & 3))) & 0xff;
@@ -511,13 +545,18 @@ static int pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where,
 	unsigned long flags;
 	int ret;
 
-	if (pcie_valid_config(pp, bus->number, PCI_SLOT(devfn)) == 0) {
+	if (pcie_valid_config(pp, bus, PCI_SLOT(devfn)) == 0) {
 		*val = 0xffffffff;
 		return PCIBIOS_DEVICE_NOT_FOUND;
 	}
 
 	spin_lock_irqsave(&pp->conf_lock, flags);
-	ret = spear13xx_pcie_rd_conf(pp, bus, devfn, where, size, val);
+	if (bus->number != pp->root_bus_nr)
+		ret = spear13xx_pcie_rd_conf(pp, bus, devfn, where, size, val);
+	else {
+		spear_dbi_read_reg(pp, where, size, val);
+		ret = 0;
+	}
 	spin_unlock_irqrestore(&pp->conf_lock, flags);
 
 	return ret;
@@ -557,11 +596,16 @@ static int pcie_wr_conf(struct pci_bus *bus, u32 devfn,
 	unsigned long flags;
 	int ret;
 
-	if (pcie_valid_config(pp, bus->number, PCI_SLOT(devfn)) == 0)
+	if (pcie_valid_config(pp, bus, PCI_SLOT(devfn)) == 0)
 		return PCIBIOS_DEVICE_NOT_FOUND;
 
 	spin_lock_irqsave(&pp->conf_lock, flags);
-	ret = spear13xx_pcie_wr_conf(pp, bus, devfn, where, size, val);
+	if (bus->number != pp->root_bus_nr)
+		ret = spear13xx_pcie_wr_conf(pp, bus, devfn, where, size, val);
+	else {
+		spear_dbi_write_reg(pp, where, size, val);
+		ret = 0;
+	}
 	spin_unlock_irqrestore(&pp->conf_lock, flags);
 
 	return ret;
