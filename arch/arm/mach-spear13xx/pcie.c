@@ -281,6 +281,24 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 	val &= 0xFFFF;
 	val |= (PCI_CLASS_BRIDGE_PCI << 16);
 	spear_dbi_write_reg(pp, PCI_CLASS_REVISION, 4, val);
+	/*if is_gen1 is set then handle it*/
+	if (pp->config.is_gen1) {
+		cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
+		spear_dbi_read_reg(pp, cap + PCI_EXP_LNKCAP, 4, &val);
+		if ((val & 0xF) != 1) {
+			val &= ~((u32)0xF);
+			val |= 1;
+			spear_dbi_write_reg(pp, cap + PCI_EXP_LNKCAP, 4,
+					val);
+		}
+		spear_dbi_read_reg(pp, cap + PCI_EXP_LNKCTL2, 4, &val);
+		if ((val & 0xF) != 1) {
+			val &= ~((u32)0xF);
+			val |= 1;
+			spear_dbi_write_reg(pp, cap + PCI_EXP_LNKCTL2, 4,
+					val);
+		}
+	}
 
 	writel(DEVICE_TYPE_RC | (1 << MISCTRL_EN_ID)
 			| (1 << APP_LTSSM_ENABLE_ID)

@@ -18,6 +18,7 @@ extern int enable_pcie0_clk(void);
 
 struct pcie_port_info {
 	u8	is_host;
+	u8	is_gen1;
 };
 extern struct pcie_port_info *(*pcie_port_init)(int port);
 
