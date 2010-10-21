@@ -28,6 +28,8 @@
 #include <plat/spi.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
+#include <mach/macb_eth.h>
+#include <mach/misc_regs.h>
 #include <mach/spear.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -69,6 +71,14 @@ static struct platform_device spear320_phy_device = {
 	.num_resources = 1,
 	.resource = &phy_resources,
 	.dev.platform_data = &phy_private_data,
+};
+
+/* Ethernet Private data */
+static struct macb_base_data spear320_macb_data = {
+	.phy_mask = 0,
+	.gpio_num = PLGPIO_76,
+	.phy_addr = 0x2,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
 };
 
 /* padmux devices to enable */
@@ -124,6 +134,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
+	&spear320_eth_macb1_mii_device,
 	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
@@ -175,6 +186,38 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #endif
 };
 
+#define SPEAR320_CONFIG_REG	0x10
+#define SPEAR_CFG_MII		0x20
+#define ENABLE_MEM_CLK		0x1
+static void macb_init_board_info(struct platform_device *pdev)
+{
+	void __iomem *io_base;
+	u32 tmp;
+
+	macb_set_plat_data(pdev, &spear320_macb_data);
+	/*
+	 * Select the MDIO Muxed configuration for the MII interface.
+	 * The RAS control register should have the following cfg
+	 * For SMII-0 interface
+	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
+	 *
+	 * For SMII-1/MII interface
+	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
+	 *
+	 * This needs to be done at run time. At present the SMII
+	 * interfaces are not functional, hence has been kept static for
+	 * the MII interface only.
+	 */
+	io_base = ioremap(SPEAR320_SOC_CONFIG_BASE, 0x80);
+	tmp = readl(io_base + SPEAR320_CONFIG_REG) | SPEAR_CFG_MII;
+	writel(tmp, io_base + SPEAR320_CONFIG_REG);
+	iounmap(io_base);
+
+	/* Enable memory Port-1 clock */
+	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, AMEM_CLK_CFG);
+}
+
 static void __init spear320_evb_init(void)
 {
 	unsigned int i;
@@ -192,6 +235,9 @@ static void __init spear320_evb_init(void)
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
 			&spear3xx_dmac_device.dev);
+
+	/* initialize macb related data in macb plat data */
+	macb_init_board_info(&spear320_eth_macb1_mii_device);
 
 	/* call spear320 machine init function */
 	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,

@@ -28,6 +28,8 @@
 #include <plat/spi.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
+#include <mach/macb_eth.h>
+#include <mach/misc_regs.h>
 #include <mach/spear.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -69,6 +71,34 @@ static struct platform_device spear310_phy_device = {
 	.num_resources = 1,
 	.resource = &phy_resources,
 	.dev.platform_data = &phy_private_data,
+};
+
+static struct macb_base_data spear310_macb1_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x1,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+};
+
+static struct macb_base_data spear310_macb2_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x3,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x22, 0x22, 0x22},
+};
+
+static struct macb_base_data spear310_macb3_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x5,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x34, 0x56, 0x78},
+};
+
+static struct macb_base_data spear310_macb4_data = {
+	.phy_mask = 0,
+	.gpio_num = -1,
+	.phy_addr = 0x7,
+	.mac_addr = {0xf2, 0xf2, 0xf2, 0x11, 0x11, 0x11},
 };
 
 /* padmux devices to enable */
@@ -126,6 +156,10 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear310 specific devices */
 	&spear310_emi_nor_device,
+	&spear310_eth_macb1_device,
+	&spear310_eth_macb2_device,
+	&spear310_eth_macb3_device,
+	&spear310_eth_macb4_device,
 	&spear310_nand_device,
 	&spear310_phy_device,
 	&spear310_plgpio_device,
@@ -184,6 +218,25 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}
 };
 
+#define ENABLE_MEM_CLK	1
+static void macb_enable_mem_clk(void)
+{
+	u32 tmp;
+
+	/* Enable memory Port-1 clock */
+	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, AMEM_CLK_CFG);
+
+	/*
+	 * Program the pad strengths of PLGPIO to drive the IO's
+	 * The Magic number being used have direct correlations
+	 * with the driving capabilities of the IO pads.
+	 */
+	writel(0x2f7bc210, PLGPIO3_PAD_PRG);
+	writel(0x017bdef6, PLGPIO4_PAD_PRG);
+
+}
+
 static void __init spear310_evb_init(void)
 {
 	unsigned int i;
@@ -204,6 +257,13 @@ static void __init spear310_evb_init(void)
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
+
+	/* initialize macb related data in macb plat data */
+	macb_enable_mem_clk();
+	macb_set_plat_data(&spear310_eth_macb1_device, &spear310_macb1_data);
+	macb_set_plat_data(&spear310_eth_macb2_device, &spear310_macb2_data);
+	macb_set_plat_data(&spear310_eth_macb3_device, &spear310_macb3_data);
+	macb_set_plat_data(&spear310_eth_macb4_device, &spear310_macb4_data);
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear3xx_smi_device);

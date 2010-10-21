@@ -721,6 +721,75 @@ struct platform_device spear320_emi_nor_device = {
 	.dev.platform_data = &emi_norflash_data,
 };
 
+/* SPEAr320 RAS ethernet devices */
+static u64 macb0_dmamask = ~0;
+static struct resource macb0_smii_resources[] = {
+	{
+		.start = SPEAR320_SMII0_BASE,
+		.end = SPEAR320_SMII0_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR320_VIRQ_SMII0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_eth_macb0_smii_device = {
+	.name = "macb",
+	.id = 1,
+	.dev = {
+		.dma_mask = &macb0_dmamask,
+		.coherent_dma_mask = ~0,
+	},
+	.resource = macb0_smii_resources,
+	.num_resources = ARRAY_SIZE(macb0_smii_resources),
+};
+
+static u64 macb1_dmamask = ~0;
+static struct resource macb1_mii_resources[] = {
+	{
+		.start = SPEAR320_SMII1_BASE,
+		.end = SPEAR320_SMII1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR320_VIRQ_MII1_SMII1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_eth_macb1_mii_device = {
+	.name = "macb",
+	.id = 1,
+	.dev = {
+		.dma_mask = &macb1_dmamask,
+		.coherent_dma_mask = ~0,
+	},
+	.resource = macb1_mii_resources,
+	.num_resources = ARRAY_SIZE(macb1_mii_resources),
+};
+
+static struct resource macb1_smii_resources[] = {
+	{
+		.start = SPEAR320_SMII1_BASE,
+		.end = SPEAR320_SMII1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR320_VIRQ_MII1_SMII1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_eth_macb1_smii = {
+	.name = "macb",
+	.id = 2,
+	.dev = {
+		.dma_mask = &macb1_dmamask,
+		.coherent_dma_mask = ~0,
+	},
+	.resource = macb1_smii_resources,
+	.num_resources = ARRAY_SIZE(macb1_smii_resources),
+};
+
 /* i2c1 device registeration */
 static struct resource i2c1_resources[] = {
 	{

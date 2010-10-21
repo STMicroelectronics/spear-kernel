@@ -261,6 +261,99 @@ struct amba_device spear310_uart5_device = {
 	.irq = {SPEAR310_VIRQ_UART5, NO_IRQ},
 };
 
+/* Ethernet Device registeration */
+static u64 macb1_dmamask = ~0;
+static struct resource macb1_resources[] = {
+	{
+		.start = SPEAR310_MACB1_BASE,
+		.end = SPEAR310_MACB1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR310_VIRQ_SMII0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear310_eth_macb1_device = {
+	.name = "macb",
+	.id = 1,
+	.dev = {
+		.dma_mask = &macb1_dmamask,
+		.coherent_dma_mask = ~0,
+		},
+	.resource = macb1_resources,
+	.num_resources = ARRAY_SIZE(macb1_resources),
+};
+
+static u64 macb2_dmamask = ~0;
+static struct resource macb2_resources[] = {
+	{
+		.start = SPEAR310_MACB2_BASE,
+		.end = SPEAR310_MACB2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR310_VIRQ_SMII1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear310_eth_macb2_device = {
+	.name = "macb",
+	.id = 2,
+	.dev = {
+		.dma_mask = &macb2_dmamask,
+		.coherent_dma_mask = ~0,
+		},
+	.resource = macb2_resources,
+	.num_resources = ARRAY_SIZE(macb2_resources),
+};
+
+static u64 macb3_dmamask = ~0;
+static struct resource macb3_resources[] = {
+	{
+		.start = SPEAR310_MACB3_BASE,
+		.end = SPEAR310_MACB3_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR310_VIRQ_SMII2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear310_eth_macb3_device = {
+	.name = "macb",
+	.id = 3,
+	.dev = {
+		.dma_mask = &macb3_dmamask,
+		.coherent_dma_mask = ~0,
+		},
+	.resource = macb3_resources,
+	.num_resources = ARRAY_SIZE(macb3_resources),
+};
+
+static u64 macb4_dmamask = ~0;
+static struct resource macb4_resources[] = {
+	{
+		.start = SPEAR310_MACB4_BASE,
+		.end = SPEAR310_MACB4_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR310_VIRQ_SMII3,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear310_eth_macb4_device = {
+	.name = "macb",
+	.id = 4,
+	.dev = {
+		.dma_mask = &macb4_dmamask,
+		.coherent_dma_mask = ~0,
+		},
+	.resource = macb4_resources,
+	.num_resources = ARRAY_SIZE(macb4_resources),
+};
+
 /* nand device registeration */
 static struct fsmc_nand_platform_data nand_platform_data;
 
