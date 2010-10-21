@@ -72,3 +72,10 @@ config W90P910_ETH
 	help
 	  Say Y here if you want to use built-in Ethernet ports
 	  on w90p910 processor.
+
+config ETH_SPEAR_MACB
+	bool "Cadence macb Ethernet for SPEAr 310/320 Support"
+	depends on NET_ETHERNET && ARM && (MACH_SPEAR310 || (MACH_SPEAR320))
+	select PHYLIB
+	help
+	  This is the driver for Cadence macb Ethernet controller.
