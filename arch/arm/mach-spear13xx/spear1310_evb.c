@@ -256,7 +256,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&pmx_gmii,
 	&pmx_keyboard_6x6,
 	&pmx_mcif,
-	&pmx_nand_8bit,
 	&pmx_smi_2_chips,
 	&pmx_uart0,
 
@@ -511,11 +510,6 @@ static void __init spear1310_evb_init(void)
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
 			&spear13xx_dmac_device[0].dev);
 
-	/* set nand device's plat data */
-	nand_set_plat_data(&spear13xx_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			SPEAR_NAND_BW8);
-	nand_mach_init(SPEAR_NAND_BW8);
-
 	/* call spear1310 machine init function */
 	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
@@ -525,8 +519,6 @@ static void __init spear1310_evb_init(void)
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
 	/* initialize fsmc related data in fsmc plat data */
-	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
-			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
 	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
 			0, FSMC_FLASH_WIDTH16);
 
@@ -549,10 +541,6 @@ static void __init spear1310_evb_init(void)
 	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
 
 	/* Initialize fsmc regiters */
-	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
-			FSMC_FLASH_WIDTH8);
-
-	/* ras fsmc init */
 	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);
 	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 3,
 			FSMC_FLASH_WIDTH16);
