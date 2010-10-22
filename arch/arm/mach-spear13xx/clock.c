@@ -1187,6 +1187,13 @@ static struct clk uart5_clk = {
 	.pclk = &ras_pclk_clk,
 	.recalc = &follow_parent,
 };
+
+/* i2c1 clock */
+static struct clk i2c1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_pclk_clk,
+	.recalc = &follow_parent,
+};
 #endif
 
 static struct clk dummy_apb_pclk;
@@ -1310,6 +1317,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "uart3",		.clk = &uart3_clk},
 	{.dev_id = "uart4",		.clk = &uart4_clk},
 	{.dev_id = "uart5",		.clk = &uart5_clk},
+	{.dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 };
 #endif
 
