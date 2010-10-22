@@ -475,6 +475,25 @@ static void  __init ras_fsmc_config(u32 mode, u32 width)
 	iounmap(address);
 }
 
+/*
+ * select_e1_interface: config CPLD to enable select E1 interface
+ *
+ * By default, TDM is selected. To switch the hardware connection, SW should
+ * call this function in machine init routine to enable E1 interface
+ */
+static void __init select_e1_interface(struct platform_device *pdev)
+{
+	/*
+	 * selection is through CPLD which is connected on FSMC bus
+	 * before config, initialize FSMC controller here
+	 */
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_8);
+	fsmc_nor_init(NULL, SPEAR1310_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
+
+	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + (pdev->id * 0x100), 0);
+	tdm_hdlc_set_plat_data(pdev, 32);
+}
+
 static void __init spear1310_evb_init(void)
 {
 	/* set adc platform data */
@@ -523,20 +542,15 @@ static void __init spear1310_evb_init(void)
 	/* Add Amba Devices */
 	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
 
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear1310_tdm_hdlc_0_device); */
+	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
+
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
-
-#if defined(CONFIG_ENABLE_E1_INTERFACE_A) || defined(CONFIG_ENABLE_E1_INTERFACE_B)
-	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_8);
-	fsmc_nor_init(NULL, SPEAR1310_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
-#ifdef CONFIG_ENABLE_E1_INTERFACE_A
-	e1phy_init(SPEAR1310_FSMC1_CS2_BASE, 0);
-#endif
-#ifdef CONFIG_ENABLE_E1_INTERFACE_B
-	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + 0x100, 0);
-#endif
-#endif
 
 	/* ras fsmc init */
 	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);
