@@ -627,8 +627,7 @@ struct clcd_rate_tbl clcd_rtbl[] = {
 
 /* clcd synth clock */
 static struct clk clcd_synth_clk = {
-	.en_reg = CLCD_CLK_SYNT,
-	.en_reg_bit = CLCD_SYNT_ENB,
+	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &clcd_synth_pclk_sel,
 	.pclk_sel_shift = CLCD_SYNT_CLK_SHIFT,
 	.calc_rate = &clcd_calc_rate,
