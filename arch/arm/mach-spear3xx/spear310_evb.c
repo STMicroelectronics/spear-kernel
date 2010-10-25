@@ -192,14 +192,14 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	{
 		.modalias = "spidev",
 		.controller_data = &spi0_dev_chip_info,
-		.max_speed_hz = 10000000,
+		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 0,
 		.mode = 0,
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 400000,
+		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 1,
 		.mode = 0,
