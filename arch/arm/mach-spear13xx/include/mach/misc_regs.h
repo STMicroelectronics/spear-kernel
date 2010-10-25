@@ -118,7 +118,6 @@
 #define C3_CLK_SYNT		(MISC_BASE + 0x24c)
 #define CLCD_CLK_SYNT		(MISC_BASE + 0x250)
 	/* CLCD synth reg masks */
-	#define CLCD_SYNT_ENB			31
 	#define CLCD_SYNT_DIV_FACTOR_MASK	0x1ffff
 	#define CLCD_SYNT_DIV_FACTOR_SHIFT	0
 
