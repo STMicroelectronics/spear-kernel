@@ -211,19 +211,19 @@ struct gpt_rate_tbl {
 	u16 nscale;
 };
 
-/* clcd clk configuration structure */
-struct clcd_synth_masks {
+/* synthesizer clk configuration structure */
+struct frac_synth_masks {
 	u32 div_factor_mask;
 	u32 div_factor_shift;
 };
 
-struct clcd_clk_config {
+struct frac_synth_clk_config {
 	void __iomem *synth_reg;
-	struct clcd_synth_masks *masks;
+	struct frac_synth_masks *masks;
 };
 
-/* clcd clk rate config structure */
-struct clcd_rate_tbl {
+/* synthesizer clk rate config structure */
+struct frac_synth_rate_tbl {
 	u32 div;
 };
 
@@ -261,9 +261,10 @@ int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long aux_calc_rate(struct clk *clk, int index);
 int aux_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate);
-unsigned long clcd_calc_rate(struct clk *clk, int index);
-int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
-int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate);
+unsigned long frac_synth_calc_rate(struct clk *clk, int index);
+int frac_synth_clk_recalc(struct clk *clk, unsigned long *rate,
+		unsigned long prate);
+int frac_synth_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 void pll_set_rate(u16 pdiv, u8 nmul, u8 hclkdiv);
 
 #endif /* __PLAT_CLOCK_H */

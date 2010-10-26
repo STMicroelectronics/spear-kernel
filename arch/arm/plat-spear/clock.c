@@ -860,11 +860,11 @@ int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate)
  * Max error due to scaling down by 10000 is 10 KHz
  */
 
-/* Calculates clcd clk rate for different values of div */
-unsigned long clcd_calc_rate(struct clk *clk, int index)
+/* Calculates Synthesizer clk rate for different values of div */
+unsigned long frac_synth_calc_rate(struct clk *clk, int index)
 {
 	unsigned long rate = clk->pclk->rate;
-	struct clcd_rate_tbl *tbls = clk->rate_config.tbls;
+	struct frac_synth_rate_tbl *tbls = clk->rate_config.tbls;
 
 	rate /= 10000;
 	rate <<= 14;
@@ -874,10 +874,11 @@ unsigned long clcd_calc_rate(struct clk *clk, int index)
 	return rate;
 }
 
-/* calculates current programmed rate of clcd synthesizer */
-int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
+/* calculates current programmed rate of synthesizer */
+int frac_synth_clk_recalc(struct clk *clk, unsigned long *rate,
+		unsigned long prate)
 {
-	struct clcd_clk_config *config = clk->private_data;
+	struct frac_synth_clk_config *config = clk->private_data;
 	unsigned int div = 1;
 	unsigned int val;
 
@@ -896,10 +897,10 @@ int clcd_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 }
 
 /* Configures new clock rate of auxiliary synthesizers used by: UART, FIRDA*/
-int clcd_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+int frac_synth_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 {
-	struct clcd_rate_tbl *tbls = clk->rate_config.tbls;
-	struct clcd_clk_config *config = clk->private_data;
+	struct frac_synth_rate_tbl *tbls = clk->rate_config.tbls;
+	struct frac_synth_clk_config *config = clk->private_data;
 	unsigned long val, rate;
 	int i;
 
