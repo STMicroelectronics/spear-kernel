@@ -14,18 +14,19 @@
 #ifndef __PLAT_NAND_H
 #define __PLAT_NAND_H
 
+#include <asm/mach-types.h>
 #include <linux/mtd/partitions.h>
 
 #define SPEAR_NAND_BW8		1
 #define SPEAR_NAND_BW16		2
 
-#if defined(CONFIG_MACH_SPEAR310)
-#define PLAT_NAND_CLE		(1 << 17)
-#define PLAT_NAND_ALE		(1 << 16)
-#else
+/* For spear310 only */
+#define SPEAR310_PLAT_NAND_CLE	(1 << 17)
+#define SPEAR310_PLAT_NAND_ALE	(1 << 16)
+
+/* For other SPEAr SoCs */
 #define PLAT_NAND_CLE		(1 << 16)
 #define PLAT_NAND_ALE		(1 << 17)
-#endif
 
 struct nand_platform_data {
 	/*
@@ -41,6 +42,10 @@ struct nand_platform_data {
 	unsigned int		nr_partitions;
 	unsigned int		options;
 	unsigned int		width;
+
+	/* CLE, ALE offsets */
+	unsigned long		cle_off;
+	unsigned long		ale_off;
 
 	/*
 	 * Machine specific information
@@ -71,6 +76,14 @@ static inline void nand_set_plat_data(struct platform_device *pdev,
 
 	nand_plat_data->options = options;
 	nand_plat_data->width = width;
+
+	if (machine_is_spear310()) {
+		nand_plat_data->ale_off = SPEAR310_PLAT_NAND_ALE;
+		nand_plat_data->cle_off = SPEAR310_PLAT_NAND_CLE;
+	} else {
+		nand_plat_data->ale_off = PLAT_NAND_ALE;
+		nand_plat_data->cle_off = PLAT_NAND_CLE;
+	}
 }
 
 #endif /* __PLAT_NAND_H */
