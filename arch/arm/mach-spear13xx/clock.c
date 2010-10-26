@@ -170,6 +170,14 @@ static struct clk pll3_clk = {
 	.private_data = &pll3_config,
 };
 
+/* pll3div2 clock */
+static struct clk pll3div2_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &pll3_clk,
+	.div_factor = 2,
+	.recalc = &follow_parent,
+};
+
 /* pll4 (DDR) configuration structure */
 static struct pll_clk_config pll4_config = {
 	.mode_reg = PLL4_CTR,
@@ -968,6 +976,60 @@ static struct clk kbd_clk = {
 };
 
 /* RAS CLOCKS */
+
+/* RAS fractional synthesizers masks for Synth-0*/
+static struct frac_synth_masks ras_synth0_masks = {
+	.div_factor_mask = FRAC_SYNT_DIV_FACTOR_MASK,
+	.div_factor_shift = FRAC_SYNT_DIV_FACTOR_SHIFT,
+};
+
+static struct frac_synth_clk_config ras_synth0_config = {
+	.synth_reg = RAS_CLK_SYNT0,
+	.masks = &ras_synth0_masks,
+};
+
+/* RAS Fractional Synthesizer parents */
+static struct pclk_info ras_synth0_pclk_info[] = {
+	{
+		.pclk = &pll1div4_clk,
+		.pclk_val = RAS_SYNT0_1_PLL1_DIV4_VAL,
+	}, {
+		.pclk = &pll3div2_clk,
+		.pclk_val = RAS_SYNT0_1_PLL3_DIV2_VAL,
+	}, {
+		.pclk = &pll3_clk,
+		.pclk_val = RAS_SYNT0_1_PLL3_VAL,
+	},
+};
+
+/* RAS Fractional Synthesizer-0 parent select structure */
+static struct pclk_sel ras_synth0_pclk_sel = {
+	.pclk_info = ras_synth0_pclk_info,
+	.pclk_count = ARRAY_SIZE(ras_synth0_pclk_info),
+	.pclk_sel_reg = PLL_CFG,
+	.pclk_sel_mask = RAS_SYNT0_1_CLK_MASK,
+};
+
+/* RAS rate configuration table, in ascending order of rates */
+struct frac_synth_rate_tbl ras_rtbl[] = {
+	/* For pll1div4 = 250 MHz */
+	{.div = 0x14000}, /* 50 MHz */
+	{.div = 0x0A000}, /* 100 MHz */
+};
+
+/* RAS Fractional Synthesizer-0 Clock */
+static struct clk ras_synth0_clk = {
+	.en_reg = RAS_CLK_ENB,
+	.en_reg_bit = SYNT0_CLK_ENB,
+	.pclk_sel = &ras_synth0_pclk_sel,
+	.pclk_sel_shift = RAS_SYNT0_1_CLK_SHIFT,
+	.calc_rate = &frac_synth_calc_rate,
+	.recalc = &frac_synth_clk_recalc,
+	.set_rate = &frac_synth_clk_set_rate,
+	.rate_config = {ras_rtbl, ARRAY_SIZE(ras_rtbl), 0},
+	.private_data = &ras_synth0_config,
+};
+
 /* pll3 generated clock */
 static struct clk ras_pll3_clk = {
 	.pclk = &pll3_clk,
@@ -1225,6 +1287,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* synthesizers/prescaled clocks */
 	{.con_id = "pll1div2_clk",		.clk = &pll1div2_clk},
 	{.con_id = "pll1div4_clk",		.clk = &pll1div4_clk},
+	{.con_id = "pll3div2_clk",		.clk = &pll3div2_clk},
 	{.con_id = "c3_synth_clk",		.clk = &c3_synth_clk},
 	{.con_id = "gmii_txclk123_pad_clk",	.clk = &gmii_txclk125_pad},
 	{.con_id = "clcd_synth_clk",		.clk = &clcd_synth_clk},
@@ -1236,6 +1299,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "stmmacphy.0",		.clk = &gmac_phy0_clk},
 
 	/* RAS clocks */
+	{.con_id = "ras_synth0_clk",		.clk = &ras_synth0_clk},
 	{.con_id = "ras_pll3_clk",		.clk = &ras_pll3_clk},
 	{.con_id = "ras_pll2_clk",		.clk = &ras_pll2_clk},
 	{.con_id = "ras_tx125_clk",		.clk = &ras_tx125_clk},
