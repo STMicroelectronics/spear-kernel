@@ -62,7 +62,6 @@
  */
 #define DEBUG_VAR 1
 #define DB9000_INIT_FB 0
-
 #include "db9000fb.h"
 
 /* Bits which should not be set in machine configuration structures */
@@ -305,6 +304,8 @@ static int db9000fb_bpp_to_cr1(struct fb_var_screeninfo *var)
 	case 24:
 		ret = DB9000_CR1_BPP(DB9000_CR1_BPP_24bpp);
 		break;
+	default:
+		ret = DB9000_CR1_BPP(DB9000_CR1_BPP_24bpp);
 	}
 	return ret;
 }
@@ -452,6 +453,16 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			var->blue.offset   = 0;
 			var->blue.length   = 8;
 			break;
+		case 32: /* RGB888 */
+			var->transp.offset = 24;
+			var->transp.length = 0;
+			var->red.offset	   = 16;
+			var->red.length    = 8;
+			var->green.offset  = 8;
+			var->green.length  = 8;
+			var->blue.offset   = 0;
+			var->blue.length   = 8;
+			break;
 		default:
 			return -EINVAL;
 		}
@@ -546,23 +557,6 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 	return 0;
 }
 
-static int db9000fb_mmap(struct fb_info *info,
-			struct vm_area_struct *vma)
-{
-	struct db9000fb_info *fbi = to_db9000fb(info);
-	unsigned long len, off = vma->vm_pgoff << PAGE_SHIFT;
-
-	int ret = -EINVAL;
-
-	len = info->fix.smem_len;
-
-	if (off <= len && vma->vm_end - vma->vm_start <= len - off)
-		ret = dma_mmap_writecombine(fbi->dev, vma,
-			fbi->fb.screen_base,
-			fbi->fb.fix.smem_start,
-			fbi->fb.fix.smem_len);
-	return ret;
-}
 
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
@@ -574,7 +568,6 @@ static struct fb_ops db9000fb_ops = {
 	.fb_copyarea	= cfb_copyarea,
 	.fb_imageblit	= cfb_imageblit,
 	.fb_blank	= db9000fb_blank,
-	.fb_mmap	= db9000fb_mmap,
 };
 
 /*
@@ -601,14 +594,14 @@ static struct fb_ops db9000fb_ops = {
 static inline unsigned int get_pcd(struct db9000fb_info *fbi,
 				unsigned int pixclock)
 {
-	uint64_t pcd;
-	uint32_t pcd_32;
-
-	pcd = (uint64_t)(clk_get_rate(fbi->clk));
-
-	pcd_32 = __div64_32(&pcd, pixclock);
-	pcd_32 -= 2;
-
+	uint32_t pcd, pcd_32;
+	pcd = (uint32_t)(clk_get_rate(fbi->clk)/1000000);
+	pcd_32 = (pcd * pixclock)/1000000;
+	if (pcd_32 < 2)	{
+		printk(KERN_ERR"Invalid PCD value %d", pcd_32);
+		return 0;
+	}
+	pcd_32 = pcd_32 - 2;
 	return (unsigned int)pcd_32;
 }
 
@@ -682,7 +675,7 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 	fbi->reg_vtr1 =
 		DB9000_VTR1_VBP(var->upper_margin) |
 		DB9000_VTR1_VFP(var->lower_margin) |
-		DB9000_VTR1_VSW((var->vsync_len) + 1);
+		DB9000_VTR1_VSW((var->vsync_len));
 
 	fbi->reg_vtr2 = DB9000_VTR2_LPP(var->yres);
 
@@ -694,12 +687,12 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 
 	if (pcd) {
 		fbi->reg_pctr =
-		/* Pixel Clock Divider */
-		DB9000_PCTR_PCD(pcd) |
-		 /* Pixel Clock Divider Bypass */
-		DB9000_PCTR_PCB(fbi->reg_pctr) |
-		 /* Pixel Clock Input Select */
-		DB9000_PCTR_PCI(fbi->reg_pctr);
+			/* Pixel Clock Divider */
+			DB9000_PCTR_PCD(pcd) |
+			/* Pixel Clock Divider Bypass */
+			DB9000_PCTR_PCB(fbi->reg_pctr) |
+			/* Pixel Clock Input Select */
+			DB9000_PCTR_PCI(fbi->reg_pctr);
 		set_hsync_time(fbi, pcd);
 	}
 }
@@ -727,6 +720,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	case 16:
 	case 18:
 	case 24:
+	case 32:
 		break;
 	default:
 		printk(KERN_ERR "%s: invalid bit depth %d\n",
@@ -852,11 +846,8 @@ static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 
 	cr1 = lcd_readl(fbi, DB9000_CR1) & ~DB9000_CR1_ENB;
 	lcd_writel(fbi, DB9000_CR1, cr1);
-
 /*	wait_for_completion_timeout(&fbi->disable_done, 200 * HZ / 1000); */
 	msleep(100);
-	/* disable LCD controller clock */
-/*	clk_disable(fbi->clk); */
 }
 
 /*
@@ -1062,50 +1053,6 @@ static int db9000fb_resume(struct platform_device *pdev)
 #define db9000fb_resume	NULL
 #endif
 
-/*
- * db9000fb_init_video_memory():
- */
-static int __devinit db9000fb_init_video_memory(struct db9000fb_info *fbi)
-{
-	dma_addr_t dma;
-	int size = PAGE_ALIGN(fbi->video_mem_size);
-#if DB9000_INIT_FB
-	int i;
-	uint32_t *ptr;
-#endif
-	fbi->video_mem = dma_alloc_writecombine(fbi->dev, size,
-			&dma, GFP_KERNEL);
-	if (!fbi->video_mem) {
-		printk(KERN_ERR "%s: unable to map framebuffer\n",
-			__func__);
-		return -ENOMEM;
-	}
-	fbi->video_mem_phys = virt_to_phys(fbi->video_mem);
-	fbi->video_mem_size = size;
-
-	fbi->fb.fix.smem_start = dma;
-	fbi->fb.fix.smem_len = size;
-	fbi->fb.screen_base	= fbi->video_mem;
-
-#if DB9000_INIT_FB
-/* Blank the screen */
-	ptr = (int32_t *)(fbi->video_mem);
-	for (i = 0; i < (size/4); ++i) {
-		/*
-		 * red
-		 * *ptr++ = 0x00ff0000;
-		 * green
-		 * *ptr++ = 0x0000ff00;
-		 * blue
-		 * *ptr++ = 0x000000ff;
-		 * Blank screen
-		 * *ptr++ = 0x0000000;
-		 */
-	}
-#endif
-	return 0;
-}
-
 static void db9000fb_decode_mode_info(struct db9000fb_info *fbi,
 				struct db9000fb_mode_info *modes,
 				unsigned int num_modes)
@@ -1139,6 +1086,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 {
 	struct db9000fb_info *fbi;
 	void *addr;
+	unsigned int status = 0;
 	struct db9000fb_mach_info *inf = dev->platform_data;
 
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
@@ -1151,16 +1099,10 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 
 	memset(fbi, 0, sizeof(struct db9000fb_info));
 	fbi->dev = dev;
-
 	fbi->clk = clk_get(dev, NULL);
 	if (IS_ERR(fbi->clk)) {
-		kfree(fbi);
-		dev_err(dev,
-			"%s: unable to get clcd clock in clk_get",
-				__func__);
-		return NULL;
+		status = PTR_ERR(fbi->clk);
 	}
-
 	strcpy(fbi->fb.fix.id, DB9000FB_NAME);
 
 	fbi->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
@@ -1172,22 +1114,21 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 
 	fbi->fb.var.nonstd	= 0;
 	fbi->fb.var.activate	= FB_ACTIVATE_NOW;
-	fbi->fb.var.height	= -1;
-	fbi->fb.var.width	= -1;
+	fbi->fb.var.height	= fbi->fb.var.yres;
+	fbi->fb.var.width	= fbi->fb.var.xres;
 	fbi->fb.var.accel_flags	= 0;
 	fbi->fb.var.vmode	= FB_VMODE_NONINTERLACED;
-
+	fbi->fb.pseudo_palette  = fbi->cmap;
 	fbi->fb.fbops		= &db9000fb_ops;
 	fbi->fb.flags		= FBINFO_DEFAULT;
 	fbi->fb.node		= -1;
 
 	addr = fbi;
-	fbi->fb.pseudo_palette	= fbi->palette;
 	fbi->palette_mode = PAL_STATIC;
 
 	fbi->state		= C_STARTUP;
 	fbi->task_state		= (u_char)-1;
-
+	fbi->frame_base		= inf->frame_buf_base;
 	db9000fb_decode_mach_info(fbi, inf);
 
 	init_waitqueue_head(&fbi->ctrlr_wait);
@@ -1250,6 +1191,8 @@ done:
 		case 16:
 		case 18:
 		case 24:
+		case 32:
+
 			inf->modes[0].bpp = bpp;
 			dev_info(dev, "overriding bit depth: %d\n", bpp);
 			break;
@@ -1517,6 +1460,7 @@ static void __devinit db9000fb_check_options(struct device *dev,
 	case 16:
 	case 18:
 	case 24:
+	case 32:
 		break;
 	default:
 		dev_warn(dev, "BPP setting illegal "
@@ -1557,16 +1501,28 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	int video_buf_size = 0;
 	int bits_per_pixel = 0;
 	uint32_t db9000_reg;
-
+	char __iomem *addr;
 	inf = pdev->dev.platform_data;
-	ret = -ENOMEM;
+	ret = -EBUSY;
 	fbi = NULL;
 	if (!inf)
-		goto failed;
+		return ret;
+
+	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (r == NULL) {
+		dev_err(&pdev->dev, "no I/O memory resource defined\n");
+		return ret;
+	}
+
+	r = request_mem_region(r->start, resource_size(r), pdev->name);
+	if (r == NULL) {
+		dev_err(&pdev->dev, "failed to request I/O memory\n");
+		return ret;
+	}
 
 	ret = db9000fb_parse_options(&pdev->dev, g_options);
 	if (ret < 0)
-		goto failed;
+		return ret;
 
 	db9000fb_check_options(&pdev->dev, inf);
 
@@ -1575,86 +1531,73 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 			inf->modes->mode.yres,
 			inf->modes->bpp);
 	if (inf->modes->mode.xres == 0 ||
-		inf->modes->mode.yres == 0 ||
-		inf->modes->bpp == 0) {
+			inf->modes->mode.yres == 0 ||
+			inf->modes->bpp == 0) {
 		dev_err(&pdev->dev, "Invalid resolution or bit depth\n");
-		ret = -EINVAL;
-		goto failed;
+		return -EINVAL;
 	}
+
+
 	fbi = db9000fb_init_fbinfo(&pdev->dev);
 	if (!fbi) {
 		/* only reason for db9000fb_init_fbinfo to fail is kmalloc */
 		dev_err(&pdev->dev, "Failed to initialize"
 				"framebuffer device\n");
-		ret = -ENOMEM;
-		goto failed;
-	}
-/*	db9000fb_backlight_power = inf->db9000fb_backlight_power; */
-/*	db9000fb_lcd_power = inf->db9000fb_lcd_power; */
-
-	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (r == NULL) {
-		dev_err(&pdev->dev, "no I/O memory resource defined\n");
-		ret = -ENODEV;
-		goto failed_fbi;
-	}
-
-	r = request_mem_region(r->start, resource_size(r), pdev->name);
-	if (r == NULL) {
-		dev_err(&pdev->dev, "failed to request I/O memory\n");
-		ret = -EBUSY;
-		goto failed_fbi;
+		return -ENOMEM;
 	}
 
 	fbi->mmio_base = ioremap(r->start, resource_size(r));
 	if (fbi->mmio_base == NULL) {
 		dev_err(&pdev->dev, "failed to map I/O memory\n");
-		ret = -EBUSY;
-		goto failed_free_res;
+		ret = -ENOMEM;
+		goto err_free_fbi;
 	}
 
 	/* Enable the clocks for the DB9000 core */
 	if (clk_enable(fbi->clk)) {
 		dev_err(&pdev->dev, "failed to enable clock\n");
 		ret = -EBUSY;
-		goto failed_fbi;
+		goto err_free_mmio_base;
 	}
+
 	/* Read the core version register and print it out */
 	db9000_reg = lcd_readl(fbi, DB9000_CIR);
 	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
-		__func__, db9000_reg);
+			__func__, db9000_reg);
 
 	bits_per_pixel = inf->modes->bpp;
 	if ((inf->modes->bpp == 24) &&
-		((inf->modes->cr1 & DB9000_CR1_FBP) == 0))
+			((inf->modes->cr1 & DB9000_CR1_FBP) == 0))
 		bits_per_pixel = 32;
-
 	video_buf_size = ((inf->modes->mode.xres) *
-		(inf->modes->mode.yres) *
-		(bits_per_pixel) / 8);
+			(inf->modes->mode.yres) *
+			(bits_per_pixel) / 8);
 
 	fbi->video_mem_size = video_buf_size + (PALETTE_SIZE + PAGE_SIZE);
-
 	/* Initialize video memory */
-	ret = db9000fb_init_video_memory(fbi);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to allocate video RAM: %d\n", ret);
+	addr = ioremap(fbi->frame_base, fbi->video_mem_size);
+	if (!addr) {
+		dev_err(&pdev->dev, "failed to allocate memory\n");
 		ret = -ENOMEM;
-		goto failed_free_io;
+		goto err_disable_clock;
 	}
+	fbi->fb.screen_base = addr;
+	fbi->fb.fix.smem_start = fbi->frame_base;
+	fbi->fb.fix.smem_len = fbi->video_mem_size;
+	fbi->fb.var.height = fbi->fb.var.yres;
+	fbi->fb.var.width = fbi->fb.var.xres;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(&pdev->dev, "no IRQ defined\n");
-		ret = -ENODEV;
-		goto failed_free_mem;
+		ret = irq;
+		goto err_free_framebuffer_addr;
 	}
 
 	ret = request_irq(irq, db9000fb_handle_irq, IRQF_DISABLED, "LCD", fbi);
 	if (ret) {
 		dev_err(&pdev->dev, "request_irq failed: %d\n", ret);
-		ret = -EBUSY;
-		goto failed_free_mem;
+		goto err_free_framebuffer_addr;
 	}
 
 	/*
@@ -1664,23 +1607,23 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	ret = db9000fb_check_var(&fbi->fb.var, &fbi->fb);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get suitable mode\n");
-		goto failed_free_irq;
+		goto err_free_irq;
 	}
 
 	ret = db9000fb_set_par(&fbi->fb);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to set parameters\n");
-		goto failed_free_irq;
+		goto err_free_irq;
 	}
 
 	if ((fbi->palette_mode == PAL_STATIC) ||
-		(fbi->palette_mode == PAL_NONE))
+			(fbi->palette_mode == PAL_NONE))
 		fbi->video_mem_size_used = video_buf_size;
 	else if (fbi->palette_mode == PAL_IN_FB)
 		fbi->video_mem_size_used =
 			video_buf_size + (fbi->palette_size * 2);
 	if ((inf->modes->bpp == 24) &&
-		((inf->modes->cr1 & DB9000_CR1_FBP) == 1)) {
+			((inf->modes->cr1 & DB9000_CR1_FBP) == 1)) {
 		if (fbi->reg_dear == 0)
 			fbi->reg_dear =
 				fbi->video_mem_size_used +
@@ -1690,43 +1633,42 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, fbi);
 
 	ret = register_framebuffer(&fbi->fb);
-	ret = 0;
 	if (ret < 0) {
 		dev_err(&pdev->dev,
-			"Failed to register framebuffer device: %d\n", ret);
-		goto failed_free_cmap;
+			"Failed to register framebuffer device:%d\n", ret);
+		goto err_clear_plat_data;
 	}
 #ifdef CONFIG_CPU_FREQ
 	fbi->freq_transition.notifier_call = db9000fb_freq_transition;
 	fbi->freq_policy.notifier_call = db9000fb_freq_policy;
 	cpufreq_register_notifier(&fbi->freq_transition,
-				CPUFREQ_TRANSITION_NOTIFIER);
+			CPUFREQ_TRANSITION_NOTIFIER);
 	cpufreq_register_notifier(&fbi->freq_policy,
-				CPUFREQ_POLICY_NOTIFIER);
+			CPUFREQ_POLICY_NOTIFIER);
 #endif
 	/*
 	 * Ok, now enable the LCD controller
 	 */
 	set_ctrlr_state(fbi, C_ENABLE);
+
 	return 0;
 
-failed_free_cmap:
+err_clear_plat_data:
+	platform_set_drvdata(pdev, NULL);
 	if (fbi->fb.cmap.len)
 		fb_dealloc_cmap(&fbi->fb.cmap);
-failed_free_irq:
+err_free_irq:
 	free_irq(irq, fbi);
-failed_free_mem:
-	dma_free_writecombine(&pdev->dev, fbi->video_mem_size,
-			fbi->video_mem, fbi->fb.fix.smem_start);
-failed_free_io:
-	iounmap(fbi->mmio_base);
-failed_free_res:
-	release_mem_region(r->start, resource_size(r));
-failed_fbi:
+err_free_framebuffer_addr:
+	iounmap(addr);
+err_disable_clock:
 	clk_put(fbi->clk);
-	platform_set_drvdata(pdev, NULL);
+err_free_mmio_base:
+	iounmap(fbi->mmio_base);
+err_free_fbi:
 	kfree(fbi);
-failed:
+	release_mem_region(r->start, resource_size(r));
+
 	return ret;
 }
 
@@ -1752,9 +1694,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, fbi);
-	dma_free_writecombine(&pdev->dev, fbi->video_mem_size,
-			fbi->video_mem, fbi->fb.fix.smem_start);
-
+	iounmap(fbi->fb.screen_base);
 	iounmap(fbi->mmio_base);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1784,13 +1724,12 @@ static int __init db9000fb_init(void)
 
 	return platform_driver_register(&db9000fb_driver);
 }
+module_init(db9000fb_init);
 
 static void __exit db9000fb_exit(void)
 {
 	platform_driver_unregister(&db9000fb_driver);
 }
-
-module_init(db9000fb_init);
 module_exit(db9000fb_exit);
 
 MODULE_DESCRIPTION("loadable framebuffer driver for Digital Blocks DB9000");

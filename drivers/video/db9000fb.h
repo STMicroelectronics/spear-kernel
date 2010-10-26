@@ -73,9 +73,9 @@ struct db9000fb_info {
 
 	void __iomem		*mmio_base;
 	void __iomem		*misc_io_base;
-
 	size_t			dma_buff_size;
 	dma_addr_t		dma_buff_phys;
+	unsigned long		frame_base;
 	struct db9000fb_dma_descriptor	*f_descriptor;
 	/*
 	 * These are the addresses we mapped
@@ -86,7 +86,7 @@ struct db9000fb_info {
 	u_char			*map_cpu; /* virtual */
 	u_int			map_size;
 	unsigned long		hsync_time;
-
+	unsigned long		cmap[16];
 /* virtual address of frame buffer */
 	void __iomem		*video_mem;
 /* physical address of frame buffer */

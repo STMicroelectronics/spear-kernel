@@ -1899,21 +1899,6 @@ config FB_DB9000_PARAMETERS
 	  single model of flatpanel then you can safely leave this
 	  option disabled.
 
-#	  <file:Documentation/fb/db9000fb.txt> describes the available parameters.
-choice
-
-	depends on FB_DB9000 && ARCH_SPEAR13XX
-	prompt "LCD Panel"
-	default FB_DB9000_LCD_SHARP_LQ043T3DX0A
-
-config FB_DB9000_LCD_SHARP_LQ043T3DX0A
-	bool "SHARP LQ043T3DX0A CLCD 4.2\" TFT(480x272)"
-	help
-	  This is an implementation of the Sharp LQ043T3DX0A, a 4.2"
-	  color TFT panel. The native resolution is 480x272.
-
-endchoice
-
 config FB_MBX
 	tristate "2700G LCD framebuffer support"
 	depends on FB && ARCH_PXA
