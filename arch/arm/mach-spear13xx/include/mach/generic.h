@@ -17,8 +17,10 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
+#include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
+#include <asm/setup.h>
 #include <plat/padmux.h>
 
 /*
@@ -250,7 +252,9 @@ extern struct platform_device spear13xx_wdt_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */
+extern unsigned long db900fb_buffer_phys;
 extern struct db9000fb_mach_info sharp_lcd_info;
+extern struct db9000fb_mach_info chimei_b101aw02_info;
 
 /* Add spear13xx family function declarations here */
 void __init spear13xx_clk_init(void);
@@ -259,6 +263,8 @@ void __init spear_setup_timer(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
+void __init spear13xx_fixup(struct machine_desc *desc,
+	struct tag *tags, char **cmdline, struct meminfo *mi);
 void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
 void pcm_init(struct device *dma_dev);
