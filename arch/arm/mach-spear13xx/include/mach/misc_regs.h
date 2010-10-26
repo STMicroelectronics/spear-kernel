@@ -46,6 +46,11 @@
 	#define CLCD_SYNT_PLL2_VAL		1
 	#define CLCD_SYNT_CLK_MASK		1
 	#define CLCD_SYNT_CLK_SHIFT		31
+	#define RAS_SYNT0_1_PLL1_DIV4_VAL	0
+	#define RAS_SYNT0_1_PLL3_DIV2_VAL	1
+	#define RAS_SYNT0_1_PLL3_VAL		2
+	#define RAS_SYNT0_1_CLK_MASK		3
+	#define RAS_SYNT0_1_CLK_SHIFT		27
 
 #define PLL1_CTR		(MISC_BASE + 0x214)
 #define PLL1_FRQ		(MISC_BASE + 0x218)
@@ -117,9 +122,10 @@
 
 #define C3_CLK_SYNT		(MISC_BASE + 0x24c)
 #define CLCD_CLK_SYNT		(MISC_BASE + 0x250)
-	/* CLCD synth reg masks */
-	#define CLCD_SYNT_DIV_FACTOR_MASK	0x1ffff
-	#define CLCD_SYNT_DIV_FACTOR_SHIFT	0
+	#define CLCD_SYNT_ENB			31
+	/* Fractional synthesizer reg masks */
+	#define FRAC_SYNT_DIV_FACTOR_MASK	0x1ffff
+	#define FRAC_SYNT_DIV_FACTOR_SHIFT	0
 
 #define UART_CLK_SYNT		(MISC_BASE + 0x254)
 #define GMAC_CLK_SYNT		(MISC_BASE + 0x258)
@@ -205,10 +211,10 @@
 	#define PCLK1_CLK_ENB		11
 	#define PCLK2_CLK_ENB		12
 	#define PCLK3_CLK_ENB		13
-	#define SYN0_CLK_ENB		14
-	#define SYN1_CLK_ENB		15
-	#define SYN2_CLK_ENB		16
-	#define SYN3_CLK_ENB		17
+	#define SYNT0_CLK_ENB		14
+	#define SYNT1_CLK_ENB		15
+	#define SYNT2_CLK_ENB		16
+	#define SYNT3_CLK_ENB		17
 #define RAS_SW_RST		(MISC_BASE + 0x288)
 #define PLL1_SYNT		(MISC_BASE + 0x28c)
 #define I2S_CLK_CFG		(MISC_BASE + 0x290)
