@@ -20,12 +20,8 @@
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <linux/stmpe610.h>
-#include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <mach/generic.h>
-#include <mach/gpio.h>
-#include <mach/spear.h>
-#include <mach/pcie.h>
+#include <asm/setup.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/jpeg.h>
@@ -33,11 +29,14 @@
 #include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/generic.h>
+#include <mach/gpio.h>
+#include <mach/spear.h>
+#include <mach/pcie.h>
 #include <mach/hardware.h>
 #include <mach/db9000fb_info.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
-
 static struct mtd_partition partition_info[] = {
 	PARTITION("X-loader", 0, 1 * 0x20000),
 	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
@@ -258,12 +257,11 @@ static void __init spear900_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
-
-#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	/* db9000_clcd plat data */
-	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
+#if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
+	chimei_b101aw02_info.frame_buf_base = db900fb_buffer_phys;
+	clcd_set_plat_data(&spear13xx_db9000_clcd_device,
+			&chimei_b101aw02_info);
 #endif
-
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
 			&spear13xx_dmac_device[0].dev);
@@ -311,6 +309,7 @@ static void __init spear900_evb_init(void)
 
 MACHINE_START(SPEAR900, "ST-SPEAR900-EVB")
 	.boot_params	=	0x00000100,
+	.fixup          =	spear13xx_fixup,
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,

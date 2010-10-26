@@ -21,7 +21,6 @@
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <linux/stmpe610.h>
-#include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
@@ -507,12 +506,10 @@ static void __init spear1310_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
-
-#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	/* db9000_clcd plat data */
+#if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
+	sharp_lcd_info.frame_buf_base = db900fb_buffer_phys;
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
 #endif
-
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
 			&spear13xx_dmac_device[0].dev);
@@ -557,6 +554,7 @@ static void __init spear1310_evb_init(void)
 
 MACHINE_START(SPEAR1310, "ST-SPEAR1310-EVB")
 	.boot_params	=	0x00000100,
+	.fixup          =       spear13xx_fixup,
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,

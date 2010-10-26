@@ -23,7 +23,6 @@
 /* This is enough for the size of 800x480 (1.5 MB) */
 #define FRAMESIZE 0x00180000
 
-#ifdef CONFIG_FB_DB9000_LCD_SHARP_LQ043T3DX0A
 static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.mode = {
 		.name = "Sharp LQ043T3DA0A",
@@ -54,7 +53,37 @@ struct db9000fb_mach_info sharp_lcd_info = {
 	.cmap_static    = 0,
 	.cmap_inverse   = 0,
 };
-#endif
+
+/* 10.4 inch lcd pannel information */
+static struct db9000fb_mode_info chimei_b101aw02_mode = {
+	.mode = {
+		.name = "Auo B101AW02",
+		.refresh = 60,
+		.xres = 1024,
+		.yres = 768,
+		.pixclock = 18181,
+		.left_margin = 30,
+		.right_margin = 30,
+		.upper_margin = 20,
+		.lower_margin = 20,
+		.hsync_len = 30,
+		.vsync_len = 20,
+		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+	},
+	.bpp = 32,
+	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
+	.pctr = 0,
+	.dear = 0,
+};
+struct db9000fb_mach_info chimei_b101aw02_info = {
+	.modes          = &chimei_b101aw02_mode,
+	.num_modes      = 1,
+	.lcd_conn       = LCD_PCLK_EDGE_FALL,
+	.video_mem_size = 0,
+	.cmap_static    = 0,
+	.cmap_inverse   = 0,
+};
 
 void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
