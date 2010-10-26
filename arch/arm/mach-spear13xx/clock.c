@@ -1172,20 +1172,32 @@ static struct pclk_info phy_pclk_info[] = {
 	}, {
 		.pclk = &ras_tx50_clk,
 		.pclk_val = 0x0,
+	}, {
+		.pclk = &ras_synth0_clk,
+		.pclk_val = 0x3,
 	},
 };
 
-static struct pclk_sel phy_pclk_sel = {
+/* SMII and RGMII are both driven by 125 MHz clock source */
+static struct pclk_sel phy_smii_rgmii_pclk_sel = {
 	.pclk_info = phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(phy_pclk_info),
 	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
-	.pclk_sel_mask = SPEAR1310_PHY_CLK_MASK,
+	.pclk_sel_mask = SPEAR1310_SMII_PHY_CLK_MASK,
+};
+
+/* RMII interface is driven by 50 MHz clock source */
+static struct pclk_sel phy_rmii_pclk_sel = {
+	.pclk_info = phy_pclk_info,
+	.pclk_count = ARRAY_SIZE(phy_pclk_info),
+	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
+	.pclk_sel_mask = SPEAR1310_RMII_PHY_CLK_MASK,
 };
 
 /* Phy 1 Clock */
 struct clk gmac_phy1_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &phy_pclk_sel,
+	.pclk_sel = &phy_smii_rgmii_pclk_sel,
 	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
@@ -1193,7 +1205,7 @@ struct clk gmac_phy1_clk = {
 /* Phy 2 Clock */
 static struct clk gmac_phy2_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &phy_pclk_sel,
+	.pclk_sel = &phy_smii_rgmii_pclk_sel,
 	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
@@ -1201,7 +1213,7 @@ static struct clk gmac_phy2_clk = {
 /* Phy 3 Clock */
 static struct clk gmac_phy3_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &phy_pclk_sel,
+	.pclk_sel = &phy_rmii_pclk_sel,
 	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
@@ -1209,7 +1221,7 @@ static struct clk gmac_phy3_clk = {
 /* Phy 4 Clock */
 static struct clk gmac_phy4_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &phy_pclk_sel,
+	.pclk_sel = &phy_smii_rgmii_pclk_sel,
 	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
