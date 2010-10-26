@@ -631,11 +631,11 @@ static void tdm_hdlc_setup(void)
 
 	/* enable proper clock going to RAS */
 	val = readl(RAS_CLK_ENB);
-	val |= (1 << SYN1_CLK_ENB);
+	val |= (1 << SYNT1_CLK_ENB);
 	writel(val, RAS_CLK_ENB);
 
 	val = readl(RAS_SW_RST);
-	val &= ~(1 << SYN1_CLK_ENB);
+	val &= ~(1 << SYNT1_CLK_ENB);
 	writel(val, RAS_SW_RST);
 
 	val = readl(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0));
