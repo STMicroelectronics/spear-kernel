@@ -65,6 +65,7 @@ static int phy_clk_cfg(void *data)
 		"ras_pll2_clk",
 		"ras_tx125_clk",
 		"ras_tx50_clk",
+		"ras_synth0_clk",
 	};
 	struct clk *clk;
 	u32 tmp;
@@ -77,13 +78,13 @@ static int phy_clk_cfg(void *data)
 	}
 	/*
 	 * Select 125 MHz clock for SMII mode, else the clock
-	 * for RMII/RGMII mode is 50 Mhz.
+	 * for RMII mode is 50 Mhz.
 	 * The default clock for the GMAC is driven by pll-2
 	 * set to 125Mhz. In case the clock source is required to
 	 * be from tx pad, the gmac0 interface should select that
 	 * to pad clock.
 	 */
-	tmp = (plat_dat->interface == PHY_INTERFACE_MODE_MII) ? 0 : 2;
+	tmp = (plat_dat->interface == PHY_INTERFACE_MODE_RMII) ? 3 : 0;
 
 	clk = clk_get(NULL, pclk_name[tmp]);
 	if (IS_ERR(clk)) {
@@ -115,12 +116,17 @@ static int phy_clk_cfg(void *data)
 		tmp |= PHY_INTF_MODE_RGMII << 13;
 		break;
 	default:
+		clk_put(clk);
 		return -EINVAL;
 		break;
 	}
 	writel(tmp, addr);
 	clk_set_parent(plat_dat->clk, clk);
+	if (plat_dat->interface == PHY_INTERFACE_MODE_MII)
+		ret = clk_set_rate(clk, 50);
+
 	ret = clk_enable(plat_dat->clk);
+
 	return ret;
 fail_get_pclk:
 	clk_put(plat_dat->clk);
