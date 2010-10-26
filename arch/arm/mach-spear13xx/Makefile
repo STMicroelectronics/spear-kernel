@@ -9,7 +9,7 @@ obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
 obj-$(CONFIG_PCIEPORTBUS)		+= pcie.o
 obj-$(CONFIG_PM)			+= pm.o sleep.o
-obj-$(CONFIG_SPEAR_DB9000)		+= db9000_lcd.o
+obj-y					+= db9000_lcd.o
 
 # spear1300 specific files
 obj-$(CONFIG_MACH_SPEAR1300)		+= spear1300.o

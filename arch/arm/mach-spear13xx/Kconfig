@@ -40,11 +40,4 @@ config MACH_SPEAR900
 	help
 	  Supports ST SPEAr900 Machine
 
-config SPEAR_DB9000
-	bool "SPEAr DB9000 LCD"
-	depends on FB_DB9000
-	default y
-	help
-	  Support for DB9000 LCD device driver over SPEAr platform.
-
 endif #ARCH_SPEAR13XX
