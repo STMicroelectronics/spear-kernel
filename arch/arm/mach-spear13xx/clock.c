@@ -588,18 +588,18 @@ static struct clk gmac_phy0_clk = {
 	.recalc = &follow_parent,
 };
 
-/* clcd synthesizers masks */
-static struct clcd_synth_masks clcd_masks = {
-	.div_factor_mask = CLCD_SYNT_DIV_FACTOR_MASK,
-	.div_factor_shift = CLCD_SYNT_DIV_FACTOR_SHIFT,
+/* clcd fractional synthesizers masks */
+static struct frac_synth_masks clcd_masks = {
+	.div_factor_mask = FRAC_SYNT_DIV_FACTOR_MASK,
+	.div_factor_shift = FRAC_SYNT_DIV_FACTOR_SHIFT,
 };
 
-static struct clcd_clk_config clcd_synth_config = {
+static struct frac_synth_clk_config clcd_synth_config = {
 	.synth_reg = CLCD_CLK_SYNT,
 	.masks = &clcd_masks,
 };
 
-/* clcd synth parents */
+/* clcd fractional synthesizer parents */
 static struct pclk_info clcd_synth_pclk_info[] = {
 	{
 		.pclk = &pll1div4_clk,
@@ -610,7 +610,7 @@ static struct pclk_info clcd_synth_pclk_info[] = {
 	},
 };
 
-/* clcd synth parent select structure */
+/* clcd fractional synthesizer parent select structure */
 static struct pclk_sel clcd_synth_pclk_sel = {
 	.pclk_info = clcd_synth_pclk_info,
 	.pclk_count = ARRAY_SIZE(clcd_synth_pclk_info),
@@ -619,20 +619,20 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 };
 
 /* clcd rate configuration table, in ascending order of rates */
-struct clcd_rate_tbl clcd_rtbl[] = {
+struct frac_synth_rate_tbl clcd_rtbl[] = {
 	/* For pll1div4 = 250 MHz */
 	{.div = 0x08480}, /* 60 MHz */
 	{.div = 0x04240}, /* 120 MHz */
 };
 
-/* clcd synth clock */
+/* clcd fractional synthesizer clock */
 static struct clk clcd_synth_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &clcd_synth_pclk_sel,
 	.pclk_sel_shift = CLCD_SYNT_CLK_SHIFT,
-	.calc_rate = &clcd_calc_rate,
-	.recalc = &clcd_clk_recalc,
-	.set_rate = &clcd_clk_set_rate,
+	.calc_rate = &frac_synth_calc_rate,
+	.recalc = &frac_synth_clk_recalc,
+	.set_rate = &frac_synth_clk_set_rate,
 	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 1},
 	.private_data = &clcd_synth_config,
 };
