@@ -645,7 +645,13 @@ static struct clk clcd_synth_clk = {
 	.private_data = &clcd_synth_config,
 };
 
-/* clcd clock parents */
+#if 0
+/* clcd clock parents
+ * This we would select if we want to use pll5_clk or clcd_synth_clk
+ * as a parent clock of clcd.
+ * For selection of any of these two parent, check the combination of
+ * 3-2 bit of clcdclk_sel misc register
+ */
 static struct pclk_info clcd_pclk_info[] = {
 	{
 		.pclk = &pll5_clk,
@@ -663,13 +669,16 @@ static struct pclk_sel clcd_pclk_sel = {
 	.pclk_sel_reg = PERIP_CLK_CFG,
 	.pclk_sel_mask = CLCD_CLK_MASK,
 };
+#endif
 
-/* clcd clock */
+/*
+ * clcd clock
+ * AHB clock is used as a parent clock of clcd
+ */
 static struct clk clcd_clk = {
 	.en_reg = PERIP1_CLK_ENB,
 	.en_reg_bit = CLCD_CLK_ENB,
-	.pclk_sel = &clcd_pclk_sel,
-	.pclk_sel_shift = CLCD_CLK_SHIFT,
+	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 
