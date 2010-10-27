@@ -513,6 +513,10 @@ static void __init spear1310_evb_init(void)
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
 			&spear13xx_dmac_device[0].dev);
+#ifdef CONFIG_SND_SOC_STA529
+	/* configure i2s configuration for dma xfer */
+	pcm_init(&spear13xx_dmac_device[0].dev);
+#endif
 
 	/* call spear1310 machine init function */
 	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
