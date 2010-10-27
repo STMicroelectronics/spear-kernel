@@ -206,14 +206,6 @@ static int clcdfb_set_par(struct fb_info *info)
 	struct clcd_fb *fb = to_clcd(info);
 	struct clcd_regs regs;
 
-	fb->fb.fix.line_length = fb->fb.var.xres_virtual *
-				 fb->fb.var.bits_per_pixel / 8;
-
-	if (fb->fb.var.bits_per_pixel <= 8)
-		fb->fb.fix.visual = FB_VISUAL_PSEUDOCOLOR;
-	else
-		fb->fb.fix.visual = FB_VISUAL_TRUECOLOR;
-
 	fb->board->decode(fb, &regs);
 
 	clcdfb_disable(fb);
@@ -423,6 +415,14 @@ static int clcdfb_register(struct clcd_fb *fb)
 	fb->fb.monspecs.vfmax	= 400;
 	fb->fb.monspecs.dclkmin = 1000000;
 	fb->fb.monspecs.dclkmax	= 100000000;
+
+	fb->fb.fix.line_length = fb->fb.var.xres_virtual *
+				 fb->fb.var.bits_per_pixel / 8;
+
+	if (fb->fb.var.bits_per_pixel <= 8)
+		fb->fb.fix.visual = FB_VISUAL_PSEUDOCOLOR;
+	else
+		fb->fb.fix.visual = FB_VISUAL_TRUECOLOR;
 
 	/*
 	 * Make sure that the bitfields are set appropriately.
