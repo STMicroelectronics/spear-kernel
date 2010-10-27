@@ -18,7 +18,7 @@
 
 #if defined(CONFIG_ARCH_SPEAR3XX) || defined(CONFIG_ARCH_SPEAR6XX)
 .text
-ENTRY(pll_set_rate)
+ENTRY(vco_set_rate)
 	stmfd	sp!, {r0-r12, lr}
 
 	/* Lock down the TLB entry to the current victim */
@@ -183,5 +183,5 @@ cache_prefetch_end1 :
 
 #elif defined(CONFIG_ARCH_SPEAR13XX)
 .text
-ENTRY(pll_set_rate)
+ENTRY(vco_set_rate)
 #endif
