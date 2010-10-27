@@ -49,8 +49,8 @@ static struct clk rtc_clk = {
 };
 
 /* clock derived from osc1 or osc3 */
-/* pll[1-3] parents */
-static struct pclk_info pll_pclk_info[] = {
+/* vco[1-3] parents */
+static struct pclk_info vco_pclk_info[] = {
 	{
 		.pclk = &osc1_24m_clk,
 		.pclk_val = OSC_24M_VAL,
@@ -60,16 +60,16 @@ static struct pclk_info pll_pclk_info[] = {
 	},
 };
 
-/* pll[1-3] parent select structure */
-static struct pclk_sel pll_pclk_sel = {
-	.pclk_info = pll_pclk_info,
-	.pclk_count = ARRAY_SIZE(pll_pclk_info),
+/* vco[1-3] parent select structure */
+static struct pclk_sel vco_pclk_sel = {
+	.pclk_info = vco_pclk_info,
+	.pclk_count = ARRAY_SIZE(vco_pclk_info),
 	.pclk_sel_reg = PLL_CFG,
 	.pclk_sel_mask = PLL_CLK_MASK,
 };
 
-/* pll masks structure */
-static struct pll_clk_masks pll_masks = {
+/* vco masks structure */
+static struct vco_clk_masks vco_masks = {
 	.mode_mask = PLL_MODE_MASK,
 	.mode_shift = PLL_MODE_SHIFT,
 	.norm_fdbk_m_mask = PLL_NORM_FDBK_M_MASK,
@@ -81,129 +81,162 @@ static struct pll_clk_masks pll_masks = {
 	.div_n_mask = PLL_DIV_N_MASK,
 	.div_n_shift = PLL_DIV_N_SHIFT,
 };
-/* pll1 configuration structure */
-static struct pll_clk_config pll1_config = {
+/* vco1 configuration structure */
+static struct vco_clk_config vco1_config = {
 	.mode_reg = PLL1_CTR,
 	.cfg_reg = PLL1_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* pll rate configuration table, in ascending order of rates */
-struct pll_rate_tbl pll_rtbl[] = {
+/* vco rate configuration table, in ascending order of rates */
+struct vco_rate_tbl vco_rtbl[] = {
 	/* PCLK 24MHz */
-	{.mode = 0, .m = 0x64, .n = 0x03, .p = 0x2}, /* 400 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* 500 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* 664 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* 800 MHz */
-	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* 1000 MHz */
+	{.mode = 0, .m = 0x83, .n = 0x02, .p = 0x6}, /* 49.288 MHz */
+	{.mode = 0, .m = 0x64, .n = 0x03, .p = 0x2}, /* vco 800, pll 200 MHz */
+	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* vco 1000, pll 250 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* vco 1328, pll 332 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* vco 1600, pll 400 MHz */
+	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* vco 2, pll 1 GHz */
 };
 
-/* pll1 clock */
-static struct clk pll1_clk = {
+/* vco1 clock */
+static struct clk vco1_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
-	.pclk_sel = &pll_pclk_sel,
+	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = PLL1_CLK_SHIFT,
 	.en_reg = PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
-	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 4},
-	.private_data = &pll1_config,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.private_data = &vco1_config,
 };
 
-/* pll1div2 clock */
-static struct clk pll1div2_clk = {
+/* clock derived from vco1 clock */
+/* pll1 clock */
+static struct clk pll1_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll1_clk,
+	.pclk = &vco1_clk,
+	.recalc = &pll_clk_recalc,
+};
+
+/* vco1div2 clock */
+static struct clk vco1div2_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco1_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
-/* pll1div4 clock */
-static struct clk pll1div4_clk = {
+/* vco1div4 clock */
+static struct clk vco1div4_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll1_clk,
+	.pclk = &vco1_clk,
 	.div_factor = 4,
 	.recalc = &follow_parent,
 };
 
-/* pll2 configuration structure */
-static struct pll_clk_config pll2_config = {
+/* vco2 configuration structure */
+static struct vco_clk_config vco2_config = {
 	.mode_reg = PLL2_CTR,
 	.cfg_reg = PLL2_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* pll2 clock */
-static struct clk pll2_clk = {
+/* vco2 clock */
+static struct clk vco2_clk = {
 	.flags = SYSTEM_CLK,
-	.pclk_sel = &pll_pclk_sel,
+	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = PLL2_CLK_SHIFT,
 	.en_reg = PLL2_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
-	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 4},
-	.private_data = &pll2_config,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.private_data = &vco2_config,
 };
 
-/* pll3 configuration structure */
-static struct pll_clk_config pll3_config = {
+/* clock derived from vco2 clock */
+/* pll2 clock */
+static struct clk pll2_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco2_clk,
+	.recalc = &pll_clk_recalc,
+};
+
+/* vco3 configuration structure */
+static struct vco_clk_config vco3_config = {
 	.mode_reg = PLL3_CTR,
 	.cfg_reg = PLL3_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* pll3 clock */
-static struct clk pll3_clk = {
+/* vco3 clock */
+static struct clk vco3_clk = {
 	.flags = SYSTEM_CLK,
-	.pclk_sel = &pll_pclk_sel,
+	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = PLL3_CLK_SHIFT,
 	.en_reg = PLL3_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
-	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 4},
-	.private_data = &pll3_config,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 0},
+	.private_data = &vco3_config,
 };
 
-/* pll3div2 clock */
-static struct clk pll3div2_clk = {
+/* clock derived from vco3 clock */
+/* pll3 clock */
+static struct clk pll3_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll3_clk,
+	.pclk = &vco3_clk,
+	.recalc = &pll_clk_recalc,
+};
+
+/* vco3div2 clock */
+static struct clk vco3div2_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco3_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
-/* pll4 (DDR) configuration structure */
-static struct pll_clk_config pll4_config = {
+/* vco4 (DDR) configuration structure */
+static struct vco_clk_config vco4_config = {
 	.mode_reg = PLL4_CTR,
 	.cfg_reg = PLL4_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* pll4 rate configuration table, in ascending order of rates */
-struct pll_rate_tbl pll4_rtbl[] = {
-	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* 500 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* 664 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* 800 MHz */
-	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* 1000 MHz */
+/* vco4 rate configuration table, in ascending order of rates */
+struct vco_rate_tbl vco4_rtbl[] = {
+	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* vco 1000, pll 250 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* vco 1328, pll 332 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* vco 1600, pll 400 MHz */
+	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* vco 2, pll 1 GHz */
 };
 
-/* pll4 (DDR) clock */
-static struct clk pll4_clk = {
+/* vco4 (DDR) clock */
+static struct clk vco4_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc1_24m_clk,
 	.en_reg = PLL4_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco4_rtbl, ARRAY_SIZE(vco4_rtbl), 3},
+	.private_data = &vco4_config,
+};
+
+/* clock derived from vco4 clock */
+/* pll4 clock */
+static struct clk pll4_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco4_clk,
 	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll4_rtbl, ARRAY_SIZE(pll4_rtbl), 3},
-	.private_data = &pll4_config,
 };
 
 /* pll5 USB 48 MHz clock */
@@ -375,7 +408,7 @@ struct aux_rate_tbl aux_rtbl[] = {
 static struct clk uart_synth_clk = {
 	.en_reg = UART_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
-	.pclk = &pll1div2_clk,
+	.pclk = &vco1div2_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -421,7 +454,7 @@ static struct aux_clk_config sdhci_synth_config = {
 static struct clk sdhci_synth_clk = {
 	.en_reg = SDHCI_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
-	.pclk = &pll1div2_clk,
+	.pclk = &vco1div2_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -447,7 +480,7 @@ static struct aux_clk_config cfxd_synth_config = {
 static struct clk cfxd_synth_clk = {
 	.en_reg = CFXD_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
-	.pclk = &pll1div2_clk,
+	.pclk = &vco1div2_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -473,7 +506,7 @@ static struct aux_clk_config c3_synth_config = {
 static struct clk c3_synth_clk = {
 	.en_reg = C3_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
-	.pclk = &pll1div2_clk,
+	.pclk = &vco1div2_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -610,7 +643,7 @@ static struct frac_synth_clk_config clcd_synth_config = {
 /* clcd fractional synthesizer parents */
 static struct pclk_info clcd_synth_pclk_info[] = {
 	{
-		.pclk = &pll1div4_clk,
+		.pclk = &vco1div4_clk,
 		.pclk_val = CLCD_SYNT_PLL1_DIV4_VAL,
 	}, {
 		.pclk = &pll2_clk,
@@ -628,9 +661,9 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 
 /* clcd rate configuration table, in ascending order of rates */
 struct frac_synth_rate_tbl clcd_rtbl[] = {
-	/* For pll1div4 = 250 MHz */
-	{.div = 0x08480}, /* 60 MHz */
-	{.div = 0x04240}, /* 120 MHz */
+	/* For vco1div4 = 500 MHz */
+	{.div = 0x10900}, /* 60 MHz */
+	{.div = 0x08480}, /* 120 MHz */
 };
 
 /* clcd fractional synthesizer clock */
@@ -691,7 +724,7 @@ static struct clk i2s_src_pad_clk = {
 
 static struct pclk_info i2s_src_pclk_info[] = {
 	{
-		.pclk = &pll1div2_clk,
+		.pclk = &vco1div2_clk,
 		.pclk_val = I2S_SRC_PLLDIV2_VAL,
 	}, {
 		.pclk = &pll3_clk,
@@ -1000,10 +1033,10 @@ static struct frac_synth_clk_config ras_synth0_config = {
 /* RAS Fractional Synthesizer parents */
 static struct pclk_info ras_synth0_pclk_info[] = {
 	{
-		.pclk = &pll1div4_clk,
+		.pclk = &vco1div4_clk,
 		.pclk_val = RAS_SYNT0_1_PLL1_DIV4_VAL,
 	}, {
-		.pclk = &pll3div2_clk,
+		.pclk = &vco3div2_clk,
 		.pclk_val = RAS_SYNT0_1_PLL3_DIV2_VAL,
 	}, {
 		.pclk = &pll3_clk,
@@ -1021,7 +1054,7 @@ static struct pclk_sel ras_synth0_pclk_sel = {
 
 /* RAS rate configuration table, in ascending order of rates */
 struct frac_synth_rate_tbl ras_rtbl[] = {
-	/* For pll1div4 = 250 MHz */
+	/* For vco1div4 = 500 MHz */
 	{.div = 0x14000}, /* 50 MHz */
 	{.div = 0x0A000}, /* 100 MHz */
 };
@@ -1039,19 +1072,19 @@ static struct clk ras_synth0_clk = {
 	.private_data = &ras_synth0_config,
 };
 
-/* pll3 generated clock */
-static struct clk ras_pll3_clk = {
-	.pclk = &pll3_clk,
-	.en_reg = RAS_CLK_ENB,
-	.en_reg_bit = PLL3_CLK_ENB,
-	.recalc = &follow_parent,
-};
-
 /* pll2 generated clock */
 static struct clk ras_pll2_clk = {
 	.pclk = &pll2_clk,
 	.en_reg = RAS_CLK_ENB,
 	.en_reg_bit = PLL2_CLK_ENB,
+	.recalc = &follow_parent,
+};
+
+/* pll3 generated clock */
+static struct clk ras_pll3_clk = {
+	.pclk = &pll3_clk,
+	.en_reg = RAS_CLK_ENB,
+	.en_reg_bit = PLL3_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
@@ -1292,12 +1325,21 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "rtc-spear",		.clk = &rtc_clk},
 
 	/* clock derived from 24/25 MHz osc1/osc3 clk */
+	{.con_id = "vco1_clk",		.clk = &vco1_clk},
+	{.con_id = "vco2_clk",		.clk = &vco2_clk},
+	{.con_id = "vco3_clk",		.clk = &vco3_clk},
+	{.con_id = "vco4_clk",		.clk = &vco4_clk},
+	{.con_id = "pll5_clk",		.clk = &pll5_clk},
+	{.con_id = "pll6_clk",		.clk = &pll6_clk},
+
+	/* clock derived from vco1-5 clk */
 	{.con_id = "pll1_clk",		.clk = &pll1_clk},
 	{.con_id = "pll2_clk",		.clk = &pll2_clk},
 	{.con_id = "pll3_clk",		.clk = &pll3_clk},
 	{.con_id = "pll4_clk",		.clk = &pll4_clk},
-	{.con_id = "pll5_clk",		.clk = &pll5_clk},
-	{.con_id = "pll6_clk",		.clk = &pll6_clk},
+	{.con_id = "vco1div2_clk",	.clk = &vco1div2_clk},
+	{.con_id = "vco1div4_clk",	.clk = &vco1div4_clk},
+	{.con_id = "vco3div2_clk",	.clk = &vco3div2_clk},
 
 	/* clock derived from pll1 clk */
 	{.con_id = "ddr_clk",		.clk = &ddr_clk},
@@ -1306,9 +1348,6 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "apb_clk",		.clk = &apb_clk},
 
 	/* synthesizers/prescaled clocks */
-	{.con_id = "pll1div2_clk",		.clk = &pll1div2_clk},
-	{.con_id = "pll1div4_clk",		.clk = &pll1div4_clk},
-	{.con_id = "pll3div2_clk",		.clk = &pll3div2_clk},
 	{.con_id = "c3_synth_clk",		.clk = &c3_synth_clk},
 	{.con_id = "gmii_txclk123_pad_clk",	.clk = &gmii_txclk125_pad},
 	{.con_id = "clcd_synth_clk",		.clk = &clcd_synth_clk},

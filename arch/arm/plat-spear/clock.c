@@ -516,18 +516,28 @@ EXPORT_SYMBOL(clk_round_rate);
 /*All below functions are called with lock held */
 
 /*
- * Calculates pll clk rate for specific value of mode, m, n and p
- *
  * In normal mode
- * rate = (2 * M[15:8] * Fin)/(N * 2^P)
+ * rate = (2 * M[15:8] * Fin)/N
  *
  * In Dithered mode
- * rate = (2 * M[15:0] * Fin)/(256 * N * 2^P)
+ * rate = (2 * M[15:0] * Fin)/(256 * N)
+ *
+ * pll_rate = vco/2^p
+ *
+ * vco and pll are very closely bound to each other,
+ * "vco needs to program: mode, m & n" and "pll needs to program p", both share
+ * common enable/disable logic.
+ * In clock framework all programming is left on vco and pll will be always
+ * enabled. Moreover vco_set_rate will expect desired_rate as desired_rate of
+ * pll instead of vco, so that all m, n, p can be configured here only. pll will
+ * only support clk_recalc based on programmed value of vco and p.
  */
-unsigned long pll_calc_rate(struct clk *clk, int index)
+
+/* Calculates vco clk rate for specific value of mode, m, n and p */
+unsigned long vco_calc_rate(struct clk *clk, int index)
 {
 	unsigned long rate = clk->pclk->rate;
-	struct pll_rate_tbl *tbls = clk->rate_config.tbls;
+	struct vco_rate_tbl *tbls = clk->rate_config.tbls;
 	unsigned int mode;
 
 	mode = tbls[index].mode ? 256 : 1;
@@ -535,18 +545,10 @@ unsigned long pll_calc_rate(struct clk *clk, int index)
 			(mode * tbls[index].n * (1 << tbls[index].p))) * 10000;
 }
 
-/*
- * calculates current programmed rate of pll1
- *
- * In normal mode
- * rate = (2 * M[15:8] * Fin)/(N * 2^P)
- *
- * In Dithered mode
- * rate = (2 * M[15:0] * Fin)/(256 * N * 2^P)
- */
-int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
+/* calculates current programmed rate of vco */
+int vco_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 {
-	struct pll_clk_config *config = clk->private_data;
+	struct vco_clk_config *config = clk->private_data;
 	unsigned int num = 2, den = 0, val, mode = 0;
 
 	mode = (readl(config->mode_reg) >> config->masks->mode_shift) &
@@ -554,9 +556,7 @@ int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 
 	val = readl(config->cfg_reg);
 	/* calculate denominator */
-	den = (val >> config->masks->div_p_shift) & config->masks->div_p_mask;
-	den = 1 << den;
-	den *= (val >> config->masks->div_n_shift) & config->masks->div_n_mask;
+	den = (val >> config->masks->div_n_shift) & config->masks->div_n_mask;
 
 	/* calculate numerator & denominator */
 	if (!mode) {
@@ -577,13 +577,11 @@ int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
 	return 0;
 }
 
-/*
- * Configures new clock rate of pll
- */
-int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
+/* Configures new clock rate of vco */
+int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 {
-	struct pll_rate_tbl *tbls = clk->rate_config.tbls;
-	struct pll_clk_config *config = clk->private_data;
+	struct vco_rate_tbl *tbls = clk->rate_config.tbls;
+	struct vco_clk_config *config = clk->private_data;
 	unsigned long val, rate;
 	int i;
 
@@ -601,10 +599,10 @@ int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 		else {
 			/*
 			 * call routine to put ddr in refresh mode, and
-			 * configure pll.
+			 * configure vco.
 			 */
-			pll_set_rate(tbls[i].m, tbls[i].p, tbls[i].n);
-			clk->rate = rate;
+			vco_set_rate(tbls[i].m, tbls[i].p, tbls[i].n);
+			clk->rate = rate * (1 << tbls[i].p);
 		}
 		return 0;
 	}
@@ -632,8 +630,21 @@ int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 			config->masks->norm_fdbk_m_shift;
 
 	writel(val, config->cfg_reg);
-	clk->rate = rate;
+	clk->rate = rate * (1 << tbls[i].p);
 
+	return 0;
+}
+
+/* calculates current programmed rate of pll = vco/2^p */
+int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate)
+{
+	struct vco_clk_config *config = clk->pclk->private_data;
+	unsigned int p;
+
+	p = readl(config->cfg_reg);
+	p = (p >> config->masks->div_p_shift) & config->masks->div_p_mask;
+
+	*rate = prate / (1 << p);
 	return 0;
 }
 

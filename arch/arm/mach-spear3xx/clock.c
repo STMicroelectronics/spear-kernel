@@ -40,8 +40,8 @@ static struct clk rtc_clk = {
 };
 
 /* clock derived from 24 MHz osc clk */
-/* pll masks structure */
-static struct pll_clk_masks pll_masks = {
+/* vco masks structure */
+static struct vco_clk_masks vco_masks = {
 	.mode_mask = PLL_MODE_MASK,
 	.mode_shift = PLL_MODE_SHIFT,
 	.norm_fdbk_m_mask = PLL_NORM_FDBK_M_MASK,
@@ -54,51 +54,65 @@ static struct pll_clk_masks pll_masks = {
 	.div_n_shift = PLL_DIV_N_SHIFT,
 };
 
-/* pll rate configuration table, in ascending order of rates */
-struct pll_rate_tbl pll_rtbl[] = {
-	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* 166 MHz */
-	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* 266 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* 332 MHz */
+/* vco rate configuration table, in ascending order of rates */
+struct vco_rate_tbl vco_rtbl[] = {
+	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* vco 332 & pll 166 MHz */
+	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* vco 532 & pll 266 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* vco 664 & pll 332 MHz */
 };
 
-/* pll1 configuration structure */
-static struct pll_clk_config pll1_config = {
+/* vco1 configuration structure */
+static struct vco_clk_config vco1_config = {
 	.mode_reg = PLL1_CTR,
 	.cfg_reg = PLL1_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* PLL1 clock */
-static struct clk pll1_clk = {
+/* vco1 clock */
+static struct clk vco1_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_24m_clk,
 	.en_reg = PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
-	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
-	.private_data = &pll1_config,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 2},
+	.private_data = &vco1_config,
 };
 
-/* pll2 configuration structure */
-static struct pll_clk_config pll2_config = {
+/* pll1 clock */
+static struct clk pll1_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco1_clk,
+	.recalc = &pll_clk_recalc,
+};
+
+/* vco2 configuration structure */
+static struct vco_clk_config vco2_config = {
 	.mode_reg = PLL2_CTR,
 	.cfg_reg = PLL2_FRQ,
-	.masks = &pll_masks,
+	.masks = &vco_masks,
 };
 
-/* PLL2 clock */
-static struct clk pll2_clk = {
+/* vco2 clock */
+static struct clk vco2_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_24m_clk,
 	.en_reg = PLL2_CTR,
 	.en_reg_bit = PLL_ENABLE,
-	.calc_rate = &pll_calc_rate,
+	.calc_rate = &vco_calc_rate,
+	.recalc = &vco_clk_recalc,
+	.set_rate = &vco_clk_set_rate,
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 2},
+	.private_data = &vco2_config,
+};
+
+/* pll2 clock */
+static struct clk pll2_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &vco2_clk,
 	.recalc = &pll_clk_recalc,
-	.set_rate = &pll_clk_set_rate,
-	.rate_config = {pll_rtbl, ARRAY_SIZE(pll_rtbl), 2},
-	.private_data = &pll2_config,
 };
 
 /* PLL3 48 MHz clock */
@@ -721,10 +735,14 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* clock derived from 32 KHz osc clk */
 	{ .dev_id = "rtc-spear",	.clk = &rtc_clk},
 	/* clock derived from 24 MHz osc clk */
-	{ .con_id = "pll1_clk",		.clk = &pll1_clk},
-	{ .con_id = "pll2_clk",		.clk = &pll2_clk},
+	{ .con_id = "vco1_clk",		.clk = &vco1_clk},
+	{ .con_id = "vco2_clk",		.clk = &vco2_clk},
 	{ .con_id = "pll3_48m_clk",	.clk = &pll3_48m_clk},
 	{ .dev_id = "wdt",		.clk = &wdt_clk},
+	/* clock derived from vco1 clk */
+	{ .con_id = "pll1_clk",		.clk = &pll1_clk},
+	/* clock derived from vco2 clk */
+	{ .con_id = "pll2_clk",		.clk = &pll2_clk},
 	/* clock derived from pll1 clk */
 	{ .con_id = "cpu_clk",		.clk = &cpu_clk},
 	{ .con_id = "ahb_clk",		.clk = &ahb_clk},

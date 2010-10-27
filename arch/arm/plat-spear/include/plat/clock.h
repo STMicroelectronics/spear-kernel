@@ -123,8 +123,8 @@ struct clk {
 #endif
 };
 
-/* pll configuration structure */
-struct pll_clk_masks {
+/* vco configuration structure */
+struct vco_clk_masks {
 	u32 mode_mask;
 	u32 mode_shift;
 
@@ -138,14 +138,14 @@ struct pll_clk_masks {
 	u32 div_n_shift;
 };
 
-struct pll_clk_config {
+struct vco_clk_config {
 	void __iomem *mode_reg;
 	void __iomem *cfg_reg;
-	struct pll_clk_masks *masks;
+	struct vco_clk_masks *masks;
 };
 
-/* pll clk rate config structure */
-struct pll_rate_tbl {
+/* vco clk rate config structure */
+struct vco_rate_tbl {
 	u8 mode;
 	u16 m;
 	u8 n;
@@ -247,9 +247,10 @@ void recalc_root_clocks(void);
 
 /* clock recalc & set rate functions */
 int follow_parent(struct clk *clk, unsigned long *rate, unsigned long prate);
-unsigned long pll_calc_rate(struct clk *clk, int index);
+unsigned long vco_calc_rate(struct clk *clk, int index);
+int vco_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
+int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 int pll_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
-int pll_clk_set_rate(struct clk *clk, unsigned long desired_rate);
 unsigned long bus_calc_rate(struct clk *clk, int index);
 int bus_clk_recalc(struct clk *clk, unsigned long *rate, unsigned long prate);
 int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate);
@@ -265,6 +266,6 @@ unsigned long frac_synth_calc_rate(struct clk *clk, int index);
 int frac_synth_clk_recalc(struct clk *clk, unsigned long *rate,
 		unsigned long prate);
 int frac_synth_clk_set_rate(struct clk *clk, unsigned long desired_rate);
-void pll_set_rate(u16 pdiv, u8 nmul, u8 hclkdiv);
+void vco_set_rate(u16 m, u8 p, u8 n);
 
 #endif /* __PLAT_CLOCK_H */
