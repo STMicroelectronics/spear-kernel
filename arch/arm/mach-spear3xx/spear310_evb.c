@@ -164,6 +164,7 @@ static struct platform_device *plat_devs[] __initdata = {
  * By default, TDM is selected. To switch the hardware connection, SW should
  * call this function in machine init routine to enable E1 interface
  */
+#if 0
 static void __init select_e1_interface(struct platform_device *pdev)
 {
 	/*
@@ -175,6 +176,7 @@ static void __init select_e1_interface(struct platform_device *pdev)
 	e1phy_init(SPEAR310_EMI_MEM_2_BASE, 2);
 	tdm_hdlc_set_plat_data(pdev, 32);
 }
+#endif
 
 /* spi board information */
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */

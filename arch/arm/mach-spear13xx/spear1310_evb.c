@@ -48,12 +48,14 @@
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
+#if 0
 static struct mtd_partition partition_info[] = {
 	PARTITION("X-loader", 0, 1 * 0x20000),
 	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
 	PARTITION("Kernel", 0x80000, 24 * 0x20000),
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
+#endif
 
 static int phy_clk_cfg(void *data)
 {
@@ -486,6 +488,7 @@ static void  __init ras_fsmc_config(u32 mode, u32 width)
  * By default, TDM is selected. To switch the hardware connection, SW should
  * call this function in machine init routine to enable E1 interface
  */
+#if 0
 static void __init select_e1_interface(struct platform_device *pdev)
 {
 	/*
@@ -498,6 +501,7 @@ static void __init select_e1_interface(struct platform_device *pdev)
 	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + (pdev->id * 0x100), 0);
 	tdm_hdlc_set_plat_data(pdev, 32);
 }
+#endif
 
 static void __init spear1310_evb_init(void)
 {
