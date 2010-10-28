@@ -763,6 +763,53 @@ static void dmac_setup(void)
 	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
+static void i2s_clk_init(void)
+{
+	struct clk *i2s_src_clk, *pll3_clk, *i2s_ref_clk;
+
+	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
+	if (IS_ERR(i2s_src_clk)) {
+		pr_err("%s:couldn't get clk for i2s_src_clk\n", __func__);
+		return;
+	}
+
+	pll3_clk = clk_get_sys(NULL, "pll3_clk");
+	if (IS_ERR(pll3_clk)) {
+		pr_err("%s:couldn't get clk for pll3_clck\n", __func__);
+		goto put_src_clk;
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get clk for i2s_ref_clk\n", __func__);
+		goto put_pll3_clk;
+	}
+
+	if (clk_set_parent(i2s_src_clk, pll3_clk))
+		goto put_ref_clk;
+
+	if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
+		goto put_ref_clk;
+
+	if (clk_set_rate(i2s_ref_clk, 12288000)) /*12.288 Mhz */
+		goto put_ref_clk;
+
+	if (clk_enable(i2s_ref_clk)) {
+		pr_err("%s:enabling i2s_ref_clk_fail\n", __func__);
+		goto put_ref_clk;
+	}
+	goto put_pll3_clk;
+
+put_ref_clk:
+	clk_put(i2s_ref_clk);
+put_pll3_clk:
+	clk_put(pll3_clk);
+put_src_clk:
+	clk_put(i2s_src_clk);
+
+	return;
+}
+
 static void sdhci_enable(void)
 {
 	unsigned val = readl(PERIP_CFG);
@@ -816,6 +863,11 @@ void __init spear13xx_init(void)
 #endif
 
 	dmac_setup();
+
+#ifdef CONFIG_SND_SOC_STA529
+	i2s_clk_init();
+#endif
+
 	sdhci_enable();
 	set_udc_plat_data(&spear13xx_udc_device);
 }
