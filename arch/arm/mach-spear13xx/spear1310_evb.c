@@ -518,6 +518,19 @@ static void __init spear1310_evb_init(void)
 	pcm_init(&spear13xx_dmac_device[0].dev);
 #endif
 
+/*
+ * SPEAr1310 FSMC cannot used as NOR and NAND at the same time
+ * For the moment, disable NAND and use NOR only
+ * If NAND is needed, enable the following code and disable all code for NOR.
+ * Also enable nand in padmux configuration to use it.
+ */
+	/* set nand device's plat data */
+#if 0
+	nand_set_plat_data(&spear13xx_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
+			SPEAR_NAND_BW8);
+	nand_mach_init(SPEAR_NAND_BW8);
+#endif
+
 	/* call spear1310 machine init function */
 	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
