@@ -91,6 +91,7 @@ static struct vco_clk_config vco1_config = {
 /* vco rate configuration table, in ascending order of rates */
 struct vco_rate_tbl vco_rtbl[] = {
 	/* PCLK 24MHz */
+	{.mode = 0, .m = 0x83, .n = 0x02, .p = 0x6}, /* 49.288 MHz */
 	{.mode = 0, .m = 0x64, .n = 0x03, .p = 0x2}, /* vco 800, pll 200 MHz */
 	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* vco 1000, pll 250 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* vco 1328, pll 332 MHz */
@@ -108,7 +109,7 @@ static struct clk vco1_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
 	.private_data = &vco1_config,
 };
 
@@ -153,7 +154,7 @@ static struct clk vco2_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
 	.private_data = &vco2_config,
 };
 
@@ -182,7 +183,7 @@ static struct clk vco3_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 0},
 	.private_data = &vco3_config,
 };
 
@@ -724,13 +725,13 @@ static struct clk i2s_src_pad_clk = {
 static struct pclk_info i2s_src_pclk_info[] = {
 	{
 		.pclk = &vco1div2_clk,
-		.pclk_val = 0x0,
+		.pclk_val = I2S_SRC_PLLDIV2_VAL,
 	}, {
 		.pclk = &pll3_clk,
-		.pclk_val = 0x1,
+		.pclk_val = I2S_SRC_PLL3_VAL,
 	}, {
 		.pclk = &i2s_src_pad_clk,
-		.pclk_val = 0x2,
+		.pclk_val = I2S_SRC_PAD_VAL,
 	},
 };
 
@@ -738,28 +739,28 @@ static struct pclk_sel i2s_src_pclk_sel = {
 	.pclk_info = i2s_src_pclk_info,
 	.pclk_count = ARRAY_SIZE(i2s_src_pclk_info),
 	.pclk_sel_reg = I2S_CLK_CFG,
-	.pclk_sel_mask = 0x3,
+	.pclk_sel_mask = I2S_SRC_CLK_MASK,
 };
 
 /* i2s src clock */
 static struct clk i2s_src_clk = {
 	.en_reg = I2S_CLK_CFG,
-	.en_reg_bit = 2,
+	.en_reg_bit = I2S_SRC_CLK_ENB,
 	.pclk_sel = &i2s_src_pclk_sel,
-	.pclk_sel_shift = 0,
+	.pclk_sel_shift = I2S_SRC_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
 /* i2s reference clk synthesizer masks */
 static struct aux_clk_masks i2s_ref_aux_masks = {
 	.eq_sel_mask = AUX_EQ_SEL_MASK,
-	.eq_sel_shift = 3,
+	.eq_sel_shift = I2S_REF_CLK_SHIFT,
 	.eq1_mask = AUX_EQ1_SEL,
 	.eq2_mask = AUX_EQ2_SEL,
-	.xscale_sel_mask = 0xFF,
-	.xscale_sel_shift = 12,
-	.yscale_sel_mask = 0xFF,
-	.yscale_sel_shift = 4,
+	.xscale_sel_mask = I2S_REF_CLK_X_MASK,
+	.xscale_sel_shift = I2S_REF_CLK_X_SHIFT,
+	.yscale_sel_mask = I2S_REF_CLK_Y_MASK,
+	.yscale_sel_shift = I2S_REF_CLK_Y_SHIFT,
 };
 
 /* i2s reference clk configurations */
@@ -768,15 +769,20 @@ static struct aux_clk_config i2s_ref_config = {
 	.masks = &i2s_ref_aux_masks,
 };
 
+/* i2s ref out aux rate configuration table, in ascending order of rates */
+struct aux_rate_tbl i2s_ref_aux_rtbl[] = {
+	/* For parent clk = 12.288MHz */
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
+};
 /* i2s ref out clock */
 static struct clk i2s_ref_clk = {
-	.en_reg = I2S_CLK_CFG,
-	.en_reg_bit = 2,
+	.en_reg = PERIP2_CLK_ENB,
+	.en_reg_bit = I2S_REFOUT_CLK_ENB,
 	.pclk = &i2s_src_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 0},
+	.rate_config = {i2s_ref_aux_rtbl, ARRAY_SIZE(i2s_ref_aux_rtbl), 0},
 	.private_data = &i2s_ref_config,
 };
 
@@ -784,10 +790,10 @@ static struct clk i2s_ref_clk = {
 static struct pclk_info i2s_sclk_pclk_info[] = {
 	{
 		.pclk = &i2s_src_clk,
-		.pclk_val = 0x0,
+		.pclk_val = I2S_SRC_CLK_VAL,
 	}, {
 		.pclk = &i2s_ref_clk,
-		.pclk_val = 0x1,
+		.pclk_val = I2S_REF_CLK_VAL,
 	},
 };
 
@@ -796,25 +802,25 @@ static struct pclk_sel i2s_sclk_pclk_sel = {
 	.pclk_info = i2s_sclk_pclk_info,
 	.pclk_count = ARRAY_SIZE(i2s_sclk_pclk_info),
 	.pclk_sel_reg = I2S_CLK_CFG,
-	.pclk_sel_mask = 0x1,
+	.pclk_sel_mask = I2S_SCLK_SEL_MASK,
 };
 
 /* i2s sclk aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
 	/* For i2s_ref_out_clk = 12.288MHz */
-	{.xscale = 1, .yscale = 8, .eq = 0}, /* i2s_clk: 1.53 MHz */
+	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
 static struct aux_clk_masks i2s_sclk_aux_masks = {
-	.eq_sel_mask = 0x1,
-	.eq_sel_shift = 21,
+	.eq_sel_mask = I2S_SCLK_EQ_SEL_MASK,
+	.eq_sel_shift = I2S_SCLK_EQ_SEL_SHIFT,
 	.eq1_mask = AUX_EQ1_SEL,
 	.eq2_mask = AUX_EQ2_SEL,
-	.xscale_sel_mask = 0x1F,
-	.xscale_sel_shift = 27,
-	.yscale_sel_mask = 0x1F,
-	.yscale_sel_shift = 22,
+	.xscale_sel_mask = I2S_SCLK_X_MASK,
+	.xscale_sel_shift = I2S_SCLK_X_SHIFT,
+	.yscale_sel_mask = I2S_SCLK_Y_MASK,
+	.yscale_sel_shift = I2S_SCLK_Y_SHIFT,
 };
 
 /* i2s sclk synth configurations */
@@ -826,9 +832,9 @@ static struct aux_clk_config i2s_sclk_synth_config = {
 /* i2s sclk (bit clock) */
 static struct clk i2s_sclk_clk = {
 	.en_reg = I2S_CLK_CFG,
-	.en_reg_bit = 20,
+	.en_reg_bit = I2S_SCLK_SYNTH_ENB,
 	.pclk_sel = &i2s_sclk_pclk_sel,
-	.pclk_sel_shift = 2,
+	.pclk_sel_shift = I2S_SCLK_SHIFT,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -1365,6 +1371,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* i2s refout and sclk clks */
 	{.con_id = "i2s_src_pad_clk",		.clk = &i2s_src_pad_clk},
 	{.con_id = "i2s_src_clk",		.clk = &i2s_src_clk},
+	{.con_id = "i2s_ref_clk",		.clk = &i2s_ref_clk},
+	{.con_id = "i2s_sclk_clk",		.clk = &i2s_sclk_clk},
 
 	/* clocks having multiple parent source from above clocks */
 	{.dev_id = "clcd-db9000",	.clk = &clcd_clk},
@@ -1372,8 +1380,6 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpt1",		.clk = &gpt1_clk},
 	{.dev_id = "gpt2",		.clk = &gpt2_clk},
 	{.dev_id = "gpt3",		.clk = &gpt3_clk},
-	{.dev_id = "i2s_ref_clk",	.clk = &i2s_ref_clk},
-	{.dev_id = "i2s_sclk_clk",	.clk = &i2s_sclk_clk},
 	{.dev_id = "uart",		.clk = &uart_clk},
 
 	/* clock derived from ahb clk */
