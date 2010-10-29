@@ -128,19 +128,21 @@ static int
 spear_sta_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	int ret;
+	int ret = -EINVAL;
 	struct clk *clk;
 
-	clk = clk_get_sys("i2s_ref_clk", NULL);
+	clk = clk_get_sys(NULL, "i2s_ref_clk");
 	if (IS_ERR(clk)) {
 		ret = PTR_ERR(clk);
 		goto err_clk;
 	}
-	clk_set_rate(clk, freq);
+	if (clk_set_rate(clk, freq))
+		goto err_put_clk;
 
 	ret = clk_enable(clk);
 	if (ret < 0)
 		goto err_put_clk;
+
 	return 0;
 
 err_put_clk:

@@ -153,45 +153,37 @@ spear13xx_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai, int clk_id,
 		unsigned int freq, int dir)
 {
 	struct spear13xx_i2s_dev *dev = cpu_dai->private_data;
-	struct clk *clk, *pclk;
-	int ret;
+	struct clk *sclk_clk, *src_clk;
+	int ret = -EINVAL;
 
-	clk = clk_get_sys("i2s_sclk_clk", NULL);
-	if (IS_ERR(clk)) {
-		ret = PTR_ERR(clk);
+	sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(sclk_clk)) {
 		dev_err(dev->dev, "couldn't get i2s_sclk\n");
-		goto err_clk;
+		return PTR_ERR(sclk_clk);
 	}
 
-	pclk = clk_get_sys("i2s_ref_clk", NULL);
-	if (IS_ERR(pclk)) {
-		ret = PTR_ERR(pclk);
-		dev_err(dev->dev, "couldn't get i2s_ref_sclk\n");
-		goto err_pclk;
+	src_clk = clk_get_sys(NULL, "i2s_src_clk");
+	if (IS_ERR(src_clk)) {
+		ret = PTR_ERR(src_clk);
+		dev_err(dev->dev, "couldn't get i2s_src_sclk\n");
+		goto put_sclk_clk;
 	}
 
-	clk_set_parent(clk, pclk);
+	if (clk_set_parent(sclk_clk, src_clk))
+		goto put_src_clk;
 
-	clk_set_rate(clk, freq);
-
-	ret = clk_enable(clk);
+	ret = clk_enable(sclk_clk);
 	if (ret < 0) {
 		dev_err(dev->dev, "enable i2s_sclk fail\n");
-		goto err_clk;
+		goto put_src_clk;
 	}
-#if 1 /*configuring PLL3*/
-	{
-		int val;
-		val = 0x09101025;
-		writel(val, I2S_CLK_CFG);
-	}
-#endif
-
 	return 0;
 
-err_pclk:
-	clk_put(clk);
-err_clk:
+put_src_clk:
+	clk_put(src_clk);
+put_sclk_clk:
+	clk_put(sclk_clk);
+
 	return ret;
 }
 
