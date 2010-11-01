@@ -218,6 +218,29 @@
 #define RAS_SW_RST		((unsigned int *)(MISC_BASE + 0x288))
 #define PLL1_SYNT		((unsigned int *)(MISC_BASE + 0x28c))
 #define I2S_CLK_CFG		((unsigned int *)(MISC_BASE + 0x290))
+	/* I2S_CLK_CFG register mask */
+	#define I2S_SRC_PLLDIV2_VAL	0
+	#define I2S_SRC_CLK_VAL		0
+	#define I2S_SRC_CLK_SHIFT	0
+	#define I2S_SRC_PLL3_VAL	1
+	#define I2S_REF_CLK_VAL		1
+	#define I2S_SRC_CLK_ENB		2
+	#define I2S_SRC_PAD_VAL		2
+	#define I2S_REF_CLK_SHIFT	3
+	#define I2S_SRC_CLK_MASK	3
+	#define I2S_REF_CLK_Y_SHIFT	4
+	#define I2S_REF_CLK_X_SHIFT	12
+	#define I2S_SCLK_SYNTH_ENB	20
+	#define I2S_SCLK_EQ_SEL_SHIFT	21
+	#define I2S_SCLK_Y_SHIFT	22
+	#define I2S_SCLK_X_SHIFT	27
+	#define I2S_REF_CLK_X_MASK	0xFF
+	#define I2S_REF_CLK_Y_MASK	0xFF
+	#define I2S_SCLK_X_MASK		0x1F
+	#define I2S_SCLK_Y_MASK		0x1F
+	#define I2S_SCLK_EQ_SEL_MASK	1
+	#define I2S_SCLK_SEL_MASK	1
+	#define I2S_SCLK_SHIFT		2
 
 /* Peripheral Configuration Registers */
 #define DMAC_HS_SEL		((unsigned int *)(MISC_BASE + 0x300))
