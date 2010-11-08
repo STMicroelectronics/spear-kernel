@@ -275,7 +275,7 @@ choice
 
 config STMPE610_SPI
 	bool "STMPE610 SPI Inteface"
-	select SPI_MASTER
+	depends on SPI_MASTER
 	help
 	  This is used to enable SPI interface of STMPE610
 
