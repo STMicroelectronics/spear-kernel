@@ -57,36 +57,37 @@ static int ehci_spear_setup(struct usb_hcd *hcd)
 }
 
 static const struct hc_driver ehci_spear_hc_driver = {
-	.description		= hcd_name,
-	.product_desc		= "SPEAr EHCI",
-	.hcd_priv_size		= sizeof(struct spear_ehci),
+	.description			= hcd_name,
+	.product_desc			= "SPEAr EHCI",
+	.hcd_priv_size			= sizeof(struct spear_ehci),
 
 	/* generic hardware linkage */
-	.irq			= ehci_irq,
-	.flags			= HCD_MEMORY | HCD_USB2,
+	.irq				= ehci_irq,
+	.flags				= HCD_MEMORY | HCD_USB2,
 
 	/* basic lifecycle operations */
-	.reset			= ehci_spear_setup,
-	.start			= ehci_run,
-	.stop			= ehci_stop,
-	.shutdown		= ehci_shutdown,
+	.reset				= ehci_spear_setup,
+	.start				= ehci_run,
+	.stop				= ehci_stop,
+	.shutdown			= ehci_shutdown,
 
 	/* managing i/o requests and associated device resources */
-	.urb_enqueue		= ehci_urb_enqueue,
-	.urb_dequeue		= ehci_urb_dequeue,
-	.endpoint_disable	= ehci_endpoint_disable,
-	.endpoint_reset		= ehci_endpoint_reset,
+	.urb_enqueue			= ehci_urb_enqueue,
+	.urb_dequeue			= ehci_urb_dequeue,
+	.endpoint_disable		= ehci_endpoint_disable,
+	.endpoint_reset			= ehci_endpoint_reset,
 
 	/* scheduling support */
-	.get_frame_number	= ehci_get_frame,
+	.get_frame_number		= ehci_get_frame,
 
 	/* root hub support */
-	.hub_status_data	= ehci_hub_status_data,
-	.hub_control		= ehci_hub_control,
-	.bus_suspend		= ehci_bus_suspend,
-	.bus_resume		= ehci_bus_resume,
-	.relinquish_port	= ehci_relinquish_port,
-	.port_handed_over	= ehci_port_handed_over,
+	.hub_status_data		= ehci_hub_status_data,
+	.hub_control			= ehci_hub_control,
+	.bus_suspend			= ehci_bus_suspend,
+	.bus_resume			= ehci_bus_resume,
+	.relinquish_port		= ehci_relinquish_port,
+	.port_handed_over		= ehci_port_handed_over,
+	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
 
 static int spear_ehci_hcd_drv_probe(struct platform_device *pdev)
