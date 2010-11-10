@@ -73,17 +73,17 @@ static void enable_dbi_access(struct pcie_app_reg *app_reg)
 			&app_reg->slv_armisc);
 	writel(readl(&app_reg->slv_awmisc) | (1 << AXI_OP_DBI_ACCESS_ID),
 			&app_reg->slv_awmisc);
-
+	wmb();
 }
 
 static void disable_dbi_access(struct pcie_app_reg *app_reg)
 {
 	/* disable DBI access */
+	wmb();
 	writel(readl(&app_reg->slv_armisc) & ~(1 << AXI_OP_DBI_ACCESS_ID),
 			&app_reg->slv_armisc);
 	writel(readl(&app_reg->slv_awmisc) & ~(1 << AXI_OP_DBI_ACCESS_ID),
 			&app_reg->slv_awmisc);
-
 }
 
 static void spear_dbi_read_reg(struct pcie_port *pp, int where, int size,
@@ -469,21 +469,7 @@ static int __init spear13xx_pcie_setup(int nr, struct pci_sys_data *sys)
 	if (!(pp->config.is_host))
 		return 0;
 
-/*	if (!spear13xx_pcie_link_up((void __iomem *)pp->va_app_base))
-		return 0;*/
 	pp->root_bus_nr = sys->busnr;
-
-	/* Generic PCIe unit setup.*/
-
-	/* Enable own BME. It is necessary to enable own BME to do a
-	 * memory transaction on a downstream device
-	 */
-/*	spear_dbi_read_reg(pp, PCI_COMMAND, 2, &val);
-	val |= (PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER
-			| PCI_COMMAND_PARITY | PCI_COMMAND_SERR);
-	spear_dbi_write_reg(pp, PCI_COMMAND, 2, val);*/
-
-	/* Need to come back here*/
 
 	sys->resource[0] = &pp->res[0];
 	sys->resource[1] = &pp->res[1];
@@ -534,24 +520,35 @@ static int spear13xx_pcie_rd_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)
 {
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
-		| (where & 0xFFFC);
+	u32 address;
+	u32 armisc;
 
-	writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
+	armisc = readl(&app_reg->slv_armisc);
+	armisc &= ~(AXI_OP_TYPE_MASK);
+	if (bus->parent->number == pp->root_bus_nr) {
+		address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
+			| (where & 0xFFFC);
+		writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
 			&app_reg->pom_cfg0_addr_start);
-	writel(readl(&app_reg->slv_armisc) & ~(AXI_OP_TYPE_MASK),
-			&app_reg->slv_armisc);
-	writel(readl(&app_reg->slv_armisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
-			&app_reg->slv_armisc);
-	udelay(1);
+		armisc |= AXI_OP_TYPE_CONFIG_RDRW_TYPE0;
+	} else {
+		address = (u32)pp->va_cfg1_base | (PCI_FUNC(devfn) << 16)
+			| (where & 0xFFFC);
+		writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
+			&app_reg->pom_cfg1_addr_start);
+		armisc |= AXI_OP_TYPE_CONFIG_RDRW_TYPE1;
+	}
+	writel(armisc, &app_reg->slv_armisc);
+	while (armisc != readl(&app_reg->slv_armisc))
+		;
 	*val = readl(address);
 	if (size == 1)
 		*val = (*val >> (8 * (where & 3))) & 0xff;
 	else if (size == 2)
 		*val = (*val >> (8 * (where & 3))) & 0xffff;
 
-	writel(readl(&app_reg->slv_armisc) & ~(AXI_OP_TYPE_MASK),
-			&app_reg->slv_armisc);
+	armisc &= ~(AXI_OP_TYPE_MASK);
+	writel(armisc, &app_reg->slv_armisc);
 
 	return PCIBIOS_SUCCESSFUL;
 }
@@ -585,15 +582,28 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 {
 	int ret = PCIBIOS_SUCCESSFUL;
 	struct pcie_app_reg *app_reg = (struct pcie_app_reg *) pp->va_app_base;
-	u32 address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
-			| (where & 0xFFFC);
+	u32 address;
+	u32 awmisc;
 
-	writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
+	awmisc = readl(&app_reg->slv_awmisc);
+	awmisc &= ~(AXI_OP_TYPE_MASK);
+
+	if (bus->parent->number == pp->root_bus_nr) {
+		address = (u32)pp->va_cfg0_base | (PCI_FUNC(devfn) << 16)
+			| (where & 0xFFFC);
+		writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
 			&app_reg->pom_cfg0_addr_start);
-	writel(readl(&app_reg->slv_awmisc) & ~(AXI_OP_TYPE_MASK),
-			&app_reg->slv_awmisc);
-	writel(readl(&app_reg->slv_awmisc) | AXI_OP_TYPE_CONFIG_RDRW_TYPE0,
-			&app_reg->slv_awmisc);
+		awmisc |= AXI_OP_TYPE_CONFIG_RDRW_TYPE0;
+	} else {
+		address = (u32)pp->va_cfg1_base | (PCI_FUNC(devfn) << 16)
+			| (where & 0xFFFC);
+		writel((bus->number << 24) | (PCI_SLOT(devfn) << 19),
+			&app_reg->pom_cfg1_addr_start);
+		awmisc |= AXI_OP_TYPE_CONFIG_RDRW_TYPE1;
+	}
+	writel(awmisc, &app_reg->slv_awmisc);
+	while (awmisc != readl(&app_reg->slv_awmisc))
+		;
 	if (size == 4)
 		writel(val, address);
 	else if (size == 2)
@@ -602,8 +612,9 @@ static int spear13xx_pcie_wr_conf(struct pcie_port *pp, struct pci_bus *bus,
 		writeb(val, address + (where & 3));
 	else
 		ret = PCIBIOS_BAD_REGISTER_NUMBER;
-	writel(readl(&app_reg->slv_awmisc) & ~(AXI_OP_TYPE_MASK),
-			&app_reg->slv_awmisc);
+
+	awmisc &= ~(AXI_OP_TYPE_MASK);
+	writel(awmisc, &app_reg->slv_awmisc);
 	return ret;
 }
 
@@ -788,6 +799,12 @@ static void __init add_pcie_port(int port, u32 base, u32 app_base)
 			pr_err("error with ioremap in function %s\n", __func__);
 			return;
 		}
+		pp->va_cfg1_base = (void __iomem *)
+			ioremap(app_reg->in_cfg1_addr_start, IN_CFG1_SIZE);
+		if (!pp->va_cfg1_base) {
+			pr_err("error with ioremap in function %s\n", __func__);
+			return;
+		}
 
 	}
 }
@@ -845,7 +862,7 @@ static int __init spear13xx_pcie_init(void)
 	}
 
 	pci_common_init(&spear13xx_pci);
-
+	pr_info("pcie init successful\n");
 	return 0;
 }
 subsys_initcall(spear13xx_pcie_init);
