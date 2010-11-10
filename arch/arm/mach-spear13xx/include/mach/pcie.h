@@ -30,6 +30,7 @@ struct pcie_port {
 	void __iomem		*va_app_base;
 	void __iomem		*va_dbi_base;
 	void __iomem		*va_cfg0_base;
+	void __iomem		*va_cfg1_base;
 	spinlock_t		conf_lock;
 	char			mem_space_name[16];
 	char			io_space_name[16];
