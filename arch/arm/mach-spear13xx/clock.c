@@ -91,12 +91,11 @@ static struct vco_clk_config vco1_config = {
 /* vco rate configuration table, in ascending order of rates */
 struct vco_rate_tbl vco_rtbl[] = {
 	/* PCLK 24MHz */
-	{.mode = 0, .m = 0x83, .n = 0x02, .p = 0x6}, /* 49.288 MHz */
-	{.mode = 0, .m = 0x64, .n = 0x03, .p = 0x2}, /* vco 800, pll 200 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* vco 1000, pll 250 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* vco 1328, pll 332 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* vco 1600, pll 400 MHz */
-	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* vco 2, pll 1 GHz */
+	{.mode = 0, .m = 0x83, .n = 0x04, .p = 0x5}, /* vco 1572, pll 49.125 MHz */
+	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x1}, /* vco 1000, pll 500 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x1}, /* vco 1328, pll 664 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x1}, /* vco 1600, pll 800 MHz */
+	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x0}, /* vco 1, pll 1 GHz */
 };
 
 /* vco1 clock */
@@ -109,7 +108,7 @@ static struct clk vco1_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
 	.private_data = &vco1_config,
 };
 
@@ -154,7 +153,7 @@ static struct clk vco2_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
 	.private_data = &vco2_config,
 };
 
@@ -212,10 +211,10 @@ static struct vco_clk_config vco4_config = {
 
 /* vco4 rate configuration table, in ascending order of rates */
 struct vco_rate_tbl vco4_rtbl[] = {
-	{.mode = 0, .m = 0x7D, .n = 0x03, .p = 0x2}, /* vco 1000, pll 250 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x03, .p = 0x2}, /* vco 1328, pll 332 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x03, .p = 0x2}, /* vco 1600, pll 400 MHz */
-	{.mode = 0, .m = 0xFA, .n = 0x06, .p = 0x1}, /* vco 2, pll 1 GHz */
+	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x2}, /* vco 1000, pll 250 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x2}, /* vco 1328, pll 332 MHz */
+	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x2}, /* vco 1600, pll 400 MHz */
+	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x0}, /* vco 1, pll 1 GHz */
 };
 
 /* vco4 (DDR) clock */
@@ -395,7 +394,7 @@ static struct aux_clk_config uart_synth_config = {
 
 /* aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl aux_rtbl[] = {
-	/* For PLL1div2 = 500 MHz */
+	/* For VCO1div2 = 500 MHz */
 	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
 	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
 	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
@@ -661,9 +660,9 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 
 /* clcd rate configuration table, in ascending order of rates */
 struct frac_synth_rate_tbl clcd_rtbl[] = {
-	/* For vco1div4 = 500 MHz */
-	{.div = 0x10900}, /* 60 MHz */
-	{.div = 0x08480}, /* 120 MHz */
+	/* For vco1div4 = 250 MHz */
+	{.div = 0x08900}, /* 58 MHz */
+	{.div = 0x04480}, /* 116 MHz */
 };
 
 /* clcd fractional synthesizer clock */
@@ -1054,9 +1053,10 @@ static struct pclk_sel ras_synth0_pclk_sel = {
 
 /* RAS rate configuration table, in ascending order of rates */
 struct frac_synth_rate_tbl ras_rtbl[] = {
-	/* For vco1div4 = 500 MHz */
-	{.div = 0x14000}, /* 50 MHz */
-	{.div = 0x0A000}, /* 100 MHz */
+	/* For vco1div4 = 250 MHz */
+	{.div = 0x14000}, /* 25 MHz */
+	{.div = 0x0A000}, /* 50 MHz */
+	{.div = 0x05000}, /* 100 MHz */
 };
 
 /* RAS Fractional Synthesizer-0 Clock */
@@ -1068,7 +1068,7 @@ static struct clk ras_synth0_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {ras_rtbl, ARRAY_SIZE(ras_rtbl), 0},
+	.rate_config = {ras_rtbl, ARRAY_SIZE(ras_rtbl), 1},
 	.private_data = &ras_synth0_config,
 };
 
