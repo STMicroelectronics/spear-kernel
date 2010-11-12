@@ -64,6 +64,8 @@
 #define DB9000_INIT_FB 0
 #include "db9000fb.h"
 
+#define NUMBER_OF_BUFFERS 2
+
 /* Bits which should not be set in machine configuration structures */
 #define CR1_INVALID_CONFIG_MASK	(~(DB9000_CR1_ENB | DB9000_CR1_LPE |\
 			DB9000_CR1_BPP(7) | DB9000_CR1_RGB |\
@@ -371,7 +373,7 @@ static void db9000fb_setmode(struct fb_var_screeninfo *var,
 	var->sync		= mode->mode.sync;
 	var->grayscale		= mode->cmap_greyscale;
 	var->xres_virtual	= var->xres;
-	var->yres_virtual	= var->yres;
+	var->yres_virtual	= var->yres * NUMBER_OF_BUFFERS;
 }
 
 /*
@@ -393,6 +395,8 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		var->xres = MIN_XRES;
 	if (var->yres < MIN_YRES)
 		var->yres = MIN_YRES;
+	if (var->yres_virtual < MIN_YRES)
+		var->yres_virtual = MIN_YRES;
 
 	if (inf->fixed_modes) {
 		struct db9000fb_mode_info *mode;
@@ -408,12 +412,14 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			return -EINVAL;
 		if (var->bits_per_pixel > inf->modes->bpp)
 			return -EINVAL;
+		if (var->yres_virtual >
+			inf->modes->mode.yres * NUMBER_OF_BUFFERS)
+			return -EINVAL;
+		if (var->xres_virtual != inf->modes->mode.xres)
+			return -EINVAL;
+		if (var->yoffset > inf->modes->mode.yres)
+			return -EINVAL;
 	}
-
-	var->xres_virtual =
-		max(var->xres_virtual, var->xres);
-	var->yres_virtual =
-		max(var->yres_virtual, var->yres);
 
 	/*
 	 * Setup the RGB parameters for this display.
@@ -429,7 +435,7 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		var->blue.offset  = 0;
 		var->blue.length  = 5;
 		var->transp.offset = var->transp.length = 0;
-	 } else if (var->bits_per_pixel > 16) {
+	} else if (var->bits_per_pixel > 16) {
 		struct db9000fb_mode_info *mode;
 		mode = db9000fb_getmode(inf, var);
 		if (!mode)
@@ -557,12 +563,31 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 	return 0;
 }
 
+/* Pan the display if device supports it. */
+static int db9000fb_pan_display(struct fb_var_screeninfo *var,
+	struct fb_info *info)
+{
+	struct db9000fb_info *fbi =
+		container_of(info, struct db9000fb_info, fb);
+	u_int y_bottom = var->yoffset;
+
+	if (!(var->vmode & FB_VMODE_YWRAP))
+		y_bottom += var->yres;
+
+	BUG_ON(y_bottom > var->yres_virtual);
+
+	fbi->reg_dbar = info->fix.smem_start +
+		(var->yoffset * info->fix.line_length);
+
+	return 0;
+}
 
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
 	.fb_check_var	= db9000fb_check_var,
 	.fb_set_par	= db9000fb_set_par,
 	.fb_setcolreg	= db9000fb_setcolreg,
+	.fb_pan_display = db9000fb_pan_display,
 	.fb_setcmap	= db9000fb_setcmap,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
@@ -771,13 +796,13 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	/*
 	 * Only update the registers if the controller is enabled
 	 * and something has changed.
+	 * DBAR is not checked here, it is adviced to be updated on BAU event
 	 */
 	if ((lcd_readl(fbi, DB9000_CR1) != fbi->reg_cr1) ||
 		(lcd_readl(fbi, DB9000_HTR) != fbi->reg_htr) ||
 		(lcd_readl(fbi, DB9000_VTR1) != fbi->reg_vtr1) ||
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
-		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr) ||
-		(lcd_readl(fbi, DB9000_DBAR) != fbi->reg_dbar))
+		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 	return 0;
 }
@@ -811,6 +836,9 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 {
 	int i;
 	u32 val;
+	unsigned int isr;
+	unsigned int imr;
+
 	pr_debug("db9000fb: Enabling LCD controller\n");
 	pr_debug("reg_cr1: 0x%08x\n", (unsigned int) fbi->reg_cr1);
 	pr_debug("reg_htr : 0x%08x\n", (unsigned int) fbi->reg_htr);
@@ -836,6 +864,13 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr);
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
+
+	/* enable BAU event for IRQ */
+	isr = lcd_readl(fbi, DB9000_ISR);
+	imr = lcd_readl(fbi, DB9000_IMR);
+	lcd_writel(fbi, DB9000_ISR, isr | DB9000_ISR_BAU);
+	lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_BAU);
+
 	lcd_writel(fbi, DB9000_CR1,
 		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE);
 }
@@ -857,9 +892,17 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 {
 	struct db9000fb_info *fbi = dev_id;
 	unsigned int isr = lcd_readl(fbi, DB9000_ISR);
-	unsigned int ivr = lcd_readl(fbi, DB9000_IVR);
+	unsigned int ivr;
+	u32 dbar;
+
+	if (isr & DB9000_ISR_BAU) { /*DMA Base Address Register Update to DCAR*/
+		dbar = lcd_readl(fbi, DB9000_DBAR);
+		if (dbar != fbi->reg_dbar)
+			lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
+	}
 
 	if (isr & DB9000_ISR_LDD) {
+		ivr = lcd_readl(fbi, DB9000_IVR);
 		lcd_writel(fbi, DB9000_IVR, ivr | DB9000_ISR_LDD);
 		complete(&fbi->disable_done);
 	}
@@ -1108,8 +1151,8 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
 	fbi->fb.fix.type_aux	= 0;
 	fbi->fb.fix.xpanstep	= 0;
-	fbi->fb.fix.ypanstep	= 0;
-	fbi->fb.fix.ywrapstep	= 0;
+	fbi->fb.fix.ypanstep	= 1;
+	fbi->fb.fix.ywrapstep	= 1;
 	fbi->fb.fix.accel	= FB_ACCEL_NONE;
 
 	fbi->fb.var.nonstd	= 0;
@@ -1571,7 +1614,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		bits_per_pixel = 32;
 	video_buf_size = ((inf->modes->mode.xres) *
 			(inf->modes->mode.yres) *
-			(bits_per_pixel) / 8);
+			(bits_per_pixel) / 8) * NUMBER_OF_BUFFERS;
 
 	fbi->video_mem_size = video_buf_size + (PALETTE_SIZE + PAGE_SIZE);
 	/* Initialize video memory */
