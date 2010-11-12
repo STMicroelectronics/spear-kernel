@@ -31,6 +31,8 @@ Introduction
 			- SPEAr1300_EVB (Evaluation Board)
 		- SPEAr1310 (SOC)
 			- SPEAr1310_EVB (Evaluation Board)
+		- SPEAr900 (SOC)
+			- SPEAr900_EVB (Evaluation Board)
 
   Configuration
   -------------
@@ -47,6 +49,12 @@ Introduction
   After applying default configuration, Linux kernel for SPEAr architecture
   can be compiled as
 	#make ARCH=arm CROSS_COMPILE=arm-linux- uImage
+
+  Please note that ARCH and CROSS_COMPILE can be omitted in the command line
+  provided that they are properly defined in the shell variable environment:
+
+  export ARCH=arm
+  export CROSS_COMPILE=arm-ca9-linux-
 
   Layout
   ------
