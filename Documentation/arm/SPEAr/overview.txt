@@ -33,14 +33,11 @@ Introduction
   Configuration
   -------------
 
-  A generic configuration is provided for each machine, and can be used as the
-  default by
-	#make ARCH=arm spear600_defconfig
-	#make ARCH=arm spear300_defconfig
-	#make ARCH=arm spear310_defconfig
-	#make ARCH=arm spear320_defconfig
-	#make ARCH=arm spear1300_defconfig
-	#make ARCH=arm spear1300-smp_defconfig (for SMP based configuration)
+  A generic configuration is provided for each SPEAr family, and can be used as
+  the default by
+	#make ARCH=arm spear6xx_defconfig
+	#make ARCH=arm spear3xx_defconfig
+	#make ARCH=arm spear13xx_defconfig
 
   Compilation
   -----------
@@ -48,6 +45,12 @@ Introduction
   After applying default configuration, Linux kernel for SPEAr architecture
   can be compiled as
 	#make ARCH=arm CROSS_COMPILE=arm-linux- uImage
+
+  Please note that ARCH and CROSS_COMPILE can be omitted in the command line
+  provided that they are properly defined in the shell variable environment:
+
+  export ARCH=arm
+  export CROSS_COMPILE=arm-ca9-linux-
 	
   Layout
   ------
