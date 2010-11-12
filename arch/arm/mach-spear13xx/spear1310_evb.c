@@ -123,8 +123,8 @@ static int phy_clk_cfg(void *data)
 	}
 	writel(tmp, addr);
 	clk_set_parent(plat_dat->clk, clk);
-	if (plat_dat->interface == PHY_INTERFACE_MODE_MII)
-		ret = clk_set_rate(clk, 50);
+	if (plat_dat->interface == PHY_INTERFACE_MODE_RMII)
+		ret = clk_set_rate(clk, 50000000);
 
 	ret = clk_enable(plat_dat->clk);
 
