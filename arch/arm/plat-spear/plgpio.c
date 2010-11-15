@@ -451,15 +451,15 @@ static int __init plgpio_init(void)
 		plgpio_enb = SPEAR310_PLGPIO_ENB;
 		plgpio_wdata = SPEAR310_PLGPIO_WDATA;
 		plgpio_dir = SPEAR310_PLGPIO_DIR;
-		plgpio_rdata = SPEAR310_PLGPIO_IE;
-		plgpio_ie = SPEAR310_PLGPIO_RDATA;
+		plgpio_rdata = SPEAR310_PLGPIO_RDATA;
+		plgpio_ie = SPEAR310_PLGPIO_IE;
 		plgpio_mis = SPEAR310_PLGPIO_MIS;
 	} else if (machine_is_spear320()) {
 		plgpio_enb = SPEAR320_PLGPIO_ENB;
 		plgpio_wdata = SPEAR320_PLGPIO_WDATA;
 		plgpio_dir = SPEAR320_PLGPIO_DIR;
-		plgpio_rdata = SPEAR320_PLGPIO_IE;
-		plgpio_ie = SPEAR320_PLGPIO_RDATA;
+		plgpio_rdata = SPEAR320_PLGPIO_RDATA;
+		plgpio_ie = SPEAR320_PLGPIO_IE;
 		plgpio_mis = SPEAR320_PLGPIO_MIS;
 	} else {
 		return 0;
