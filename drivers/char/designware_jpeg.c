@@ -1035,15 +1035,23 @@ static s32 desigware_jpeg_release(struct inode *inode, struct file *file)
 	/* checking that other jpeg node is already closed or not */
 	if (!g_drv_data->jpeg_busy[
 			dev_type == JPEG_READ ? JPEG_WRITE : JPEG_READ]) {
-		clk_disable(g_drv_data->clk);
+		struct dma_chan *dma_chan;
 
-		if (g_drv_data->dma_chan[JPEG_READ])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_READ]);
-		if (g_drv_data->dma_chan[JPEG_WRITE])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_WRITE]);
+		if (g_drv_data->dma_chan[JPEG_WRITE]) {
+			dma_chan = g_drv_data->dma_chan[JPEG_WRITE];
+			dma_chan->device->device_terminate_all(dma_chan);
+			dma_release_channel(dma_chan);
+		}
+		if (g_drv_data->dma_chan[JPEG_READ]) {
+			dma_chan = g_drv_data->dma_chan[JPEG_READ];
+			dma_chan->device->device_terminate_all(dma_chan);
+			dma_release_channel(dma_chan);
+		}
 
 		g_drv_data->dma_chan[JPEG_READ] =
 			g_drv_data->dma_chan[JPEG_WRITE] = NULL;
+
+		clk_disable(g_drv_data->clk);
 	}
 
 	/* mark jpeg as busy */
