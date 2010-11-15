@@ -289,6 +289,7 @@ extern struct platform_device spear1310_can0_device;
 extern struct platform_device spear1310_can1_device;
 extern struct platform_device spear1310_i2c1_device;
 extern struct platform_device spear1310_ras_fsmc_nor_device;
+extern struct platform_device spear1310_plgpio_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
 extern struct platform_device spear1310_tdm_hdlc_0_device;

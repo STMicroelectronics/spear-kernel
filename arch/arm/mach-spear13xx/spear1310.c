@@ -18,6 +18,7 @@
 #include <asm/delay.h>
 #include <plat/hdlc.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 
@@ -482,6 +483,43 @@ struct platform_device spear1310_i2c1_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
+};
+
+/* plgpio */
+static struct plgpio_platform_data plgpio_plat_data = {
+	.gpio_base = 16,
+	.irq_base = SPEAR_PLGPIO_INT_BASE,
+	.gpio_count = SPEAR_PLGPIO_COUNT,
+	.grp_size = PLGPIO_GROUP_SIZE,
+	.regs = {
+		.enb = SPEAR13XX_PLGPIO_ENB_OFF,
+		.wdata = SPEAR13XX_PLGPIO_WDATA_OFF,
+		.dir = SPEAR13XX_PLGPIO_DIR_OFF,
+		.ie = SPEAR13XX_PLGPIO_IE_OFF,
+		.rdata = SPEAR13XX_PLGPIO_RDATA_OFF,
+		.mis = SPEAR13XX_PLGPIO_MIS_OFF,
+	},
+};
+
+static struct resource plgpio_resources[] = {
+	{
+		.start = SPEAR1310_RAS_BASE,
+		.end = SPEAR1310_RAS_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PLGPIO,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_plgpio_device = {
+	.name = "plgpio",
+	.id = -1,
+	.dev = {
+		.platform_data = &plgpio_plat_data,
+	},
+	.num_resources = ARRAY_SIZE(plgpio_resources),
+	.resource = plgpio_resources,
 };
 
 /* fsmc nor flash device registeration */

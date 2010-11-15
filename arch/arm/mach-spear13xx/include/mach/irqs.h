@@ -15,6 +15,9 @@
 #ifndef __MACH_IRQS_H
 #define __MACH_IRQS_H
 
+#include <linux/kernel.h>
+#include <mach/gpio.h>
+
 /* IRQ definitions */
 /*
  * SGI : ID0 - ID15
@@ -111,7 +114,7 @@
 #define IRQ_GETH3_PMT		(IRQ_SHPI_START + 97)
 #define IRQ_GETH4_SBD		(IRQ_SHPI_START + 98)
 #define IRQ_GETH4_PMT		(IRQ_SHPI_START + 99)
-#define IRQ_GPIO		(IRQ_SHPI_START + 100)
+#define IRQ_PLGPIO		(IRQ_SHPI_START + 100)
 #define IRQ_PCI_BRDG_HOST_FATAL (IRQ_SHPI_START + 101)
 #define IRQ_PCI_INTA		(IRQ_SHPI_START + 102)
 #define IRQ_PCI_INTB		(IRQ_SHPI_START + 103)
@@ -128,7 +131,16 @@
 /* GPIO pins virtual irqs */
 #define SPEAR_GPIO0_INT_BASE	(VIRQ_START + 0)
 #define SPEAR_GPIO1_INT_BASE	(SPEAR_GPIO0_INT_BASE + 8)
+
+#define SPEAR_PLGPIO_COUNT	250
+#if defined(CONFIG_MACH_SPEAR1310)
+#define SPEAR_PLGPIO_INT_BASE	(SPEAR_GPIO1_INT_BASE + 8)
+#define SPEAR_GPIO_INT_END	(SPEAR_PLGPIO_INT_BASE + \
+				DIV_ROUND_UP(SPEAR_PLGPIO_COUNT,\
+					PLGPIO_GROUP_SIZE))
+#else
 #define SPEAR_GPIO_INT_END	(SPEAR_GPIO1_INT_BASE + 8)
+#endif
 
 /* PCIE MSI virtual irqs */
 #define SPEAR_NUM_MSI_IRQS	64
