@@ -50,6 +50,7 @@ struct plgpio_regs {
  * gpio_base: gpio start number of plgpios
  * irq_base: irq number of plgpio0
  * gpio_count: total count of plgpios
+ * grp_size: number of gpio's in a group for interrupt registers
  * p2o: function ptr for pin to offset conversion. This is required only for
  * machines where mapping b/w pin and offset is not 1-to-1.
  * o2p: function ptr for offset to pin conversion. This is required only for
@@ -60,6 +61,7 @@ struct plgpio_platform_data {
 	u32 gpio_base;
 	u32 irq_base;
 	u32 gpio_count;
+	u32 grp_size;
 	int (*p2o)(int pin);		/* pin_to_offset */
 	int (*o2p)(int offset);		/* offset_to_pin */
 	u32 p2o_regs;

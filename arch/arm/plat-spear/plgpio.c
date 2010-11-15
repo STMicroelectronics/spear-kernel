@@ -36,6 +36,7 @@
  * base: base address of plgpio block
  * irq_base: irq number of plgpio0
  * chip: gpio framework specific chip information structure
+ * grp_size: number of gpio's in a group for interrupt registers
  * p2o: function ptr for pin to offset conversion. This is required only for
  * machines where mapping b/w pin and offset is not 1-to-1.
  * o2p: function ptr for offset to pin conversion. This is required only for
@@ -48,6 +49,7 @@ struct plgpio {
 	void __iomem		*base;
 	unsigned		irq_base;
 	struct gpio_chip	chip;
+	u32			grp_size;
 	int			(*p2o)(int pin);	/* pin_to_offset */
 	int			(*o2p)(int offset);	/* offset_to_pin */
 	u32			p2o_regs;
@@ -203,7 +205,6 @@ static int plgpio_request(struct gpio_chip *chip, unsigned offset)
 	spin_lock_irqsave(&plgpio->lock, flags);
 	plgpio_reg_set(plgpio->base, offset, plgpio->regs.enb);
 	spin_unlock_irqrestore(&plgpio->lock, flags);
-
 	return 0;
 }
 
@@ -230,11 +231,12 @@ static void plgpio_free(struct gpio_chip *chip, unsigned offset)
 static int plgpio_to_irq(struct gpio_chip *chip, unsigned offset)
 {
 	struct plgpio *plgpio = container_of(chip, struct plgpio, chip);
+	int size = plgpio->grp_size ? plgpio->grp_size : 1;
 
 	if (plgpio->irq_base == (unsigned) -1)
 		return -EINVAL;
 
-	return plgpio->irq_base + offset;
+	return plgpio->irq_base + offset / size;
 }
 
 /* PLGPIO IRQ */
@@ -277,9 +279,10 @@ static void plgpio_irq_unmask(unsigned irq)
 static int plgpio_irq_type(unsigned irq, unsigned trigger)
 {
 	struct plgpio *plgpio = get_irq_chip_data(irq);
+	int size = plgpio->grp_size ? plgpio->grp_size : 1;
 	int offset = irq - plgpio->irq_base;
 
-	if (offset >= plgpio->chip.ngpio)
+	if (offset >= DIV_ROUND_UP(plgpio->chip.ngpio, size))
 		return -EINVAL;
 
 	if (trigger != IRQ_TYPE_LEVEL_HIGH)
@@ -298,8 +301,11 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 {
 	struct plgpio *plgpio = get_irq_data(irq);
 	unsigned long pending;
-	int regs_count = DIV_ROUND_UP(plgpio->chip.ngpio, MAX_GPIO_PER_REG),
-	    count, pin, offset, i = 0;
+	int regs_count, size, count, pin, offset, i = 0;
+
+	size = plgpio->grp_size ? plgpio->grp_size : 1;
+	count = DIV_ROUND_UP(plgpio->chip.ngpio, size);
+	regs_count = DIV_ROUND_UP(count, MAX_GPIO_PER_REG);
 
 	/* check all plgpio MIS registers for a possible interrupt */
 	for (; i < regs_count; i++) {
@@ -315,7 +321,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 		 * so, we must not take other 28 bits into consideration for
 		 * checking interrupt. so clear those bits.
 		 */
-		count = plgpio->chip.ngpio - i * MAX_GPIO_PER_REG;
+		count = count - i * MAX_GPIO_PER_REG;
 		if (count < MAX_GPIO_PER_REG)
 			pending &= (1 << count) - 1;
 
@@ -328,8 +334,11 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 			} else
 				pin = offset;
 
-			generic_handle_irq(plgpio_to_irq(&plgpio->chip,
-						i * MAX_GPIO_PER_REG + pin));
+			/* get correct irq line number */
+			pin = i * MAX_GPIO_PER_REG + pin;
+			/* get correct gpio pin number */
+			pin *= size;
+			generic_handle_irq(plgpio_to_irq(&plgpio->chip, pin));
 		}
 	}
 }
@@ -338,7 +347,7 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 {
 	struct plgpio_platform_data *pdata;
 	struct plgpio *plgpio;
-	int ret, irq, i;
+	int ret, irq, i, count;
 	struct resource *res;
 
 	pdata = pdev->dev.platform_data;
@@ -390,6 +399,7 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 	plgpio->chip.dev = &pdev->dev;
 	plgpio->chip.owner = THIS_MODULE;
 	plgpio->irq_base = pdata->irq_base;
+	plgpio->grp_size = pdata->grp_size;
 	plgpio->p2o = pdata->p2o;
 	plgpio->o2p = pdata->o2p;
 	plgpio->p2o_regs = pdata->p2o_regs;
@@ -419,8 +429,10 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		goto remove_gpiochip;
 	}
 
+	count = pdata->grp_size ? pdata->grp_size : 1;
+	count = DIV_ROUND_UP(pdata->gpio_count, count);
 	set_irq_chained_handler(irq, plgpio_irq_handler);
-	for (i = 0; i < pdata->gpio_count; i++) {
+	for (i = 0; i < count; i++) {
 		set_irq_chip(i+plgpio->irq_base, &plgpio_irqchip);
 		set_irq_handler(i+plgpio->irq_base, handle_simple_irq);
 		set_irq_flags(i+plgpio->irq_base, IRQF_VALID);
