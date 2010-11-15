@@ -292,6 +292,7 @@ extern struct platform_device spear1310_eth2_device;
 extern struct platform_device spear1310_eth3_device;
 extern struct platform_device spear1310_eth4_device;
 extern struct platform_device spear1310_i2c1_device;
+extern struct platform_device spear1310_plgpio_device;
 extern struct platform_device spear1310_phy1_device;
 extern struct platform_device spear1310_phy2_device;
 extern struct platform_device spear1310_phy3_device;
