@@ -19,7 +19,7 @@
 #include <asm/irq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
-#include <plat/gpio.h>
+#include <mach/gpio.h>
 #include <plat/nand.h>
 #include <plat/shirq.h>
 
@@ -769,6 +769,14 @@ static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,
 	.irq_base = SPEAR3XX_PLGPIO_INT_BASE,
 	.gpio_count = SPEAR3XX_PLGPIO_COUNT,
+	.regs = {
+		.enb = SPEAR320_PLGPIO_ENB_OFF,
+		.wdata = SPEAR320_PLGPIO_WDATA_OFF,
+		.dir = SPEAR320_PLGPIO_DIR_OFF,
+		.ie = SPEAR320_PLGPIO_IE_OFF,
+		.rdata = SPEAR320_PLGPIO_RDATA_OFF,
+		.mis = SPEAR320_PLGPIO_MIS_OFF,
+	},
 };
 
 /* CAN device registeration */

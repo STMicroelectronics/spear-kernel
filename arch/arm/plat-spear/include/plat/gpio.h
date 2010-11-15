@@ -34,6 +34,15 @@
 #define PTO_RDATA_REG		0x010
 #define PTO_MIS_REG		0x020
 
+struct plgpio_regs {
+	u32 enb;		/* enable register */
+	u32 wdata;		/* write data register */
+	u32 dir;		/* direction set register */
+	u32 rdata;		/* read data register */
+	u32 ie;			/* interrupt enable register */
+	u32 mis;		/* mask interrupt status register */
+};
+
 /* functions for converting pin to correct offset in register and vice versa */
 /**
  * struct plgpio_platform_data: plgpio driver platform data
@@ -54,6 +63,7 @@ struct plgpio_platform_data {
 	int (*p2o)(int pin);		/* pin_to_offset */
 	int (*o2p)(int offset);		/* offset_to_pin */
 	u32 p2o_regs;
+	struct plgpio_regs regs;
 };
 
 #endif /* __PLAT_GPIO_H */

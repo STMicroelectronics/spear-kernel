@@ -16,7 +16,7 @@
 #include <asm/irq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
-#include <plat/gpio.h>
+#include <mach/gpio.h>
 #include <plat/nand.h>
 #include <plat/hdlc.h>
 #include <plat/shirq.h>
@@ -443,6 +443,14 @@ static struct plgpio_platform_data plgpio_plat_data = {
 	/* list of registers with inconsistency */
 	.p2o_regs = PTO_RDATA_REG | PTO_WDATA_REG | PTO_DIR_REG |
 		PTO_IE_REG | PTO_RDATA_REG | PTO_MIS_REG,
+	.regs = {
+		.enb = SPEAR310_PLGPIO_ENB_OFF,
+		.wdata = SPEAR310_PLGPIO_WDATA_OFF,
+		.dir = SPEAR310_PLGPIO_DIR_OFF,
+		.ie = SPEAR310_PLGPIO_IE_OFF,
+		.rdata = SPEAR310_PLGPIO_RDATA_OFF,
+		.mis = SPEAR310_PLGPIO_MIS_OFF,
+	},
 };
 
 static struct resource plgpio_resources[] = {
