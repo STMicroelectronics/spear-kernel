@@ -188,7 +188,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.modalias = "stmpe610-spi",
 		.platform_data = &stmpe610_spi_pdata,
 		.controller_data = &spi0_ts_chip_info,
-		.max_speed_hz = 25000000,
+		.max_speed_hz = 1000000,
 		.bus_num = 0,
 		.chip_select = 0,
 	},
