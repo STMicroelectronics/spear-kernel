@@ -195,6 +195,9 @@ extern struct pmx_dev pmx_gpt_0_2;
 extern struct pmx_dev pmx_gpt_1_1;
 extern struct pmx_dev pmx_gpt_1_2;
 extern struct pmx_dev pmx_mcif;
+extern struct pmx_dev pmx_sdhci;
+extern struct pmx_dev pmx_cf;
+extern struct pmx_dev pmx_xd;
 
 #if defined(CONFIG_MACH_SPEAR1310)
 extern struct pmx_dev pmx_uart1_modem;
