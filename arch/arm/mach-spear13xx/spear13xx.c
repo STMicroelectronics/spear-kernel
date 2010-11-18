@@ -535,16 +535,6 @@ struct platform_device spear13xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
-static void sdhci_enable(void)
-{
-	unsigned val = readl(PERIP_CFG);
-
-	/* This function enables SD/MMC interface out of SD/MMC, CF, XD */
-	val &= ~(MCIF_SEL_MASK << MCIF_SEL_SHIFT);
-	val |= SD_MMC_ACTIVE << MCIF_SEL_SHIFT;
-	writel(val, PERIP_CFG);
-}
-
 #ifdef CONFIG_PCIEPORTBUS
 /* PCIE0 clock always needs to be enabled if any of the three PCIE port
  * have to be used. So call this function from the board initilization
@@ -824,7 +814,6 @@ void __init spear13xx_init(void)
 	i2s_clk_init();
 #endif
 
-	sdhci_enable();
 	dmac_setup();
 	set_udc_plat_data(&spear13xx_udc_device);
 }
@@ -1497,4 +1486,70 @@ struct pmx_dev pmx_mcif = {
 	.name = "mcif",
 	.modes = pmx_mcif_modes,
 	.mode_count = ARRAY_SIZE(pmx_mcif_modes),
+};
+
+/* Pad multiplexing for sdhci device */
+static struct pmx_mux_reg pmx_sdhci_mux[] = {
+	{
+		.address = SDHCI_CFG,
+		.mask = MCIF_SEL_MASK,
+		.value = MCIF_SEL_SD,
+	},
+};
+
+static struct pmx_dev_mode pmx_sdhci_modes[] = {
+	{
+		.mux_regs = pmx_sdhci_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),
+	},
+};
+
+struct pmx_dev pmx_sdhci = {
+	.name = "sdhci",
+	.modes = pmx_sdhci_modes,
+	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
+};
+
+/* Pad multiplexing for cf device */
+static struct pmx_mux_reg pmx_cf_mux[] = {
+	{
+		.address = SDHCI_CFG,
+		.mask = MCIF_SEL_MASK,
+		.value = MCIF_SEL_CF,
+	},
+};
+
+static struct pmx_dev_mode pmx_cf_modes[] = {
+	{
+		.mux_regs = pmx_cf_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_cf_mux),
+	},
+};
+
+struct pmx_dev pmx_cf = {
+	.name = "cf",
+	.modes = pmx_cf_modes,
+	.mode_count = ARRAY_SIZE(pmx_cf_modes),
+};
+
+/* Pad multiplexing for xd device */
+static struct pmx_mux_reg pmx_xd_mux[] = {
+	{
+		.address = SDHCI_CFG,
+		.mask = MCIF_SEL_MASK,
+		.value = MCIF_SEL_XD,
+	},
+};
+
+static struct pmx_dev_mode pmx_xd_modes[] = {
+	{
+		.mux_regs = pmx_xd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_xd_mux),
+	},
+};
+
+struct pmx_dev pmx_xd = {
+	.name = "xd",
+	.modes = pmx_xd_modes,
+	.mode_count = ARRAY_SIZE(pmx_xd_modes),
 };

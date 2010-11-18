@@ -59,6 +59,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&pmx_smi_4_chips,
 	&pmx_ssp,
 	&pmx_uart0,
+	&pmx_sdhci,
 
 	/* spear900 specific devices */
 };
