@@ -481,6 +481,9 @@ extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
 
 #define pgtable_cache_init() do { } while (0)
 
+void identity_mapping_add(pgd_t *, unsigned long, unsigned long);
+void identity_mapping_del(pgd_t *, unsigned long, unsigned long);
+
 #endif /* !__ASSEMBLY__ */
 
 #endif /* CONFIG_MMU */
