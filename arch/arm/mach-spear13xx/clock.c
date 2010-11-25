@@ -1393,6 +1393,32 @@ static struct clk i2c1_clk = {
 	.pclk = &ras_pclk_clk,
 	.recalc = &follow_parent,
 };
+
+/* tdm_hdlc clock */
+static struct pclk_info tdm_pclk_info[] = {
+	{
+		.pclk = &pll3_clk,
+		.pclk_val = TDM_CLK_PLL3,
+	}, {
+		.pclk = &ras_synth1_clk,
+		.pclk_val = TDM_CLK_RAS_SYNT1,
+	},
+};
+
+static struct pclk_sel tdm_pclk_sel = {
+	.pclk_info = tdm_pclk_info,
+	.pclk_count = ARRAY_SIZE(tdm_pclk_info),
+	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0)),
+	.pclk_sel_mask = TDM_CLK_MASK,
+};
+
+static struct clk tdm_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &tdm_pclk_sel,
+	.pclk_sel_shift = TDM_CLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
 #endif
 
 static struct clk dummy_apb_pclk;
@@ -1529,6 +1555,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "uart4",		.clk = &uart4_clk},
 	{.dev_id = "uart5",		.clk = &uart5_clk},
 	{.dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
+	{.con_id = "tdm_hdlc",		.clk = &tdm_clk},
 };
 #endif
 
