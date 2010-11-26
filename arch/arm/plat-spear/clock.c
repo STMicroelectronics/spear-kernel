@@ -78,14 +78,16 @@ static struct clkops generic_clkops = {
 static struct pclk_info *pclk_info_get(struct clk *clk)
 {
 	unsigned int val, i;
-	struct pclk_info *info = NULL;
+	struct pclk_info *info = &clk->pclk_sel->pclk_info[0];
 
-	val = (readl(clk->pclk_sel->pclk_sel_reg) >> clk->pclk_sel_shift)
-		& clk->pclk_sel->pclk_sel_mask;
+	if (clk->pclk_sel->pclk_sel_reg) {
+		val = readl(clk->pclk_sel->pclk_sel_reg) >> clk->pclk_sel_shift;
+		val &= clk->pclk_sel->pclk_sel_mask;
 
-	for (i = 0; i < clk->pclk_sel->pclk_count; i++) {
-		if (clk->pclk_sel->pclk_info[i].pclk_val == val)
-			info = &clk->pclk_sel->pclk_info[i];
+		for (i = 0; i < clk->pclk_sel->pclk_count; i++) {
+			if (clk->pclk_sel->pclk_info[i].pclk_val == val)
+				info = &clk->pclk_sel->pclk_info[i];
+		}
 	}
 
 	return info;
@@ -261,13 +263,26 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	if (!found)
 		return -EINVAL;
 
-	spin_lock_irqsave(&clocks_lock, flags);
-	/* reflect parent change in hardware */
-	val = readl(clk->pclk_sel->pclk_sel_reg);
-	val &= ~(clk->pclk_sel->pclk_sel_mask << clk->pclk_sel_shift);
-	val |= clk->pclk_sel->pclk_info[i].pclk_val << clk->pclk_sel_shift;
-	writel(val, clk->pclk_sel->pclk_sel_reg);
-	spin_unlock_irqrestore(&clocks_lock, flags);
+	/*
+	 * It may happen that there is no real address associated with a
+	 * parent clock selection. This can be true for virtual clocks
+	 * and in some cases clocks where the selection is in the domain
+	 * of device itself (example clcd)
+	 * In those cases there would not be a register (and a value)
+	 * associated which can select a parent. We only would reflect
+	 * properly all s/w status
+	 */
+	if (clk->pclk_sel->pclk_sel_reg) {
+		spin_lock_irqsave(&clocks_lock, flags);
+
+		val = readl(clk->pclk_sel->pclk_sel_reg);
+		val &= ~(clk->pclk_sel->pclk_sel_mask << clk->pclk_sel_shift);
+		val |= clk->pclk_sel->pclk_info[i].pclk_val
+			<< clk->pclk_sel_shift;
+		writel(val, clk->pclk_sel->pclk_sel_reg);
+
+		spin_unlock_irqrestore(&clocks_lock, flags);
+	}
 
 	/* reflect parent change in software */
 	clk_reparent(clk, &clk->pclk_sel->pclk_info[i]);
