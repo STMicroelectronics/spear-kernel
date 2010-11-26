@@ -681,18 +681,18 @@ static struct clk clcd_synth_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 1},
+	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 0},
 	.private_data = &clcd_synth_config,
 };
 
-#if 0
-/* clcd clock parents
- * This we would select if we want to use pll5_clk or clcd_synth_clk
- * as a parent clock of clcd.
+/*
+ * clcd clock parents
+ * This would select to use pll5_clk or clcd_synth_clk as a parent clock
+ * of clcd (called as pixel clock in CLCD documentation).
  * For selection of any of these two parent, check the combination of
  * 3-2 bit of clcdclk_sel misc register
  */
-static struct pclk_info clcd_pclk_info[] = {
+static struct pclk_info clcd_pixel_pclk_info[] = {
 	{
 		.pclk = &pll5_clk,
 		.pclk_val = AUX_CLK_PLL5_VAL,
@@ -703,22 +703,49 @@ static struct pclk_info clcd_pclk_info[] = {
 };
 
 /* clcd parent select structure */
-static struct pclk_sel clcd_pclk_sel = {
-	.pclk_info = clcd_pclk_info,
-	.pclk_count = ARRAY_SIZE(clcd_pclk_info),
+static struct pclk_sel clcd_pixel_pclk_sel = {
+	.pclk_info = clcd_pixel_pclk_info,
+	.pclk_count = ARRAY_SIZE(clcd_pixel_pclk_info),
 	.pclk_sel_reg = PERIP_CLK_CFG,
 	.pclk_sel_mask = CLCD_CLK_MASK,
 };
-#endif
+
+static struct clk clcd_pixel_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &clcd_pixel_pclk_sel,
+	.pclk_sel_shift = CLCD_CLK_SHIFT,
+	.recalc = &follow_parent,
+};
 
 /*
  * clcd clock
- * AHB clock is used as a parent clock of clcd
+ * There are 2 options for clcd clock,
+ *  - derived from AHB (bus clk)
+ *  - dervied from Pixel Clock Input (pixel clk)
+ * The selection bit for these clock is in device itself, hence treating
+ * them as virtual clocks without selection register.
+ * Controller driver on itself needs to program proper selection
  */
+
+static struct pclk_info clcd_pclk_info[] = {
+	{
+		.pclk = &clcd_pixel_clk,
+	}, {
+		.pclk = &ahb_clk,
+	},
+};
+
+static struct pclk_sel clcd_pclk_sel = {
+	.pclk_info = clcd_pclk_info,
+	.pclk_count = ARRAY_SIZE(clcd_pclk_info),
+	.pclk_sel_reg = 0, /* no select register */
+};
+
+/* clcd clock */
 static struct clk clcd_clk = {
 	.en_reg = PERIP1_CLK_ENB,
 	.en_reg_bit = CLCD_CLK_ENB,
-	.pclk = &ahb_clk,
+	.pclk_sel = &clcd_pclk_sel,
 	.recalc = &follow_parent,
 };
 
@@ -1492,6 +1519,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "i2s_sclk_clk",		.clk = &i2s_sclk_clk},
 
 	/* clocks having multiple parent source from above clocks */
+	{.dev_id = "clcd_pixel_clk",	.clk = &clcd_pixel_clk},
 	{.dev_id = "clcd-db9000",	.clk = &clcd_clk},
 	{.dev_id = "gpt0",		.clk = &gpt0_clk},
 	{.dev_id = "gpt1",		.clk = &gpt1_clk},
