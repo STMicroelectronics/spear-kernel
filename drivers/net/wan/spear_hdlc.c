@@ -978,6 +978,24 @@ static int spear_create_tsa_sysfs(struct port_t *port)
 	return 0;
 }
 
+/*	spear_remove_tsa_sysfs
+ *
+ *	Remove timeslot objects in sysfs
+ */
+static void spear_remove_tsa_sysfs(struct port_t *port)
+{
+	struct kobject *kobj;
+	int i;
+
+	for (i = 0; i < port->nr_timeslot; i++) {
+		kobj = port->tsa_kobjs[i];
+		sysfs_remove_group(kobj, &tsa_attr_group);
+		kobject_put(kobj);
+	}
+
+	kfree(port->tsa_kobjs);
+}
+
 /* net_device interface */
 static const struct net_device_ops spear_hdlc_ops = {
 	.ndo_open       = channel_open,
@@ -1219,10 +1237,41 @@ static int rs485_hdlc_drv_probe(struct platform_device *pdev)
 static int spear_hdlc_drv_remove(struct platform_device *pdev)
 {
 	struct port_t *port = platform_get_drvdata(pdev);
+	struct resource *mem, *irq;
+	int i;
+
+	tasklet_kill(&port->int_tasklet);
+
+	/* free irq */
+	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	free_irq(irq->start, port);
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	release_mem_region(mem->start, resource_size(mem));
+
+	/* free all channels */
+	for (i = 0; i < port->nr_channel; i++) {
+		unregister_hdlc_device(port->ch[i]->dev);
+		free_netdev(port->ch[i]->dev);
+		kfree(port->ch[i]);
+	}
+
+	/* remove sysfs */
+	if (port->has_tsa)
+		spear_remove_tsa_sysfs(port);
+
+	/* free dma memory pool */
+	dma_free_coherent(&pdev->dev, MEM_POOL_SIZE, (void *) port->mem_virt, port->mem_phys);
+
 	if (port->clk) {
 		clk_disable(port->clk);
 		clk_put(port->clk);
 	}
+
+	/* free port */
+	platform_set_drvdata(pdev, NULL);
+	kfree(port);
+
 	return 0;
 }
 
