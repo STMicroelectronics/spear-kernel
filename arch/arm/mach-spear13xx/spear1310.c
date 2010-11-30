@@ -656,29 +656,49 @@ struct platform_device spear1310_rs485_1_device = {
 
 static void tdm_hdlc_setup(void)
 {
-	unsigned long val;
+	struct clk *synth_clk, *vco_clk, *tdm_clk;
+	char *synth_clk_name = "ras_synth1_clk";
+	char *vco_clk_name = "vco1div4_clk";
+	int ret;
 
-	/* use vcodiv4 source for ras_clk_synt1 */
-	val = readl(PLL_CFG);
-	val &= ~0x18000000;
-	writel(val, PLL_CFG);
+	vco_clk = clk_get(NULL, vco_clk_name);
+	if (IS_ERR(vco_clk)) {
+		pr_err("Failed to get %s\n", vco_clk_name);
+		return;
+	}
 
-	writel(0x80004000, RAS_CLK_SYNT1);	/* generate 250MHz clock */
+	synth_clk = clk_get(NULL, synth_clk_name);
+	if (IS_ERR(synth_clk)) {
+		pr_err("Failed to get %s\n", synth_clk_name);
+		goto free_vco_clk;
+	}
 
-	udelay(2000);
+	/* use vco1div4 source for ras_clk_synt1 */
+	ret = clk_set_parent(synth_clk, vco_clk);
+	if (ret < 0) {
+		pr_err("Failed to set parent %s to %s\n", vco_clk_name,
+				synth_clk_name);
+		goto free_synth_clk;
+	}
 
-	/* enable proper clock going to RAS */
-	val = readl(RAS_CLK_ENB);
-	val |= (1 << SYNT1_CLK_ENB);
-	writel(val, RAS_CLK_ENB);
+	/* select ras_clk_synt1 as source for TDM */
+	tdm_clk = clk_get_sys(NULL, "tdm_hdlc");
+	if (IS_ERR(tdm_clk)) {
+		pr_err("Failed to get tdm clock\n");
+		goto free_synth_clk;
+	}
+	ret = clk_set_parent(tdm_clk, synth_clk);
+	if (ret < 0) {
+		pr_err("Failed to set parent %s to tdm clock\n", synth_clk_name);
+		goto free_tdm_clk;
+	}
 
-	val = readl(RAS_SW_RST);
-	val &= ~(1 << SYNT1_CLK_ENB);
-	writel(val, RAS_SW_RST);
-
-	val = readl(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0));
-	val |= 0x02000000;
-	writel(val, IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0));
+free_tdm_clk:
+	clk_put(tdm_clk);
+free_synth_clk:
+	clk_put(synth_clk);
+free_vco_clk:
+	clk_put(vco_clk);
 }
 
 /* Following will create 1310 specific static virtual/physical mappings */
