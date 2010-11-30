@@ -12,6 +12,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -77,6 +78,7 @@ struct port_t {
 
 	spinlock_t		lock;		/* spin lock for atomic operation */
 	struct tasklet_struct	int_tasklet;	/* tasklet for interrupt processing */
+	struct clk		*clk;
 
 	/* function to build HTCR & HRCR value */
 	u32			(*htcr) (struct port_t *);
@@ -1097,12 +1099,33 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 {
 	struct port_t *port;
 	struct tdm_hdlc_platform_data *plat_data;
+	struct clk *clk;
+	int ret;
 
 	plat_data = (struct tdm_hdlc_platform_data *)pdev->dev.platform_data;
 
 	port = kzalloc(sizeof(struct port_t), GFP_KERNEL);
 	platform_set_drvdata(pdev, port);
 
+	clk = clk_get(NULL, "tdm_hdlc");
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		goto free_mem;
+	}
+
+	ret = clk_set_rate(clk, 250000000);	/* for 250 MHz */
+	if (ret < 0) {
+		pr_err("Failed to set proper clk rate\n");
+		goto free_clk;
+	}
+
+	ret = clk_enable(clk);
+	if (ret < 0) {
+		pr_err("Failed to enable TDM clk\n");
+		goto free_clk;
+	}
+
+	port->clk		= clk;
 	port->pdev		= pdev;
 	port->has_tsa		= 1;
 	port->nr_channel	= plat_data->nr_channel;
@@ -1143,7 +1166,15 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 	}
 
 	/* call command probe */
-	return spear_hdlc_drv_probe(pdev);
+	ret = spear_hdlc_drv_probe(pdev);
+	return ret;
+
+free_clk:
+	clk_put(clk);
+free_mem:
+	kfree(port);
+	platform_set_drvdata(pdev, NULL);
+	return ret;
 }
 
 /*	rs485_hdlc_drv_probe
@@ -1187,6 +1218,11 @@ static int rs485_hdlc_drv_probe(struct platform_device *pdev)
  */
 static int spear_hdlc_drv_remove(struct platform_device *pdev)
 {
+	struct port_t *port = platform_get_drvdata(pdev);
+	if (port->clk) {
+		clk_disable(port->clk);
+		clk_put(port->clk);
+	}
 	return 0;
 }
 
