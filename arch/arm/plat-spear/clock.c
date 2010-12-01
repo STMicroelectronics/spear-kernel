@@ -287,7 +287,11 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	/* reflect parent change in software */
 	clk_reparent(clk, &clk->pclk_sel->pclk_info[i]);
 
+	if (clk->recalc)
+		BUG_ON(clk->recalc(clk, &clk->rate, clk->pclk->rate));
+
 	propagate_rate(clk, 0);
+
 	return 0;
 }
 EXPORT_SYMBOL(clk_set_parent);
