@@ -1198,14 +1198,14 @@ static int __devinit parse_opt_mode(struct device *dev, const char *this_opt)
 		case '-':
 			namelen = i;
 			if (!bpp_specified && !yres_specified) {
-				bpp = strict_stroul(&name[i+1], NULL, 0);
+				bpp = strict_strtoul(&name[i+1], 0, 0);
 				bpp_specified = 1;
 			} else
 				goto done;
 			break;
 		case 'x':
 			if (!yres_specified) {
-				yres = strict_stroul(&name[i+1], NULL, 0);
+				yres = strict_strtoul(&name[i+1], 0, 0);
 				yres_specified = 1;
 			} else
 				goto done;
@@ -1217,7 +1217,7 @@ static int __devinit parse_opt_mode(struct device *dev, const char *this_opt)
 		}
 	}
 	if (i < 0 && yres_specified) {
-		xres = strict_stroul(name, NULL, 0);
+		xres = strict_strtoul(name, 0, 0);
 		res_specified = 1;
 	}
 done:
@@ -1260,28 +1260,28 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "mode:", 5)) {
 		return parse_opt_mode(dev, this_opt);
 	} else if (!strncmp(this_opt, "pixclock:", 9)) {
-		mode->mode.pixclock = strict_stroul(this_opt+9, NULL, 0);
+		mode->mode.pixclock = strict_strtoul(this_opt+9, 0, 0);
 		sprintf(s, "pixclock: %u\n", mode->mode.pixclock);
 	} else if (!strncmp(this_opt, "left:", 5)) {
-		mode->mode.left_margin = strict_stroul(this_opt+5, NULL, 0);
+		mode->mode.left_margin = strict_strtoul(this_opt+5, 0, 0);
 		sprintf(s, "left: %u\n", mode->mode.left_margin);
 	} else if (!strncmp(this_opt, "right:", 6)) {
-		mode->mode.right_margin = strict_stroul(this_opt+6, NULL, 0);
+		mode->mode.right_margin = strict_strtoul(this_opt+6, 0, 0);
 		sprintf(s, "right: %u\n", mode->mode.right_margin);
 	} else if (!strncmp(this_opt, "upper:", 6)) {
-		mode->mode.upper_margin = strict_stroul(this_opt+6, NULL, 0);
+		mode->mode.upper_margin = strict_strtoul(this_opt+6, 0, 0);
 		sprintf(s, "upper: %u\n", mode->mode.upper_margin);
 	} else if (!strncmp(this_opt, "lower:", 6)) {
-		mode->mode.lower_margin = strict_stroul(this_opt+6, NULL, 0);
+		mode->mode.lower_margin = strict_strtoul(this_opt+6, 0, 0);
 		sprintf(s, "lower: %u\n", mode->mode.lower_margin);
 	} else if (!strncmp(this_opt, "hsynclen:", 9)) {
-		mode->mode.hsync_len = strict_stroul(this_opt+9, NULL, 0);
+		mode->mode.hsync_len = strict_strtoul(this_opt+9, 0, 0);
 		sprintf(s, "hsynclen: %u\n", mode->mode.hsync_len);
 	} else if (!strncmp(this_opt, "vsynclen:", 9)) {
-		mode->mode.vsync_len = strict_stroul(this_opt+9, NULL, 0);
+		mode->mode.vsync_len = strict_strtoul(this_opt+9, 0, 0);
 		sprintf(s, "vsynclen: %u\n", mode->mode.vsync_len);
 	} else if (!strncmp(this_opt, "hsync:", 6)) {
-		if (strict_stroul(this_opt+6, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+6, 0, 0) == 0) {
 			sprintf(s, "hsync: Active Low\n");
 			mode->mode.sync &= ~FB_SYNC_HOR_HIGH_ACT;
 		} else {
@@ -1289,7 +1289,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			mode->mode.sync |= FB_SYNC_HOR_HIGH_ACT;
 		}
 	} else if (!strncmp(this_opt, "vsync:", 6)) {
-		if (strict_stroul(this_opt+6, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+6, 0, 0) == 0) {
 			sprintf(s, "vsync: Active Low\n");
 			mode->mode.sync &= ~FB_SYNC_VERT_HIGH_ACT;
 		} else {
@@ -1297,7 +1297,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			mode->mode.sync |= FB_SYNC_VERT_HIGH_ACT;
 		}
 	} else if (!strncmp(this_opt, "pixclockpol:", 12)) {
-		if (strict_stroul(this_opt+12, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+12, 0, 0) == 0) {
 			sprintf(s, "pixel clock polarity: falling edge\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_PCP) |
 				DB9000_CR1_PixFlEdg;
@@ -1307,7 +1307,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 				DB9000_CR1_PixRsEdg;
 		}
 	} else if (!strncmp(this_opt, "fbp:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "frame buffer 24 bit packing: "
 			"No packing, 24 bits per 32-bit word\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_FBP);
@@ -1317,7 +1317,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_FBP);
 		}
 	} else if (!strncmp(this_opt, "dep:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "data enable polarity: active low\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEP);
 		} else {
@@ -1325,7 +1325,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_DEP);
 		}
 	} else if (!strncmp(this_opt, "dee:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "DMA end address enable: disabled\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEE);
 		} else {
@@ -1333,11 +1333,11 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_DEE);
 		}
 	} else if (!strncmp(this_opt, "dear:", 5)) {
-		inf->modes->dear = strict_stroul(this_opt+5, NULL, 0);
-		sprintf(s, "DMA end address offset: %lu\n",
-			strict_stroul(this_opt+4, NULL, 0));
+		inf->modes->dear = strict_strtoul(this_opt+5, 0, 0);
+		sprintf(s, "DMA end address offset: %d\n",
+			strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "lps:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Selected Single port output mode to LCD\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_LPS);
 		} else {
@@ -1347,11 +1347,11 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "fdw:", 4)) {
 		inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_FDW(3));
 		inf->modes->cr1 |=
-			DB9000_CR1_FDW(strict_stroul(this_opt+4, NULL, 0));
-		sprintf(s, "Fifo DMA Words setting: %lu\n",
-			strict_stroul(this_opt+4, NULL, 0));
+			DB9000_CR1_FDW(strict_strtoul(this_opt+4, 0, 0));
+		sprintf(s, "Fifo DMA Words setting: %d\n",
+			strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "pss:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Palette load source from "
 				"internal registers\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_PSS);
@@ -1362,12 +1362,12 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "ops:", 4)) {
 		inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_OPS(7));
 		inf->modes->cr1 |=
-			(DB9000_CR1_OPS(strict_stroul(this_opt+4, NULL, 0))
+			(DB9000_CR1_OPS(strict_strtoul(this_opt+4, 0, 0))
 				& DB9000_CR1_OPS(3));
-		sprintf(s, "Output pixel select: %lu\n",
-			strict_stroul(this_opt+4, NULL, 0));
+		sprintf(s, "Output pixel select: %d\n",
+			strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "rgb:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "RGB mode set to: RGB\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_RGB);
 		} else {
@@ -1375,7 +1375,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_RGB);
 		}
 	} else if (!strncmp(this_opt, "epo:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel endianness set to little\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_EPO);
 		} else {
@@ -1383,7 +1383,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_EPO);
 		}
 	} else if (!strncmp(this_opt, "ebo:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Frame buffer byte endianness "
 				"set to little\n");
 			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_EBO);
@@ -1392,7 +1392,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_EBO);
 		}
 	} else if (!strncmp(this_opt, "pci:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel Clock Input Select: Master bus "
 				"clock or Pixel clock divider\n");
 			inf->modes->pctr =
@@ -1403,7 +1403,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 				(info->reg_pctr | DB9000_PCTR_PCI(1));
 		}
 	} else if (!strncmp(this_opt, "pcb:", 4)) {
-		if (strict_stroul(this_opt+4, NULL, 0) == 0) {
+		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel Clock comes from "
 				"pixel clock divider\n");
 			inf->modes->pctr =
@@ -1416,9 +1416,9 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "pcd:", 4)) {
 		inf->modes->pctr = (info->reg_pctr & ~DB9000_PCTR_PCD(255));
 		inf->modes->pctr |=
-			DB9000_PCTR_PCD(strict_stroul(this_opt+4, NULL, 0));
-		sprintf(s, "Pixel clock divider: %lu\n",
-			strict_stroul(this_opt+4, NULL, 0));
+			DB9000_PCTR_PCD(strict_strtoul(this_opt+4, 0, 0));
+		sprintf(s, "Pixel clock divider: %d\n",
+			strict_strtoul(this_opt+4, 0, 0));
 	} else {
 		dev_err(dev, "unknown option: %s\n", this_opt);
 		return -EINVAL;
