@@ -391,12 +391,9 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct db9000fb_info *fbi = to_db9000fb(info);
 	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
 
-	if (var->xres < MIN_XRES)
-		var->xres = MIN_XRES;
-	if (var->yres < MIN_YRES)
-		var->yres = MIN_YRES;
-	if (var->yres_virtual < MIN_YRES)
-		var->yres_virtual = MIN_YRES;
+	if ((var->xres < MIN_XRES) || (var->yres < MIN_YRES)
+			|| (var->yres_virtual < MIN_YRES))
+		return -EINVAL;
 
 	if (inf->fixed_modes) {
 		struct db9000fb_mode_info *mode;
