@@ -208,7 +208,7 @@ static int clcdfb_set_par(struct fb_info *info)
 
 	fb->board->decode(fb, &regs);
 
-	clcdfb_disable(fb);
+	clcdfb_enable(fb, regs.cntl);
 
 	writel(regs.tim0, fb->regs + CLCD_TIM0);
 	writel(regs.tim1, fb->regs + CLCD_TIM1);
@@ -220,8 +220,6 @@ static int clcdfb_set_par(struct fb_info *info)
 	clk_set_rate(fb->clk, (1000000000 / regs.pixclock) * 1000);
 
 	fb->clcd_cntl = regs.cntl;
-
-	clcdfb_enable(fb, regs.cntl);
 
 #ifdef DEBUG
 	printk(KERN_INFO
