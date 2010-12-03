@@ -675,8 +675,6 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 	else if (pal == PAL_IN_FB)
 		fbi->reg_cr1 |= DB9000_CR1_PSS;
 
-	if (dma == DMA_BASE)
-		fbi->reg_dbar = fbi->fb.fix.smem_start;
 	return 0;
 }
 
@@ -869,6 +867,8 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_VTR1, fbi->reg_vtr1);
 	lcd_writel(fbi, DB9000_VTR2, fbi->reg_vtr2);
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr);
+
+	fbi->reg_dbar = fbi->fb.fix.smem_start;
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
 
