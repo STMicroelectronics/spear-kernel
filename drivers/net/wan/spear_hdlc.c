@@ -957,6 +957,7 @@ static int spear_create_tsa_sysfs(struct port_t *port)
 {
 	struct platform_device *pdev = port->pdev;
 	struct kobject *kobj;
+	char name[16];
 	int i;
 
 	port->tsa_kobjs = kzalloc(sizeof(void *) * port->nr_timeslot, GFP_KERNEL);
@@ -966,13 +967,12 @@ static int spear_create_tsa_sysfs(struct port_t *port)
 	}
 
 	for (i = 0; i < port->nr_timeslot; i++) {
-		kobj = kobject_create();
+		sprintf(name, "ts%d", i);
+		kobj = kobject_create_and_add(name, &pdev->dev.kobj);
 		port->tsa_kobjs[i] = kobj;
 
-		if (kobject_add(kobj, &pdev->dev.kobj, "ts%d", i) ||
-		    sysfs_create_group(kobj, &tsa_attr_group)) {
+		if (sysfs_create_group(kobj, &tsa_attr_group))
 			dev_err(&pdev->dev, "create timeslot kobj to sysfs failed\n");
-		}
 	}
 
 	return 0;
