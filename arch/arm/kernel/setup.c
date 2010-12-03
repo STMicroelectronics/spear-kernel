@@ -723,8 +723,6 @@ void __init setup_arch(char **cmdline_p)
 		convert_to_tag_list(tags);
 	if (tags->hdr.tag != ATAG_CORE)
 		tags = (struct tag *)&init_tags;
-
-
 	if (tags->hdr.tag == ATAG_CORE) {
 		if (meminfo.nr_banks != 0)
 			squash_mem_tags(tags);
@@ -732,8 +730,6 @@ void __init setup_arch(char **cmdline_p)
 		parse_tags(tags);
 	}
 
-	if (mdesc->fixup)
-		mdesc->fixup(mdesc, tags, &from, &meminfo);
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
 	init_mm.end_data   = (unsigned long) _edata;
@@ -742,6 +738,10 @@ void __init setup_arch(char **cmdline_p)
 	memcpy(boot_command_line, from, COMMAND_LINE_SIZE);
 	boot_command_line[COMMAND_LINE_SIZE-1] = '\0';
 	parse_cmdline(cmdline_p, from);
+
+	if (mdesc->fixup)
+		mdesc->fixup(mdesc, tags, &from, &meminfo);
+
 	paging_init(mdesc);
 	request_standard_resources(&meminfo, mdesc);
 
