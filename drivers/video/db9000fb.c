@@ -522,6 +522,7 @@ static int db9000fb_set_par(struct fb_info *info)
 	} else {
 		fb_alloc_cmap(&fbi->fb.cmap, 1<<fbi->fb.var.bits_per_pixel, 0);
 	}
+
 	db9000fb_activate_var(var, fbi);
 	return 0;
 }
@@ -615,7 +616,7 @@ static struct fb_ops db9000fb_ops = {
  *
  *
  */
-static inline unsigned int get_pcd(struct db9000fb_info *fbi,
+static inline int get_pcd(struct db9000fb_info *fbi,
 				unsigned int pixclock)
 {
 	uint32_t pcd, pcd_32;
@@ -626,7 +627,7 @@ static inline unsigned int get_pcd(struct db9000fb_info *fbi,
 		return -EINVAL;
 	}
 	pcd_32 = pcd_32 - 2;
-	return (unsigned int)pcd_32;
+	return pcd_32;
 }
 
 /*
@@ -683,8 +684,22 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 static void setup_parallel_timing(struct db9000fb_info *fbi,
 				  struct fb_var_screeninfo *var)
 {
-	unsigned int pcd = get_pcd(fbi, var->pixclock);
-
+	if (DB9000_PCTR_PCB(fbi->reg_pctr) == 0 &&
+				DB9000_PCTR_PCI(fbi->reg_pctr) == 1)
+		pr_info("Pixel clock is used");
+	else {
+		int pcd = get_pcd(fbi, var->pixclock);
+		if (pcd >= 0) {
+			fbi->reg_pctr =
+				/* Pixel Clock Divider */
+				(pcd) |
+				/* Pixel Clock Divider Bypass */
+				DB9000_PCTR_PCB(fbi->reg_pctr) |
+				/* Pixel Clock Input Select */
+				DB9000_PCTR_PCI(fbi->reg_pctr);
+			set_hsync_time(fbi, pcd);
+		}
+	}
 	fbi->reg_htr =
 	/* horizontal sync width */
 /*	DB9000_HTR_HSW((var->hsync_len) - 1) | */
@@ -708,17 +723,6 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		(var->sync & FB_SYNC_HOR_HIGH_ACT) ? 0 : DB9000_CR1_HSP;
 	fbi->reg_cr1 |=
 		(var->sync & FB_SYNC_VERT_HIGH_ACT) ? 0 : DB9000_CR1_VSP;
-
-	if (pcd) {
-		fbi->reg_pctr =
-			/* Pixel Clock Divider */
-			DB9000_PCTR_PCD(pcd) |
-			/* Pixel Clock Divider Bypass */
-			DB9000_PCTR_PCB(fbi->reg_pctr) |
-			/* Pixel Clock Input Select */
-			DB9000_PCTR_PCI(fbi->reg_pctr);
-		set_hsync_time(fbi, pcd);
-	}
 }
 
 /*
@@ -806,6 +810,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
 		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr))
 		db9000fb_schedule_work(fbi, C_REENABLE);
+
 	return 0;
 }
 
@@ -849,7 +854,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	pr_debug("reg_pctr: 0x%08x\n", (unsigned int) fbi->reg_pctr);
 
 	/* enable LCD controller clock */
-	/* clk_enable(fbi->clk); */
+	clk_enable(fbi->clk);
 
 	/* Write into the palette memory */
 	if (fbi->palette_size > 0) {
@@ -885,6 +890,7 @@ static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_CR1, cr1);
 /*	wait_for_completion_timeout(&fbi->disable_done, 200 * HZ / 1000); */
 	msleep(100);
+	clk_disable(fbi->clk);
 }
 
 /*
@@ -920,9 +926,7 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 {
 	u_int old_state;
-
 	mutex_lock(&fbi->ctrlr_lock);
-
 	old_state = fbi->state;
 
 	/*
@@ -938,9 +942,9 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * controller is already disabled, then do nothing.
 		 */
 		if (old_state != C_DISABLE && old_state != C_DISABLE_PM) {
+			db9000fb_lcd_power(fbi, 0);
 			fbi->state = state;
 			db9000fb_disable_controller(fbi);
-			db9000fb_lcd_power(fbi, 0);
 		}
 		break;
 
@@ -977,9 +981,9 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * registers.
 		 */
 		if (old_state == C_ENABLE) {
-			db9000fb_disable_controller(fbi);
 			db9000fb_lcd_power(fbi, 0);
 			db9000fb_setup_gpio(fbi);
+			db9000fb_disable_controller(fbi);
 			msleep(100);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
@@ -1002,11 +1006,12 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * turn on the backlight.
 		 */
 		if (old_state != C_ENABLE) {
+
 			fbi->state = C_ENABLE;
 			db9000fb_setup_gpio(fbi);
 			db9000fb_lcd_power(fbi, 1);
-			db9000fb_backlight_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
+			db9000fb_backlight_power(fbi, 1);
 		}
 		break;
 	}
@@ -1147,7 +1152,10 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->clk = clk_get(dev, NULL);
 	if (IS_ERR(fbi->clk)) {
 		status = PTR_ERR(fbi->clk);
+		kfree(fbi);
+		return NULL;
 	}
+
 	strcpy(fbi->fb.fix.id, DB9000FB_NAME);
 
 	fbi->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
@@ -1597,14 +1605,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_free_fbi;
 	}
-
-	/* Enable the clocks for the DB9000 core */
-	if (clk_enable(fbi->clk)) {
-		dev_err(&pdev->dev, "failed to enable clock\n");
-		ret = -EBUSY;
-		goto err_free_mmio_base;
-	}
-
 	/* Read the core version register and print it out */
 	db9000_reg = lcd_readl(fbi, DB9000_CIR);
 	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
@@ -1624,7 +1624,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (!addr) {
 		dev_err(&pdev->dev, "failed to allocate memory\n");
 		ret = -ENOMEM;
-		goto err_disable_clock;
+		goto err_free_mmio_base;
 	}
 	fbi->fb.screen_base = addr;
 	fbi->fb.fix.smem_start = fbi->frame_base;
@@ -1683,6 +1683,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 			"Failed to register framebuffer device:%d\n", ret);
 		goto err_clear_plat_data;
 	}
+
 #ifdef CONFIG_CPU_FREQ
 	fbi->freq_transition.notifier_call = db9000fb_freq_transition;
 	fbi->freq_policy.notifier_call = db9000fb_freq_policy;
@@ -1706,12 +1707,11 @@ err_free_irq:
 	free_irq(irq, fbi);
 err_free_framebuffer_addr:
 	iounmap(addr);
-err_disable_clock:
-	clk_put(fbi->clk);
 err_free_mmio_base:
 	iounmap(fbi->mmio_base);
 err_free_fbi:
 	kfree(fbi);
+	clk_put(fbi->clk);
 	release_mem_region(r->start, resource_size(r));
 
 	return ret;
