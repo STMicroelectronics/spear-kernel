@@ -67,3 +67,4 @@ unsigned long db9000fb_get_hsync_time(struct device *dev);
 
 void __init clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data);
+unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int dual);

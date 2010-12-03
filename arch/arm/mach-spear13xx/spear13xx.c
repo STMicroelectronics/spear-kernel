@@ -32,7 +32,6 @@
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 
-unsigned long db900fb_buffer_phys;
 /* Add spear13xx machines common devices here */
 /* gpio device registeration */
 static struct pl061_platform_data gpio_plat_data[] = {
@@ -824,7 +823,8 @@ void __init spear13xx_init_irq(void)
 	gic_dist_init(0, __io_address(SPEAR13XX_GIC_DIST_BASE), 29);
 	gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
 }
-static unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
+
+unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
 {
 	unsigned long addr = ~0;
 	int i;
@@ -837,15 +837,6 @@ static unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
 
 	return addr;
 }
-
-void __init spear13xx_fixup(struct machine_desc *desc, struct tag *tags,
-		char **cmdline, struct meminfo *mi)
-{
-	db900fb_buffer_phys = reserve_mem(mi, 1024*768*8);
-	if (db900fb_buffer_phys == ~0)
-		printk(KERN_ERR"Unable to allocate fb buffer\n");
-}
-
 
 /* Following will create static virtual/physical mappings */
 struct map_desc spear13xx_io_desc[] __initdata = {

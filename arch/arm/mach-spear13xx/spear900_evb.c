@@ -33,6 +33,8 @@
 #include <mach/pcie.h>
 #include <mach/spear.h>
 
+static unsigned long db900fb_buffer_phys;
+
 /* fsmc nor partition info */
 #if 0
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -222,6 +224,19 @@ static struct pcie_port_info *spear900_pcie_port_init(int port)
 }
 #endif
 
+static void spear900_evb_fixup(struct machine_desc *desc, struct tag *tags,
+		char **cmdline, struct meminfo *mi)
+{
+#if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
+	unsigned long size;
+
+	size = clcd_get_fb_size(&chimei_b101aw02_info, 1);
+	db900fb_buffer_phys = reserve_mem(mi, ALIGN(size, SZ_1M));
+	if (db900fb_buffer_phys == ~0)
+		pr_err("Unable to allocate fb buffer\n");
+#endif
+}
+
 static void __init spear900_evb_init(void)
 {
 	unsigned int i;
@@ -295,7 +310,7 @@ static void __init spear900_evb_init(void)
 
 MACHINE_START(SPEAR900, "ST-SPEAR900-EVB")
 	.boot_params	=	0x00000100,
-	.fixup          =	spear13xx_fixup,
+	.fixup		=	spear900_evb_fixup,
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,

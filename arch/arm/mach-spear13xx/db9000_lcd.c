@@ -85,6 +85,19 @@ struct db9000fb_mach_info chimei_b101aw02_info = {
 	.cmap_inverse   = 0,
 };
 
+unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int dual)
+{
+	unsigned long size;
+	struct db9000fb_mode_info *info = data->modes;
+
+	if (dual)
+		size = (2 * info->mode.xres * info->mode.yres * info->bpp / 8);
+	else
+		size = (info->mode.xres * info->mode.yres * info->bpp / 8);
+
+	return size;
+}
+
 void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
