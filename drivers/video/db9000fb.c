@@ -394,6 +394,8 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if ((var->xres < MIN_XRES) || (var->yres < MIN_YRES)
 			|| (var->yres_virtual < MIN_YRES))
 		return -EINVAL;
+	if ((var->pixclock) <= 0)
+		return -EINVAL;
 
 	if (inf->fixed_modes) {
 		struct db9000fb_mode_info *mode;
@@ -621,7 +623,7 @@ static inline unsigned int get_pcd(struct db9000fb_info *fbi,
 	pcd_32 = (pcd * pixclock)/1000000;
 	if (pcd_32 < 2)	{
 		printk(KERN_ERR"Invalid PCD value %d", pcd_32);
-		return 0;
+		return -EINVAL;
 	}
 	pcd_32 = pcd_32 - 2;
 	return (unsigned int)pcd_32;
@@ -770,6 +772,9 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->lower_margin < 0 || var->lower_margin > 255)
 		printk(KERN_ERR "%s: invalid lower_margin %d\n",
 			fbi->fb.fix.id, var->lower_margin);
+	if (var->pixclock <= 0)
+		printk(KERN_ERR "%s: invalid pixel clock %d\n",
+				fbi->fb.fix.id, var->pixclock);
 #endif
 	/* Update shadow copy atomically */
 	local_irq_save(flags);
