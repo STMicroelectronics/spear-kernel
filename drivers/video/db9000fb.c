@@ -1631,6 +1631,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	fbi->fb.fix.smem_len = fbi->video_mem_size;
 	fbi->fb.var.height = fbi->fb.var.yres;
 	fbi->fb.var.width = fbi->fb.var.xres;
+	/* Clear the screen */
+	memset((char *)fbi->fb.screen_base, 0, fbi->fb.fix.smem_len);
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
