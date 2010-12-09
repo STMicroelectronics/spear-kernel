@@ -229,7 +229,7 @@ static void spear1300_evb_fixup(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	unsigned long size;
 
-	size = clcd_get_fb_size(&sharp_lcd_info, 1);
+	size = clcd_get_fb_size(&sharp_lcd_info, NUM_OF_FRAMEBUFFERS);
 	db900fb_buffer_phys = reserve_mem(mi, ALIGN(size, SZ_1M));
 	if (db900fb_buffer_phys == ~0)
 		pr_err("Unable to allocate fb buffer\n");
