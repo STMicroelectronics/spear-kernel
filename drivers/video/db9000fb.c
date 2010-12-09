@@ -64,8 +64,6 @@
 #define DB9000_INIT_FB 0
 #include "db9000fb.h"
 
-#define NUMBER_OF_BUFFERS 2
-
 /* Bits which should not be set in machine configuration structures */
 #define CR1_INVALID_CONFIG_MASK	(~(DB9000_CR1_ENB | DB9000_CR1_LPE |\
 			DB9000_CR1_BPP(7) | DB9000_CR1_RGB |\
@@ -373,7 +371,7 @@ static void db9000fb_setmode(struct fb_var_screeninfo *var,
 	var->sync		= mode->mode.sync;
 	var->grayscale		= mode->cmap_greyscale;
 	var->xres_virtual	= var->xres;
-	var->yres_virtual	= var->yres * NUMBER_OF_BUFFERS;
+	var->yres_virtual	= var->yres * NUM_OF_FRAMEBUFFERS;
 }
 
 /*
@@ -412,7 +410,7 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		if (var->bits_per_pixel > inf->modes->bpp)
 			return -EINVAL;
 		if (var->yres_virtual >
-			inf->modes->mode.yres * NUMBER_OF_BUFFERS)
+			inf->modes->mode.yres * NUM_OF_FRAMEBUFFERS)
 			return -EINVAL;
 		if (var->xres_virtual != inf->modes->mode.xres)
 			return -EINVAL;
@@ -1616,7 +1614,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		bits_per_pixel = 32;
 	video_buf_size = ((inf->modes->mode.xres) *
 			(inf->modes->mode.yres) *
-			(bits_per_pixel) / 8) * NUMBER_OF_BUFFERS;
+			(bits_per_pixel) / 8) * NUM_OF_FRAMEBUFFERS;
 
 	fbi->video_mem_size = video_buf_size + (PALETTE_SIZE + PAGE_SIZE);
 	/* Initialize video memory */
