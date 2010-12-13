@@ -54,8 +54,8 @@ static u32 spr_pcie_app_base[NUM_PCIE_PORTS] = {
 	SPEAR13XX_PCIE2_APP_BASE,
 };
 
-/* Keeping all DDR area of 256MB accesible for inbound transaction */
-#define INBOUND_ADDR_MASK	0xFFFFFFF
+/* Keeping 0-32GB of address range accesible for inbound transaction */
+#define INBOUND_ADDR_MASK	0x7FFFFFFF
 
 #ifdef CONFIG_PCI_MSI
 static DECLARE_BITMAP(msi_irq_in_use[NUM_PCIE_PORTS], SPEAR_NUM_MSI_IRQS);
@@ -257,7 +257,7 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 
 	/*setup registers for inbound translation */
 
-	writel(INBOUND_ADDR_MASK + 1, &app_reg->mem0_addr_offset_limit);
+	writel((u32)INBOUND_ADDR_MASK + 1, &app_reg->mem0_addr_offset_limit);
 	writel(0, &app_reg->pim0_mem_addr_start);
 	writel(0, &app_reg->pim1_mem_addr_start);
 	spear_dbi_write_reg(pp, PCIE_BAR0_MASK_REG, 4, INBOUND_ADDR_MASK);
