@@ -307,6 +307,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 	count = DIV_ROUND_UP(plgpio->chip.ngpio, size);
 	regs_count = DIV_ROUND_UP(count, MAX_GPIO_PER_REG);
 
+	desc->chip->ack(irq);
 	/* check all plgpio MIS registers for a possible interrupt */
 	for (; i < regs_count; i++) {
 		pending = readl(plgpio->base + plgpio->regs.mis +
@@ -314,6 +315,9 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 		if (!pending)
 			continue;
 
+		/* clear interrupts */
+		writel(~pending, plgpio->base + plgpio->regs.mis +
+				i * sizeof(int *));
 		/*
 		 * clear extra bits in last register having gpios < MAX/REG
 		 * ex: Suppose there are max 102 plgpios. then last register
@@ -341,6 +345,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 			generic_handle_irq(plgpio_to_irq(&plgpio->chip, pin));
 		}
 	}
+	desc->chip->unmask(irq);
 }
 
 static int __devinit plgpio_probe(struct platform_device *pdev)
