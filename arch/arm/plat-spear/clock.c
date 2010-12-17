@@ -346,6 +346,14 @@ void clk_register(struct clk_lookup *cl)
 		return;
 	clk = cl->clk;
 
+	/*
+	 * There can be multiple clk_lookups associated with single clk
+	 * structure. So if this clk is iterated once, then don't do following
+	 * steps next time.
+	 */
+	if (clk->cl)
+		goto clkdev_add;
+
 	spin_lock_irqsave(&clocks_lock, flags);
 
 	INIT_LIST_HEAD(&clk->children);
@@ -383,6 +391,7 @@ void clk_register(struct clk_lookup *cl)
 	clk->cl = cl;
 #endif
 
+clkdev_add:
 	/* add clock to arm clockdev framework */
 	clkdev_add(cl);
 }
@@ -1017,8 +1026,12 @@ static int clk_debugfs_register_one(struct clk *c)
 	char *p = s;
 
 	if (c) {
-		if (c->cl->con_id)
+		if (c->cl->con_id) {
 			p += sprintf(p, "%s", c->cl->con_id);
+
+			if (c->cl->dev_id)
+				p += sprintf(p, "%s", "-");
+		}
 		if (c->cl->dev_id)
 			p += sprintf(p, "%s", c->cl->dev_id);
 	}
