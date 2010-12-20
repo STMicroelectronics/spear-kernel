@@ -1,7 +1,7 @@
 VERSION = 2
 PATCHLEVEL = 6
 SUBLEVEL = 32
-EXTRAVERSION =-lsp-3.0-rc6.3
+EXTRAVERSION = .16
 NAME = Man-Eating Seals of Antiquity
 
 # *DOCUMENTATION*

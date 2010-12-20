@@ -135,6 +135,14 @@ static bool radeon_atom_apply_quirks(struct drm_device *dev,
 		}
 	}
 
+	/* HIS X1300 is DVI+VGA, not DVI+DVI */
+	if ((dev->pdev->device == 0x7146) &&
+	    (dev->pdev->subsystem_vendor == 0x17af) &&
+	    (dev->pdev->subsystem_device == 0x2058)) {
+		if (supported_device == ATOM_DEVICE_DFP1_SUPPORT)
+			return false;
+	}
+
 	/* Funky macbooks */
 	if ((dev->pdev->device == 0x71C5) &&
 	    (dev->pdev->subsystem_vendor == 0x106b) &&
@@ -934,7 +942,7 @@ struct radeon_encoder_atom_dig *radeon_atombios_get_lvds_info(struct
 		lvds->native_mode.vtotal = lvds->native_mode.vdisplay +
 			le16_to_cpu(lvds_info->info.sLCDTiming.usVBlanking_Time);
 		lvds->native_mode.vsync_start = lvds->native_mode.vdisplay +
-			le16_to_cpu(lvds_info->info.sLCDTiming.usVSyncWidth);
+			le16_to_cpu(lvds_info->info.sLCDTiming.usVSyncOffset);
 		lvds->native_mode.vsync_end = lvds->native_mode.vsync_start +
 			le16_to_cpu(lvds_info->info.sLCDTiming.usVSyncWidth);
 		lvds->panel_pwr_delay =
