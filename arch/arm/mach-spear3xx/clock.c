@@ -605,23 +605,6 @@ static struct clk fsmc_clk = {
 };
 #endif
 
-/* common clocks to spear310 and spear320 */
-#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
-/* uart1 clock */
-static struct clk uart1_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
-
-/* uart2 clock */
-static struct clk uart2_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
-#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
-
 /* common clocks to spear300 and spear320 */
 #if defined(CONFIG_CPU_SPEAR300) || defined(CONFIG_CPU_SPEAR320)
 /* clcd clock */
@@ -659,22 +642,36 @@ static struct clk kbd_clk = {
 
 /* spear310 machine specific clock structures */
 #ifdef CONFIG_CPU_SPEAR310
+/* uart1 clock */
+static struct clk spear310_uart1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk spear310_uart2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
 /* uart3 clock */
-static struct clk uart3_clk = {
+static struct clk spear310_uart3_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 
 /* uart4 clock */
-static struct clk uart4_clk = {
+static struct clk spear310_uart4_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 
 /* uart5 clock */
-static struct clk uart5_clk = {
+static struct clk spear310_uart5_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
@@ -721,6 +718,22 @@ static struct clk ssp2_clk = {
 /* pwm clock */
 static struct clk pwm_clk = {
 	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart1 clock */
+static struct clk spear320_uart1_clk = {
+	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
+	.en_reg_bit = UART1_2_PCLK_APB,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk spear320_uart2_clk = {
+	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
+	.en_reg_bit = UART1_2_PCLK_APB,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
@@ -791,11 +804,11 @@ static struct clk_lookup spear300_clk_lookups[] = {
 static struct clk_lookup spear310_clk_lookups[] = {
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
-	{ .dev_id = "uart1",		.clk = &uart1_clk},
-	{ .dev_id = "uart2",		.clk = &uart2_clk},
-	{ .dev_id = "uart3",		.clk = &uart3_clk},
-	{ .dev_id = "uart4",		.clk = &uart4_clk},
-	{ .dev_id = "uart5",		.clk = &uart5_clk},
+	{ .dev_id = "uart1",		.clk = &spear310_uart1_clk},
+	{ .dev_id = "uart2",		.clk = &spear310_uart2_clk},
+	{ .dev_id = "uart3",		.clk = &spear310_uart3_clk},
+	{ .dev_id = "uart4",		.clk = &spear310_uart4_clk},
+	{ .dev_id = "uart5",		.clk = &spear310_uart5_clk},
 };
 #endif
 
@@ -812,8 +825,8 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
-	{ .dev_id = "uart1",		.clk = &uart1_clk},
-	{ .dev_id = "uart2",		.clk = &uart2_clk},
+	{ .dev_id = "uart1",		.clk = &spear320_uart1_clk},
+	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
 };
 #endif
 
