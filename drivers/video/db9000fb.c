@@ -1697,6 +1697,16 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	 */
 	set_ctrlr_state(fbi, C_ENABLE);
 
+#if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
+	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
+		/* Start display and show logo on boot */
+		fb_set_cmap(&fbi->fb.cmap,
+				&fbi->fb);
+
+		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
+	}
+#endif
+
 	return 0;
 
 err_clear_plat_data:
