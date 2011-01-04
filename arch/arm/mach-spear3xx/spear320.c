@@ -18,10 +18,10 @@
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
 #include <plat/gpio.h>
 #include <plat/shirq.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)

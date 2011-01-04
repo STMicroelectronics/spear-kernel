@@ -13,19 +13,19 @@
 
 #include <linux/types.h>
 #include <linux/gpio.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
-#include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
-#include <mach/pcie.h>
-#include <plat/keyboard.h>
 #include <plat/fsmc.h>
+#include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/generic.h>
+#include <mach/pcie.h>
+#include <mach/spear.h>
 
 /* fsmc nor partition info */
 #if 0

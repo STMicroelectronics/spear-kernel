@@ -12,19 +12,19 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
-#include <asm/mach/arch.h>
-#include <asm/mach-types.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
-#include <linux/mmc/sdhci-spear.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
+#include <asm/mach/arch.h>
+#include <asm/mach-types.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {

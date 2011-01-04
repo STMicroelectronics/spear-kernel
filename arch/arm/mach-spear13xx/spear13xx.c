@@ -24,9 +24,9 @@
 #include <asm/mach/arch.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
-#include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/irqs.h>
 #include <mach/misc_regs.h>
 
 /* Add spear13xx machines common devices here */

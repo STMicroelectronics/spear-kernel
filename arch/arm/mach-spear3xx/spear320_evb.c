@@ -12,19 +12,19 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/spi/flash.h>
+#include <linux/spi/spi.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <linux/spi/flash.h>
-#include <linux/mmc/sdhci-spear.h>
-#include <linux/spi/spi.h>
-#include <mach/emi.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
 #include <plat/fsmc.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/emi.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 

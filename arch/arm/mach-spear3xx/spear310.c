@@ -15,10 +15,10 @@
 #include <linux/ptrace.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
 #include <plat/gpio.h>
 #include <plat/shirq.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 /* pad multiplexing support */
 

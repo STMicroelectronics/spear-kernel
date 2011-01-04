@@ -16,9 +16,9 @@
 #include <linux/ptrace.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
+#include <plat/shirq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
-#include <plat/shirq.h>
 
 /* modes */
 #define NAND_MODE			(1 << 0)

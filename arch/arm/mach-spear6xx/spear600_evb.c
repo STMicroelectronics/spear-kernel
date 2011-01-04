@@ -14,15 +14,15 @@
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
-#include <asm/mach/arch.h>
-#include <asm/mach-types.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
+#include <asm/mach/arch.h>
+#include <asm/mach-types.h>
 #include <plat/fsmc.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
