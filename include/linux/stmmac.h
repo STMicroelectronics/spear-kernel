@@ -26,6 +26,9 @@
 #ifndef __STMMAC_PLATFORM_DATA
 #define __STMMAC_PLATFORM_DATA
 
+#define STMAC_TYPE_0	0
+#define STMAC_TYPE_1	1
+#define STMAC_TYPE_2	2
 /* platfrom data for platfrom device structure's platfrom_data field */
 
 /* Private data for the STM on-board ethernet driver */
@@ -36,8 +39,10 @@ struct plat_stmmacenet_data {
 	int has_gmac;
 	int enh_desc;
 	int tx_coe;
+	int csum_off_engine;
 	int bugged_jumbo;
 	int pmt;
+	unsigned long features;
 	void (*fix_mac_speed)(void *priv, unsigned int speed);
 	void (*bus_setup)(void __iomem *ioaddr);
 #ifdef CONFIG_STM_DRIVERS
@@ -53,6 +58,8 @@ struct plat_stmmacphy_data {
 	int interface;
 	int (*phy_reset)(void *priv);
 	void *priv;
+	int (*phy_clk_cfg) (void *priv);
+	struct clk *clk;
 };
 #endif
 
