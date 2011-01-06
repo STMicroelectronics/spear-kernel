@@ -188,6 +188,8 @@ extern struct amba_device clcd_device;
 extern struct amba_device ssp_device[];
 extern struct amba_device uart1_device;
 extern struct amba_device uart2_device;
+extern struct platform_device can0_device;
+extern struct platform_device can1_device;
 extern struct platform_device i2c1_device;
 extern struct platform_device nand_device;
 extern struct platform_device plgpio_device;
