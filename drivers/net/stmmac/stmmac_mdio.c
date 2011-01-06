@@ -49,6 +49,7 @@
 #define	STMMAC_CLK_RANGE_35_60M		3	/* MDC = Clk/26 */
 #define	STMMAC_CLK_RANGE_150_250M	4	/* MDC = Clk/102 */
 #define	STMMAC_CLK_RANGE_250_300M	5	/* MDC = Clk/122 */
+u32 *mac1_bus;
 
 static int stmmac_get_mac_clk(struct stmmac_priv *priv)
 {
@@ -89,12 +90,23 @@ static int stmmac_get_mac_clk(struct stmmac_priv *priv)
  */
 static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
 	int data;
 	u16 regValue;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	unsigned long ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
+
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (machine_is_spear1310() && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	ioaddr = ndev->base_addr;
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
 
 	/*
 	 * If the clock framework is supported in the architecture code
@@ -108,12 +120,12 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 			((phyreg << 6) & (0x000007C0)));
 	regValue |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
-	do {} while (((readl(priv->ioaddr + mii_address)) & MII_BUSY) == 1);
-	writel(regValue, priv->ioaddr + mii_address);
-	do {} while (((readl(priv->ioaddr + mii_address)) & MII_BUSY) == 1);
+	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
+	writel(regValue, ioaddr + mii_address);
+	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
 
 	/* Read the data from the MII data register */
-	data = (int)readl(priv->ioaddr + mii_data);
+	data = (int)readl(ioaddr + mii_data);
 
 	return data;
 }
@@ -129,11 +141,22 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 			     u16 phydata)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	unsigned long ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
 	u16 value;
+
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (machine_is_spear1310() && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
+	ioaddr = ndev->base_addr;
 
 	/*
 	 * If the clock framework is supported in the architecture code
@@ -150,14 +173,14 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	value |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
 	/* Wait until any existing MII operation is complete */
-	do {} while (((readl(priv->ioaddr + mii_address)) & MII_BUSY) == 1);
+	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
 
 	/* Set the MII address register to write */
-	writel(phydata, priv->ioaddr + mii_data);
-	writel(value, priv->ioaddr + mii_address);
+	writel(phydata, ioaddr + mii_data);
+	writel(value, ioaddr + mii_address);
 
 	/* Wait until any existing MII operation is complete */
-	do {} while (((readl(priv->ioaddr + mii_address)) & MII_BUSY) == 1);
+	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
 
 	return 0;
 }

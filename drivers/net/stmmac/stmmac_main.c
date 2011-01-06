@@ -1684,6 +1684,8 @@ static int stmmac_associate_phy(struct device *dev, void *data)
  * @pdev: platform device pointer
  * Description: the driver is initialized through platform_device.
  */
+struct	clk *spear1310_sys_clk;
+
 static int stmmac_dvr_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1760,6 +1762,17 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	priv->stmmac_clk = clk_get(&pdev->dev, NULL);
 	if (!(IS_ERR(priv->stmmac_clk)))
 		clk_enable(priv->stmmac_clk);
+	/*
+	 * Following hack has been provided as a sepcial case for
+	 * spear1310 ethernet interfaces where mdio lines of eth0 is
+	 * shared by the rest of ethernet interfaces, hence we have to
+	 * do following in order to ensure that clock is enabled for the
+	 * shared mdio lines
+	 */
+	if (machine_is_spear1310() && (spear1310_sys_clk == NULL)) {
+		spear1310_sys_clk = priv->stmmac_clk;
+		clk_enable(spear1310_sys_clk);
+	}
 
 	/* Set the I/O base addr */
 	ndev->base_addr = (unsigned long)addr;
