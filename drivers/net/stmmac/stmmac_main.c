@@ -39,6 +39,7 @@
 #include <linux/skbuff.h>
 #include <linux/ethtool.h>
 #include <linux/if_ether.h>
+#include <linux/cpufreq.h>
 #include <linux/crc32.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
@@ -141,6 +142,31 @@ static const u32 default_msg_level = (NETIF_MSG_DRV | NETIF_MSG_PROBE |
 static irqreturn_t stmmac_interrupt(int irq, void *dev_id);
 static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev);
 
+#ifdef CONFIG_CPU_FREQ
+static int stmmac_eth_notifier(struct notifier_block *nb,
+		unsigned long phase, void *p)
+{
+	struct stmmac_priv *priv;
+
+	priv = container_of(nb, struct stmmac_priv, stmmac_notifier_blk);
+	switch (phase) {
+	case CPUFREQ_PRECHANGE:
+		/* Stop TX/RX DMA */
+		priv->hw->dma->stop_tx(priv->ioaddr);
+		priv->hw->dma->stop_rx(priv->ioaddr);
+		return NOTIFY_OK;
+	case CPUFREQ_POSTCHANGE:
+		/* Start TX/RX DMA */
+		priv->hw->dma->start_tx(priv->ioaddr);
+		priv->hw->dma->start_rx(priv->ioaddr);
+		priv->hw->dma->enable_dma_transmission(priv->ioaddr);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+}
+
+#endif
 /**
  * stmmac_verify_args - verify the driver parameters.
  * Description: it verifies if some wrong parameter is passed to the driver.
@@ -1788,6 +1814,11 @@ out:
 			iounmap(addr);
 	}
 
+#ifdef CONFIG_CPU_FREQ
+	priv->stmmac_notifier_blk.notifier_call = &stmmac_eth_notifier;
+	cpufreq_register_notifier(&priv->stmmac_notifier_blk,
+			CPUFREQ_TRANSITION_NOTIFIER);
+#endif
 	return ret;
 }
 
@@ -1806,6 +1837,10 @@ static int stmmac_dvr_remove(struct platform_device *pdev)
 
 	pr_info("%s:\n\tremoving driver", __func__);
 
+#ifdef CONFIG_CPU_FREQ
+	cpufreq_unregister_notifier(&priv->stmmac_notifier_blk,
+			CPUFREQ_TRANSITION_NOTIFIER);
+#endif
 	priv->hw->dma->stop_rx(priv->ioaddr);
 	priv->hw->dma->stop_tx(priv->ioaddr);
 

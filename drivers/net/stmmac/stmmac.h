@@ -98,6 +98,9 @@ struct stmmac_priv {
 	int no_csum_insertion;
 	struct clk *stmmac_clk;
 	unsigned long features;
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block stmmac_notifier_blk;
+#endif
 };
 
 #ifdef CONFIG_STM_DRIVERS
