@@ -92,6 +92,7 @@ static struct vco_clk_config vco1_config = {
 struct vco_rate_tbl vco_rtbl[] = {
 	/* PCLK 24MHz */
 	{.mode = 0, .m = 0x83, .n = 0x04, .p = 0x5}, /* vco 1572, pll 49.125 MHz */
+	{.mode = 0, .m = 0x64, .n = 0x06, .p = 0x1}, /* vco 800, pll 400 MHz */
 	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x1}, /* vco 1000, pll 500 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x1}, /* vco 1328, pll 664 MHz */
 	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x1}, /* vco 1600, pll 800 MHz */
@@ -108,7 +109,7 @@ static struct clk vco1_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
 	.private_data = &vco1_config,
 };
 
@@ -153,7 +154,7 @@ static struct clk vco2_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 4},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
 	.private_data = &vco2_config,
 };
 

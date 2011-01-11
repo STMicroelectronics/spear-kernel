@@ -26,6 +26,7 @@
 #define LCD_PCLK_EDGE_RISE	(0 << 9)
 #define LCD_PCLK_EDGE_FALL	(1 << 9)
 
+#define NUM_OF_FRAMEBUFFERS 2
 /*
  * This structure describes the machine which we are running on.
  * It is set in linux/arch/arm/mach-spear13xx and used in the probe routine
