@@ -88,6 +88,14 @@ struct usbtouch_device_info {
 	int  (*init)        (struct usbtouch_usb *usbtouch);
 };
 
+#define MAX_NUM_OF_CONTACTS 10
+/* MT contact info */
+static struct mt_contact_info {
+	int x, y;
+	int touch;
+	int contact_id;
+} mt_contact[MAX_NUM_OF_CONTACTS];
+
 /* a usbtouch device */
 struct usbtouch_usb {
 	unsigned char *data;
@@ -103,7 +111,6 @@ struct usbtouch_usb {
 
 	int x, y;
 	int touch, press;
-	int contact_num;
 };
 
 
@@ -310,7 +317,6 @@ static int etouch_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
 	dev->x = ((pkt[1] & 0x1F) << 7) | (pkt[2] & 0x7F);
 	dev->y = ((pkt[3] & 0x1F) << 7) | (pkt[4] & 0x7F);
 	dev->touch = pkt[0] & 0x01;
-	dev->contact_num  = 0x0;
 
 	return 1;
 }
@@ -330,52 +336,6 @@ static int etouch_get_pkt_len(unsigned char *buf, int len)
 	}
 
 	return 0;
-}
-
-/*
- * Packet Format:
- *
- * 1) each USB paket has 7 bytes
- * 2) first byte is always 0x01
- * 3) second byte indicates which touch number is reported in upper nibble,
- *    first touch is reported as 2, second as 3 a.s.o.
- * 4) second byte lower nibble is 0x07 for touch down and 0x06 for touch up
- * 5) third byte is always 0xF0 in the upper nibble plus the total number of
- *    currently detected touches in the lower nibble
- * 6) fourth and fifth byte are the X_LSB and X_MSB value for the touch
- * 7) sixth and seventh byte are the Y_LSB and Y_MSB value for the touch
- */
-#define ETOUCH_MULTI_PKT_LEN		0x07
-
-static int etouch_multi_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
-{
-	unsigned char type;
-
-	if (pkt[0] != 0x1)
-		return 0;
-
-	dev->contact_num  = (pkt[1] >> 0x4) & 0x0F;
-	type = (pkt[1] & 0xF);
-	switch (type) {
-	case 0x7:
-		dev->touch = 1;
-		break;
-	case 0x6:
-		dev->touch = 0;
-		break;
-	default:
-		return 0;
-	}
-
-	dev->x = ((pkt[4] & 0x0F) << 7) | (pkt[3] & 0x7F);
-	dev->y = ((pkt[6] & 0x0F) << 7) | (pkt[5] & 0x7F);
-
-	return 1;
-}
-
-static int etouch_multi_get_pkt_len(unsigned char *buf, int len)
-{
-	return ETOUCH_MULTI_PKT_LEN;
 }
 
 static void etouch_process_pkt(struct usbtouch_usb *usbtouch,
@@ -409,12 +369,6 @@ static void etouch_process_pkt(struct usbtouch_usb *usbtouch,
 					ABS_MT_POSITION_Y, usbtouch->y);
 			}
 
-			if (usbtouch->contact_num) {
-				input_report_abs(usbtouch->input,
-					ABS_MT_TRACKING_ID,
-					usbtouch->contact_num);
-			}
-
 			input_mt_sync(usbtouch->input);
 		}
 		pos += pkt_len;
@@ -436,6 +390,94 @@ static int etouch_init(struct usbtouch_usb *usbtouch)
 	return 0;
 }
 
+/*
+ * Packet Format:
+ *
+ * 1) each USB paket has 7 bytes
+ * 2) first byte is always 0x01
+ * 3) second byte indicates which touch number is reported in upper nibble,
+ *    first touch is reported as 2, second as 3 a.s.o.
+ * 4) second byte lower nibble is 0x07 for touch down and 0x06 for touch up
+ * 5) third byte is always 0xF0 in the upper nibble plus the total number of
+ *    currently detected touches in the lower nibble
+ * 6) fourth and fifth byte are the X_LSB and X_MSB value for the touch
+ * 7) sixth and seventh byte are the Y_LSB and Y_MSB value for the touch
+ */
+#define ETOUCH_MULTI_PKT_LEN		0x07
+
+static int etouch_multi_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
+{
+	unsigned char type;
+	unsigned char cnum;
+
+	if (pkt[0] != 0x1)
+		return 0;
+
+	cnum  = ((pkt[1] >> 0x4) & 0x0F) - 2;
+	if (cnum > MAX_NUM_OF_CONTACTS - 1)
+		return 0;
+
+	mt_contact[cnum].contact_id  = cnum + 2;
+	type = (pkt[1] & 0xF);
+	switch (type) {
+	case 0x7:
+		mt_contact[cnum].touch = 1;
+		break;
+	case 0x6:
+		mt_contact[cnum].touch = 0;
+		break;
+	default:
+		return 0;
+	}
+
+	mt_contact[cnum].x = ((pkt[4] & 0x0F) << 8) | (pkt[3] & 0xFF);
+	mt_contact[cnum].y = ((pkt[6] & 0x0F) << 8) | (pkt[5] & 0xFF);
+
+	return 1;
+}
+
+static int etouch_multi_get_pkt_len(unsigned char *buf, int len)
+{
+	return ETOUCH_MULTI_PKT_LEN;
+}
+
+static void etouch_multi_process_pkt(struct usbtouch_usb *usbtouch,
+				unsigned char *pkt, int len)
+{
+	struct usbtouch_device_info *type = usbtouch->type;
+	int pkt_len, i;
+
+	/* get packet len */
+	pkt_len = type->get_pkt_len(pkt, len);
+
+	/* full packet: process */
+	if (unlikely(len != ETOUCH_MULTI_PKT_LEN))
+		return;
+
+	if (!type->read_data(usbtouch, pkt))
+		goto sync_and_ret;
+
+	/* Generate evdev events */
+	for (i = 0; i < MAX_NUM_OF_CONTACTS; i++) {
+		if (mt_contact[i].contact_id > 0) {
+			if (mt_contact[i].touch) {
+				input_report_abs(usbtouch->input,
+					ABS_MT_POSITION_X, mt_contact[i].x);
+				input_report_abs(usbtouch->input,
+					ABS_MT_POSITION_Y, mt_contact[i].y);
+			} else {
+				mt_contact[i].contact_id = 0;
+			}
+
+			input_mt_sync(usbtouch->input);
+		}
+	}
+
+sync_and_ret:
+	input_sync(usbtouch->input);
+	return;
+}
+
 static int etouch_multi_init(struct usbtouch_usb *usbtouch)
 {
 	/* Enable ABS params for MT events */
@@ -443,8 +485,6 @@ static int etouch_multi_init(struct usbtouch_usb *usbtouch)
 							0, 0xffff, 0, 0);
 	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_Y,
 							0, 0xffff, 0, 0);
-	input_set_abs_params(usbtouch->input, ABS_MT_TRACKING_ID,
-							0, 0xff, 0, 0);
 
 	return 0;
 }
@@ -960,7 +1000,7 @@ static struct usbtouch_device_info usbtouch_dev_info[] = {
 		.min_yc		= 0x0,
 		.max_yc		= 0x07ff,
 		.rept_size	= 16,
-		.process_pkt	= etouch_process_pkt,
+		.process_pkt	= etouch_multi_process_pkt,
 		.get_pkt_len	= etouch_multi_get_pkt_len,
 		.read_data	= etouch_multi_read_data,
 		.init		= etouch_multi_init,
