@@ -36,9 +36,9 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 		.vsync_len = 10,
 		.sync = 0,/* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
 	},
-	.bpp = 24,
+	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FBP,
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
 	.pctr = 0,
 	.dear = 0,
 };
