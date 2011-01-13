@@ -19,6 +19,11 @@ static struct i2c_board_info __initdata i2c_board_info[] = {
 	}, {
 		.type = "eeprom",
 		.addr = 0x51,
+#ifdef CONFIG_ARCH_SPEAR13XX
+	}, {
+		.type = "sta529",
+		.addr = 0x1a,
+#endif
 	},
 };
 

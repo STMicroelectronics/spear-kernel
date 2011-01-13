@@ -90,11 +90,13 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci0_device,
 	&spear13xx_ehci1_device,
 	&spear13xx_i2c_device,
+	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcie_gadget0_device,
+	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
@@ -270,6 +272,11 @@ static void __init spear1310_evb_init(void)
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
+#endif
+
+#ifdef CONFIG_SND_SOC_STA529
+	/* configure i2s configuration for dma xfer */
+	pcm_init(&spear13xx_dmac_device[0].dev);
 #endif
 
 	/* call spear1310 machine init function */

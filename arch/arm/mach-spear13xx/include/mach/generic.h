@@ -230,6 +230,8 @@ extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
 extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
+extern struct platform_device spear13xx_i2s0_device;
+extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
@@ -238,6 +240,7 @@ extern struct platform_device spear13xx_ohci1_device;
 extern struct platform_device spear13xx_pcie_gadget0_device;
 extern struct platform_device spear13xx_pcie_gadget1_device;
 extern struct platform_device spear13xx_pcie_gadget2_device;
+extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
@@ -253,6 +256,7 @@ void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
+void pcm_init(struct device *dma_dev);
 
 /* spear1300 declarations */
 #ifdef CONFIG_MACH_SPEAR1300

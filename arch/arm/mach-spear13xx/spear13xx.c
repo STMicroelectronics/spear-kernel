@@ -182,6 +182,67 @@ struct platform_device spear13xx_dmac_device[] = {
 	},
 };
 
+/* i2s0 device registeration */
+static struct resource i2s0_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S0_BASE,
+		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= IRQ_PLAY_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= IRQ_REC_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s0_device = {
+	.name = "spear13xx-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s0_resources),
+	.resource = i2s0_resources,
+};
+
+/* i2s1 device registeration */
+static struct resource i2s1_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S1_BASE,
+		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= IRQ_PLAY_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= IRQ_REC_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s1_device = {
+	.name = "spear13xx-i2s",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s1_resources),
+	.resource = i2s1_resources,
+};
+
+struct platform_device spear13xx_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
+};
+
 /* i2c device registeration */
 static struct resource i2c_resources[] = {
 	{
@@ -637,6 +698,55 @@ static void dmac_setup(void)
 	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
+#ifdef CONFIG_SND_SOC_STA529
+static void i2s_clk_init(void)
+{
+	struct clk *i2s_src_clk, *pll3_clk, *i2s_ref_clk;
+
+	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
+	if (IS_ERR(i2s_src_clk)) {
+		pr_err("%s:couldn't get clk for i2s_src_clk\n", __func__);
+		return;
+	}
+
+	pll3_clk = clk_get_sys(NULL, "pll3_clk");
+	if (IS_ERR(pll3_clk)) {
+		pr_err("%s:couldn't get clk for pll3_clck\n", __func__);
+		goto put_src_clk;
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get clk for i2s_ref_clk\n", __func__);
+		goto put_pll3_clk;
+	}
+
+	if (clk_set_parent(i2s_src_clk, pll3_clk))
+		goto put_ref_clk;
+
+	if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
+		goto put_ref_clk;
+
+	if (clk_set_rate(i2s_ref_clk, 12288000)) /*12.288 Mhz */
+		goto put_ref_clk;
+
+	if (clk_enable(i2s_ref_clk)) {
+		pr_err("%s:enabling i2s_ref_clk_fail\n", __func__);
+		goto put_ref_clk;
+	}
+	goto put_pll3_clk;
+
+put_ref_clk:
+	clk_put(i2s_ref_clk);
+put_pll3_clk:
+	clk_put(pll3_clk);
+put_src_clk:
+	clk_put(i2s_src_clk);
+
+	return;
+}
+#endif
+
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
@@ -649,6 +759,10 @@ void __init spear13xx_init(void)
 	 * At full speed latency must be >=2, so 0x249 in low bits
 	 */
 	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+#endif
+
+#ifdef CONFIG_SND_SOC_STA529
+	i2s_clk_init();
 #endif
 
 	sdhci_enable();
