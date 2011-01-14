@@ -3291,6 +3291,8 @@ void console_sysfs_notify(void)
  */
 int __init tty_init(void)
 {
+	int ret = 0;
+
 	cdev_init(&tty_cdev, &tty_fops);
 	if (cdev_add(&tty_cdev, MKDEV(TTYAUX_MAJOR, 0), 1) ||
 	    register_chrdev_region(MKDEV(TTYAUX_MAJOR, 0), 1, "/dev/tty") < 0)
@@ -3306,11 +3308,11 @@ int __init tty_init(void)
 	if (IS_ERR(consdev))
 		consdev = NULL;
 	else
-		device_create_file(consdev, &dev_attr_active);
+		ret = device_create_file(consdev, &dev_attr_active);
 
 #ifdef CONFIG_VT
 	vty_init(&console_fops);
 #endif
-	return 0;
+	return ret;
 }
 
