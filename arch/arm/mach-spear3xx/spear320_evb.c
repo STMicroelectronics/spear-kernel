@@ -242,7 +242,7 @@ static void __init spear320_evb_init(void)
 	macb_init_board_info(&spear320_eth_macb1_mii_device);
 
 	/* Register slave devices on the I2C buses */
-	i2c_register_board_devices();
+	i2c_register_default_devices();
 
 	/* initialize emi related data in emi plat data */
 	emi_init_board_info(&spear320_emi_nor_device, partition_info,

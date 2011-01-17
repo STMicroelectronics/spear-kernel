@@ -52,7 +52,7 @@ extern struct sys_timer spear3xx_timer;
 
 /* Add spear3xx family function declarations here */
 void __init spear3xx_clk_init(void);
-void __init i2c_register_board_devices(void);
+void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
 void __init spear3xx_map_io(void);
 void __init spear3xx_init_irq(void);

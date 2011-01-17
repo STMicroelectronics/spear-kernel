@@ -22,7 +22,7 @@ static struct i2c_board_info __initdata i2c_board_info[] = {
 	},
 };
 
-void __init i2c_register_board_devices(void)
+void __init i2c_register_default_devices(void)
 {
 	i2c_register_board_info(0, i2c_board_info,
 				ARRAY_SIZE(i2c_board_info));

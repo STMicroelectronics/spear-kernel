@@ -260,7 +260,7 @@ extern struct db9000fb_mach_info chimei_b101aw02_info;
 
 /* Add spear13xx family function declarations here */
 void __init spear13xx_clk_init(void);
-void __init i2c_register_board_devices(void);
+void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);

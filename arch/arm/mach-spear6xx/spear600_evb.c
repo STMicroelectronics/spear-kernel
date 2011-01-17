@@ -140,7 +140,7 @@ static void __init spear600_evb_init(void)
 	spear600_init();
 
 	/* Register slave devices on the I2C buses */
-	i2c_register_board_devices();
+	i2c_register_default_devices();
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&smi_device);
