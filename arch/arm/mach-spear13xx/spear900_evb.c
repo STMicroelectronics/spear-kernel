@@ -14,6 +14,8 @@
 #include <linux/irq.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
+#include <linux/i2c.h>
+#include <linux/i2c/l3g4200d.h>
 #include <linux/mtd/nand.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
@@ -129,6 +131,25 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = spear_keymap,
 	.keymapsize = ARRAY_SIZE(spear_keymap),
 	.rep = 1,
+};
+
+/* Initializing platform data for SPEAr900 specific Input devices on I2C Bus */
+/* Gyroscope platform data */
+static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
+	.poll_interval = 5,
+	.min_interval = 2,
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+};
+
+static struct i2c_board_info __initdata i2c_board_info[] = {
+	/* gyroscope board info */
+	{
+		.type = "l3g4200d_gyr",
+		.addr = 0x68,
+		.platform_data = &l3g4200d_pdata,
+	},
 };
 
 /* Currently no gpios are free on eval board so it is kept commented */
@@ -293,6 +314,10 @@ static void __init spear900_evb_init(void)
 #endif
 	/* call spear900 machine init function */
 	spear900_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+
+	/* Register EVB 900 specific i2c slave devices */
+	i2c_register_board_info(0, i2c_board_info,
+				ARRAY_SIZE(i2c_board_info));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
