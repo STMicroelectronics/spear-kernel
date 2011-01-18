@@ -266,6 +266,18 @@ config INPUT_GPIO_ROTARY_ENCODER
 	  To compile this driver as a module, choose M here: the
 	  module will be called rotary_encoder.
 
+config INPUT_GYRO_L3G4200
+	tristate "STMicroelectronics L3G4200D gyroscope sensor"
+	depends on I2C
+	select INPUT_POLLDEV
+	default n
+	help
+	  This driver provides support for the L3G4200D gyroscope connected
+	  via I2C.
+
+	  The gyroscope data is readable via sysfs. This driver can also be
+	  built as module.
+
 config INPUT_RB532_BUTTON
 	tristate "Mikrotik Routerboard 532 button interface"
 	depends on MIKROTIK_RB532
