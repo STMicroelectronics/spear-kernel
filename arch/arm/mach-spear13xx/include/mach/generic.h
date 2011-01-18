@@ -68,6 +68,7 @@ extern struct platform_device spear1310_can1_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_init(void);
+void __init spear1310_map_io(void);
 
 #endif /* CONFIG_MACH_SPEAR1310 */
 
