@@ -55,6 +55,23 @@ struct platform_device spear1310_can1_device = {
 	.resource = can1_resources,
 };
 
+/* Following will create 1310 specific static virtual/physical mappings */
+struct map_desc spear1310_io_desc[] __initdata = {
+	{
+		.virtual	= IO_ADDRESS(SPEAR1310_RAS_BASE),
+		.pfn		= __phys_to_pfn(SPEAR1310_RAS_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+};
+
+/* This will create static memory mapping for selected devices */
+void __init spear1310_map_io(void)
+{
+	spear13xx_map_io();
+	iotable_init(spear1310_io_desc, ARRAY_SIZE(spear1310_io_desc));
+}
+
 void __init spear1310_init(void)
 {
 	/* call spear13xx family common init function */
