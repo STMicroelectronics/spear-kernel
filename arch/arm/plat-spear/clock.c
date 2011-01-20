@@ -623,6 +623,7 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 {
 	struct vco_rate_tbl *tbls = clk->rate_config.tbls;
 	struct vco_clk_config *config = clk->private_data;
+	struct clk *pll_clk, *_tmp;
 	unsigned long val, rate;
 	int i;
 
@@ -634,7 +635,15 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	if (ddr_clk && (clk->flags & DDR_ANCESTOR)) {
 		int ret;
 
-		ret = ddr_rate_acceptable(clk, rate);
+		/*
+		 * Since desired_rate is rate of pll instead of vco, we
+		 * need to send pll's clk struct to ddr_rate_acceptable.
+		 */
+		list_for_each_entry_safe(pll_clk, _tmp, &clk->children, sibling)
+			if (pll_clk->flags & DDR_ANCESTOR)
+				break;
+
+		ret = ddr_rate_acceptable(pll_clk, rate);
 		if (ret == false)
 			return -EPERM;
 		else {
