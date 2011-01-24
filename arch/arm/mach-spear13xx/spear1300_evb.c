@@ -34,8 +34,6 @@
 #include <mach/hardware.h>
 #include <mach/pcie.h>
 
-static unsigned long db900fb_buffer_phys;
-
 /* fsmc nor partition info */
 #if 0
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -267,8 +265,8 @@ static void spear1300_evb_fixup(struct machine_desc *desc, struct tag *tags,
 	unsigned long size;
 
 	size = clcd_get_fb_size(&sharp_lcd_info, NUM_OF_FRAMEBUFFERS);
-	db900fb_buffer_phys = reserve_mem(mi, ALIGN(size, SZ_1M));
-	if (db900fb_buffer_phys == ~0)
+	sharp_lcd_info.frame_buf_base = reserve_mem(mi, ALIGN(size, SZ_1M));
+	if (sharp_lcd_info.frame_buf_base == ~0)
 		pr_err("Unable to allocate fb buffer\n");
 #endif
 }
@@ -280,9 +278,8 @@ static void __init spear1300_evb_init(void)
 	/* set adc platform data */
 	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
 
-	/* db9000_clcd plat data */
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	sharp_lcd_info.frame_buf_base = db900fb_buffer_phys;
+	/* db9000_clcd plat data */
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, &sharp_lcd_info);
 #endif
 
