@@ -99,16 +99,12 @@ lcd_readl(struct db9000fb_info *fbi, unsigned int off)
 {
 	unsigned long val;
 	val = __raw_readl(((unsigned int)fbi->mmio_base) + off);
-/*	printk("%s: Read: 0x%08X from addr: 0x%08X\n", __func__,
-	(unsigned int)val, (unsigned int)off);*/
 	return val;
 }
 
 static inline void
 lcd_writel(struct db9000fb_info *fbi, unsigned int off, unsigned long val)
 {
-/*	printk("%s: Writing: 0x%08X to addr: 0x%08X\n", __func__,
-	(unsigned int)val, (unsigned int)off); */
 	__raw_writel(val, ((unsigned int)fbi->mmio_base) + off);
 }
 
@@ -849,8 +845,6 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 		for (i = 0; i < (fbi->palette_size/2) ; ++i) {
 			val = fbi->palette[i];
 			lcd_writel(fbi, (DB9000_PALT + i*4), val);
-/* pr_debug("Palette register: 0x%04x: written with: 0x%08x\n",
-	(DB9000_PALT + i*4), (unsigned int) val); */
 		}
 	}
 	lcd_writel(fbi, DB9000_HTR, fbi->reg_htr);
@@ -878,7 +872,6 @@ static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 
 	cr1 = lcd_readl(fbi, DB9000_CR1) & ~DB9000_CR1_ENB;
 	lcd_writel(fbi, DB9000_CR1, cr1);
-/*	wait_for_completion_timeout(&fbi->disable_done, 200 * HZ / 1000); */
 	msleep(100);
 	clk_disable(fbi->clk);
 }
@@ -1034,8 +1027,8 @@ db9000fb_freq_transition(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
 	struct db9000fb_info *fbi = TO_INF(nb, freq_transition);
+	struct fb_var_screeninfo *var = &fbi->fb.var;
 	/* TODO struct cpufreq_freqs *f = data; */
-/*	u_int pcd; */
 
 	switch (val) {
 	case CPUFREQ_PRECHANGE:
@@ -1043,7 +1036,10 @@ db9000fb_freq_transition(
 		break;
 
 	case CPUFREQ_POSTCHANGE:
-	break;
+		if (!(fbi->reg_pctr & DB9000_PCTR_PCI))
+			setup_parallel_timing(fbi, var);
+		set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
+		break;
 	}
 	return 0;
 }
