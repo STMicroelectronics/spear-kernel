@@ -1588,7 +1588,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-
 	fbi = db9000fb_init_fbinfo(&pdev->dev);
 	if (!fbi) {
 		/* only reason for db9000fb_init_fbinfo to fail is kmalloc */
@@ -1675,6 +1674,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 				fbi->fb.fix.smem_start;
 	}
 
+	 /* Ok, now enable the LCD controller */
+	set_ctrlr_state(fbi, C_ENABLE);
 	platform_set_drvdata(pdev, fbi);
 
 	ret = register_framebuffer(&fbi->fb);
@@ -1692,10 +1693,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	cpufreq_register_notifier(&fbi->freq_policy,
 			CPUFREQ_POLICY_NOTIFIER);
 #endif
-	/*
-	 * Ok, now enable the LCD controller
-	 */
-	set_ctrlr_state(fbi, C_ENABLE);
 
 #if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
 	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
