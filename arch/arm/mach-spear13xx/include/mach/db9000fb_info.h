@@ -1,3 +1,5 @@
+#ifndef __DB9000FB_INFO_H__
+#define __DB9000FB_INFO_H__
 /*
  *  arch/arm/mach-spear13xx/include/mach/db9000fb_info.h
  *
@@ -15,7 +17,6 @@
  */
 
 #include <linux/fb.h>
-#include <mach/db9000-regs.h>
 #include <mach/irqs.h>
 
 /*
@@ -27,6 +28,7 @@
 #define LCD_PCLK_EDGE_FALL	(1 << 9)
 
 #define NUM_OF_FRAMEBUFFERS 2
+#define PALETTE_SIZE	(128 * 4)
 /*
  * This structure describes the machine which we are running on.
  * It is set in linux/arch/arm/mach-spear13xx and used in the probe routine
@@ -46,8 +48,7 @@ struct db9000fb_mode_info {
 /*
  * This structure describes the machine which we are running on.
  * It is set in linux/arch/arm/mach-spear13xx/machine_name.c
- * and used in the probe routine
- * of linux/drivers/video/db9000fb.c
+ * and used in the probe routine of linux/drivers/video/db9000fb.c
  */
 struct db9000fb_mach_info {
 	struct db9000fb_mode_info *modes;
@@ -69,3 +70,4 @@ unsigned long db9000fb_get_hsync_time(struct device *dev);
 void __init clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data);
 unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int dual);
+#endif

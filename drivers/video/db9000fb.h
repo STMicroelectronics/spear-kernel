@@ -59,8 +59,6 @@ enum {
 	DMA_MAX,
 };
 
-#define PALETTE_SIZE	(128 * 4)
-
 struct db9000fb_frame_buff {
 	unsigned char *frame_buff;
 	unsigned char *pixel_data_start;

@@ -21,9 +21,6 @@
 #include <mach/db9000fb_info.h>
 #include <mach/hardware.h>
 
-/* This is enough for the size of 800x480 (1.5 MB) */
-#define FRAMESIZE 0x00180000
-
 static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.mode = {
 		.name = "Sharp LQ043T3DA0A",
@@ -90,8 +87,8 @@ unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int buffer_cnt)
 	unsigned long size;
 	struct db9000fb_mode_info *info = data->modes;
 
-	size = (buffer_cnt * info->mode.xres * info->mode.yres * info->bpp / 8);
-
+	size = PALETTE_SIZE + (buffer_cnt * info->mode.xres *
+			info->mode.yres * info->bpp / 8);
 	return size;
 }
 
