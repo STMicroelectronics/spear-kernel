@@ -86,7 +86,7 @@
 #define DB9000_CR1_ENB	(1 << 0)
 /* LCD Power Enable */
 #define DB9000_CR1_LPE	(1 << 1)
- /* LCD Bits per Pixel */
+/* LCD Bits per Pixel */
 #define DB9000_CR1_BPP(x)  (((x) & 0x7) << 2)
 /* RGB or BGR Format */
 #define DB9000_CR1_RGB	(1 << 5)
@@ -165,9 +165,9 @@
 /* Pixel Clock Divider */
 #define DB9000_PCTR_PCD(x)	(((x) & 0xff) << 0)
 /* Pixel Clock Divider Bypass */
-#define DB9000_PCTR_PCB(x)	(((x) & 0x01) << 8)
+#define DB9000_PCTR_PCB		(1 << 8)
 /* Pixel Clock Input Select */
-#define DB9000_PCTR_PCI(x)	(((x) & 0x01) << 9)
+#define DB9000_PCTR_PCI		(1 << 9)
 
 /* Interrupt Status Register, Offset 0x018 */
 #define DB9000_ISR_OFU	(1 << 0) /* Output FIFO Underrun */

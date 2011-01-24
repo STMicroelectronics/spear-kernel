@@ -70,7 +70,7 @@ static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
-	.pctr = DB9000_PCTR_PCI(1) | DB9000_PCTR_PCB(0),
+	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
 struct db9000fb_mach_info chimei_b101aw02_info = {

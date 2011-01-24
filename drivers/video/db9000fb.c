@@ -680,19 +680,11 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 static void setup_parallel_timing(struct db9000fb_info *fbi,
 				  struct fb_var_screeninfo *var)
 {
-	if (DB9000_PCTR_PCB(fbi->reg_pctr) == 0 &&
-				DB9000_PCTR_PCI(fbi->reg_pctr) == 1)
-		pr_info("Pixel clock is used");
-	else {
+	if (!(fbi->reg_pctr & DB9000_PCTR_PCI)) {
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
-			fbi->reg_pctr =
-				/* Pixel Clock Divider */
-				(pcd) |
-				/* Pixel Clock Divider Bypass */
-				DB9000_PCTR_PCB(fbi->reg_pctr) |
-				/* Pixel Clock Input Select */
-				DB9000_PCTR_PCI(fbi->reg_pctr);
+			fbi->reg_pctr = pcd | ~DB9000_PCTR_PCI |
+				~DB9000_PCTR_PCB;
 			set_hsync_time(fbi, pcd);
 		}
 	}
@@ -1404,22 +1396,22 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 			sprintf(s, "Pixel Clock Input Select: Master bus "
 				"clock or Pixel clock divider\n");
 			inf->modes->pctr =
-				(info->reg_pctr & ~DB9000_PCTR_PCI(1));
+				(info->reg_pctr & ~DB9000_PCTR_PCI);
 		} else {
 			sprintf(s, "Pixel Clock Input Select: PCLK_IN\n");
 			inf->modes->pctr =
-				(info->reg_pctr | DB9000_PCTR_PCI(1));
+				(info->reg_pctr | DB9000_PCTR_PCI);
 		}
 	} else if (!strncmp(this_opt, "pcb:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel Clock comes from "
 				"pixel clock divider\n");
 			inf->modes->pctr =
-				(info->reg_pctr & ~DB9000_PCTR_PCB(1));
+				(info->reg_pctr & ~DB9000_PCTR_PCB);
 		} else {
 			sprintf(s, "Pixel clock comes from bus clock\n");
 			inf->modes->pctr =
-				(info->reg_pctr & ~DB9000_PCTR_PCB(1));
+				(info->reg_pctr & ~DB9000_PCTR_PCB);
 		}
 	} else if (!strncmp(this_opt, "pcd:", 4)) {
 		inf->modes->pctr = (info->reg_pctr & ~DB9000_PCTR_PCD(255));
