@@ -21,7 +21,8 @@
 
   Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
-
+#include <linux/platform_device.h>
+#include <linux/stmmac.h>
 #include "common.h"
 
 static int enh_desc_get_tx_status(void *data, struct stmmac_extra_stats *x,
@@ -105,7 +106,10 @@ static int enh_desc_get_tx_len(struct dma_desc *p)
 	return p->des01.etx.buffer1_size;
 }
 
-static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
+#define GMAC_VERSION_35	0x35
+
+static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err,
+		u32 mac_id)
 {
 	int ret = good_frame;
 	u32 status = (type << 2 | ipc_err << 1 | payload_err) & 0x7;
@@ -140,16 +144,16 @@ static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
 	} else if (status == 0x1) {
 		CHIP_DBG(KERN_ERR
 		    "RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
-		ret = discard_frame;
+		ret = (mac_id >= GMAC_VERSION_35) ? discard_frame : csum_none;
 	} else if (status == 0x3) {
 		CHIP_DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
-		ret = discard_frame;
+		ret = (mac_id >= GMAC_VERSION_35) ? discard_frame : csum_none;
 	}
 	return ret;
 }
 
 static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-				  struct dma_desc *p)
+		struct dma_desc *p, int csum_engine, u32 mac_id)
 {
 	int ret = good_frame;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
@@ -195,8 +199,12 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 	 * It doesn't match with the information reported into the databook.
 	 * At any rate, we need to understand if the CSUM hw computation is ok
 	 * and report this info to the upper layers. */
-	ret = enh_desc_coe_rdes0(p->des01.erx.ipc_csum_error,
-		p->des01.erx.frame_type, p->des01.erx.payload_csum_error);
+	if (csum_engine != STMAC_TYPE_0)
+		ret = enh_desc_coe_rdes0(p->des01.erx.ipc_csum_error,
+			p->des01.erx.frame_type,
+			p->des01.erx.payload_csum_error, mac_id);
+	else
+		ret = csum_none;
 
 	if (unlikely(p->des01.erx.dribbling)) {
 		CHIP_DBG(KERN_ERR "GMAC RX: dribbling error\n");

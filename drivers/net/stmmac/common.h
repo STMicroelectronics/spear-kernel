@@ -175,7 +175,7 @@ struct stmmac_desc_ops {
 	int (*get_rx_frame_len) (struct dma_desc *p);
 	/* Return the reception status looking at the RDES1 */
 	int (*rx_status) (void *data, struct stmmac_extra_stats *x,
-			  struct dma_desc *p);
+			  struct dma_desc *p, int csum_engine, u32 mac_id);
 };
 
 struct stmmac_dma_ops {
@@ -240,6 +240,7 @@ struct mac_device_info {
 	const struct stmmac_dma_ops	*dma;
 	struct mii_regs mii;	/* MII register Addresses */
 	struct mac_link link;
+	u32 mac_id;
 };
 
 struct mac_device_info *dwmac1000_setup(void __iomem *ioaddr);

@@ -227,14 +227,14 @@ static const struct stmmac_ops dwmac1000_ops = {
 struct mac_device_info *dwmac1000_setup(void __iomem *ioaddr)
 {
 	struct mac_device_info *mac;
-	u32 uid = readl(ioaddr + GMAC_VERSION);
-
-	pr_info("\tDWMAC1000 - user ID: 0x%x, Synopsys ID: 0x%x\n",
-		((uid & 0x0000ff00) >> 8), (uid & 0x000000ff));
 
 	mac = kzalloc(sizeof(const struct mac_device_info), GFP_KERNEL);
 	if (!mac)
 		return NULL;
+
+	mac->mac_id = readl(ioaddr + GMAC_VERSION);
+	pr_info("\tDWMAC1000 - user ID: 0x%x, Synopsys ID: 0x%x\n",
+		((mac->mac_id & 0x0000ff00) >> 8), (mac->mac_id & 0x000000ff));
 
 	mac->mac = &dwmac1000_ops;
 	mac->dma = &dwmac1000_dma_ops;

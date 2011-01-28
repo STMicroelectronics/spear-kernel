@@ -70,7 +70,7 @@ static int ndesc_get_tx_len(struct dma_desc *p)
  * In case of success, it returns csum_none becasue the device
  * is not able to compute the csum in HW. */
 static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-			       struct dma_desc *p)
+			       struct dma_desc *p, int csum_engine, u32 mac_id)
 {
 	int ret = csum_none;
 	struct net_device_stats *stats = (struct net_device_stats *)data;

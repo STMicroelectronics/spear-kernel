@@ -33,6 +33,50 @@
 #define MII_BUSY 0x00000001
 #define MII_WRITE 0x00000002
 
+/* CSR Frequency Access*/
+#define F_20M	20000000
+#define F_35M	35000000
+#define F_60M	60000000
+#define F_100M	100000000
+#define F_150M	150000000
+#define F_250M	50000000
+#define F_300M	300000000
+
+/* MDC Clock Selection */
+#define	STMMAC_CLK_RANGE_60_100M	0	/* MDC = Clk/42 */
+#define	STMMAC_CLK_RANGE_100_150M	1	/* MDC = Clk/62 */
+#define	STMMAC_CLK_RANGE_20_35M		2	/* MDC = Clk/16 */
+#define	STMMAC_CLK_RANGE_35_60M		3	/* MDC = Clk/26 */
+#define	STMMAC_CLK_RANGE_150_250M	4	/* MDC = Clk/102 */
+#define	STMMAC_CLK_RANGE_250_300M	5	/* MDC = Clk/122 */
+
+static int stmmac_get_mac_clk(struct stmmac_priv *priv)
+{
+	u32 clk_rate = clk_get_rate(priv->stmmac_clk);
+
+	/*
+	 * Decide on the MDC clock dynamically based on the
+	 * csr clock input.
+	 * This is helpfull in case the cpu frequency is changed
+	 * on the run using the cpu freq framework, and based
+	 * on that the bus frequency is also changed.
+	 */
+	if ((clk_rate >= F_20M) && (clk_rate < F_35M))
+		return STMMAC_CLK_RANGE_20_35M;
+	else if ((clk_rate >= F_35M) && (clk_rate < F_60M))
+		return STMMAC_CLK_RANGE_35_60M;
+	else if ((clk_rate >= F_60M) && (clk_rate < F_100M))
+		return STMMAC_CLK_RANGE_60_100M;
+	else if ((clk_rate >= F_100M) && (clk_rate < F_150M))
+		return STMMAC_CLK_RANGE_100_150M;
+	else if ((clk_rate >= F_150M) && (clk_rate < F_250M))
+		return STMMAC_CLK_RANGE_150_250M;
+	else if ((clk_rate >= F_250M) && (clk_rate < F_300M))
+		return STMMAC_CLK_RANGE_250_300M;
+	else
+		return STMMAC_CLK_RANGE_150_250M;
+
+}
 /**
  * stmmac_mdio_read
  * @bus: points to the mii_bus structure
@@ -49,9 +93,18 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned int mii_address = priv->hw->mii.addr;
 	unsigned int mii_data = priv->hw->mii.data;
-
 	int data;
-	u16 regValue = (((phyaddr << 11) & (0x0000F800)) |
+	u16 regValue;
+
+	/*
+	 * If the clock framework is supported in the architecture code
+	 * then dynamically select the mdio clock,
+	 * Else the platform code would provide the csr clock
+	 */
+	if (priv->stmmac_clk)
+		priv->mii_clk_csr = stmmac_get_mac_clk(priv);
+
+	regValue = (((phyaddr << 11) & (0x0000F800)) |
 			((phyreg << 6) & (0x000007C0)));
 	regValue |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
@@ -80,13 +133,21 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned int mii_address = priv->hw->mii.addr;
 	unsigned int mii_data = priv->hw->mii.data;
+	u16 value;
 
-	u16 value =
-	    (((phyaddr << 11) & (0x0000F800)) | ((phyreg << 6) & (0x000007C0)))
-	    | MII_WRITE;
+	/*
+	 * If the clock framework is supported in the architecture code
+	 * then dynamically select the mdio clock,
+	 * Else the platform code would provide the csr clock
+	 */
+	if (priv->stmmac_clk)
+		priv->mii_clk_csr = stmmac_get_mac_clk(priv);
+
+	value =
+	(((phyaddr << 11) & (0x0000F800)) | ((phyreg << 6) & (0x000007C0)))
+		| MII_WRITE;
 
 	value |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
-
 
 	/* Wait until any existing MII operation is complete */
 	do {} while (((readl(priv->ioaddr + mii_address)) & MII_BUSY) == 1);

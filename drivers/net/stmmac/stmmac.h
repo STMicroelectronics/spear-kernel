@@ -23,6 +23,7 @@
 #define DRV_MODULE_VERSION	"Apr_2010"
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
+#include <linux/clk.h>
 
 #include "common.h"
 #ifdef CONFIG_STMMAC_TIMER
@@ -92,8 +93,11 @@ struct stmmac_priv {
 #endif
 	int enh_desc;
 	int rx_coe;
+	int csum_off_engine;
 	int bugged_jumbo;
 	int no_csum_insertion;
+	struct clk *stmmac_clk;
+	unsigned long features;
 };
 
 #ifdef CONFIG_STM_DRIVERS

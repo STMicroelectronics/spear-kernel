@@ -23,7 +23,7 @@ config STMMAC_DA
 config STMMAC_DUAL_MAC
 	bool "STMMAC: dual mac support (EXPERIMENTAL)"
 	default n
-        depends on EXPERIMENTAL && STMMAC_ETH && !STMMAC_TIMER
+        depends on EXPERIMENTAL && STMMAC_ETH && !STMMAC_TIMER && !PLAT_SPEAR
 	help
 	  Some ST SoCs (for example the stx7141 and stx7200c2) have two
 	  Ethernet Controllers. This option turns on the second Ethernet
@@ -32,6 +32,7 @@ config STMMAC_DUAL_MAC
 config STMMAC_TIMER
 	bool "STMMAC Timer optimisation"
 	default n
+	depends on !PLAT_SPEAR
 	depends on RTC_HCTOSYS_DEVICE
 	help
 	  Use an external timer for mitigating the number of network
