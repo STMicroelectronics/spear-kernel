@@ -135,6 +135,8 @@ struct db9000fb_info {
 	struct notifier_block	freq_transition;
 	struct notifier_block	freq_policy;
 #endif
+	/* Completion - for PAN display alignment with VSYNC/BAU event */
+	struct completion vsync_notifier;
 };
 
 #define TO_INF(ptr, member) container_of(ptr, struct db9000fb_info, member)

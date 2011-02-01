@@ -85,7 +85,6 @@
 			DB9000_ISR_FBEM | DB9000_ISR_FNCM |\
 			DB9000_ISR_FLCM)
 
-
 extern uint32_t __attribute__((weak)) __div64_32(uint64_t *n, uint32_t base);
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on);
 static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on);
@@ -561,6 +560,7 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	struct fb_info *info)
 {
+	unsigned next_frame_address;
 	struct db9000fb_info *fbi =
 		container_of(info, struct db9000fb_info, fb);
 	u_int y_bottom = var->yoffset;
@@ -570,8 +570,18 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 
 	BUG_ON(y_bottom > var->yres_virtual);
 
-	fbi->reg_dbar = info->fix.smem_start +
+	next_frame_address = info->fix.smem_start +
 		(var->yoffset * info->fix.line_length);
+
+	/* There are some probing calls with no buffer switch */
+	if (fbi->reg_dbar != next_frame_address) {
+		lcd_writel(fbi, DB9000_DBAR, next_frame_address);
+		/*
+		 * Force waiting till the current buffer is completely drawn by
+		 * video controller
+		 */
+		wait_for_completion(&fbi->vsync_notifier);
+	}
 
 	return 0;
 }
@@ -890,8 +900,10 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 
 	if (isr & DB9000_ISR_BAU) { /*DMA Base Address Register Update to DCAR*/
 		dbar = lcd_readl(fbi, DB9000_DBAR);
-		if (dbar != fbi->reg_dbar)
-			lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
+		if (dbar != fbi->reg_dbar) {
+			fbi->reg_dbar = dbar;
+			complete(&fbi->vsync_notifier);
+		}
 	}
 
 	if (isr & DB9000_ISR_LDD) {
@@ -1692,6 +1704,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
+	init_completion(&fbi->vsync_notifier);
 
 	return 0;
 
@@ -1729,6 +1742,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	unregister_framebuffer(info);
 
 	db9000fb_disable_controller(fbi);
+	complete_and_exit(&fbi->vsync_notifier, 0);
 
 	if (fbi->fb.cmap.len)
 		fb_dealloc_cmap(&fbi->fb.cmap);
