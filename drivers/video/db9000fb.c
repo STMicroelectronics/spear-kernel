@@ -683,7 +683,9 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 				~DB9000_PCTR_PCB;
 			set_hsync_time(fbi, pcd);
 		}
-	}
+	} else
+		clk_set_rate(fbi->clk, 58000000);
+
 	fbi->reg_htr =
 	/* horizontal sync width */
 /*	DB9000_HTR_HSW((var->hsync_len) - 1) | */
@@ -1036,8 +1038,7 @@ db9000fb_freq_transition(
 		break;
 
 	case CPUFREQ_POSTCHANGE:
-		if (!(fbi->reg_pctr & DB9000_PCTR_PCI))
-			setup_parallel_timing(fbi, var);
+		setup_parallel_timing(fbi, var);
 		set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
 		break;
 	}

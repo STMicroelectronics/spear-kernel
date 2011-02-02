@@ -132,7 +132,6 @@ void clcd_set_plat_data(struct platform_device *pdev,
 			goto free_clcd_pclk;
 		}
 		clk_set_parent(fb_clk, clcd_pclk);
-		clk_set_rate(fb_clk, 58000000);
 
 free_clcd_pclk:
 		clk_put(clcd_pclk);
