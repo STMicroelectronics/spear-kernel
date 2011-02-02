@@ -14,8 +14,10 @@
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <plat/adc.h>
@@ -44,6 +46,29 @@ static struct resource emi_nor_resources[] = {
 		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+};
+
+/* ethernet device */
+static struct plat_stmmacphy_data phy_private_data = {
+	.bus_id = 0,
+	.phy_addr = -1,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_MII,
+};
+
+static struct resource phy_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear310_phy_device = {
+	.name = "stmmacphy",
+	.id = -1,
+	.num_resources = 1,
+	.resource = &phy_resources,
+	.dev.platform_data = &phy_private_data,
 };
 
 /* padmux devices to enable */
@@ -90,6 +115,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_adc_device,
 	&spear3xx_dmac_device,
 	&spear3xx_ehci_device,
+	&spear3xx_eth_device,
 	&spear3xx_i2c_device,
 	&spear3xx_jpeg_device,
 	&spear3xx_ohci0_device,
@@ -101,6 +127,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear310 specific devices */
 	&spear310_emi_nor_device,
 	&spear310_nand_device,
+	&spear310_phy_device,
 	&spear310_plgpio_device,
 	&spear310_tdm_hdlc_device,
 	&spear310_rs485_0_device,

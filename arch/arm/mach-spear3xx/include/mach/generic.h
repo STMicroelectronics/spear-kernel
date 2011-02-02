@@ -38,6 +38,7 @@ extern struct amba_device spear3xx_wdt_device;
 extern struct platform_device spear3xx_adc_device;
 extern struct platform_device spear3xx_dmac_device;
 extern struct platform_device spear3xx_ehci_device;
+extern struct platform_device spear3xx_eth_device;
 extern struct platform_device spear3xx_i2c_device;
 extern struct platform_device spear3xx_jpeg_device;
 extern struct platform_device spear3xx_ohci0_device;

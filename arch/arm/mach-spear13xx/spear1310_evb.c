@@ -11,13 +11,16 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <linux/stmpe610.h>
 #include <asm/mach-types.h>
 #include <plat/adc.h>
@@ -30,6 +33,7 @@
 #include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
+#include <mach/hardware.h>
 #include <mach/pcie.h>
 #include <mach/spear.h>
 
@@ -45,6 +49,213 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
 #endif
+
+/* Ethernet specific macros */
+#define GETH1_PHY_INTF_MASK	(0x7 << 4)
+#define GETH2_PHY_INTF_MASK	(0x7 << 7)
+#define GETH3_PHY_INTF_MASK	(0x7 << 10)
+#define GETH4_PHY_INTF_MASK	(0x7 << 13)
+#define PHY_INTF_MODE_RGMII	0x1
+#define PHY_INTF_MODE_RMII	0x4
+#define PHY_INTF_MODE_SMII	0x6
+
+static int phy_clk_cfg(void *data)
+{
+	struct platform_device *pdev = data;
+	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
+	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1));
+	struct clk *clk = NULL;
+	u32 tmp;
+	int ret;
+	char *pclk_name[] = {
+		"ras_pll2_clk",
+		"ras_tx125_clk",
+		"ras_tx50_clk",
+		"ras_synth0_clk",
+	};
+
+	pdata->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(pdata->clk)) {
+		ret = PTR_ERR(pdata->clk);
+		goto fail_get_phy_clk;
+	}
+
+	/*
+	 * Select 125 MHz clock for SMII mode, else the clock
+	 * for RMII mode is 50 Mhz.
+	 * The default clock for the GMAC is driven by pll-2
+	 * set to 125Mhz. In case the clock source is required to
+	 * be from tx pad, the gmac0 interface should select that
+	 * to pad clock.
+	 */
+	tmp = (pdata->interface == PHY_INTERFACE_MODE_RMII) ? 3 : 0;
+	clk = clk_get(NULL, pclk_name[tmp]);
+	if (IS_ERR(clk)) {
+		pr_err("%s:couldn't get %s as parent for MAC\n",
+				__func__, pclk_name[tmp]);
+		ret = PTR_ERR(clk);
+		goto fail_get_pclk;
+	}
+
+	tmp = readl(addr);
+	switch (pdata->bus_id) {
+	case 1:
+		tmp &= (~GETH1_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(PHY_INTF_MODE_SMII << 4) : (PHY_INTF_MODE_RMII << 4);
+		break;
+	case 2:
+		tmp &= (~GETH2_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(PHY_INTF_MODE_SMII << 7) : (PHY_INTF_MODE_RMII << 7);
+		break;
+	case 3:
+		tmp &= (~GETH3_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(PHY_INTF_MODE_SMII << 10) : (PHY_INTF_MODE_RMII << 10);
+		break;
+	case 4:
+		tmp &= (~GETH4_PHY_INTF_MASK);
+		tmp |= PHY_INTF_MODE_RGMII << 13;
+		break;
+	default:
+		clk_put(clk);
+		return -EINVAL;
+		break;
+	}
+
+	writel(tmp, addr);
+	clk_set_parent(pdata->clk, clk);
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII)
+		ret = clk_set_rate(clk, 50000000);
+
+	ret = clk_enable(pdata->clk);
+
+	return ret;
+fail_get_pclk:
+	clk_put(pdata->clk);
+fail_get_phy_clk:
+	return ret;
+}
+
+/* Ethernet phy-0 device registeration */
+static struct plat_stmmacphy_data phy0_private_data = {
+	.bus_id = 0,
+	.phy_addr = 5,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_GMII,
+};
+
+static struct resource phy0_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1310_phy0_device = {
+	.name		= "stmmacphy",
+	.id		= 0,
+	.num_resources	= 1,
+	.resource	= &phy0_resources,
+	.dev.platform_data = &phy0_private_data,
+};
+
+/* Ethernet phy-1 device registeration */
+static struct plat_stmmacphy_data phy1_private_data = {
+	.bus_id = 1,
+	.phy_addr = 1,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.phy_clk_cfg = phy_clk_cfg,
+};
+
+static struct resource phy1_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1310_phy1_device = {
+	.name = "stmmacphy",
+	.id = 1,
+	.num_resources = 1,
+	.resource = &phy1_resources,
+	.dev.platform_data = &phy1_private_data,
+};
+
+/* Ethernet phy-2 device registeration */
+static struct plat_stmmacphy_data phy2_private_data = {
+	.bus_id = 2,
+	.phy_addr = 2,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.phy_clk_cfg = phy_clk_cfg,
+};
+
+static struct resource phy2_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1310_phy2_device = {
+	.name = "stmmacphy",
+	.id = 2,
+	.num_resources = 1,
+	.resource = &phy2_resources,
+	.dev.platform_data = &phy2_private_data,
+};
+
+/* Ethernet phy-3 device registeration */
+static struct plat_stmmacphy_data phy3_private_data = {
+	.bus_id = 3,
+	.phy_addr = 3,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_RMII,
+	.phy_clk_cfg = phy_clk_cfg,
+};
+
+static struct resource phy3_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1310_phy3_device = {
+	.name = "stmmacphy",
+	.id = 3,
+	.num_resources = 1,
+	.resource = &phy3_resources,
+	.dev.platform_data = &phy3_private_data,
+};
+
+/* Ethernet phy-4 device registeration */
+static struct plat_stmmacphy_data phy4_private_data = {
+	.bus_id = 4,
+	.phy_addr = 4,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_RGMII,
+	.phy_clk_cfg = phy_clk_cfg,
+};
+
+static struct resource phy4_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1310_phy4_device = {
+	.name = "stmmacphy",
+	.id = 4,
+	.num_resources = 1,
+	.resource = &phy4_resources,
+	.dev.platform_data = &phy4_private_data,
+};
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -94,6 +305,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
 	&spear13xx_ehci1_device,
+	&spear13xx_eth0_device,
 	&spear13xx_i2c_device,
 	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,
@@ -111,8 +323,17 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1310 specific devices */
 	&spear1310_can0_device,
 	&spear1310_can1_device,
+	&spear1310_eth1_device,
+	&spear1310_eth2_device,
+	&spear1310_eth3_device,
+	&spear1310_eth4_device,
 	&spear1310_i2c1_device,
 	&spear1310_plgpio_device,
+	&spear1310_phy0_device,
+	&spear1310_phy1_device,
+	&spear1310_phy2_device,
+	&spear1310_phy3_device,
+	&spear1310_phy4_device,
 	&spear1310_ras_fsmc_nor_device,
 	&spear1310_rs485_0_device,
 	&spear1310_rs485_1_device,

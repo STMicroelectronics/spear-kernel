@@ -19,6 +19,8 @@
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/netdevice.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -180,6 +182,48 @@ struct platform_device spear13xx_dmac_device[] = {
 		},
 		.num_resources = ARRAY_SIZE(dmac_resources[1]),
 		.resource = dmac_resources[1],
+	},
+};
+
+/* Ethernet device registeration */
+static struct plat_stmmacenet_data ether0_platform_data = {
+	.bus_id = 0,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.pbl = 32,
+	.csum_off_engine = STMAC_TYPE_2,
+	.bugged_jumbo = 1,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth0_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_GETH0_BASE,
+		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GMAC_1,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GMAC_2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth0_dma_mask = ~(u32) 0;
+struct platform_device spear13xx_eth0_device = {
+	.name = "stmmaceth",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(eth0_resources),
+	.resource = eth0_resources,
+	.dev = {
+		.platform_data = &ether0_platform_data,
+		.dma_mask = &eth0_dma_mask,
+		.coherent_dma_mask = ~0,
 	},
 };
 

@@ -14,8 +14,10 @@
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <plat/adc.h>
@@ -25,6 +27,29 @@
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+
+/* Ethernet phy device registeration */
+static struct plat_stmmacphy_data phy_private_data = {
+	.bus_id = 0,
+	.phy_addr = 1,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_GMII,
+};
+
+static struct resource phy_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device phy_device = {
+	.name = "stmmacphy",
+	.id = -1,
+	.num_resources = 1,
+	.resource = &phy_resources,
+	.dev.platform_data = &phy_private_data,
+};
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
@@ -44,6 +69,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&dmac_device,
 	&ehci0_device,
 	&ehci1_device,
+	&eth_device,
+	&phy_device,
 	&i2c_device,
 	&jpeg_device,
 	&ohci0_device,

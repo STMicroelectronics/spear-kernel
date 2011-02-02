@@ -13,7 +13,9 @@
 
 #include <linux/clk.h>
 #include <linux/mtd/physmap.h>
+#include <linux/netdevice.h>
 #include <linux/ptrace.h>
+#include <linux/stmmac.h>
 #include <asm/irq.h>
 #include <asm/delay.h>
 #include <plat/hdlc.h>
@@ -461,6 +463,174 @@ struct platform_device spear1310_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+};
+
+/* Ethernet GETH-1 device registeration */
+static struct plat_stmmacenet_data ether1_platform_data = {
+	.bus_id = 1,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth1_resources[] = {
+	[0] = {
+		.start = SPEAR1310_GETH1_BASE,
+		.end = SPEAR1310_GETH1_BASE + SZ_32K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GETH1_SBD,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GETH1_PMT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth1_dma_mask = ~(u32) 0;
+struct platform_device spear1310_eth1_device = {
+	.name = "stmmaceth",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(eth1_resources),
+	.resource = eth1_resources,
+	.dev = {
+		.platform_data = &ether1_platform_data,
+		.dma_mask = &eth1_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
+};
+
+/* Ethernet GETH-2 device registeration */
+static struct plat_stmmacenet_data ether2_platform_data = {
+	.bus_id = 2,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth2_resources[] = {
+	[0] = {
+		.start = SPEAR1310_GETH2_BASE,
+		.end = SPEAR1310_GETH2_BASE + SZ_32K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GETH2_SBD,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GETH2_PMT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth2_dma_mask = ~(u32) 0;
+struct platform_device spear1310_eth2_device = {
+	.name = "stmmaceth",
+	.id = 2,
+	.num_resources = ARRAY_SIZE(eth2_resources),
+	.resource = eth2_resources,
+	.dev = {
+		.platform_data = &ether2_platform_data,
+		.dma_mask = &eth2_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
+};
+
+/* Ethernet GETH-3 device registeration */
+static struct plat_stmmacenet_data ether3_platform_data = {
+	.bus_id = 3,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth3_resources[] = {
+	[0] = {
+		.start = SPEAR1310_GETH3_BASE,
+		.end = SPEAR1310_GETH3_BASE + SZ_32K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GETH3_SBD,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GETH3_PMT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth3_dma_mask = ~(u32) 0;
+struct platform_device spear1310_eth3_device = {
+	.name = "stmmaceth",
+	.id = 3,
+	.num_resources = ARRAY_SIZE(eth3_resources),
+	.resource = eth3_resources,
+	.dev = {
+		.platform_data = &ether3_platform_data,
+		.dma_mask = &eth3_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
+};
+
+/* Ethernet GETH-4 device registeration */
+static struct plat_stmmacenet_data ether4_platform_data = {
+	.bus_id = 4,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.pbl = 8,
+	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth4_resources[] = {
+	[0] = {
+		.start = SPEAR1310_GETH4_BASE,
+		.end = SPEAR1310_GETH4_BASE + SZ_32K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_GETH4_SBD,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GETH4_PMT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 eth4_dma_mask = ~(u32) 0;
+struct platform_device spear1310_eth4_device = {
+	.name = "stmmaceth",
+	.id = 4,
+	.num_resources = ARRAY_SIZE(eth4_resources),
+	.resource = eth4_resources,
+	.dev = {
+		.platform_data = &ether4_platform_data,
+		.dma_mask = &eth4_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
 };
 
 /* i2c1 device registeration */
