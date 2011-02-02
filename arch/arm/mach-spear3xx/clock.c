@@ -748,7 +748,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
 	{ .dev_id = "dma",		.clk = &dma_clk},
 	{ .dev_id = "jpeg",		.clk = &jpeg_clk},
-	{ .dev_id = "gmac",		.clk = &gmac_clk},
+	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},
 	{ .dev_id = "smi",		.clk = &smi_clk},
 	{ .dev_id = "c3",		.clk = &c3_clk},
 	/* clock derived from apb clk */
