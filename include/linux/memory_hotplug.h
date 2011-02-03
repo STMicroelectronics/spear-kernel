@@ -69,7 +69,10 @@ extern void online_page(struct page *page);
 /* VM interface that may be used by firmware interface */
 extern int online_pages(unsigned long, unsigned long);
 extern void __offline_isolated_pages(unsigned long, unsigned long);
-extern int offline_pages(unsigned long, unsigned long, unsigned long);
+
+#ifdef CONFIG_MEMORY_HOTREMOVE
+extern bool is_pageblock_removable_nolock(struct page *page);
+#endif /* CONFIG_MEMORY_HOTREMOVE */
 
 /* reasonably generic interface to expand the physical pages in a zone  */
 extern int __add_pages(int nid, struct zone *zone, unsigned long start_pfn,
@@ -158,6 +161,9 @@ extern void register_page_bootmem_info_node(struct pglist_data *pgdat);
 extern void put_page_bootmem(struct page *page);
 #endif
 
+void lock_memory_hotplug(void);
+void unlock_memory_hotplug(void);
+
 #else /* ! CONFIG_MEMORY_HOTPLUG */
 /*
  * Stub functions for when hotplug is off
@@ -189,6 +195,9 @@ static inline void register_page_bootmem_info_node(struct pglist_data *pgdat)
 {
 }
 
+static inline void lock_memory_hotplug(void) {}
+static inline void unlock_memory_hotplug(void) {}
+
 #endif /* ! CONFIG_MEMORY_HOTPLUG */
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
@@ -203,6 +212,7 @@ static inline int is_mem_section_removable(unsigned long pfn,
 }
 #endif /* CONFIG_MEMORY_HOTREMOVE */
 
+extern int mem_online_node(int nid);
 extern int add_memory(int nid, u64 start, u64 size);
 extern int arch_add_memory(int nid, u64 start, u64 size);
 extern int remove_memory(u64 start, u64 size);

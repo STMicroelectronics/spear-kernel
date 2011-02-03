@@ -17,7 +17,6 @@
 #define MAX_CHANNEL_NUM		2
 #define MIN_CHANNEL_NUM		2
 
-extern struct snd_soc_dai spear13xx_i2s_dai;
 void get_dma_start_addr(struct snd_pcm_substream *substream);
 
 #endif /*end if i2s header file */

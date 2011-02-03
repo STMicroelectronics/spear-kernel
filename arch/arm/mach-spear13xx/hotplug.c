@@ -17,8 +17,8 @@
 #include <linux/errno.h>
 #include <linux/smp.h>
 #include <linux/completion.h>
-
 #include <asm/cacheflush.h>
+#include <asm/system.h>
 
 extern volatile int pen_release;
 
@@ -31,7 +31,7 @@ static inline void cpu_enter_lowpower(void)
 	flush_cache_all();
 	asm volatile(
 	"	mcr	p15, 0, %1, c7, c5, 0\n"
-	"	mcr	p15, 0, %1, c7, c10, 4\n"
+	"	dsb\n"
 	/*
 	 * Turn off coherency
 	 */
@@ -43,7 +43,7 @@ static inline void cpu_enter_lowpower(void)
 	"	mcr	p15, 0, %0, c1, c0, 0\n"
 	  : "=&r" (v)
 	  : "r" (0)
-	  : "cc");
+	  : "cc", "memory");
 }
 
 static inline void cpu_leave_lowpower(void)
@@ -63,19 +63,8 @@ static inline void cpu_leave_lowpower(void)
 
 static inline void platform_do_lowpower(unsigned int cpu)
 {
-	/*
-	 * there is no power-control hardware on this platform, so all
-	 * we can do is put the core into WFI; this is safe as the calling
-	 * code will have already disabled interrupts
-	 */
 	for (;;) {
-		/*
-		 * here's the WFI
-		 */
-		asm(".word	0xe320f003\n"
-		    :
-		    :
-		    : "memory", "cc");
+		wfi();
 
 		if (pen_release == cpu) {
 			/*
@@ -136,7 +125,7 @@ void __cpuinit platform_cpu_die(unsigned int cpu)
 	cpu_leave_lowpower();
 }
 
-int mach_cpu_disable(unsigned int cpu)
+int platform_cpu_disable(unsigned int cpu)
 {
 	/*
 	 * we don't allow CPU 0 to be shutdown (it is still too special

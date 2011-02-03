@@ -41,6 +41,7 @@ __start_interrupts:
 	. = 0x200
 _machine_check_pSeries:
 	HMT_MEDIUM
+	DO_KVM	0x200
 	mtspr	SPRN_SPRG_SCRATCH0,r13		/* save r13 */
 	EXCEPTION_PROLOG_PSERIES(PACA_EXMC, machine_check_common)
 
@@ -48,6 +49,7 @@ _machine_check_pSeries:
 	.globl data_access_pSeries
 data_access_pSeries:
 	HMT_MEDIUM
+	DO_KVM	0x300
 	mtspr	SPRN_SPRG_SCRATCH0,r13
 BEGIN_FTR_SECTION
 	mfspr	r13,SPRN_SPRG_PACA
@@ -77,6 +79,7 @@ ALT_FTR_SECTION_END_IFCLR(CPU_FTR_SLB)
 	.globl data_access_slb_pSeries
 data_access_slb_pSeries:
 	HMT_MEDIUM
+	DO_KVM	0x380
 	mtspr	SPRN_SPRG_SCRATCH0,r13
 	mfspr	r13,SPRN_SPRG_PACA		/* get paca address into r13 */
 	std	r3,PACA_EXSLB+EX_R3(r13)
@@ -115,6 +118,7 @@ data_access_slb_pSeries:
 	.globl instruction_access_slb_pSeries
 instruction_access_slb_pSeries:
 	HMT_MEDIUM
+	DO_KVM	0x480
 	mtspr	SPRN_SPRG_SCRATCH0,r13
 	mfspr	r13,SPRN_SPRG_PACA		/* get paca address into r13 */
 	std	r3,PACA_EXSLB+EX_R3(r13)
@@ -154,6 +158,7 @@ instruction_access_slb_pSeries:
 	.globl	system_call_pSeries
 system_call_pSeries:
 	HMT_MEDIUM
+	DO_KVM	0xc00
 BEGIN_FTR_SECTION
 	cmpdi	r0,0x1ebe
 	beq-	1f
@@ -185,13 +190,19 @@ END_FTR_SECTION_IFSET(CPU_FTR_REAL_LE)
 	 * prolog code of the PerformanceMonitor one. A little
 	 * trickery is thus necessary
 	 */
+performance_monitor_pSeries_1:
 	. = 0xf00
+	DO_KVM	0xf00
 	b	performance_monitor_pSeries
 
+altivec_unavailable_pSeries_1:
 	. = 0xf20
+	DO_KVM	0xf20
 	b	altivec_unavailable_pSeries
 
+vsx_unavailable_pSeries_1:
 	. = 0xf40
+	DO_KVM	0xf40
 	b	vsx_unavailable_pSeries
 
 #ifdef CONFIG_CBE_RAS
@@ -287,6 +298,12 @@ slb_miss_user_pseries:
 	rfid
 	b	.				/* prevent spec. execution */
 #endif /* __DISABLED__ */
+
+/* KVM's trampoline code needs to be close to the interrupt handlers */
+
+#ifdef CONFIG_KVM_BOOK3S_64_HANDLER
+#include "../kvm/book3s_rmhandlers.S"
+#endif
 
 	.align	7
 	.globl	__end_interrupts
@@ -724,8 +741,11 @@ _STATIC(do_hash_page)
 	std	r3,_DAR(r1)
 	std	r4,_DSISR(r1)
 
-	andis.	r0,r4,0xa450		/* weird error? */
+	andis.	r0,r4,0xa410		/* weird error? */
 	bne-	handle_page_fault	/* if not, try to insert a HPTE */
+	andis.  r0,r4,DSISR_DABRMATCH@h
+	bne-    handle_dabr_fault
+
 BEGIN_FTR_SECTION
 	andis.	r0,r4,0x0020		/* Is it a segment table fault? */
 	bne-	do_ste_alloc		/* If so handle it */
@@ -804,13 +824,22 @@ END_FW_FTR_SECTION_IFCLR(FW_FEATURE_ISERIES)
 
 	/*
 	 * hash_page couldn't handle it, set soft interrupt enable back
-	 * to what it was before the trap.  Note that .raw_local_irq_restore
+	 * to what it was before the trap.  Note that .arch_local_irq_restore
 	 * handles any interrupts pending at this point.
 	 */
 	ld	r3,SOFTE(r1)
 	TRACE_AND_RESTORE_IRQ_PARTIAL(r3, 11f)
-	bl	.raw_local_irq_restore
+	bl	.arch_local_irq_restore
 	b	11f
+
+/* We have a data breakpoint exception - handle it */
+handle_dabr_fault:
+	bl	.save_nvgprs
+	ld      r4,_DAR(r1)
+	ld      r5,_DSISR(r1)
+	addi    r3,r1,STACK_FRAME_OVERHEAD
+	bl      .do_dabr
+	b       .ret_from_except_lite
 
 /* Here we have a page fault that hash_page can't handle. */
 handle_page_fault:

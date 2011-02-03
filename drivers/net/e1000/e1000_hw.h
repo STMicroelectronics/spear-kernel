@@ -35,12 +35,13 @@
 
 #include "e1000_osdep.h"
 
+
 /* Forward declarations of structures used by the shared code */
 struct e1000_hw;
 struct e1000_hw_stats;
 
 /* Enumerated types specific to the e1000 hardware */
-/* Media Access Controlers */
+/* Media Access Controllers */
 typedef enum {
 	e1000_undefined = 0,
 	e1000_82542_rev2_0,

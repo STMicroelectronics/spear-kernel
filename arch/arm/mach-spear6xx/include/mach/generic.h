@@ -19,7 +19,6 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
-#include <plat/device.h>
 
 /*
  * Each GPT has 2 timer channels
@@ -41,11 +40,10 @@ extern struct platform_device ehci0_device;
 extern struct platform_device ehci1_device;
 extern struct platform_device eth_device;
 extern struct platform_device i2c_device;
+extern struct platform_device jpeg_device;
 extern struct platform_device nand_device;
 extern struct platform_device ohci0_device;
 extern struct platform_device ohci1_device;
-extern struct platform_device phy_device;
-extern struct platform_device jpeg_device;
 extern struct platform_device rtc_device;
 extern struct platform_device smi_device;
 extern struct platform_device touchscreen_device;

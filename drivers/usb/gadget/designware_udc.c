@@ -2297,14 +2297,15 @@ static struct dw_udc_dev the_controller = {
  * disconnect is reported. then a host may connect again, or
  * the driver might get unbound.
  */
-int usb_gadget_register_driver(struct usb_gadget_driver *driver)
+int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
+		int (*bind)(struct usb_gadget *))
 {
 	struct dw_udc_dev *udev = &the_controller;
 	int retval;
 	unsigned long flags;
 
 	/* Paranoid */
-	if (!driver || driver->speed < USB_SPEED_FULL || !driver->bind ||
+	if (!driver || driver->speed < USB_SPEED_FULL || !bind ||
 			!driver->disconnect || !driver->setup)
 		return -EINVAL;
 	if (!udev)
@@ -2322,7 +2323,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		return retval;
 	}
 
-	retval = driver->bind(&udev->gadget);
+	retval = bind(&udev->gadget);
 	if (retval) {
 		dev_err(udev->dev, "bind to driver %s --> error %d\n",
 				driver->driver.name, retval);
@@ -2353,7 +2354,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 
 	return 0;
 }
-EXPORT_SYMBOL(usb_gadget_register_driver);
+EXPORT_SYMBOL(usb_gadget_probe_driver);
 
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {

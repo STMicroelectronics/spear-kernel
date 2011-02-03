@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <mach/misc_regs.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -130,7 +131,7 @@ void get_dma_start_addr(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	struct spear13xx_i2s_dev *dev = rtd->dai->cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
 
 	prtd->txdma = dev->res->start + TXDMA;
 	prtd->rxdma = dev->res->start + RXDMA;
@@ -152,7 +153,7 @@ static int
 spear13xx_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	struct spear13xx_i2s_dev *dev = cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 	struct clk *sclk_clk, *src_clk;
 	int ret = -EINVAL;
 
@@ -286,9 +287,7 @@ i2s_stop(struct spear13xx_i2s_dev *dev, struct snd_pcm_substream *substream)
 
 static irqreturn_t i2s_play_irq(int irq, void *_dev)
 {
-	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)_dev;
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_i2s_dev *dev = rtd->dai->cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = (struct spear13xx_i2s_dev *)_dev;
 	u32 ch0, ch1;
 
 	/* check for the tx data overrun condition */
@@ -317,9 +316,7 @@ static irqreturn_t i2s_play_irq(int irq, void *_dev)
 
 static irqreturn_t i2s_capture_irq(int irq, void *_dev)
 {
-	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)_dev;
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_i2s_dev *dev = rtd->dai->cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = (struct spear13xx_i2s_dev *)_dev;
 	u32 ch0, ch1;
 
 	/* check for the rx data overrun condition */
@@ -350,16 +347,15 @@ static int
 spear13xx_i2s_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
-	struct spear13xx_i2s_dev *dev = cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 	u32 ret = 0;
 
-	cpu_dai->dma_data = dev->dma_params[substream->stream];
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		ret = request_irq(dev->play_irq, i2s_play_irq, 0,
-				"spear13xx-i2s", substream);
+				"spear13xx-i2s", dev);
 	} else {
 		ret = request_irq(dev->capture_irq, i2s_capture_irq,
-				0, "spear13xx-i2s", substream);
+				0, "spear13xx-i2s", dev);
 	}
 	if (ret) {
 		dev_err(dev->dev, "irq registration failure\n");
@@ -375,6 +371,7 @@ spear13xx_i2s_startup(struct snd_pcm_substream *substream,
 
 	/* unmask i2s interrupt for channel 1 */
 	i2s_write_reg(dev->i2s_base, IMR1, 0x00);
+	snd_soc_dai_set_dma_data(cpu_dai, substream, dev->dma_params);
 
 	return 0;
 }
@@ -383,7 +380,7 @@ static int spear13xx_i2s_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
 {
-	struct spear13xx_i2s_dev *dev = dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	u32 channel;
 
 	channel = params_channels(params);
@@ -397,14 +394,14 @@ static void
 spear13xx_i2s_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
-	struct spear13xx_i2s_dev *dev = dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (dev->play_irq)
-			free_irq(dev->play_irq, substream);
+			free_irq(dev->play_irq, dev);
 	} else {
 		if (dev->capture_irq)
-			free_irq(dev->capture_irq, substream);
+			free_irq(dev->capture_irq, dev);
 	}
 
 	/* mask i2s interrupt for channel 0 */
@@ -413,14 +410,15 @@ spear13xx_i2s_shutdown(struct snd_pcm_substream *substream,
 	/* mask i2s interrupt for channel 1 */
 	i2s_write_reg(dev->i2s_base, IMR1, 0x33);
 
+	i2s_stop(dev, substream);
+
 }
 
 static int
 spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_i2s_dev *dev = rtd->dai->cpu_dai->private_data;
+	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
 	switch (cmd) {
@@ -453,9 +451,7 @@ static struct snd_soc_dai_ops spear13xx_i2s_dai_ops = {
 	.set_sysclk	= spear13xx_i2s_set_dai_sysclk,
 };
 
-struct snd_soc_dai spear13xx_i2s_dai = {
-	.name = "spear-i2s",
-	.id = 0,
+struct snd_soc_dai_driver spear13xx_i2s_dai = {
 	.playback = {
 		.channels_min = MAX_CHANNEL_NUM,
 		.channels_max = MIN_CHANNEL_NUM,
@@ -532,15 +528,17 @@ spear13xx_i2s_probe(struct platform_device *pdev)
 		goto err_free_play_irq;
 	}
 
-	spear13xx_i2s_dai.private_data = dev;
-	spear13xx_i2s_dai.dev = &pdev->dev;
-	ret = snd_soc_register_dai(&spear13xx_i2s_dai);
+	dev->dev = &pdev->dev;
+	dev_set_drvdata(&pdev->dev, dev);
+
+	ret = snd_soc_register_dai(&pdev->dev, &spear13xx_i2s_dai);
 	if (ret != 0)
 		goto err_free_capture_irq;
 
 	return 0;
 
 err_free_capture_irq:
+	dev_set_drvdata(&pdev->dev, NULL);
 	free_irq(dev->capture_irq, pdev);
 err_free_play_irq:
 	free_irq(dev->play_irq, pdev);
@@ -554,16 +552,15 @@ err_kfree:
 	kfree(dev);
 err_release_mem_region:
 	release_mem_region(res->start, resource_size(res));
-
 	return ret;
 }
 
 static int
 spear13xx_i2s_remove(struct platform_device *pdev)
 {
-	struct spear13xx_i2s_dev *dev = spear13xx_i2s_dai.private_data;
+	struct spear13xx_i2s_dev *dev = dev_get_drvdata(&pdev->dev);
 
-	snd_soc_unregister_dai(&spear13xx_i2s_dai);
+	snd_soc_unregister_dai(&pdev->dev);
 	free_irq(dev->capture_irq, pdev);
 	free_irq(dev->play_irq, pdev);
 	iounmap(dev->i2s_base);
@@ -575,37 +572,9 @@ spear13xx_i2s_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-
-static int
-spear13xx_i2s_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	struct spear13xx_i2s_dev *dev = spear13xx_i2s_dai.private_data;
-
-	clk_disable(dev->clk);
-
-	return 0;
-}
-
-static int spear13xx_i2s_resume(struct platform_device *pdev)
-{
-	struct spear13xx_i2s_dev *dev = spear13xx_i2s_dai.private_data;
-
-	clk_enable(dev->clk);
-
-	return 0;
-}
-
-#else
-#define spear13xx_i2s_suspend	NULL
-#define spear13xx_i2s_resume	NULL
-#endif
-
 static struct platform_driver spear13xx_i2s_driver = {
 	.probe		= spear13xx_i2s_probe,
 	.remove		= spear13xx_i2s_remove,
-	.suspend	= spear13xx_i2s_suspend,
-	.resume		= spear13xx_i2s_resume,
 	.driver		= {
 		.name	= "spear13xx-i2s",
 		.owner	= THIS_MODULE,
@@ -624,7 +593,6 @@ static void __exit spear13xx_i2s_exit(void)
 }
 module_exit(spear13xx_i2s_exit);
 
-EXPORT_SYMBOL_GPL(spear13xx_i2s_dai);
 MODULE_AUTHOR("Rajeev Kumar");
 MODULE_DESCRIPTION("SPEAr I2S SoC Interface");
 MODULE_LICENSE("GPL");

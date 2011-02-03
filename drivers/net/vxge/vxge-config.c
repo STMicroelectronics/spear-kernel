@@ -7,17 +7,191 @@
  * system is licensed under the GPL.
  * See the file COPYING in this distribution for more information.
  *
- * vxge-config.c: Driver for Neterion Inc's X3100 Series 10GbE PCIe I/O
+ * vxge-config.c: Driver for Exar Corp's X3100 Series 10GbE PCIe I/O
  *                Virtualized Server Adapter.
- * Copyright(c) 2002-2009 Neterion Inc.
+ * Copyright(c) 2002-2010 Exar Corp.
  ******************************************************************************/
 #include <linux/vmalloc.h>
 #include <linux/etherdevice.h>
 #include <linux/pci.h>
 #include <linux/pci_hotplug.h>
+#include <linux/slab.h>
 
 #include "vxge-traffic.h"
 #include "vxge-config.h"
+
+static enum vxge_hw_status
+__vxge_hw_fifo_create(
+	struct __vxge_hw_vpath_handle *vpath_handle,
+	struct vxge_hw_fifo_attr *attr);
+
+static enum vxge_hw_status
+__vxge_hw_fifo_abort(
+	struct __vxge_hw_fifo *fifoh);
+
+static enum vxge_hw_status
+__vxge_hw_fifo_reset(
+	struct __vxge_hw_fifo *ringh);
+
+static enum vxge_hw_status
+__vxge_hw_fifo_delete(
+	struct __vxge_hw_vpath_handle *vpath_handle);
+
+static struct __vxge_hw_blockpool_entry *
+__vxge_hw_blockpool_block_allocate(struct __vxge_hw_device *hldev,
+			u32 size);
+
+static void
+__vxge_hw_blockpool_block_free(struct __vxge_hw_device *hldev,
+			struct __vxge_hw_blockpool_entry *entry);
+
+static void vxge_hw_blockpool_block_add(struct __vxge_hw_device *devh,
+					void *block_addr,
+					u32 length,
+					struct pci_dev *dma_h,
+					struct pci_dev *acc_handle);
+
+static enum vxge_hw_status
+__vxge_hw_blockpool_create(struct __vxge_hw_device *hldev,
+			struct __vxge_hw_blockpool  *blockpool,
+			u32 pool_size,
+			u32 pool_max);
+
+static void
+__vxge_hw_blockpool_destroy(struct __vxge_hw_blockpool  *blockpool);
+
+static void *
+__vxge_hw_blockpool_malloc(struct __vxge_hw_device *hldev,
+			u32 size,
+			struct vxge_hw_mempool_dma *dma_object);
+
+static void
+__vxge_hw_blockpool_free(struct __vxge_hw_device *hldev,
+			void *memblock,
+			u32 size,
+			struct vxge_hw_mempool_dma *dma_object);
+
+
+static struct __vxge_hw_channel*
+__vxge_hw_channel_allocate(struct __vxge_hw_vpath_handle *vph,
+			enum __vxge_hw_channel_type type, u32 length,
+			u32 per_dtr_space, void *userdata);
+
+static void
+__vxge_hw_channel_free(
+	struct __vxge_hw_channel *channel);
+
+static enum vxge_hw_status
+__vxge_hw_channel_initialize(
+	struct __vxge_hw_channel *channel);
+
+static enum vxge_hw_status
+__vxge_hw_channel_reset(
+	struct __vxge_hw_channel *channel);
+
+static enum vxge_hw_status __vxge_hw_ring_delete(struct __vxge_hw_vpath_handle *vp);
+
+static enum vxge_hw_status
+__vxge_hw_device_fifo_config_check(struct vxge_hw_fifo_config *fifo_config);
+
+static enum vxge_hw_status
+__vxge_hw_device_config_check(struct vxge_hw_device_config *new_config);
+
+static void
+__vxge_hw_device_id_get(struct __vxge_hw_device *hldev);
+
+static void
+__vxge_hw_device_host_info_get(struct __vxge_hw_device *hldev);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_card_info_get(
+	u32 vp_id,
+	struct vxge_hw_vpath_reg __iomem *vpath_reg,
+	struct vxge_hw_device_hw_info *hw_info);
+
+static enum vxge_hw_status
+__vxge_hw_device_initialize(struct __vxge_hw_device *hldev);
+
+static void
+__vxge_hw_device_pci_e_init(struct __vxge_hw_device *hldev);
+
+static enum vxge_hw_status
+__vxge_hw_device_reg_addr_get(struct __vxge_hw_device *hldev);
+
+static enum vxge_hw_status
+__vxge_hw_device_register_poll(
+	void __iomem	*reg,
+	u64 mask, u32 max_millis);
+
+static inline enum vxge_hw_status
+__vxge_hw_pio_mem_write64(u64 val64, void __iomem *addr,
+			  u64 mask, u32 max_millis)
+{
+	__vxge_hw_pio_mem_write32_lower((u32)vxge_bVALn(val64, 32, 32), addr);
+	wmb();
+
+	__vxge_hw_pio_mem_write32_upper((u32)vxge_bVALn(val64, 0, 32), addr);
+	wmb();
+
+	return  __vxge_hw_device_register_poll(addr, mask, max_millis);
+}
+
+static struct vxge_hw_mempool*
+__vxge_hw_mempool_create(struct __vxge_hw_device *devh, u32 memblock_size,
+			 u32 item_size,	u32 private_size, u32 items_initial,
+			 u32 items_max,	struct vxge_hw_mempool_cbs *mp_callback,
+			 void *userdata);
+static void __vxge_hw_mempool_destroy(struct vxge_hw_mempool *mempool);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_stats_get(struct __vxge_hw_virtualpath *vpath,
+			  struct vxge_hw_vpath_stats_hw_info *hw_stats);
+
+static enum vxge_hw_status
+vxge_hw_vpath_stats_enable(struct __vxge_hw_vpath_handle *vpath_handle);
+
+static enum vxge_hw_status
+__vxge_hw_legacy_swapper_set(struct vxge_hw_legacy_reg __iomem *legacy_reg);
+
+static u64
+__vxge_hw_vpath_pci_func_mode_get(u32  vp_id,
+				  struct vxge_hw_vpath_reg __iomem *vpath_reg);
+
+static u32
+__vxge_hw_vpath_func_id_get(u32 vp_id, struct vxge_hw_vpmgmt_reg __iomem *vpmgmt_reg);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_addr_get(u32 vp_id, struct vxge_hw_vpath_reg __iomem *vpath_reg,
+			 u8 (macaddr)[ETH_ALEN], u8 (macaddr_mask)[ETH_ALEN]);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_reset_check(struct __vxge_hw_virtualpath *vpath);
+
+
+static enum vxge_hw_status
+__vxge_hw_vpath_sw_reset(struct __vxge_hw_device *devh, u32 vp_id);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_fw_ver_get(u32 vp_id, struct vxge_hw_vpath_reg __iomem *vpath_reg,
+			   struct vxge_hw_device_hw_info *hw_info);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_mac_configure(struct __vxge_hw_device *devh, u32 vp_id);
+
+static void
+__vxge_hw_vp_terminate(struct __vxge_hw_device *devh, u32 vp_id);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_stats_access(struct __vxge_hw_virtualpath *vpath,
+			     u32 operation, u32 offset,	u64 *stat);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_xmac_tx_stats_get(struct __vxge_hw_virtualpath	*vpath,
+				  struct vxge_hw_xmac_vpath_tx_stats *vpath_tx_stats);
+
+static enum vxge_hw_status
+__vxge_hw_vpath_xmac_rx_stats_get(struct __vxge_hw_virtualpath	*vpath,
+				  struct vxge_hw_xmac_vpath_rx_stats *vpath_rx_stats);
 
 /*
  * __vxge_hw_channel_allocate - Allocate memory for channel
@@ -182,8 +356,6 @@ __vxge_hw_device_pci_e_init(struct __vxge_hw_device *hldev)
 	pci_write_config_word(hldev->pdev, PCI_COMMAND, cmd);
 
 	pci_save_state(hldev->pdev);
-
-	return;
 }
 
 /*
@@ -191,7 +363,7 @@ __vxge_hw_device_pci_e_init(struct __vxge_hw_device *hldev)
  * Will poll certain register for specified amount of time.
  * Will poll until masked bit is not cleared.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_device_register_poll(void __iomem *reg, u64 mask, u32 max_millis)
 {
 	u64 val64;
@@ -222,7 +394,7 @@ __vxge_hw_device_register_poll(void __iomem *reg, u64 mask, u32 max_millis)
  * in progress
  * This routine checks the vpath reset in progress register is turned zero
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_device_vpath_reset_in_prog_check(u64 __iomem *vpath_rst_in_prog)
 {
 	enum vxge_hw_status status;
@@ -237,7 +409,7 @@ __vxge_hw_device_vpath_reset_in_prog_check(u64 __iomem *vpath_rst_in_prog)
  * This routine sets the swapper and reads the toc pointer and returns the
  * memory mapped address of the toc
  */
-struct vxge_hw_toc_reg __iomem *
+static struct vxge_hw_toc_reg __iomem *
 __vxge_hw_device_toc_get(void __iomem *bar0)
 {
 	u64 val64;
@@ -341,8 +513,6 @@ void __vxge_hw_device_id_get(struct __vxge_hw_device *hldev)
 
 	hldev->minor_revision =
 		(u8)VXGE_HW_TITAN_ASIC_ID_GET_INITIAL_MINOR_REVISION(val64);
-
-	return;
 }
 
 /*
@@ -382,6 +552,22 @@ __vxge_hw_device_access_rights_get(u32 host_type, u32 func_id)
 	return access_rights;
 }
 /*
+ * __vxge_hw_device_is_privilaged
+ * This routine checks if the device function is privilaged or not
+ */
+
+enum vxge_hw_status
+__vxge_hw_device_is_privilaged(u32 host_type, u32 func_id)
+{
+	if (__vxge_hw_device_access_rights_get(host_type,
+		func_id) &
+		VXGE_HW_DEVICE_ACCESS_RIGHT_MRPCIM)
+		return VXGE_HW_OK;
+	else
+		return VXGE_HW_ERR_PRIVILAGED_OPEARATION;
+}
+
+/*
  * __vxge_hw_device_host_info_get
  * This routine returns the host type assignments
  */
@@ -411,8 +597,6 @@ void __vxge_hw_device_host_info_get(struct __vxge_hw_device *hldev)
 		hldev->first_vp_id = i;
 		break;
 	}
-
-	return;
 }
 
 /*
@@ -446,220 +630,6 @@ __vxge_hw_verify_pci_e_info(struct __vxge_hw_device *hldev)
 	return VXGE_HW_OK;
 }
 
-enum vxge_hw_status
-__vxge_hw_device_is_privilaged(struct __vxge_hw_device *hldev)
-{
-	if ((hldev->host_type == VXGE_HW_NO_MR_NO_SR_NORMAL_FUNCTION ||
-	hldev->host_type == VXGE_HW_MR_NO_SR_VH0_BASE_FUNCTION ||
-	hldev->host_type == VXGE_HW_NO_MR_SR_VH0_FUNCTION0) &&
-	(hldev->func_id == 0))
-		return VXGE_HW_OK;
-	else
-		return VXGE_HW_ERR_PRIVILAGED_OPEARATION;
-}
-
-/*
- * vxge_hw_wrr_rebalance - Rebalance the RX_WRR and KDFC_WRR calandars.
- * Rebalance the RX_WRR and KDFC_WRR calandars.
- */
-static enum
-vxge_hw_status vxge_hw_wrr_rebalance(struct __vxge_hw_device *hldev)
-{
-	u64 val64;
-	u32 wrr_states[VXGE_HW_WEIGHTED_RR_SERVICE_STATES];
-	u32 i, j, how_often = 1;
-	enum vxge_hw_status status = VXGE_HW_OK;
-
-	status = __vxge_hw_device_is_privilaged(hldev);
-	if (status != VXGE_HW_OK)
-		goto exit;
-
-	/* Reset the priorities assigned to the WRR arbitration
-	phases for the receive traffic */
-	for (i = 0; i < VXGE_HW_WRR_RING_COUNT; i++)
-		writeq(0, ((&hldev->mrpcim_reg->rx_w_round_robin_0) + i));
-
-	/* Reset the transmit FIFO servicing calendar for FIFOs */
-	for (i = 0; i < VXGE_HW_WRR_FIFO_COUNT; i++) {
-		writeq(0, ((&hldev->mrpcim_reg->kdfc_w_round_robin_0) + i));
-		writeq(0, ((&hldev->mrpcim_reg->kdfc_w_round_robin_20) + i));
-	}
-
-	/* Assign WRR priority  0 for all FIFOs */
-	for (i = 1; i < VXGE_HW_MAX_VIRTUAL_PATHS; i++) {
-		writeq(VXGE_HW_KDFC_FIFO_0_CTRL_WRR_NUMBER(0),
-				((&hldev->mrpcim_reg->kdfc_fifo_0_ctrl)  + i));
-
-		writeq(VXGE_HW_KDFC_FIFO_17_CTRL_WRR_NUMBER(0),
-			((&hldev->mrpcim_reg->kdfc_fifo_17_ctrl) + i));
-	}
-
-	/* Reset to service non-offload doorbells */
-	writeq(0, &hldev->mrpcim_reg->kdfc_entry_type_sel_0);
-	writeq(0, &hldev->mrpcim_reg->kdfc_entry_type_sel_1);
-
-	/* Set priority 0 to all receive queues */
-	writeq(0, &hldev->mrpcim_reg->rx_queue_priority_0);
-	writeq(0, &hldev->mrpcim_reg->rx_queue_priority_1);
-	writeq(0, &hldev->mrpcim_reg->rx_queue_priority_2);
-
-	/* Initialize all the slots as unused */
-	for (i = 0; i < VXGE_HW_WEIGHTED_RR_SERVICE_STATES; i++)
-		wrr_states[i] = -1;
-
-	/* Prepare the Fifo service states */
-	for (i = 0; i < VXGE_HW_MAX_VIRTUAL_PATHS; i++) {
-
-		if (!hldev->config.vp_config[i].min_bandwidth)
-			continue;
-
-		how_often = VXGE_HW_VPATH_BANDWIDTH_MAX /
-				hldev->config.vp_config[i].min_bandwidth;
-		if (how_often) {
-
-			for (j = 0; j < VXGE_HW_WRR_FIFO_SERVICE_STATES;) {
-				if (wrr_states[j] == -1) {
-					wrr_states[j] = i;
-					/* Make sure each fifo is serviced
-					 * atleast once */
-					if (i == j)
-						j += VXGE_HW_MAX_VIRTUAL_PATHS;
-					else
-						j += how_often;
-				} else
-					j++;
-			}
-		}
-	}
-
-	/* Fill the unused slots with 0 */
-	for (j = 0; j < VXGE_HW_WEIGHTED_RR_SERVICE_STATES; j++) {
-		if (wrr_states[j] == -1)
-			wrr_states[j] = 0;
-	}
-
-	/* Assign WRR priority number for FIFOs */
-	for (i = 0; i < VXGE_HW_MAX_VIRTUAL_PATHS; i++) {
-		writeq(VXGE_HW_KDFC_FIFO_0_CTRL_WRR_NUMBER(i),
-				((&hldev->mrpcim_reg->kdfc_fifo_0_ctrl) + i));
-
-		writeq(VXGE_HW_KDFC_FIFO_17_CTRL_WRR_NUMBER(i),
-			((&hldev->mrpcim_reg->kdfc_fifo_17_ctrl) + i));
-	}
-
-	/* Modify the servicing algorithm applied to the 3 types of doorbells.
-	i.e, none-offload, message and offload */
-	writeq(VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_0(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_1(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_2(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_3(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_4(1) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_5(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_6(0) |
-				VXGE_HW_KDFC_ENTRY_TYPE_SEL_0_NUMBER_7(0),
-				&hldev->mrpcim_reg->kdfc_entry_type_sel_0);
-
-	writeq(VXGE_HW_KDFC_ENTRY_TYPE_SEL_1_NUMBER_8(1),
-				&hldev->mrpcim_reg->kdfc_entry_type_sel_1);
-
-	for (i = 0, j = 0; i < VXGE_HW_WRR_FIFO_COUNT; i++) {
-
-		val64 = VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_0(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_1(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_2(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_3(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_4(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_5(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_6(wrr_states[j++]);
-		val64 |= VXGE_HW_KDFC_W_ROUND_ROBIN_0_NUMBER_7(wrr_states[j++]);
-
-		writeq(val64, (&hldev->mrpcim_reg->kdfc_w_round_robin_0 + i));
-		writeq(val64, (&hldev->mrpcim_reg->kdfc_w_round_robin_20 + i));
-	}
-
-	/* Set up the priorities assigned to receive queues */
-	writeq(VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_0(0) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_1(1) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_2(2) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_3(3) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_4(4) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_5(5) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_6(6) |
-			VXGE_HW_RX_QUEUE_PRIORITY_0_RX_Q_NUMBER_7(7),
-			&hldev->mrpcim_reg->rx_queue_priority_0);
-
-	writeq(VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_8(8) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_9(9) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_10(10) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_11(11) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_12(12) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_13(13) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_14(14) |
-			VXGE_HW_RX_QUEUE_PRIORITY_1_RX_Q_NUMBER_15(15),
-			&hldev->mrpcim_reg->rx_queue_priority_1);
-
-	writeq(VXGE_HW_RX_QUEUE_PRIORITY_2_RX_Q_NUMBER_16(16),
-				&hldev->mrpcim_reg->rx_queue_priority_2);
-
-	/* Initialize all the slots as unused */
-	for (i = 0; i < VXGE_HW_WEIGHTED_RR_SERVICE_STATES; i++)
-		wrr_states[i] = -1;
-
-	/* Prepare the Ring service states */
-	for (i = 0; i < VXGE_HW_MAX_VIRTUAL_PATHS; i++) {
-
-		if (!hldev->config.vp_config[i].min_bandwidth)
-			continue;
-
-		how_often = VXGE_HW_VPATH_BANDWIDTH_MAX /
-				hldev->config.vp_config[i].min_bandwidth;
-
-		if (how_often) {
-			for (j = 0; j < VXGE_HW_WRR_RING_SERVICE_STATES;) {
-				if (wrr_states[j] == -1) {
-					wrr_states[j] = i;
-					/* Make sure each ring is
-					 * serviced atleast once */
-					if (i == j)
-						j += VXGE_HW_MAX_VIRTUAL_PATHS;
-					else
-						j += how_often;
-				} else
-					j++;
-			}
-		}
-	}
-
-	/* Fill the unused slots with 0 */
-	for (j = 0; j < VXGE_HW_WEIGHTED_RR_SERVICE_STATES; j++) {
-		if (wrr_states[j] == -1)
-			wrr_states[j] = 0;
-	}
-
-	for (i = 0, j = 0; i < VXGE_HW_WRR_RING_COUNT; i++) {
-		val64 =  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_0(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_1(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_2(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_3(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_4(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_5(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_6(
-				wrr_states[j++]);
-		val64 |=  VXGE_HW_RX_W_ROUND_ROBIN_0_RX_W_PRIORITY_SS_7(
-				wrr_states[j++]);
-
-		writeq(val64, ((&hldev->mrpcim_reg->rx_w_round_robin_0) + i));
-	}
-exit:
-	return status;
-}
-
 /*
  * __vxge_hw_device_initialize
  * Initialize Titan-V hardware.
@@ -668,14 +638,14 @@ enum vxge_hw_status __vxge_hw_device_initialize(struct __vxge_hw_device *hldev)
 {
 	enum vxge_hw_status status = VXGE_HW_OK;
 
-	if (VXGE_HW_OK == __vxge_hw_device_is_privilaged(hldev)) {
+	if (VXGE_HW_OK == __vxge_hw_device_is_privilaged(hldev->host_type,
+				hldev->func_id)) {
 		/* Validate the pci-e link width and speed */
 		status = __vxge_hw_verify_pci_e_info(hldev);
 		if (status != VXGE_HW_OK)
 			goto exit;
 	}
 
-	vxge_hw_wrr_rebalance(hldev);
 exit:
 	return status;
 }
@@ -832,8 +802,10 @@ vxge_hw_device_initialize(
 	__vxge_hw_device_pci_e_init(hldev);
 
 	status = __vxge_hw_device_reg_addr_get(hldev);
-	if (status != VXGE_HW_OK)
+	if (status != VXGE_HW_OK) {
+		vfree(hldev);
 		goto exit;
+	}
 	__vxge_hw_device_id_get(hldev);
 
 	__vxge_hw_device_host_info_get(hldev);
@@ -953,7 +925,8 @@ vxge_hw_mrpcim_stats_access(struct __vxge_hw_device *hldev,
 	u64 val64;
 	enum vxge_hw_status status = VXGE_HW_OK;
 
-	status = __vxge_hw_device_is_privilaged(hldev);
+	status = __vxge_hw_device_is_privilaged(hldev->host_type,
+			hldev->func_id);
 	if (status != VXGE_HW_OK)
 		goto exit;
 
@@ -979,7 +952,7 @@ exit:
  * vxge_hw_device_xmac_aggr_stats_get - Get the Statistics on aggregate port
  * Get the Statistics on aggregate port
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 vxge_hw_device_xmac_aggr_stats_get(struct __vxge_hw_device *hldev, u32 port,
 				   struct vxge_hw_xmac_aggr_stats *aggr_stats)
 {
@@ -990,7 +963,8 @@ vxge_hw_device_xmac_aggr_stats_get(struct __vxge_hw_device *hldev, u32 port,
 
 	val64 = (u64 *)aggr_stats;
 
-	status = __vxge_hw_device_is_privilaged(hldev);
+	status = __vxge_hw_device_is_privilaged(hldev->host_type,
+			hldev->func_id);
 	if (status != VXGE_HW_OK)
 		goto exit;
 
@@ -1013,7 +987,7 @@ exit:
  * vxge_hw_device_xmac_port_stats_get - Get the Statistics on a port
  * Get the Statistics on port
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 vxge_hw_device_xmac_port_stats_get(struct __vxge_hw_device *hldev, u32 port,
 				   struct vxge_hw_xmac_port_stats *port_stats)
 {
@@ -1023,7 +997,8 @@ vxge_hw_device_xmac_port_stats_get(struct __vxge_hw_device *hldev, u32 port,
 	u32 offset = 0x0;
 	val64 = (u64 *) port_stats;
 
-	status = __vxge_hw_device_is_privilaged(hldev);
+	status = __vxge_hw_device_is_privilaged(hldev->host_type,
+			hldev->func_id);
 	if (status != VXGE_HW_OK)
 		goto exit;
 
@@ -1150,20 +1125,6 @@ u32 vxge_hw_device_trace_level_get(struct __vxge_hw_device *hldev)
 	return 0;
 #endif
 }
-/*
- * vxge_hw_device_debug_mask_get - Get the debug mask
- * This routine returns the current debug mask set
- */
-u32 vxge_hw_device_debug_mask_get(struct __vxge_hw_device *hldev)
-{
-#if defined(VXGE_DEBUG_TRACE_MASK) || defined(VXGE_DEBUG_ERR_MASK)
-	if (hldev == NULL)
-		return 0;
-	return hldev->debug_module_mask;
-#else
-	return 0;
-#endif
-}
 
 /*
  * vxge_hw_getpause_data -Pause frame frame generation and reception.
@@ -1221,7 +1182,8 @@ enum vxge_hw_status vxge_hw_device_setpause_data(struct __vxge_hw_device *hldev,
 		goto exit;
 	}
 
-	status = __vxge_hw_device_is_privilaged(hldev);
+	status = __vxge_hw_device_is_privilaged(hldev->host_type,
+			hldev->func_id);
 	if (status != VXGE_HW_OK)
 		goto exit;
 
@@ -1287,7 +1249,7 @@ __vxge_hw_ring_block_next_pointer_set(u8 *block, dma_addr_t dma_next)
  *             first block
  * Returns the dma address of the first RxD block
  */
-u64 __vxge_hw_ring_first_block_address_get(struct __vxge_hw_ring *ring)
+static u64 __vxge_hw_ring_first_block_address_get(struct __vxge_hw_ring *ring)
 {
 	struct vxge_hw_mempool_dma *dma_object;
 
@@ -1408,19 +1370,16 @@ __vxge_hw_ring_mempool_item_alloc(struct vxge_hw_mempool *mempoolh,
 		/* link this RxD block with previous one */
 		__vxge_hw_ring_rxdblock_link(mempoolh, ring, index - 1, index);
 	}
-
-	return;
 }
 
 /*
- * __vxge_hw_ring_initial_replenish - Initial replenish of RxDs
+ * __vxge_hw_ring_replenish - Initial replenish of RxDs
  * This function replenishes the RxDs from reserve array to work array
  */
 enum vxge_hw_status
-vxge_hw_ring_replenish(struct __vxge_hw_ring *ring, u16 min_flag)
+vxge_hw_ring_replenish(struct __vxge_hw_ring *ring)
 {
 	void *rxd;
-	int i = 0;
 	struct __vxge_hw_channel *channel;
 	enum vxge_hw_status status = VXGE_HW_OK;
 
@@ -1441,11 +1400,6 @@ vxge_hw_ring_replenish(struct __vxge_hw_ring *ring, u16 min_flag)
 		}
 
 		vxge_hw_ring_rxd_post(ring, rxd);
-		if (min_flag) {
-			i++;
-			if (i == VXGE_HW_RING_MIN_BUFF_ALLOCATION)
-				break;
-		}
 	}
 	status = VXGE_HW_OK;
 exit:
@@ -1457,7 +1411,7 @@ exit:
  * This function creates Ring and initializes it.
  *
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_ring_create(struct __vxge_hw_vpath_handle *vp,
 		      struct vxge_hw_ring_attr *attr)
 {
@@ -1550,7 +1504,7 @@ __vxge_hw_ring_create(struct __vxge_hw_vpath_handle *vp,
 	 * Currently we don't have a case when the 1) is done without the 2).
 	 */
 	if (ring->rxd_init) {
-		status = vxge_hw_ring_replenish(ring, 1);
+		status = vxge_hw_ring_replenish(ring);
 		if (status != VXGE_HW_OK) {
 			__vxge_hw_ring_delete(vp);
 			goto exit;
@@ -1568,7 +1522,7 @@ exit:
  * __vxge_hw_ring_abort - Returns the RxD
  * This function terminates the RxDs of ring
  */
-enum vxge_hw_status __vxge_hw_ring_abort(struct __vxge_hw_ring *ring)
+static enum vxge_hw_status __vxge_hw_ring_abort(struct __vxge_hw_ring *ring)
 {
 	void *rxdh;
 	struct __vxge_hw_channel *channel;
@@ -1597,7 +1551,7 @@ enum vxge_hw_status __vxge_hw_ring_abort(struct __vxge_hw_ring *ring)
  * __vxge_hw_ring_reset - Resets the ring
  * This function resets the ring during vpath reset operation
  */
-enum vxge_hw_status __vxge_hw_ring_reset(struct __vxge_hw_ring *ring)
+static enum vxge_hw_status __vxge_hw_ring_reset(struct __vxge_hw_ring *ring)
 {
 	enum vxge_hw_status status = VXGE_HW_OK;
 	struct __vxge_hw_channel *channel;
@@ -1612,7 +1566,7 @@ enum vxge_hw_status __vxge_hw_ring_reset(struct __vxge_hw_ring *ring)
 		goto exit;
 
 	if (ring->rxd_init) {
-		status = vxge_hw_ring_replenish(ring, 1);
+		status = vxge_hw_ring_replenish(ring);
 		if (status != VXGE_HW_OK)
 			goto exit;
 	}
@@ -1624,7 +1578,7 @@ exit:
  * __vxge_hw_ring_delete - Removes the ring
  * This function freeup the memory pool and removes the ring
  */
-enum vxge_hw_status __vxge_hw_ring_delete(struct __vxge_hw_vpath_handle *vp)
+static enum vxge_hw_status __vxge_hw_ring_delete(struct __vxge_hw_vpath_handle *vp)
 {
 	struct __vxge_hw_ring *ring = vp->vpath->ringh;
 
@@ -1643,7 +1597,7 @@ enum vxge_hw_status __vxge_hw_ring_delete(struct __vxge_hw_vpath_handle *vp)
  * __vxge_hw_mempool_grow
  * Will resize mempool up to %num_allocate value.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_mempool_grow(struct vxge_hw_mempool *mempool, u32 num_allocate,
 		       u32 *num_allocated)
 {
@@ -1732,7 +1686,7 @@ exit:
  * with size enough to hold %items_initial number of items. Memory is
  * DMA-able but client must map/unmap before interoperating with the device.
  */
-struct vxge_hw_mempool*
+static struct vxge_hw_mempool*
 __vxge_hw_mempool_create(
 	struct __vxge_hw_device *devh,
 	u32 memblock_size,
@@ -1849,7 +1803,7 @@ exit:
 /*
  * vxge_hw_mempool_destroy
  */
-void __vxge_hw_mempool_destroy(struct vxge_hw_mempool *mempool)
+static void __vxge_hw_mempool_destroy(struct vxge_hw_mempool *mempool)
 {
 	u32 i, j;
 	struct __vxge_hw_device *devh = mempool->devh;
@@ -1905,7 +1859,7 @@ __vxge_hw_device_fifo_config_check(struct vxge_hw_fifo_config *fifo_config)
  * __vxge_hw_device_vpath_config_check - Check vpath configuration.
  * Check the vpath configuration
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_device_vpath_config_check(struct vxge_hw_vp_config *vp_config)
 {
 	enum vxge_hw_status status;
@@ -2127,7 +2081,7 @@ vxge_hw_device_config_default_get(struct vxge_hw_device_config *device_config)
  * _hw_legacy_swapper_set - Set the swapper bits for the legacy secion.
  * Set the swapper bits appropriately for the lagacy section.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_legacy_swapper_set(struct vxge_hw_legacy_reg __iomem *legacy_reg)
 {
 	u64 val64;
@@ -2182,7 +2136,7 @@ __vxge_hw_legacy_swapper_set(struct vxge_hw_legacy_reg __iomem *legacy_reg)
  * __vxge_hw_vpath_swapper_set - Set the swapper bits for the vpath.
  * Set the swapper bits appropriately for the vpath.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_swapper_set(struct vxge_hw_vpath_reg __iomem *vpath_reg)
 {
 #ifndef __BIG_ENDIAN
@@ -2201,7 +2155,7 @@ __vxge_hw_vpath_swapper_set(struct vxge_hw_vpath_reg __iomem *vpath_reg)
  * __vxge_hw_kdfc_swapper_set - Set the swapper bits for the kdfc.
  * Set the swapper bits appropriately for the vpath.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_kdfc_swapper_set(
 	struct vxge_hw_legacy_reg __iomem *legacy_reg,
 	struct vxge_hw_vpath_reg __iomem *vpath_reg)
@@ -2221,28 +2175,6 @@ __vxge_hw_kdfc_swapper_set(
 		writeq(val64, &vpath_reg->kdfcctl_cfg0);
 		wmb();
 	}
-
-	return VXGE_HW_OK;
-}
-
-/*
- * vxge_hw_mgmt_device_config - Retrieve device configuration.
- * Get device configuration. Permits to retrieve at run-time configuration
- * values that were used to initialize and configure the device.
- */
-enum vxge_hw_status
-vxge_hw_mgmt_device_config(struct __vxge_hw_device *hldev,
-			   struct vxge_hw_device_config *dev_config, int size)
-{
-
-	if ((hldev == NULL) || (hldev->magic != VXGE_HW_DEVICE_MAGIC))
-		return VXGE_HW_ERR_INVALID_DEVICE;
-
-	if (size != sizeof(struct vxge_hw_device_config))
-		return VXGE_HW_ERR_VERSION_CONFLICT;
-
-	memcpy(dev_config, &hldev->config,
-		sizeof(struct vxge_hw_device_config));
 
 	return VXGE_HW_OK;
 }
@@ -2352,6 +2284,28 @@ exit:
 	return status;
 }
 
+/*
+ * vxge_hw_vpath_strip_fcs_check - Check for FCS strip.
+ */
+enum vxge_hw_status
+vxge_hw_vpath_strip_fcs_check(struct __vxge_hw_device *hldev, u64 vpath_mask)
+{
+	struct vxge_hw_vpmgmt_reg       __iomem *vpmgmt_reg;
+	enum vxge_hw_status status = VXGE_HW_OK;
+	int i = 0, j = 0;
+
+	for (i = 0; i < VXGE_HW_MAX_VIRTUAL_PATHS; i++) {
+		if (!((vpath_mask) & vxge_mBIT(i)))
+			continue;
+		vpmgmt_reg = hldev->vpmgmt_reg[i];
+		for (j = 0; j < VXGE_HW_MAC_MAX_MAC_PORT_ID; j++) {
+			if (readq(&vpmgmt_reg->rxmac_cfg0_port_vpmgmt_clone[j])
+			& VXGE_HW_RXMAC_CFG0_PORT_VPMGMT_CLONE_STRIP_FCS)
+				return VXGE_HW_FAIL;
+		}
+	}
+	return status;
+}
 /*
  * vxge_hw_mgmt_reg_Write - Write Titan register.
  */
@@ -2493,8 +2447,6 @@ __vxge_hw_fifo_mempool_item_alloc(
 	txdl_priv->first_txdp = txdp;
 	txdl_priv->next_txdl_priv = NULL;
 	txdl_priv->alloc_frags = 0;
-
-	return;
 }
 
 /*
@@ -2623,7 +2575,7 @@ exit:
  * __vxge_hw_fifo_abort - Returns the TxD
  * This function terminates the TxDs of fifo
  */
-enum vxge_hw_status __vxge_hw_fifo_abort(struct __vxge_hw_fifo *fifo)
+static enum vxge_hw_status __vxge_hw_fifo_abort(struct __vxge_hw_fifo *fifo)
 {
 	void *txdlh;
 
@@ -2651,7 +2603,7 @@ enum vxge_hw_status __vxge_hw_fifo_abort(struct __vxge_hw_fifo *fifo)
  * __vxge_hw_fifo_reset - Resets the fifo
  * This function resets the fifo during vpath reset operation
  */
-enum vxge_hw_status __vxge_hw_fifo_reset(struct __vxge_hw_fifo *fifo)
+static enum vxge_hw_status __vxge_hw_fifo_reset(struct __vxge_hw_fifo *fifo)
 {
 	enum vxge_hw_status status = VXGE_HW_OK;
 
@@ -2686,7 +2638,7 @@ enum vxge_hw_status __vxge_hw_fifo_delete(struct __vxge_hw_vpath_handle *vp)
  *                          in pci config space.
  * Read from the vpath pci config space.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_pci_read(struct __vxge_hw_virtualpath *vpath,
 			 u32 phy_func_0, u32 offset, u32 *val)
 {
@@ -2727,7 +2679,7 @@ exit:
  * __vxge_hw_vpath_func_id_get - Get the function id of the vpath.
  * Returns the function number of the vpath.
  */
-u32
+static u32
 __vxge_hw_vpath_func_id_get(u32 vp_id,
 	struct vxge_hw_vpmgmt_reg __iomem *vpmgmt_reg)
 {
@@ -2751,7 +2703,6 @@ __vxge_hw_read_rts_ds(struct vxge_hw_vpath_reg __iomem *vpath_reg,
 	writeq(dta_struct_sel, &vpath_reg->rts_access_steer_data0);
 	writeq(0, &vpath_reg->rts_access_steer_data1);
 	wmb();
-	return;
 }
 
 
@@ -2759,7 +2710,7 @@ __vxge_hw_read_rts_ds(struct vxge_hw_vpath_reg __iomem *vpath_reg,
  * __vxge_hw_vpath_card_info_get - Get the serial numbers,
  * part number and product description.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_card_info_get(
 	u32 vp_id,
 	struct vxge_hw_vpath_reg __iomem *vpath_reg,
@@ -2881,7 +2832,7 @@ __vxge_hw_vpath_card_info_get(
  * __vxge_hw_vpath_fw_ver_get - Get the fw version
  * Returns FW Version
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_fw_ver_get(
 	u32 vp_id,
 	struct vxge_hw_vpath_reg __iomem *vpath_reg,
@@ -2975,7 +2926,7 @@ exit:
  * __vxge_hw_vpath_pci_func_mode_get - Get the pci mode
  * Returns pci function mode
  */
-u64
+static u64
 __vxge_hw_vpath_pci_func_mode_get(
 	u32  vp_id,
 	struct vxge_hw_vpath_reg __iomem *vpath_reg)
@@ -3181,7 +3132,7 @@ exit:
  * __vxge_hw_vpath_addr_get - Get the hw address entry for this vpath
  *               from MAC address table.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_addr_get(
 	u32 vp_id, struct vxge_hw_vpath_reg __iomem *vpath_reg,
 	u8 (macaddr)[ETH_ALEN], u8 (macaddr_mask)[ETH_ALEN])
@@ -3533,7 +3484,7 @@ __vxge_hw_vpath_mgmt_read(
  * This routine checks the vpath_rst_in_prog register to see if
  * adapter completed the reset process for the vpath
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_reset_check(struct __vxge_hw_virtualpath *vpath)
 {
 	enum vxge_hw_status status;
@@ -3551,7 +3502,7 @@ __vxge_hw_vpath_reset_check(struct __vxge_hw_virtualpath *vpath)
  * __vxge_hw_vpath_reset
  * This routine resets the vpath on the device
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_reset(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -3569,7 +3520,7 @@ __vxge_hw_vpath_reset(struct __vxge_hw_device *hldev, u32 vp_id)
  * __vxge_hw_vpath_sw_reset
  * This routine resets the vpath structures
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_sw_reset(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	enum vxge_hw_status status = VXGE_HW_OK;
@@ -3594,7 +3545,7 @@ exit:
  * This routine configures the prc registers of virtual path using the config
  * passed
  */
-void
+static void
 __vxge_hw_vpath_prc_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -3659,7 +3610,6 @@ __vxge_hw_vpath_prc_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 		val64 &= ~VXGE_HW_PRC_CFG4_RTH_DISABLE;
 
 	writeq(val64, &vp_reg->prc_cfg4);
-	return;
 }
 
 /*
@@ -3667,7 +3617,7 @@ __vxge_hw_vpath_prc_configure(struct __vxge_hw_device *hldev, u32 vp_id)
  * This routine configures the kdfc registers of virtual path using the
  * config passed
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_kdfc_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -3740,7 +3690,7 @@ exit:
  * __vxge_hw_vpath_mac_configure
  * This routine configures the mac of virtual path using the config passed
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_mac_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -3808,7 +3758,7 @@ __vxge_hw_vpath_mac_configure(struct __vxge_hw_device *hldev, u32 vp_id)
  * This routine configures the tim registers of virtual path using the config
  * passed
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_tim_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -4056,12 +4006,35 @@ __vxge_hw_vpath_tim_configure(struct __vxge_hw_device *hldev, u32 vp_id)
 	return status;
 }
 
+void
+vxge_hw_vpath_tti_ci_set(struct __vxge_hw_device *hldev, u32 vp_id)
+{
+	struct __vxge_hw_virtualpath *vpath;
+	struct vxge_hw_vpath_reg __iomem *vp_reg;
+	struct vxge_hw_vp_config *config;
+	u64 val64;
+
+	vpath = &hldev->virtual_paths[vp_id];
+	vp_reg = vpath->vp_reg;
+	config = vpath->vp_config;
+
+	if (config->fifo.enable == VXGE_HW_FIFO_ENABLE) {
+		val64 = readq(&vp_reg->tim_cfg1_int_num[VXGE_HW_VPATH_INTR_TX]);
+
+		if (config->tti.timer_ci_en != VXGE_HW_TIM_TIMER_CI_ENABLE) {
+			config->tti.timer_ci_en = VXGE_HW_TIM_TIMER_CI_ENABLE;
+			val64 |= VXGE_HW_TIM_CFG1_INT_NUM_TIMER_CI;
+			writeq(val64,
+			&vp_reg->tim_cfg1_int_num[VXGE_HW_VPATH_INTR_TX]);
+		}
+	}
+}
 /*
  * __vxge_hw_vpath_initialize
  * This routine is the final phase of init which initializes the
  * registers of the vpath using the configuration passed.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_initialize(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	u64 val64;
@@ -4098,8 +4071,6 @@ __vxge_hw_vpath_initialize(struct __vxge_hw_device *hldev, u32 vp_id)
 	if (status != VXGE_HW_OK)
 		goto exit;
 
-	writeq(0, &vp_reg->gendma_int);
-
 	val64 = readq(&vp_reg->rtdma_rd_optimization_ctrl);
 
 	/* Get MRRS value from device control */
@@ -4132,7 +4103,7 @@ exit:
  * This routine is the initial phase of init which resets the vpath and
  * initializes the software support structures.
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vp_initialize(struct __vxge_hw_device *hldev, u32 vp_id,
 			struct vxge_hw_vp_config *config)
 {
@@ -4188,7 +4159,7 @@ exit:
  * __vxge_hw_vp_terminate - Terminate Virtual Path structure
  * This routine closes all channels it opened and freeup memory
  */
-void
+static void
 __vxge_hw_vp_terminate(struct __vxge_hw_device *hldev, u32 vp_id)
 {
 	struct __vxge_hw_virtualpath *vpath;
@@ -4550,7 +4521,7 @@ vxge_hw_vpath_enable(struct __vxge_hw_vpath_handle *vp)
  * Enable the DMA vpath statistics. The function is to be called to re-enable
  * the adapter to update stats into the host memory
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 vxge_hw_vpath_stats_enable(struct __vxge_hw_vpath_handle *vp)
 {
 	enum vxge_hw_status status = VXGE_HW_OK;
@@ -4575,7 +4546,7 @@ exit:
  * __vxge_hw_vpath_stats_access - Get the statistics from the given location
  *                           and offset and perform an operation
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_stats_access(struct __vxge_hw_virtualpath *vpath,
 			     u32 operation, u32 offset, u64 *stat)
 {
@@ -4611,7 +4582,7 @@ vpath_stats_access_exit:
 /*
  * __vxge_hw_vpath_xmac_tx_stats_get - Get the TX Statistics of a vpath
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_xmac_tx_stats_get(
 	struct __vxge_hw_virtualpath *vpath,
 	struct vxge_hw_xmac_vpath_tx_stats *vpath_tx_stats)
@@ -4644,9 +4615,9 @@ exit:
 /*
  * __vxge_hw_vpath_xmac_rx_stats_get - Get the RX Statistics of a vpath
  */
-enum vxge_hw_status
+static enum vxge_hw_status
 __vxge_hw_vpath_xmac_rx_stats_get(struct __vxge_hw_virtualpath *vpath,
-			struct vxge_hw_xmac_vpath_rx_stats *vpath_rx_stats)
+				  struct vxge_hw_xmac_vpath_rx_stats *vpath_rx_stats)
 {
 	u64 *val64;
 	enum vxge_hw_status status = VXGE_HW_OK;
@@ -4675,9 +4646,9 @@ exit:
 /*
  * __vxge_hw_vpath_stats_get - Get the vpath hw statistics.
  */
-enum vxge_hw_status __vxge_hw_vpath_stats_get(
-			struct __vxge_hw_virtualpath *vpath,
-			struct vxge_hw_vpath_stats_hw_info *hw_stats)
+static enum vxge_hw_status
+__vxge_hw_vpath_stats_get(struct __vxge_hw_virtualpath *vpath,
+			  struct vxge_hw_vpath_stats_hw_info *hw_stats)
 {
 	u64 val64;
 	enum vxge_hw_status status = VXGE_HW_OK;
@@ -4807,6 +4778,32 @@ enum vxge_hw_status __vxge_hw_vpath_stats_get(
 		val64);
 exit:
 	return status;
+}
+
+
+static void vxge_os_dma_malloc_async(struct pci_dev *pdev, void *devh,
+					unsigned long size)
+{
+	gfp_t flags;
+	void *vaddr;
+
+	if (in_interrupt())
+		flags = GFP_ATOMIC | GFP_DMA;
+	else
+		flags = GFP_KERNEL | GFP_DMA;
+
+	vaddr = kmalloc((size), flags);
+
+	vxge_hw_blockpool_block_add(devh, vaddr, size, pdev, pdev);
+}
+
+static void vxge_os_dma_free(struct pci_dev *pdev, const void *vaddr,
+			     struct pci_dev **p_dma_acch)
+{
+	unsigned long misaligned = *(unsigned long *)p_dma_acch;
+	u8 *tmp = (u8 *)vaddr;
+	tmp -= misaligned;
+	kfree((void *)tmp);
 }
 
 /*
@@ -5011,12 +5008,11 @@ void __vxge_hw_blockpool_blocks_remove(struct __vxge_hw_blockpool *blockpool)
  * vxge_hw_blockpool_block_add - callback for vxge_os_dma_malloc_async
  * Adds a block to block pool
  */
-void vxge_hw_blockpool_block_add(
-			struct __vxge_hw_device *devh,
-			void *block_addr,
-			u32 length,
-			struct pci_dev *dma_h,
-			struct pci_dev *acc_handle)
+static void vxge_hw_blockpool_block_add(struct __vxge_hw_device *devh,
+					void *block_addr,
+					u32 length,
+					struct pci_dev *dma_h,
+					struct pci_dev *acc_handle)
 {
 	struct __vxge_hw_blockpool  *blockpool;
 	struct __vxge_hw_blockpool_entry  *entry = NULL;
@@ -5190,8 +5186,6 @@ __vxge_hw_blockpool_free(struct __vxge_hw_device *devh,
 		if (status == VXGE_HW_OK)
 			__vxge_hw_blockpool_blocks_remove(blockpool);
 	}
-
-	return;
 }
 
 /*
@@ -5247,6 +5241,4 @@ __vxge_hw_blockpool_block_free(struct __vxge_hw_device *devh,
 	}
 
 	__vxge_hw_blockpool_blocks_remove(blockpool);
-
-	return;
 }

@@ -255,7 +255,6 @@ struct pv_mmu_ops {
 	 */
 	void (*alloc_pte)(struct mm_struct *mm, unsigned long pfn);
 	void (*alloc_pmd)(struct mm_struct *mm, unsigned long pfn);
-	void (*alloc_pmd_clone)(unsigned long pfn, unsigned long clonepfn, unsigned long start, unsigned long count);
 	void (*alloc_pud)(struct mm_struct *mm, unsigned long pfn);
 	void (*release_pte)(unsigned long pfn);
 	void (*release_pmd)(unsigned long pfn);
@@ -304,10 +303,6 @@ struct pv_mmu_ops {
 #endif	/* PAGETABLE_LEVELS == 4 */
 #endif	/* PAGETABLE_LEVELS >= 3 */
 
-#ifdef CONFIG_HIGHPTE
-	void *(*kmap_atomic_pte)(struct page *page, enum km_type type);
-#endif
-
 	struct pv_lazy_ops lazy_mode;
 
 	/* dom0 ops */
@@ -318,14 +313,14 @@ struct pv_mmu_ops {
 			   phys_addr_t phys, pgprot_t flags);
 };
 
-struct raw_spinlock;
+struct arch_spinlock;
 struct pv_lock_ops {
-	int (*spin_is_locked)(struct raw_spinlock *lock);
-	int (*spin_is_contended)(struct raw_spinlock *lock);
-	void (*spin_lock)(struct raw_spinlock *lock);
-	void (*spin_lock_flags)(struct raw_spinlock *lock, unsigned long flags);
-	int (*spin_trylock)(struct raw_spinlock *lock);
-	void (*spin_unlock)(struct raw_spinlock *lock);
+	int (*spin_is_locked)(struct arch_spinlock *lock);
+	int (*spin_is_contended)(struct arch_spinlock *lock);
+	void (*spin_lock)(struct arch_spinlock *lock);
+	void (*spin_lock_flags)(struct arch_spinlock *lock, unsigned long flags);
+	int (*spin_trylock)(struct arch_spinlock *lock);
+	void (*spin_unlock)(struct arch_spinlock *lock);
 };
 
 /* This contains all the paravirt structures: we get a convenient

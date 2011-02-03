@@ -26,8 +26,7 @@ extern unsigned int get_clk_frequency_khz(int info);
 
 #define SET_BANK(__nr,__start,__size) \
 	mi->bank[__nr].start = (__start), \
-	mi->bank[__nr].size = (__size), \
-	mi->bank[__nr].node = (((unsigned)(__start) - PHYS_OFFSET) >> 27)
+	mi->bank[__nr].size = (__size)
 
 #define ARRAY_AND_SIZE(x)	(x), ARRAY_SIZE(x)
 
@@ -55,11 +54,9 @@ static inline void pxa2xx_clear_reset_status(unsigned int mask) {}
 
 #ifdef CONFIG_PXA3xx
 extern unsigned pxa3xx_get_clk_frequency_khz(int);
-extern unsigned pxa3xx_get_memclk_frequency_10khz(void);
 extern void pxa3xx_clear_reset_status(unsigned int);
 #else
 #define pxa3xx_get_clk_frequency_khz(x)		(0)
-#define pxa3xx_get_memclk_frequency_10khz()	(0)
 static inline void pxa3xx_clear_reset_status(unsigned int mask) {}
 #endif
 
@@ -67,3 +64,8 @@ extern struct sysdev_class pxa_irq_sysclass;
 extern struct sysdev_class pxa_gpio_sysclass;
 extern struct sysdev_class pxa2xx_mfp_sysclass;
 extern struct sysdev_class pxa3xx_mfp_sysclass;
+
+void __init pxa_set_ffuart_info(void *info);
+void __init pxa_set_btuart_info(void *info);
+void __init pxa_set_stuart_info(void *info);
+void __init pxa_set_hwuart_info(void *info);

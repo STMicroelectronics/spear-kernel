@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/stmmac.h>
@@ -28,7 +29,7 @@
 		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
 		SPEAR3XX_IRQ_BASIC_GPIO)
 /* Add spear3xx machines common devices here */
-/* gpio device registeration */
+/* gpio device registration */
 static struct pl061_platform_data gpio_plat_data = {
 	.gpio_base	= 0,
 	.irq_base	= SPEAR3XX_GPIO_INT_BASE,
@@ -47,7 +48,7 @@ struct amba_device spear3xx_gpio_device = {
 	.irq = {SPEAR3XX_IRQ_BASIC_GPIO, NO_IRQ},
 };
 
-/* ssp device registeration */
+/* ssp device registration */
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
 	.enable_dma = 0,
@@ -77,7 +78,7 @@ struct amba_device spear3xx_ssp0_device = {
 	.irq = {SPEAR3XX_IRQ_SSP, NO_IRQ},
 };
 
-/* uart device registeration */
+/* uart device registration */
 struct amba_device spear3xx_uart_device = {
 	.dev = {
 		.init_name = "uart",
@@ -146,35 +147,15 @@ struct platform_device spear3xx_dmac_device = {
 	.resource = dmac_resources,
 };
 
-/* i2c device registeration */
-static struct resource i2c_resources[] = {
-	{
-		.start = SPEAR3XX_ICM1_I2C_BASE,
-		.end = SPEAR3XX_ICM1_I2C_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR3XX_IRQ_I2C,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear3xx_i2c_device = {
-	.name = "i2c_designware",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(i2c_resources),
-	.resource = i2c_resources,
-};
-
 /* Ethernet device registeration */
 static struct plat_stmmacenet_data ether_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 1,
+	.tx_coe = 1,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_2,
+	.bugged_jumbo = 1,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth_resources[] = {
@@ -195,7 +176,6 @@ static struct resource eth_resources[] = {
 };
 
 static u64 eth_dma_mask = ~(u32) 0;
-
 struct platform_device spear3xx_eth_device = {
 	.name = "stmmaceth",
 	.id = -1,
@@ -206,6 +186,28 @@ struct platform_device spear3xx_eth_device = {
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
+};
+
+/* i2c device registeration */
+static struct resource i2c_resources[] = {
+	{
+		.start = SPEAR3XX_ICM1_I2C_BASE,
+		.end = SPEAR3XX_ICM1_I2C_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_I2C,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_i2c_device = {
+	.name = "i2c_designware",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2c_resources),
+	.resource = i2c_resources,
 };
 
 /* usb host device registeration */
@@ -1094,6 +1096,28 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 
 static void __init spear3xx_timer_init(void)
 {
+	char pclk_name[] = "pll3_48m_clk";
+	struct clk *gpt_clk, *pclk;
+
+	/* get the system timer clock */
+	gpt_clk = clk_get_sys("gpt0", NULL);
+	if (IS_ERR(gpt_clk)) {
+		pr_err("%s:couldn't get clk for gpt\n", __func__);
+		BUG();
+	}
+
+	/* get the suitable parent clock for timer*/
+	pclk = clk_get(NULL, pclk_name);
+	if (IS_ERR(pclk)) {
+		pr_err("%s:couldn't get %s as parent for gpt\n",
+				__func__, pclk_name);
+		BUG();
+	}
+
+	clk_set_parent(gpt_clk, pclk);
+	clk_put(gpt_clk);
+	clk_put(pclk);
+
 	spear_setup_timer();
 }
 

@@ -90,18 +90,6 @@ static int clcd_setup(struct clcd_fb *fb)
 	return 0;
 }
 
-static int clcd_check(struct clcd_fb *fb, struct fb_var_screeninfo
-		*var)
-{
-	var->xres_virtual = var->xres = (var->xres + 15) & ~15;
-	var->yres_virtual = var->yres = (var->yres + 1) & ~1;
-
-	var->nonstd = 0;
-	var->accel_flags = 0;
-
-	return 0;
-}
-
 static void clcd_remove(struct clcd_fb *fb)
 {
 	dma_free_writecombine(&fb->dev->dev, fb->fb.fix.smem_len,
@@ -118,7 +106,7 @@ static int clcd_mmap(struct clcd_fb *fb, struct vm_area_struct *vma)
 
 struct clcd_board clcd_plat_data = {
 	.name = "spear-clcd",
-	.check = clcd_check,
+	.check = clcdfb_check,
 	.decode = clcdfb_decode,
 	.setup = clcd_setup,
 	.mmap = clcd_mmap,

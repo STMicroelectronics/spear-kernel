@@ -58,12 +58,4 @@
 #define NUM_OF_MSG		2
 #define POWER_STBY		0xBF
 
-struct sta529_setup_data {
-	int i2c_bus;
-	unsigned short i2c_address;
-};
-
-extern struct snd_soc_dai sta529_dai;
-extern struct snd_soc_codec_device soc_codec_dev_sta529;
-
 #endif /* end of codec header file */

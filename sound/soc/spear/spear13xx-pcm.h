@@ -51,7 +51,4 @@ struct spear13xx_runtime_data {
 	int frag_count;
 	int dmacount;
 };
-
-extern struct snd_soc_platform spear13xx_soc_platform;
-
 #endif /* end of pcm header file */

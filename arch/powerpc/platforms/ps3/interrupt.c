@@ -44,7 +44,7 @@
  * @lock:
  * @ipi_debug_brk_mask:
  *
- * The HV mantains per SMT thread mappings of HV outlet to HV plug on
+ * The HV maintains per SMT thread mappings of HV outlet to HV plug on
  * behalf of the guest.  These mappings are implemented as 256 bit guest
  * supplied bitmaps indexed by plug number.  The addresses of the bitmaps
  * are registered with the HV through lv1_configure_irq_state_bitmap().
@@ -152,7 +152,7 @@ static void ps3_chip_eoi(unsigned int virq)
  */
 
 static struct irq_chip ps3_irq_chip = {
-	.typename = "ps3",
+	.name = "ps3",
 	.mask = ps3_chip_mask,
 	.unmask = ps3_chip_unmask,
 	.eoi = ps3_chip_eoi,

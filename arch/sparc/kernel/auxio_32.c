@@ -23,11 +23,12 @@ static DEFINE_SPINLOCK(auxio_lock);
 
 void __init auxio_probe(void)
 {
-	int node, auxio_nd;
+	phandle node, auxio_nd;
 	struct linux_prom_registers auxregs[1];
 	struct resource r;
 
 	switch (sparc_cpu_model) {
+	case sparc_leon:
 	case sun4d:
 	case sun4:
 		return;
@@ -112,7 +113,7 @@ volatile unsigned char * auxio_power_register = NULL;
 void __init auxio_power_probe(void)
 {
 	struct linux_prom_registers regs;
-	int node;
+	phandle node;
 	struct resource r;
 
 	/* Attempt to find the sun4m power control node. */

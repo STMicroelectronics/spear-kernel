@@ -21,7 +21,7 @@
 
 #include <plat/audio-simtec.h>
 
-#include "s3c24xx-pcm.h"
+#include "s3c-dma.h"
 #include "s3c24xx-i2s.h"
 #include "s3c24xx_simtec.h"
 
@@ -139,8 +139,10 @@ static const struct snd_kcontrol_new amp_unmute_controls[] = {
 		       speaker_unmute_get, speaker_unmute_put),
 };
 
-void simtec_audio_init(struct snd_soc_codec *codec)
+void simtec_audio_init(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_soc_codec *codec = rtd->codec;
+
 	if (pdata->amp_gpio > 0) {
 		pr_debug("%s: adding amp routes\n", __func__);
 
@@ -170,8 +172,8 @@ static int simtec_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret;
 
 	/* Set the CODEC as the bus clock master, I2S */
@@ -270,7 +272,7 @@ static int attach_gpio_amp(struct device *dev,
 		gpio_direction_output(pd->amp_gain[1], 0);
 	}
 
-	/* note, curently we assume GPA0 isn't valid amp */
+	/* note, currently we assume GPA0 isn't valid amp */
 	if (pdata->amp_gpio > 0) {
 		ret = gpio_request(pd->amp_gpio, "gpio-amp");
 		if (ret) {
@@ -312,19 +314,19 @@ int simtec_audio_resume(struct device *dev)
 	return 0;
 }
 
-struct dev_pm_ops simtec_audio_pmops = {
+const struct dev_pm_ops simtec_audio_pmops = {
 	.resume	= simtec_audio_resume,
 };
 EXPORT_SYMBOL_GPL(simtec_audio_pmops);
 #endif
 
 int __devinit simtec_audio_core_probe(struct platform_device *pdev,
-				      struct snd_soc_device *socdev)
+				      struct snd_soc_card *card)
 {
 	struct platform_device *snd_dev;
 	int ret;
 
-	socdev->card->dai_link->ops = &simtec_snd_ops;
+	card->dai_link->ops = &simtec_snd_ops;
 
 	pdata = pdev->dev.platform_data;
 	if (!pdata) {
@@ -353,8 +355,7 @@ int __devinit simtec_audio_core_probe(struct platform_device *pdev,
 		goto err_gpio;
 	}
 
-	platform_set_drvdata(snd_dev, socdev);
-	socdev->dev = &snd_dev->dev;
+	platform_set_drvdata(snd_dev, card);
 
 	ret = platform_device_add(snd_dev);
 	if (ret) {

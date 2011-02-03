@@ -211,6 +211,11 @@ static void __init gumstix_init(void)
 {
 	pxa2xx_mfp_config(ARRAY_AND_SIZE(gumstix_pin_config));
 
+	pxa_set_ffuart_info(NULL);
+	pxa_set_btuart_info(NULL);
+	pxa_set_stuart_info(NULL);
+	pxa_set_hwuart_info(NULL);
+
 	gumstix_bluetooth_init();
 	gumstix_udc_init();
 	gumstix_mmc_init();
@@ -219,9 +224,7 @@ static void __init gumstix_init(void)
 }
 
 MACHINE_START(GUMSTIX, "Gumstix")
-	.phys_io	= 0x40000000,
 	.boot_params	= 0xa0000100, /* match u-boot bi_boot_params */
-	.io_pg_offst	= (io_p2v(0x40000000) >> 18) & 0xfffc,
 	.map_io		= pxa_map_io,
 	.init_irq	= pxa25x_init_irq,
 	.timer		= &pxa_timer,

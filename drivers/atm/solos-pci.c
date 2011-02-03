@@ -40,6 +40,7 @@
 #include <linux/firmware.h>
 #include <linux/ctype.h>
 #include <linux/swab.h>
+#include <linux/slab.h>
 
 #define VERSION "0.07"
 #define PTAG "solos-pci"
@@ -142,6 +143,9 @@ MODULE_AUTHOR("Traverse Technologies <support@traverse.com.au>");
 MODULE_DESCRIPTION("Solos PCI driver");
 MODULE_VERSION(VERSION);
 MODULE_LICENSE("GPL");
+MODULE_FIRMWARE("solos-FPGA.bin");
+MODULE_FIRMWARE("solos-Firmware.bin");
+MODULE_FIRMWARE("solos-db-FPGA.bin");
 MODULE_PARM_DESC(reset, "Reset Solos chips on startup");
 MODULE_PARM_DESC(atmdebug, "Print ATM data");
 MODULE_PARM_DESC(firmware_upgrade, "Initiate Solos firmware upgrade");
@@ -162,7 +166,7 @@ static irqreturn_t solos_irq(int irq, void *dev_id);
 static struct atm_vcc* find_vcc(struct atm_dev *dev, short vpi, int vci);
 static int list_vccs(int vci);
 static void release_vccs(struct atm_dev *dev);
-static int atm_init(struct solos_card *);
+static int atm_init(struct solos_card *, struct device *);
 static void atm_remove(struct solos_card *);
 static int send_command(struct solos_card *card, int dev, const char *buf, size_t size);
 static void solos_bh(unsigned long);
@@ -379,7 +383,7 @@ static int process_status(struct solos_card *card, int port, struct sk_buff *skb
 
 	/* Anything but 'Showtime' is down */
 	if (strcmp(state_str, "Showtime")) {
-		card->atmdev[port]->signal = ATM_PHY_SIG_LOST;
+		atm_dev_signal_change(card->atmdev[port], ATM_PHY_SIG_LOST);
 		release_vccs(card->atmdev[port]);
 		dev_info(&card->dev->dev, "Port %d: %s\n", port, state_str);
 		return 0;
@@ -397,7 +401,7 @@ static int process_status(struct solos_card *card, int port, struct sk_buff *skb
 		 snr[0]?", SNR ":"", snr, attn[0]?", Attn ":"", attn);
 	
 	card->atmdev[port]->link_rate = rate_down / 424;
-	card->atmdev[port]->signal = ATM_PHY_SIG_FOUND;
+	atm_dev_signal_change(card->atmdev[port], ATM_PHY_SIG_FOUND);
 
 	return 0;
 }
@@ -440,6 +444,7 @@ static ssize_t console_show(struct device *dev, struct device_attribute *attr,
 	struct atm_dev *atmdev = container_of(dev, struct atm_dev, class_dev);
 	struct solos_card *card = atmdev->dev_data;
 	struct sk_buff *skb;
+	unsigned int len;
 
 	spin_lock(&card->cli_queue_lock);
 	skb = skb_dequeue(&card->cli_queue[SOLOS_CHAN(atmdev)]);
@@ -447,11 +452,12 @@ static ssize_t console_show(struct device *dev, struct device_attribute *attr,
 	if(skb == NULL)
 		return sprintf(buf, "No data.\n");
 
-	memcpy(buf, skb->data, skb->len);
-	dev_dbg(&card->dev->dev, "len: %d\n", skb->len);
+	len = skb->len;
+	memcpy(buf, skb->data, len);
+	dev_dbg(&card->dev->dev, "len: %d\n", len);
 
 	kfree_skb(skb);
-	return skb->len;
+	return len;
 }
 
 static int send_command(struct solos_card *card, int dev, const char *buf, size_t size)
@@ -528,34 +534,37 @@ static int flash_upgrade(struct solos_card *card, int chip)
 	int numblocks = 0;
 	int offset;
 
-	if (chip == 0) {
+	switch (chip) {
+	case 0:
 		fw_name = "solos-FPGA.bin";
 		blocksize = FPGA_BLOCK;
-	} 
-	
-	if (chip == 1) {
+		break;
+	case 1:
 		fw_name = "solos-Firmware.bin";
 		blocksize = SOLOS_BLOCK;
-	}
-	
-	if (chip == 2){
+		break;
+	case 2:
 		if (card->fpga_version > LEGACY_BUFFERS){
 			fw_name = "solos-db-FPGA.bin";
 			blocksize = FPGA_BLOCK;
 		} else {
-			dev_info(&card->dev->dev, "FPGA version doesn't support daughter board upgrades\n");
+			dev_info(&card->dev->dev, "FPGA version doesn't support"
+					" daughter board upgrades\n");
 			return -EPERM;
 		}
-	}
-	
-	if (chip == 3){
+		break;
+	case 3:
 		if (card->fpga_version > LEGACY_BUFFERS){
 			fw_name = "solos-Firmware.bin";
 			blocksize = SOLOS_BLOCK;
 		} else {
-		dev_info(&card->dev->dev, "FPGA version doesn't support daughter board upgrades\n");
-		return -EPERM;
+			dev_info(&card->dev->dev, "FPGA version doesn't support"
+					" daughter board upgrades\n");
+			return -EPERM;
 		}
+		break;
+	default:
+		return -ENODEV;
 	}
 
 	if (request_firmware(&fw, fw_name, &card->dev->dev))
@@ -774,7 +783,8 @@ static struct atm_vcc *find_vcc(struct atm_dev *dev, short vpi, int vci)
 	sk_for_each(s, node, head) {
 		vcc = atm_sk(s);
 		if (vcc->dev == dev && vcc->vci == vci &&
-		    vcc->vpi == vpi && vcc->qos.rxtp.traffic_class != ATM_NONE)
+		    vcc->vpi == vpi && vcc->qos.rxtp.traffic_class != ATM_NONE &&
+		    test_bit(ATM_VF_READY, &vcc->flags))
 			goto out;
 	}
 	vcc = NULL;
@@ -900,6 +910,10 @@ static void pclose(struct atm_vcc *vcc)
 	clear_bit(ATM_VF_ADDR, &vcc->flags);
 	clear_bit(ATM_VF_READY, &vcc->flags);
 
+	/* Hold up vcc_destroy_socket() (our caller) until solos_bh() in the
+	   tasklet has finished processing any incoming packets (and, more to
+	   the point, using the vcc pointer). */
+	tasklet_unlock_wait(&card->tlet);
 	return;
 }
 
@@ -1147,6 +1161,14 @@ static int fpga_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	dev_info(&dev->dev, "Solos FPGA Version %d.%02d svn-%d\n",
 		 major_ver, minor_ver, fpga_ver);
 
+	if (fpga_ver < 37 && (fpga_upgrade || firmware_upgrade ||
+			      db_fpga_upgrade || db_firmware_upgrade)) {
+		dev_warn(&dev->dev,
+			 "FPGA too old; cannot upgrade flash. Use JTAG.\n");
+		fpga_upgrade = firmware_upgrade = 0;
+		db_fpga_upgrade = db_firmware_upgrade = 0;
+	}
+
 	if (card->fpga_version >= DMA_SUPPORTED){
 		card->using_dma = 1;
 	} else {
@@ -1188,7 +1210,7 @@ static int fpga_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	if (db_firmware_upgrade)
 		flash_upgrade(card, 3);
 
-	err = atm_init(card);
+	err = atm_init(card, &dev->dev);
 	if (err)
 		goto out_free_irq;
 
@@ -1211,7 +1233,7 @@ static int fpga_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	return err;
 }
 
-static int atm_init(struct solos_card *card)
+static int atm_init(struct solos_card *card, struct device *parent)
 {
 	int i;
 
@@ -1222,7 +1244,7 @@ static int atm_init(struct solos_card *card)
 		skb_queue_head_init(&card->tx_queue[i]);
 		skb_queue_head_init(&card->cli_queue[i]);
 
-		card->atmdev[i] = atm_dev_register("solos-pci", &fpga_ops, -1, NULL);
+		card->atmdev[i] = atm_dev_register("solos-pci", parent, &fpga_ops, -1, NULL);
 		if (!card->atmdev[i]) {
 			dev_err(&card->dev->dev, "Could not register ATM device %d\n", i);
 			atm_remove(card);
@@ -1239,7 +1261,7 @@ static int atm_init(struct solos_card *card)
 		card->atmdev[i]->ci_range.vci_bits = 16;
 		card->atmdev[i]->dev_data = card;
 		card->atmdev[i]->phy_data = (void *)(unsigned long)i;
-		card->atmdev[i]->signal = ATM_PHY_SIG_UNKNOWN;
+		atm_dev_signal_change(card->atmdev[i], ATM_PHY_SIG_UNKNOWN);
 
 		skb = alloc_skb(sizeof(*header), GFP_ATOMIC);
 		if (!skb) {

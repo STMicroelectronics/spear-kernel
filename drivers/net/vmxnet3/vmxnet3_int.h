@@ -27,16 +27,11 @@
 #ifndef _VMXNET3_INT_H
 #define _VMXNET3_INT_H
 
-#include <linux/types.h>
 #include <linux/ethtool.h>
 #include <linux/delay.h>
-#include <linux/device.h>
 #include <linux/netdevice.h>
 #include <linux/pci.h>
-#include <linux/ethtool.h>
 #include <linux/compiler.h>
-#include <linux/module.h>
-#include <linux/moduleparam.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/ioport.h>
@@ -73,10 +68,10 @@
 /*
  * Version numbers
  */
-#define VMXNET3_DRIVER_VERSION_STRING   "1.0.5.0-k"
+#define VMXNET3_DRIVER_VERSION_STRING   "1.0.14.0-k"
 
 /* a 32-bit int, each byte encode a verion number in VMXNET3_DRIVER_VERSION */
-#define VMXNET3_DRIVER_VERSION_NUM      0x01000500
+#define VMXNET3_DRIVER_VERSION_NUM      0x01000E00
 
 
 /*
@@ -306,8 +301,8 @@ struct vmxnet3_adapter {
 	struct net_device              *netdev;
 	struct pci_dev                 *pdev;
 
-	u8				*hw_addr0; /* for BAR 0 */
-	u8				*hw_addr1; /* for BAR 1 */
+	u8			__iomem *hw_addr0; /* for BAR 0 */
+	u8			__iomem *hw_addr1; /* for BAR 1 */
 
 	/* feature control */
 	bool				rxcsum;

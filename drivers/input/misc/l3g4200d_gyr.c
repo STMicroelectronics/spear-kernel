@@ -21,6 +21,7 @@
 #include <linux/i2c/l3g4200d.h>
 #include <linux/input-polldev.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
 
 /* Maximum polled-device-reported rot speed value value in dps */
 #define FS_MAX		32768

@@ -5,19 +5,21 @@
 # common files
 obj-y					+= spear13xx.o clock.o fsmc-nor.o
 obj-$(CONFIG_SMP)			+= platsmp.o headsmp.o
-obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
+obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_PCIEPORTBUS)		+= pcie.o
 obj-$(CONFIG_PM)			+= pm.o sleep.o
 obj-y					+= db9000_lcd.o
 
 # spear1300 specific files
 obj-$(CONFIG_MACH_SPEAR1300)		+= spear1300.o
+
 # spear1300 boards files
 obj-$(CONFIG_BOARD_SPEAR1300_EVB)	+= spear1300_evb.o
 
 # spear1310 specific files
 obj-$(CONFIG_MACH_SPEAR1310)		+= spear1310.o
+
 # spear1310 boards files
 obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= spear1310_evb.o
 

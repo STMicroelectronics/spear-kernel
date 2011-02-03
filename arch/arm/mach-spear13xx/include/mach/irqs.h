@@ -125,6 +125,7 @@
 #endif /* CONFIG_MACH_SPEAR1310 */
 
 #define IRQ_GIC_END		(IRQ_SHPI_START + 128)
+
 #define VIRQ_START		IRQ_GIC_END
 
 /* GPIO pins virtual irqs */

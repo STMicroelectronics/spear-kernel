@@ -14,25 +14,25 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
-#include <linux/mtd/physmap.h>
 #include <linux/dw_dmac.h>
+#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
+#include <linux/mtd/fsmc.h>
+#include <linux/netdevice.h>
 #include <linux/stmmac.h>
-#include <linux/phy.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
 #include <asm/setup.h>
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <plat/udc.h>
 #include <mach/dma.h>
-#include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/irqs.h>
 #include <mach/misc_regs.h>
-#include <plat/nand.h>
-#include <plat/udc.h>
 
 /* Add spear13xx machines common devices here */
 /* gpio device registeration */
@@ -185,26 +185,46 @@ struct platform_device spear13xx_dmac_device[] = {
 	},
 };
 
-/* i2c device registeration */
-static struct resource i2c_resources[] = {
-	{
-		.start = SPEAR13XX_I2C_BASE,
-		.end = SPEAR13XX_I2C_BASE + SZ_4K - 1,
+/* Ethernet device registeration */
+static struct plat_stmmacenet_data ether0_platform_data = {
+	.bus_id = 0,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.pbl = 32,
+	.csum_off_engine = STMAC_TYPE_2,
+	.bugged_jumbo = 1,
+	.features = NETIF_F_HW_CSUM,
+};
+
+static struct resource eth0_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_GETH0_BASE,
+		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_I2C,
+	},
+	[1] = {
+		.start = IRQ_GMAC_1,
+		.flags = IORESOURCE_IRQ,
+		.name = "macirq",
+	},
+	[2] = {
+		.start = IRQ_GMAC_2,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear13xx_i2c_device = {
-	.name = "i2c_designware",
+static u64 eth0_dma_mask = ~(u32) 0;
+struct platform_device spear13xx_eth0_device = {
+	.name = "stmmaceth",
 	.id = 0,
+	.num_resources = ARRAY_SIZE(eth0_resources),
+	.resource = eth0_resources,
 	.dev = {
+		.platform_data = &ether0_platform_data,
+		.dma_mask = &eth0_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
-	.num_resources = ARRAY_SIZE(i2c_resources),
-	.resource = i2c_resources,
 };
 
 /* i2s0 device registeration */
@@ -263,50 +283,35 @@ struct platform_device spear13xx_i2s1_device = {
 	.resource = i2s1_resources,
 };
 
-/* Ethernet device registeration */
-static struct plat_stmmacenet_data ether0_platform_data = {
-	.bus_id = 0,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_csum = 1,
-	.pbl = 32,
-	.csum_off_engine = STMAC_TYPE_2,
+struct platform_device spear13xx_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
 };
 
-static struct resource eth0_resources[] = {
-	[0] = {
-		.start = SPEAR13XX_GETH0_BASE,
-		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
+/* i2c device registeration */
+static struct resource i2c_resources[] = {
+	{
+		.start = SPEAR13XX_I2C_BASE,
+		.end = SPEAR13XX_I2C_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = IRQ_GMAC_1,
-		.flags = IORESOURCE_IRQ,
-		.name = "macirq",
-	},
-	[2] = {
-		.start = IRQ_GMAC_2,
+	}, {
+		.start = IRQ_I2C,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-static u64 eth0_dma_mask = ~(u32) 0;
-
-struct platform_device spear13xx_eth0_device = {
-	.name = "stmmaceth",
+struct platform_device spear13xx_i2c_device = {
+	.name = "i2c_designware",
 	.id = 0,
-	.num_resources = ARRAY_SIZE(eth0_resources),
-	.resource = eth0_resources,
 	.dev = {
-		.platform_data = &ether0_platform_data,
-		.dma_mask = &eth0_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
+	.num_resources = ARRAY_SIZE(i2c_resources),
+	.resource = i2c_resources,
 };
 
 /* fsmc nor flash device registeration */
 static struct physmap_flash_data fsmc_norflash_data;
-
 static struct resource fsmc_nor_resources[] = {
 	{
 		.start	= SPEAR13XX_FSMC_MEM_BASE,
@@ -330,7 +335,7 @@ void __init nand_mach_init(u32 busw)
 	fsmc_cfg &= ~(FSMC_MEMSEL_MASK << FSMC_MEMSEL_SHIFT);
 	fsmc_cfg |= (FSMC_MEM_NAND << FSMC_MEMSEL_SHIFT);
 
-	if (busw == SPEAR_NAND_BW16)
+	if (busw == FSMC_NAND_BW16)
 		fsmc_cfg |= 1 << NAND_DEV_WIDTH16;
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
@@ -353,7 +358,7 @@ static void nand_select_bank(u32 bank, u32 busw)
 	writel(fsmc_cfg, FSMC_CFG);
 }
 
-static struct nand_platform_data nand_platform_data = {
+static struct fsmc_nand_platform_data nand_platform_data = {
 	.select_bank = nand_select_bank,
 };
 
@@ -372,7 +377,7 @@ static struct resource nand_resources[] = {
 };
 
 struct platform_device spear13xx_nand_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
@@ -529,29 +534,29 @@ struct platform_device spear13xx_kbd_device = {
 /* clcd db9000 devide registration */
 static struct resource db9000fb_resources[] = {
 	[0] = {
-		.start  = SPEAR13XX_DB9000_LCD_BASE,
-		.end    = SPEAR13XX_DB9000_LCD_BASE + SZ_4K - 1,
-		.flags  = IORESOURCE_MEM,
+		.start = SPEAR13XX_DB9000_LCD_BASE,
+		.end = SPEAR13XX_DB9000_LCD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start  = IRQ_CLCD,
-		.end    = IRQ_CLCD,
-		.flags  = IORESOURCE_IRQ,
+		.start = IRQ_CLCD,
+		.end = IRQ_CLCD,
+		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 fb_dma_mask = ~(u64)0;
 
 struct platform_device spear13xx_db9000_clcd_device = {
-	.name           = "clcd-db9000",
-	.id             = -1,
-	.dev            = {
+	.name = "clcd-db9000",
+	.id = -1,
+	.dev = {
 		.parent = NULL,
 		.dma_mask = &fb_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
-	.num_resources  = ARRAY_SIZE(db9000fb_resources),
-	.resource       = db9000fb_resources,
+	.num_resources = ARRAY_SIZE(db9000fb_resources),
+	.resource = db9000fb_resources,
 };
 
 /* rtc device registration */
@@ -573,67 +578,120 @@ struct platform_device spear13xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
-/* smi device registration */
-static struct resource smi_resources[] = {
+#ifdef CONFIG_PCIEPORTBUS
+/* PCIE0 clock always needs to be enabled if any of the three PCIE port
+ * have to be used. So call this function from the board initilization
+ * file. Ideally , all controller should have been independent from
+ * others with respect to clock.
+ */
+int enable_pcie0_clk(void)
+{
+	struct clk *clk;
+	/*Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, PCIE_CFG);
+	clk = clk_get_sys("pcie0", NULL);
+	if (IS_ERR(clk)) {
+		pr_err("%s:couldn't get clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+	if (clk_enable(clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+#endif
+
+/* pcie gadget registration */
+static int pcie_gadget0_id;
+static u64 pcie_gadget0_dmamask = ~0;
+static struct resource pcie_gadget0_resources[] = {
 	{
-		.start = SPEAR13XX_SMI_CTRL_BASE,
-		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
+		.start = SPEAR13XX_PCIE0_APP_BASE,
+		.end = SPEAR13XX_PCIE0_APP_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_SMI,
+		.start = SPEAR13XX_PCIE0_BASE,
+		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear13xx_smi_device = {
-	.name = "smi",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(smi_resources),
-	.resource = smi_resources,
-};
-
-/* wdt device registration */
-static struct resource wdt_resources[] = {
-	{
-		.start = SPEAR13XX_WDT_BASE,
-		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
-struct platform_device spear13xx_wdt_device = {
-	.name = "cortexa9-wdt",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(wdt_resources),
-	.resource = wdt_resources,
-};
-
-/* usb device registeration */
-static struct resource udc_resources[] = {
-	[0] = {
-		.start = SPEAR13XX_UDC_BASE,
-		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = SPEAR13XX_UPD_BASE,
-		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[3] = {
-		.start = IRQ_UDC,
-		.end = IRQ_UDC,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-struct platform_device spear13xx_udc_device = {
-	.name = "designware_udc",
-	.id = -1,
+struct platform_device spear13xx_pcie_gadget0_device = {
+	.name = "pcie-gadget-spear",
+	.id = 0,
 	.dev = {
-		.coherent_dma_mask = 0xffffffff,
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget0_dmamask,
+		.platform_data = &pcie_gadget0_id,
 	},
-	.num_resources = ARRAY_SIZE(udc_resources),
-	.resource = udc_resources,
+	.num_resources = ARRAY_SIZE(pcie_gadget0_resources),
+	.resource = pcie_gadget0_resources,
+};
+
+static int pcie_gadget1_id;
+static u64 pcie_gadget1_dmamask = ~0;
+static struct resource pcie_gadget1_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE1_APP_BASE,
+		.end = SPEAR13XX_PCIE1_APP_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE1_BASE,
+		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pcie_gadget1_device = {
+	.name = "pcie-gadget-spear",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget1_dmamask,
+		.platform_data = &pcie_gadget1_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie_gadget1_resources),
+	.resource = pcie_gadget1_resources,
+};
+
+static int pcie_gadget2_id;
+static u64 pcie_gadget2_dmamask = ~0;
+static struct resource pcie_gadget2_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE2_APP_BASE,
+		.end = SPEAR13XX_PCIE2_APP_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE2_BASE,
+		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_PCIE2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pcie_gadget2_device = {
+	.name = "pcie-gadget-spear",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget2_dmamask,
+		.platform_data = &pcie_gadget2_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie_gadget2_resources),
+	.resource = pcie_gadget2_resources,
 };
 
 /* sdhci (sdio) device declaration */
@@ -658,98 +716,68 @@ struct platform_device spear13xx_sdhci_device = {
 	.resource = sdhci_resources,
 };
 
-/* pcie gadget registration */
-static struct resource pcie_gadget0_resources[] = {
+/* smi device registration */
+static struct resource smi_resources[] = {
 	{
-		.start = SPEAR13XX_PCIE0_APP_BASE,
-		.end = SPEAR13XX_PCIE0_APP_BASE + SZ_8K - 1,
+		.start = SPEAR13XX_SMI_CTRL_BASE,
+		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR13XX_PCIE0_BASE,
-		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE0,
+		.start = IRQ_SMI,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-/* pcie_gadget0_id defaults to 0, being static variable */
-static int pcie_gadget0_id;
-static u64 pcie_gadget0_dmamask = ~0;
-
-struct platform_device spear13xx_pcie_gadget0_device = {
-	.name = "pcie-gadget-spear",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget0_dmamask,
-		.platform_data = &pcie_gadget0_id,
-	},
-	.num_resources = ARRAY_SIZE(pcie_gadget0_resources),
-	.resource = pcie_gadget0_resources,
+struct platform_device spear13xx_smi_device = {
+	.name = "smi",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(smi_resources),
+	.resource = smi_resources,
 };
 
-static struct resource pcie_gadget1_resources[] = {
-	{
-		.start = SPEAR13XX_PCIE1_APP_BASE,
-		.end = SPEAR13XX_PCIE1_APP_BASE + SZ_8K - 1,
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_UDC_BASE,
+		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_PCIE1_BASE,
-		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
+	},
+	[1] = {
+		.start = SPEAR13XX_UPD_BASE,
+		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE1,
+	},
+	[3] = {
+		.start = IRQ_UDC,
+		.end = IRQ_UDC,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-/* pcie_gadget1_id defaults to 0, being static variable */
-static int pcie_gadget1_id;
-static u64 pcie_gadget1_dmamask = ~0;
-
-struct platform_device spear13xx_pcie_gadget1_device = {
-	.name = "pcie-gadget-spear",
-	.id = 1,
+struct platform_device spear13xx_udc_device = {
+	.name = "designware_udc",
+	.id = -1,
 	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget1_dmamask,
-		.platform_data = &pcie_gadget1_id,
+		.coherent_dma_mask = 0xffffffff,
 	},
-	.num_resources = ARRAY_SIZE(pcie_gadget1_resources),
-	.resource = pcie_gadget1_resources,
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
 };
 
-static struct resource pcie_gadget2_resources[] = {
+/* wdt device registration */
+static struct resource wdt_resources[] = {
 	{
-		.start = SPEAR13XX_PCIE2_APP_BASE,
-		.end = SPEAR13XX_PCIE2_APP_BASE + SZ_8K - 1,
+		.start = SPEAR13XX_WDT_BASE,
+		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
 		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_PCIE2_BASE,
-		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE2,
-		.flags = IORESOURCE_IRQ,
 	},
 };
 
-/* pcie_gadget2_id defaults to 0, being static variable */
-static int pcie_gadget2_id;
-static u64 pcie_gadget2_dmamask = ~0;
-
-struct platform_device spear13xx_pcie_gadget2_device = {
-	.name = "pcie-gadget-spear",
-	.id = 2,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget2_dmamask,
-		.platform_data = &pcie_gadget2_id,
-	},
-	.num_resources = ARRAY_SIZE(pcie_gadget2_resources),
-	.resource = pcie_gadget2_resources,
+struct platform_device spear13xx_wdt_device = {
+	.name = "cortexa9-wdt",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(wdt_resources),
+	.resource = wdt_resources,
 };
 
 static void dmac_setup(void)
@@ -762,6 +790,7 @@ static void dmac_setup(void)
 	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
+#ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
 	struct clk *i2s_src_clk, *pll3_clk, *i2s_ref_clk;
@@ -808,33 +837,6 @@ put_src_clk:
 
 	return;
 }
-
-#ifdef CONFIG_PCIEPORTBUS
-/* PCIE0 clock always needs to be enabled if any of the three PCIE port
- * have to be used. So call this function from the board initilization
- * file. Ideally , all controller should have been independent from
- * others with respect to clock.
- */
-int enable_pcie0_clk(void)
-{
-	struct clk *clk;
-	/*Enable all CLK in CFG registers here only. Idealy only PCIE0
-	 * should have been enabled. But Controler does not work
-	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
-	 */
-	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, PCIE_CFG);
-	clk = clk_get_sys("pcie0", NULL);
-	if (!clk) {
-		pr_err("%s:couldn't get clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-	if (clk_enable(clk)) {
-		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-
-	return 0;
-}
 #endif
 
 /* Do spear13xx familiy common initialization part here */
@@ -851,12 +853,11 @@ void __init spear13xx_init(void)
 	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
 #endif
 
-	dmac_setup();
-
 #ifdef CONFIG_SND_SOC_STA529
 	i2s_clk_init();
 #endif
 
+	dmac_setup();
 	set_udc_plat_data(&spear13xx_udc_device);
 }
 
@@ -915,14 +916,6 @@ struct map_desc spear13xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR13XX_SYSRAM1_BASE),
 		.length		= SZ_1M,
 		.type		= MT_MEMORY_NONCACHED
-#ifdef CONFIG_MACH_SPEAR1310
-	}, {
-		.virtual	= IO_ADDRESS(SPEAR1310_RAS_BASE),
-		.pfn		= __phys_to_pfn(SPEAR1310_RAS_BASE),
-		.length		= SZ_4K,
-		.type		= MT_DEVICE
-
-#endif
 	},
 };
 
@@ -937,10 +930,33 @@ void __init spear13xx_map_io(void)
 
 static void __init spear13xx_timer_init(void)
 {
+	char pclk_name[] = "osc1_24m_clk";
+	struct clk *gpt_clk, *pclk;
+
 #ifdef CONFIG_LOCAL_TIMERS
 	/* Setup the local timer base */
 	twd_base = __io_address(SPEAR13XX_LOCAL_TMR_BASE);
 #endif
+
+	/* get the system timer clock */
+	gpt_clk = clk_get_sys("gpt0", NULL);
+	if (IS_ERR(gpt_clk)) {
+		pr_err("%s:couldn't get clk for gpt\n", __func__);
+		BUG();
+	}
+
+	/* get the suitable parent clock for timer*/
+	pclk = clk_get(NULL, pclk_name);
+	if (IS_ERR(pclk)) {
+		pr_err("%s:couldn't get %s as parent for gpt\n",
+				__func__, pclk_name);
+		BUG();
+	}
+
+	clk_set_parent(gpt_clk, pclk);
+	clk_put(gpt_clk);
+	clk_put(pclk);
+
 	spear_setup_timer();
 }
 

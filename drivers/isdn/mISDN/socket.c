@@ -16,6 +16,7 @@
  */
 
 #include <linux/mISDNif.h>
+#include <linux/slab.h>
 #include "core.h"
 
 static u_int	*debug;
@@ -391,6 +392,7 @@ data_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 		if (dev) {
 			struct mISDN_devinfo di;
 
+			memset(&di, 0, sizeof(di));
 			di.id = dev->id;
 			di.Dprotocols = dev->Dprotocols;
 			di.Bprotocols = dev->Bprotocols | get_all_Bprotocols();
@@ -671,6 +673,7 @@ base_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 		if (dev) {
 			struct mISDN_devinfo di;
 
+			memset(&di, 0, sizeof(di));
 			di.id = dev->id;
 			di.Dprotocols = dev->Dprotocols;
 			di.Bprotocols = dev->Bprotocols | get_all_Bprotocols();
@@ -779,7 +782,7 @@ base_sock_create(struct net *net, struct socket *sock, int protocol)
 }
 
 static int
-mISDN_sock_create(struct net *net, struct socket *sock, int proto)
+mISDN_sock_create(struct net *net, struct socket *sock, int proto, int kern)
 {
 	int err = -EPROTONOSUPPORT;
 
@@ -808,8 +811,7 @@ mISDN_sock_create(struct net *net, struct socket *sock, int proto)
 	return err;
 }
 
-static struct
-net_proto_family mISDN_sock_family_ops = {
+static const struct net_proto_family mISDN_sock_family_ops = {
 	.owner  = THIS_MODULE,
 	.family = PF_ISDN,
 	.create = mISDN_sock_create,

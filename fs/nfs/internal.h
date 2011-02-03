@@ -30,6 +30,15 @@ static inline int nfs4_has_session(const struct nfs_client *clp)
 	return 0;
 }
 
+static inline int nfs4_has_persistent_session(const struct nfs_client *clp)
+{
+#ifdef CONFIG_NFS_V4_1
+	if (nfs4_has_session(clp))
+		return (clp->cl_session->flags & SESSION4_PERSIST);
+#endif /* CONFIG_NFS_V4_1 */
+	return 0;
+}
+
 struct nfs_clone_mount {
 	const struct super_block *sb;
 	const struct dentry *dentry;
@@ -52,6 +61,12 @@ struct nfs_clone_mount {
  * Value used if the user did not specify a port value.
  */
 #define NFS_UNSPEC_PORT		(-1)
+
+/*
+ * Maximum number of pages that readdir can use for creating
+ * a vmapped array of pages.
+ */
+#define NFS_MAX_READDIR_PAGES 8
 
 /*
  * In-kernel mount arguments
@@ -156,6 +171,7 @@ struct vfsmount *nfs_do_refmount(const struct vfsmount *mnt_parent, struct dentr
 
 /* callback_xdr.c */
 extern struct svc_version nfs4_callback_version1;
+extern struct svc_version nfs4_callback_version4;
 
 /* pagelist.c */
 extern int __init nfs_init_nfspagecache(void);
@@ -171,29 +187,19 @@ extern void nfs_destroy_directcache(void);
 /* nfs2xdr.c */
 extern int nfs_stat_to_errno(int);
 extern struct rpc_procinfo nfs_procedures[];
-extern __be32 * nfs_decode_dirent(__be32 *, struct nfs_entry *, int);
+extern __be32 *nfs_decode_dirent(struct xdr_stream *, struct nfs_entry *, struct nfs_server *, int);
 
 /* nfs3xdr.c */
 extern struct rpc_procinfo nfs3_procedures[];
-extern __be32 *nfs3_decode_dirent(__be32 *, struct nfs_entry *, int);
-
-/* nfs4proc.c */
-static inline void nfs4_restart_rpc(struct rpc_task *task,
-				    const struct nfs_client *clp)
-{
-#ifdef CONFIG_NFS_V4_1
-	if (nfs4_has_session(clp) &&
-	    test_bit(NFS4CLNT_SESSION_SETUP, &clp->cl_state)) {
-		rpc_restart_call_prepare(task);
-		return;
-	}
-#endif /* CONFIG_NFS_V4_1 */
-	rpc_restart_call(task);
-}
+extern __be32 *nfs3_decode_dirent(struct xdr_stream *, struct nfs_entry *, struct nfs_server *, int);
 
 /* nfs4xdr.c */
 #ifdef CONFIG_NFS_V4
-extern __be32 *nfs4_decode_dirent(__be32 *p, struct nfs_entry *entry, int plus);
+extern __be32 *nfs4_decode_dirent(struct xdr_stream *, struct nfs_entry *, struct nfs_server *, int);
+#endif
+#ifdef CONFIG_NFS_V4_1
+extern const u32 nfs41_maxread_overhead;
+extern const u32 nfs41_maxwrite_overhead;
 #endif
 
 /* nfs4proc.c */
@@ -205,16 +211,17 @@ extern struct rpc_procinfo nfs4_procedures[];
 void nfs_close_context(struct nfs_open_context *ctx, int is_sync);
 
 /* dir.c */
-extern int nfs_access_cache_shrinker(int nr_to_scan, gfp_t gfp_mask);
+extern int nfs_access_cache_shrinker(struct shrinker *shrink,
+					int nr_to_scan, gfp_t gfp_mask);
 
 /* inode.c */
 extern struct workqueue_struct *nfsiod_workqueue;
 extern struct inode *nfs_alloc_inode(struct super_block *sb);
 extern void nfs_destroy_inode(struct inode *);
-extern int nfs_write_inode(struct inode *,int);
-extern void nfs_clear_inode(struct inode *);
+extern int nfs_write_inode(struct inode *, struct writeback_control *);
+extern void nfs_evict_inode(struct inode *);
 #ifdef CONFIG_NFS_V4
-extern void nfs4_clear_inode(struct inode *);
+extern void nfs4_evict_inode(struct inode *);
 #endif
 void nfs_zap_acl_cache(struct inode *inode);
 extern int nfs_wait_bit_killable(void *word);
@@ -244,9 +251,7 @@ extern struct dentry *nfs_get_root(struct super_block *, struct nfs_fh *);
 #ifdef CONFIG_NFS_V4
 extern struct dentry *nfs4_get_root(struct super_block *, struct nfs_fh *);
 
-extern int nfs4_path_walk(struct nfs_server *server,
-			  struct nfs_fh *mntfh,
-			  const char *path);
+extern int nfs4_get_rootfh(struct nfs_server *server, struct nfs_fh *mntfh);
 #endif
 
 /* read.c */
@@ -272,20 +277,6 @@ extern int _nfs4_call_sync_session(struct nfs_server *server,
 				   struct nfs4_sequence_args *args,
 				   struct nfs4_sequence_res *res,
 				   int cache_reply);
-
-#ifdef CONFIG_NFS_V4_1
-extern void nfs41_sequence_free_slot(const struct nfs_client *,
-				     struct nfs4_sequence_res *res);
-#endif /* CONFIG_NFS_V4_1 */
-
-static inline void nfs4_sequence_free_slot(const struct nfs_client *clp,
-					   struct nfs4_sequence_res *res)
-{
-#ifdef CONFIG_NFS_V4_1
-	if (nfs4_has_session(clp))
-		nfs41_sequence_free_slot(clp, res);
-#endif /* CONFIG_NFS_V4_1 */
-}
 
 /*
  * Determine the device name as a string
@@ -371,6 +362,15 @@ unsigned int nfs_page_length(struct page *page)
 }
 
 /*
+ * Convert a umode to a dirent->d_type
+ */
+static inline
+unsigned char nfs_umode_to_dtype(umode_t mode)
+{
+	return (mode >> 12) & 15;
+}
+
+/*
  * Determine the number of pages in an array of length 'len' and
  * with a base offset of 'base'
  */
@@ -379,4 +379,15 @@ unsigned int nfs_page_array_len(unsigned int base, size_t len)
 {
 	return ((unsigned long)len + (unsigned long)base +
 		PAGE_SIZE - 1) >> PAGE_SHIFT;
+}
+
+/*
+ * Helper for restarting RPC calls in the possible presence of NFSv4.1
+ * sessions.
+ */
+static inline int nfs_restart_rpc(struct rpc_task *task, const struct nfs_client *clp)
+{
+	if (nfs4_has_session(clp))
+		return rpc_restart_call_prepare(task);
+	return rpc_restart_call(task);
 }

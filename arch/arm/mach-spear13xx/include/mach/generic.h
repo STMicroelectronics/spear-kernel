@@ -14,14 +14,13 @@
 #ifndef __MACH_GENERIC_H
 #define __MACH_GENERIC_H
 
-#include <asm/mach/arch.h>
-#include <asm/mach/map.h>
-#include <asm/mach/time.h>
-#include <asm/setup.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
-#include <plat/device.h>
+#include <asm/mach/arch.h>
+#include <asm/mach/time.h>
+#include <asm/mach/map.h>
+#include <asm/setup.h>
 #include <plat/padmux.h>
 
 /*
@@ -38,6 +37,7 @@
 
 #if defined(CONFIG_MACH_SPEAR1310)
 #define SPEAR1310_FUNC_CNTL_0	UL(0x6C800000)
+
 #define PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
 #define PMX_EGPIO7_MASK		(1 << 2)	/* Pcm cfg reg */
 #endif
@@ -235,26 +235,27 @@ extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
 extern struct platform_device spear13xx_eth0_device;
+extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
 extern struct platform_device spear13xx_i2s0_device;
 extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
-extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
-extern struct platform_device spear13xx_phy0_device;
+extern struct platform_device spear13xx_pcie_gadget0_device;
+extern struct platform_device spear13xx_pcie_gadget1_device;
+extern struct platform_device spear13xx_pcie_gadget2_device;
+extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
 extern struct platform_device spear13xx_udc_device;
 extern struct platform_device spear13xx_wdt_device;
-extern struct platform_device spear13xx_pcie_gadget0_device;
-extern struct platform_device spear13xx_pcie_gadget1_device;
-extern struct platform_device spear13xx_pcie_gadget2_device;
 extern struct sys_timer spear13xx_timer;
-/* Add spear1300 machine device structure declarations here */
+
+/* Add spear13xx structure declarations here */
 extern struct db9000fb_mach_info sharp_lcd_info;
 extern struct db9000fb_mach_info chimei_b101aw02_info;
 
@@ -267,6 +268,7 @@ void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
 void spear13xx_secondary_startup(void);
+void pcm_init(struct device *dma_dev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */
@@ -274,7 +276,6 @@ unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 /* Add spear1300 machine function declarations here */
 void __init spear1300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
-void pcm_init(struct device *dma_dev);
 
 #endif /* CONFIG_MACH_SPEAR1300 */
 
@@ -293,20 +294,17 @@ extern struct platform_device spear1310_eth2_device;
 extern struct platform_device spear1310_eth3_device;
 extern struct platform_device spear1310_eth4_device;
 extern struct platform_device spear1310_i2c1_device;
+extern struct platform_device spear1310_ras_fsmc_nor_device;
 extern struct platform_device spear1310_plgpio_device;
-extern struct platform_device spear1310_phy1_device;
-extern struct platform_device spear1310_phy2_device;
-extern struct platform_device spear1310_phy3_device;
-extern struct platform_device spear1310_phy4_device;
-extern struct platform_device spear1310_tdm_hdlc_0_device;
-extern struct platform_device spear1310_tdm_hdlc_1_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
-extern struct platform_device spear1310_ras_fsmc_nor_device;
+extern struct platform_device spear1310_tdm_hdlc_0_device;
+extern struct platform_device spear1310_tdm_hdlc_1_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
+void __init spear1310_map_io(void);
 
 #endif /* CONFIG_MACH_SPEAR1310 */
 
@@ -315,7 +313,6 @@ void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 /* Add spear900 machine function declarations here */
 void __init spear900_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
-void pcm_init(struct device *dma_dev);
 
 #endif /* CONFIG_MACH_SPEAR900 */
 

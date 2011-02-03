@@ -14,20 +14,21 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/spear_adc_usr.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
+#include <plat/touchscreen.h>
+#include <plat/udc.h>
 #include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/spear.h>
-#include <plat/nand.h>
-#include <plat/touchscreen.h>
-#include <plat/udc.h>
 
 /* The wake sources are routed through vic-2 */
 #define SPEAR6XX_WKUP_SRCS_VIC2		(1 << (IRQ_GMAC_1 - 32) | \
@@ -36,7 +37,6 @@
 					1 << (IRQ_BASIC_GPIO - 32))
 
 /* Add spear6xx machines common devices here */
-
 /* CLCD device registration */
 struct amba_device clcd_device = {
 	.dev = {
@@ -71,8 +71,7 @@ struct platform_device touchscreen_device = {
 	.resource = NULL,
 };
 
-
-/* ssp device registeration */
+/* ssp device registration */
 static struct pl022_ssp_controller ssp_platform_data[] = {
 	{
 		.bus_id = 0,
@@ -139,7 +138,7 @@ struct amba_device ssp_device[] = {
 	}
 };
 
-/* uart device registeration */
+/* uart device registration */
 struct amba_device uart_device[] = {
 	{
 		.dev = {
@@ -164,7 +163,7 @@ struct amba_device uart_device[] = {
 	}
 };
 
-/* gpio device registeration */
+/* gpio device registration */
 static struct pl061_platform_data gpio_plat_data[] = {
 	{
 		.gpio_base	= 0,
@@ -273,11 +272,14 @@ struct platform_device dmac_device = {
 
 /* stmmac device registeration */
 static struct plat_stmmacenet_data eth_platform_data = {
+	.bus_id = 0,
 	.has_gmac = 1,
 	.enh_desc = 0,
-	.tx_csum = 0,
+	.tx_coe = 0,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_1,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth_resources[] = {
@@ -298,7 +300,6 @@ static struct resource eth_resources[] = {
 };
 
 static u64 eth_dma_mask = ~(u32) 0;
-
 struct platform_device eth_device = {
 	.name = "stmmaceth",
 	.id = -1,
@@ -334,7 +335,7 @@ struct platform_device i2c_device = {
 };
 
 /* nand device registeration */
-static struct nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data;
 
 static struct resource nand_resources[] = {
 	{
@@ -351,7 +352,7 @@ static struct resource nand_resources[] = {
 };
 
 struct platform_device nand_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
@@ -614,6 +615,28 @@ void __init spear6xx_map_io(void)
 
 static void __init spear6xx_timer_init(void)
 {
+	char pclk_name[] = "pll3_48m_clk";
+	struct clk *gpt_clk, *pclk;
+
+	/* get the system timer clock */
+	gpt_clk = clk_get_sys("gpt0", NULL);
+	if (IS_ERR(gpt_clk)) {
+		pr_err("%s:couldn't get clk for gpt\n", __func__);
+		BUG();
+	}
+
+	/* get the suitable parent clock for timer*/
+	pclk = clk_get(NULL, pclk_name);
+	if (IS_ERR(pclk)) {
+		pr_err("%s:couldn't get %s as parent for gpt\n",
+				__func__, pclk_name);
+		BUG();
+	}
+
+	clk_set_parent(gpt_clk, pclk);
+	clk_put(gpt_clk);
+	clk_put(pclk);
+
 	spear_setup_timer();
 }
 

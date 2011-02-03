@@ -34,6 +34,7 @@
 #include <linux/moduleparam.h>
 #include <linux/debugfs.h>
 #include <linux/math64.h>
+#include <linux/slab.h>
 
 #ifdef CONFIG_UBIFS_FS_DEBUG
 
@@ -350,13 +351,8 @@ void dbg_dump_node(const struct ubifs_info *c, const void *node)
 		       le32_to_cpu(sup->fmt_version));
 		printk(KERN_DEBUG "\ttime_gran      %u\n",
 		       le32_to_cpu(sup->time_gran));
-		printk(KERN_DEBUG "\tUUID           %02X%02X%02X%02X-%02X%02X"
-		       "-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X\n",
-		       sup->uuid[0], sup->uuid[1], sup->uuid[2], sup->uuid[3],
-		       sup->uuid[4], sup->uuid[5], sup->uuid[6], sup->uuid[7],
-		       sup->uuid[8], sup->uuid[9], sup->uuid[10], sup->uuid[11],
-		       sup->uuid[12], sup->uuid[13], sup->uuid[14],
-		       sup->uuid[15]);
+		printk(KERN_DEBUG "\tUUID           %pUB\n",
+		       sup->uuid);
 		break;
 	}
 	case UBIFS_MST_NODE:
@@ -2014,7 +2010,7 @@ static int check_leaf(struct ubifs_info *c, struct ubifs_zbranch *zbr,
 		inum = key_inum_flash(c, &dent->key);
 		fscki1 = read_add_inode(c, priv, inum);
 		if (IS_ERR(fscki1)) {
-			err = PTR_ERR(fscki);
+			err = PTR_ERR(fscki1);
 			ubifs_err("error %d while processing entry node and "
 				  "trying to find parent inode node %lu",
 				  err, (unsigned long)inum);
@@ -2241,6 +2237,162 @@ out_free:
 	dump_stack();
 	free_inodes(&fsckd);
 	return err;
+}
+
+/**
+ * dbg_check_data_nodes_order - check that list of data nodes is sorted.
+ * @c: UBIFS file-system description object
+ * @head: the list of nodes ('struct ubifs_scan_node' objects)
+ *
+ * This function returns zero if the list of data nodes is sorted correctly,
+ * and %-EINVAL if not.
+ */
+int dbg_check_data_nodes_order(struct ubifs_info *c, struct list_head *head)
+{
+	struct list_head *cur;
+	struct ubifs_scan_node *sa, *sb;
+
+	if (!(ubifs_chk_flags & UBIFS_CHK_GEN))
+		return 0;
+
+	for (cur = head->next; cur->next != head; cur = cur->next) {
+		ino_t inuma, inumb;
+		uint32_t blka, blkb;
+
+		cond_resched();
+		sa = container_of(cur, struct ubifs_scan_node, list);
+		sb = container_of(cur->next, struct ubifs_scan_node, list);
+
+		if (sa->type != UBIFS_DATA_NODE) {
+			ubifs_err("bad node type %d", sa->type);
+			dbg_dump_node(c, sa->node);
+			return -EINVAL;
+		}
+		if (sb->type != UBIFS_DATA_NODE) {
+			ubifs_err("bad node type %d", sb->type);
+			dbg_dump_node(c, sb->node);
+			return -EINVAL;
+		}
+
+		inuma = key_inum(c, &sa->key);
+		inumb = key_inum(c, &sb->key);
+
+		if (inuma < inumb)
+			continue;
+		if (inuma > inumb) {
+			ubifs_err("larger inum %lu goes before inum %lu",
+				  (unsigned long)inuma, (unsigned long)inumb);
+			goto error_dump;
+		}
+
+		blka = key_block(c, &sa->key);
+		blkb = key_block(c, &sb->key);
+
+		if (blka > blkb) {
+			ubifs_err("larger block %u goes before %u", blka, blkb);
+			goto error_dump;
+		}
+		if (blka == blkb) {
+			ubifs_err("two data nodes for the same block");
+			goto error_dump;
+		}
+	}
+
+	return 0;
+
+error_dump:
+	dbg_dump_node(c, sa->node);
+	dbg_dump_node(c, sb->node);
+	return -EINVAL;
+}
+
+/**
+ * dbg_check_nondata_nodes_order - check that list of data nodes is sorted.
+ * @c: UBIFS file-system description object
+ * @head: the list of nodes ('struct ubifs_scan_node' objects)
+ *
+ * This function returns zero if the list of non-data nodes is sorted correctly,
+ * and %-EINVAL if not.
+ */
+int dbg_check_nondata_nodes_order(struct ubifs_info *c, struct list_head *head)
+{
+	struct list_head *cur;
+	struct ubifs_scan_node *sa, *sb;
+
+	if (!(ubifs_chk_flags & UBIFS_CHK_GEN))
+		return 0;
+
+	for (cur = head->next; cur->next != head; cur = cur->next) {
+		ino_t inuma, inumb;
+		uint32_t hasha, hashb;
+
+		cond_resched();
+		sa = container_of(cur, struct ubifs_scan_node, list);
+		sb = container_of(cur->next, struct ubifs_scan_node, list);
+
+		if (sa->type != UBIFS_INO_NODE && sa->type != UBIFS_DENT_NODE &&
+		    sa->type != UBIFS_XENT_NODE) {
+			ubifs_err("bad node type %d", sa->type);
+			dbg_dump_node(c, sa->node);
+			return -EINVAL;
+		}
+		if (sa->type != UBIFS_INO_NODE && sa->type != UBIFS_DENT_NODE &&
+		    sa->type != UBIFS_XENT_NODE) {
+			ubifs_err("bad node type %d", sb->type);
+			dbg_dump_node(c, sb->node);
+			return -EINVAL;
+		}
+
+		if (sa->type != UBIFS_INO_NODE && sb->type == UBIFS_INO_NODE) {
+			ubifs_err("non-inode node goes before inode node");
+			goto error_dump;
+		}
+
+		if (sa->type == UBIFS_INO_NODE && sb->type != UBIFS_INO_NODE)
+			continue;
+
+		if (sa->type == UBIFS_INO_NODE && sb->type == UBIFS_INO_NODE) {
+			/* Inode nodes are sorted in descending size order */
+			if (sa->len < sb->len) {
+				ubifs_err("smaller inode node goes first");
+				goto error_dump;
+			}
+			continue;
+		}
+
+		/*
+		 * This is either a dentry or xentry, which should be sorted in
+		 * ascending (parent ino, hash) order.
+		 */
+		inuma = key_inum(c, &sa->key);
+		inumb = key_inum(c, &sb->key);
+
+		if (inuma < inumb)
+			continue;
+		if (inuma > inumb) {
+			ubifs_err("larger inum %lu goes before inum %lu",
+				  (unsigned long)inuma, (unsigned long)inumb);
+			goto error_dump;
+		}
+
+		hasha = key_block(c, &sa->key);
+		hashb = key_block(c, &sb->key);
+
+		if (hasha > hashb) {
+			ubifs_err("larger hash %u goes before %u", hasha, hashb);
+			goto error_dump;
+		}
+	}
+
+	return 0;
+
+error_dump:
+	ubifs_msg("dumping first node");
+	dbg_dump_node(c, sa->node);
+	ubifs_msg("dumping second node");
+	dbg_dump_node(c, sb->node);
+	return -EINVAL;
+	return 0;
 }
 
 static int invocation_cnt;
@@ -2629,6 +2781,7 @@ static const struct file_operations dfs_fops = {
 	.open = open_debugfs_file,
 	.write = write_debugfs_file,
 	.owner = THIS_MODULE,
+	.llseek = default_llseek,
 };
 
 /**

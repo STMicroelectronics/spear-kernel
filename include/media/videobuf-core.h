@@ -54,8 +54,6 @@ struct videobuf_queue;
 
 struct videobuf_mapping {
 	unsigned int count;
-	unsigned long start;
-	unsigned long end;
 	struct videobuf_queue *q;
 };
 
@@ -127,34 +125,21 @@ struct videobuf_queue_ops {
 struct videobuf_qtype_ops {
 	u32                     magic;
 
-	void *(*alloc)		(size_t size);
-	void *(*vmalloc)	(struct videobuf_buffer *buf);
-	int (*iolock)		(struct videobuf_queue* q,
+	struct videobuf_buffer *(*alloc_vb)(size_t size);
+	void *(*vaddr)		(struct videobuf_buffer *buf);
+	int (*iolock)		(struct videobuf_queue *q,
 				 struct videobuf_buffer *vb,
 				 struct v4l2_framebuffer *fbuf);
-	int (*mmap)		(struct videobuf_queue *q,
-				 unsigned int *count,
-				 unsigned int *size,
-				 enum v4l2_memory memory);
-	int (*sync)		(struct videobuf_queue* q,
+	int (*sync)		(struct videobuf_queue *q,
 				 struct videobuf_buffer *buf);
-	int (*video_copy_to_user)(struct videobuf_queue *q,
-				 char __user *data,
-				 size_t count,
-				 int nonblocking);
-	int (*copy_stream)	(struct videobuf_queue *q,
-				 char __user *data,
-				 size_t count,
-				 size_t pos,
-				 int vbihack,
-				 int nonblocking);
-	int (*mmap_free)	(struct videobuf_queue *q);
 	int (*mmap_mapper)	(struct videobuf_queue *q,
-				struct vm_area_struct *vma);
+				 struct videobuf_buffer *buf,
+				 struct vm_area_struct *vma);
 };
 
 struct videobuf_queue {
 	struct mutex               vb_lock;
+	struct mutex               *ext_lock;
 	spinlock_t                 *irqlock;
 	struct device		   *dev;
 
@@ -166,12 +151,11 @@ struct videobuf_queue {
 	enum v4l2_field            field;
 	enum v4l2_field            last;   /* for field=V4L2_FIELD_ALTERNATE */
 	struct videobuf_buffer     *bufs[VIDEO_MAX_FRAME];
-	struct videobuf_queue_ops  *ops;
+	const struct videobuf_queue_ops  *ops;
 	struct videobuf_qtype_ops  *int_ops;
 
 	unsigned int               streaming:1;
 	unsigned int               reading:1;
-	unsigned int		   is_mmapped:1;
 
 	/* capture via mmap() + ioctl(QBUF/DQBUF) */
 	struct list_head           stream;
@@ -184,25 +168,39 @@ struct videobuf_queue {
 	void                       *priv_data;
 };
 
-int videobuf_waiton(struct videobuf_buffer *vb, int non_blocking, int intr);
-int videobuf_iolock(struct videobuf_queue* q, struct videobuf_buffer *vb,
+static inline void videobuf_queue_lock(struct videobuf_queue *q)
+{
+	if (!q->ext_lock)
+		mutex_lock(&q->vb_lock);
+}
+
+static inline void videobuf_queue_unlock(struct videobuf_queue *q)
+{
+	if (!q->ext_lock)
+		mutex_unlock(&q->vb_lock);
+}
+
+int videobuf_waiton(struct videobuf_queue *q, struct videobuf_buffer *vb,
+		int non_blocking, int intr);
+int videobuf_iolock(struct videobuf_queue *q, struct videobuf_buffer *vb,
 		struct v4l2_framebuffer *fbuf);
 
-void *videobuf_alloc(struct videobuf_queue* q);
+struct videobuf_buffer *videobuf_alloc_vb(struct videobuf_queue *q);
 
 /* Used on videobuf-dvb */
-void *videobuf_queue_to_vmalloc (struct videobuf_queue* q,
-				 struct videobuf_buffer *buf);
+void *videobuf_queue_to_vaddr(struct videobuf_queue *q,
+			      struct videobuf_buffer *buf);
 
 void videobuf_queue_core_init(struct videobuf_queue *q,
-			 struct videobuf_queue_ops *ops,
+			 const struct videobuf_queue_ops *ops,
 			 struct device *dev,
 			 spinlock_t *irqlock,
 			 enum v4l2_buf_type type,
 			 enum v4l2_field field,
 			 unsigned int msize,
 			 void *priv,
-			 struct videobuf_qtype_ops *int_ops);
+			 struct videobuf_qtype_ops *int_ops,
+			 struct mutex *ext_lock);
 int  videobuf_queue_is_busy(struct videobuf_queue *q);
 void videobuf_queue_cancel(struct videobuf_queue *q);
 

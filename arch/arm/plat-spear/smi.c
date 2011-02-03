@@ -12,8 +12,8 @@
  */
 
 #include <asm/mach-types.h>
-#include <mach/spear.h>
 #include <plat/smi.h>
+#include <mach/spear.h>
 
 /*
  * physical base address of flash/bank mem map base associated with smi

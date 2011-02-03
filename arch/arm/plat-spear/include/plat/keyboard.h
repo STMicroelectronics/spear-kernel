@@ -1,6 +1,4 @@
 /*
- * arch/arm/plat-spear/include/plat/keyboard.h
- *
  * Copyright (C) 2010 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
  *
@@ -12,12 +10,13 @@
 #ifndef __PLAT_KEYBOARD_H
 #define __PLAT_KEYBOARD_H
 
+#include <linux/bitops.h>
 #include <linux/input.h>
+#include <linux/input/matrix_keypad.h>
+#include <linux/types.h>
 
-#define KEY(row, col, val) (((row) << 28 | ((col) << 24) | (val)))
-
-#define DECLARE_KEYMAP(name) \
-int name[] = {\
+#define DECLARE_KEYMAP(_name) \
+int _name[] = { \
 	KEY(0, 0, KEY_ESC), \
 	KEY(0, 1, KEY_1), \
 	KEY(0, 2, KEY_2), \
@@ -117,21 +116,19 @@ int name[] = {\
 	KEY(8, 6, KEY_KP2), \
 	KEY(8, 7, KEY_KP3), \
 	KEY(8, 8, KEY_KP0), \
-};
+}
+
 /**
- * struct kbd_platform_data - keymap for spear keyboards
- * keymap: pointer to array of values encoded with KEY() macro representing
- * keymap
- * keymapsize: number of entries (initialized) in this keymap
- * rep: current values for autorepeat parameters
+ * struct kbd_platform_data - spear keyboard platform data
+ * keymap: pointer to keymap data (table and size)
+ * rep: enables key autorepeat
  *
  * This structure is supposed to be used by platform code to supply
  * keymaps to drivers that implement keyboards.
  */
 struct kbd_platform_data {
-	int *keymap;
-	unsigned int keymapsize;
-	unsigned int rep:1;
+	const struct matrix_keymap_data *keymap;
+	bool rep;
 };
 
 /* This function is used to set platform data field of pdev->dev */

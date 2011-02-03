@@ -193,13 +193,14 @@ static void __init h5000_init(void)
 	fix_msc();
 
 	pxa2xx_mfp_config(ARRAY_AND_SIZE(h5000_pin_config));
+	pxa_set_ffuart_info(NULL);
+	pxa_set_btuart_info(NULL);
+	pxa_set_stuart_info(NULL);
 	pxa_set_udc_info(&h5000_udc_mach_info);
 	platform_add_devices(ARRAY_AND_SIZE(devices));
 }
 
 MACHINE_START(H5400, "HP iPAQ H5000")
-	.phys_io = 0x40000000,
-	.io_pg_offst = (io_p2v(0x40000000) >> 18) & 0xfffc,
 	.boot_params = 0xa0000100,
 	.map_io = pxa_map_io,
 	.init_irq = pxa25x_init_irq,

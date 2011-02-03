@@ -11,8 +11,8 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <mach/hardware.h>
 #include <asm/hardware/gic.h>
+#include <mach/hardware.h>
 
 		.macro	disable_fiq
 		.endm

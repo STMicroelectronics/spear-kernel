@@ -137,7 +137,8 @@
 	li	r10,0;							   \
 	ld	r11,exception_marker@toc(r2);				   \
 	std	r10,RESULT(r1);		/* clear regs->result		*/ \
-	std	r11,STACK_FRAME_OVERHEAD-16(r1); /* mark the frame	*/
+	std	r11,STACK_FRAME_OVERHEAD-16(r1); /* mark the frame	*/ \
+	ACCOUNT_STOLEN_TIME
 
 /*
  * Exception vectors.
@@ -147,6 +148,7 @@
 	.globl label##_pSeries;				\
 label##_pSeries:					\
 	HMT_MEDIUM;					\
+	DO_KVM	n;					\
 	mtspr	SPRN_SPRG_SCRATCH0,r13;		/* save r13 */	\
 	EXCEPTION_PROLOG_PSERIES(PACA_EXGEN, label##_common)
 
@@ -170,6 +172,7 @@ label##_pSeries:					\
 	.globl label##_pSeries;						\
 label##_pSeries:							\
 	HMT_MEDIUM;							\
+	DO_KVM	n;							\
 	mtspr	SPRN_SPRG_SCRATCH0,r13;	/* save r13 */			\
 	mfspr	r13,SPRN_SPRG_PACA;	/* get paca address into r13 */	\
 	std	r9,PACA_EXGEN+EX_R9(r13);	/* save r9, r10 */	\

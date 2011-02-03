@@ -16,25 +16,25 @@
 
 #include <mach/hardware.h>
 
-#define MISC_BASE		VA_SPEAR13XX_MISC_BASE
+#define MISC_BASE		IOMEM(VA_SPEAR13XX_MISC_BASE)
 
 /* General Configuration */
-#define SOC_CFG			((unsigned int *)(MISC_BASE + 0x000))
-#define BOOTSTRAP_CFG		((unsigned int *)(MISC_BASE + 0x004))
+#define SOC_CFG			(MISC_BASE + 0x000)
+#define BOOTSTRAP_CFG		(MISC_BASE + 0x004)
 
 /* Power Management Registers */
-#define PCM_CFG			((unsigned int *)(MISC_BASE + 0x100))
-#define PCM_WKUP_CFG		((unsigned int *)(MISC_BASE + 0x104))
-#define SWITCH_CTR		((unsigned int *)(MISC_BASE + 0x108))
-#define SYS_CLK_CTRL		((unsigned int *)(MISC_BASE + 0x200))
-#define SYS_SW_RES		((unsigned int *)(MISC_BASE + 0x204))
+#define PCM_CFG			(MISC_BASE + 0x100)
+#define PCM_WKUP_CFG		(MISC_BASE + 0x104)
+#define SWITCH_CTR		(MISC_BASE + 0x108)
+#define SYS_CLK_CTRL		(MISC_BASE + 0x200)
+#define SYS_SW_RES		(MISC_BASE + 0x204)
 
 /* Clock Configuration Registers */
-#define SYS_CLK_PLLTIMER	((unsigned int *)(MISC_BASE + 0x208))
-#define SYS_CLK_OSCITIMER	((unsigned int *)(MISC_BASE + 0x20c))
+#define SYS_CLK_PLLTIMER	(MISC_BASE + 0x208)
+#define SYS_CLK_OSCITIMER	(MISC_BASE + 0x20c)
 
 /* PLL related registers and bit values */
-#define PLL_CFG			((unsigned int *)(MISC_BASE + 0x210))
+#define PLL_CFG			(MISC_BASE + 0x210)
 	/* PLL_CFG bit values */
 	#define OSC_24M_VAL			0
 	#define OSC_25M_VAL			1
@@ -58,16 +58,16 @@
 	#define RAS_SYNT2_3_CLK_SHIFT		29
 
 
-#define PLL1_CTR		((unsigned int *)(MISC_BASE + 0x214))
-#define PLL1_FRQ		((unsigned int *)(MISC_BASE + 0x218))
-#define PLL1_MOD		((unsigned int *)(MISC_BASE + 0x21c))
-#define PLL2_CTR		((unsigned int *)(MISC_BASE + 0x220))
-#define PLL2_FRQ		((unsigned int *)(MISC_BASE + 0x224))
-#define PLL2_MOD		((unsigned int *)(MISC_BASE + 0x228))
-#define PLL3_CTR		((unsigned int *)(MISC_BASE + 0x22c))
-#define PLL3_FRQ		((unsigned int *)(MISC_BASE + 0x230))
-#define PLL3_MOD		((unsigned int *)(MISC_BASE + 0x234))
-#define PLL4_CTR		((unsigned int *)(MISC_BASE + 0x238))
+#define PLL1_CTR		(MISC_BASE + 0x214)
+#define PLL1_FRQ		(MISC_BASE + 0x218)
+#define PLL1_MOD		(MISC_BASE + 0x21c)
+#define PLL2_CTR		(MISC_BASE + 0x220)
+#define PLL2_FRQ		(MISC_BASE + 0x224)
+#define PLL2_MOD		(MISC_BASE + 0x228)
+#define PLL3_CTR		(MISC_BASE + 0x22c)
+#define PLL3_FRQ		(MISC_BASE + 0x230)
+#define PLL3_MOD		(MISC_BASE + 0x234)
+#define PLL4_CTR		(MISC_BASE + 0x238)
 	/* PLL_CTR register masks */
 	#define PLL_ENABLE		2
 	#define PLL_MODE_SHIFT		4
@@ -77,7 +77,7 @@
 	#define PLL_MODE_DITH_DSB	2
 	#define PLL_MODE_DITH_SSB	3
 
-#define PLL4_FRQ		((unsigned int *)(MISC_BASE + 0x23c))
+#define PLL4_FRQ		(MISC_BASE + 0x23c)
 	/* PLL FRQ register masks */
 	#define PLL_DIV_N_SHIFT		0
 	#define PLL_DIV_N_MASK		0xFF
@@ -88,9 +88,9 @@
 	#define PLL_DITH_FDBK_M_SHIFT	16
 	#define PLL_DITH_FDBK_M_MASK	0xFFFF
 
-#define PLL4_MOD		((unsigned int *)(MISC_BASE + 0x240))
+#define PLL4_MOD		(MISC_BASE + 0x240)
 
-#define PERIP_CLK_CFG		((unsigned int *)(MISC_BASE + 0x244))
+#define PERIP_CLK_CFG		(MISC_BASE + 0x244)
 	/* PERIP_CLK_CFG bit values */
 	#define GPT_OSC24_VAL		0
 	#define GPT_APB_VAL		1
@@ -114,7 +114,7 @@
 	#define MCTR_CLK_PLL1_VAL	0x0
 	#define MCTR_CLK_PLL4_VAL	0x1
 
-#define GMAC_CLK_CFG		((unsigned int *)(MISC_BASE + 0x248))
+#define GMAC_CLK_CFG		(MISC_BASE + 0x248)
 
 	#define GMAC_PHY_PAD_VAL		0
 	#define GMAC_PHY_PLL2_VAL		1
@@ -126,21 +126,21 @@
 	#define GMAC_PHY_CLK_SHIFT		3
 	#define GMAC_PHY_SYNT_ENB_VAL		4
 
-#define C3_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x24c))
-#define CLCD_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x250))
+#define C3_CLK_SYNT		(MISC_BASE + 0x24c)
+#define CLCD_CLK_SYNT		(MISC_BASE + 0x250)
 	#define CLCD_SYNT_ENB			31
 	/* Fractional synthesizer reg masks */
 	#define FRAC_SYNT_DIV_FACTOR_MASK	0x1ffff
 	#define FRAC_SYNT_DIV_FACTOR_SHIFT	0
 
-#define UART_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x254))
-#define GMAC_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x258))
-#define SDHCI_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x25c))
-#define CFXD_CLK_SYNT		((unsigned int *)(MISC_BASE + 0x260))
-#define RAS_CLK_SYNT0		((unsigned int *)(MISC_BASE + 0x264))
-#define RAS_CLK_SYNT1		((unsigned int *)(MISC_BASE + 0x268))
-#define RAS_CLK_SYNT2		((unsigned int *)(MISC_BASE + 0x26c))
-#define RAS_CLK_SYNT3		((unsigned int *)(MISC_BASE + 0x270))
+#define UART_CLK_SYNT		(MISC_BASE + 0x254)
+#define GMAC_CLK_SYNT		(MISC_BASE + 0x258)
+#define SDHCI_CLK_SYNT		(MISC_BASE + 0x25c)
+#define CFXD_CLK_SYNT		(MISC_BASE + 0x260)
+#define RAS_CLK_SYNT0		(MISC_BASE + 0x264)
+#define RAS_CLK_SYNT1		(MISC_BASE + 0x268)
+#define RAS_CLK_SYNT2		(MISC_BASE + 0x26c)
+#define RAS_CLK_SYNT3		(MISC_BASE + 0x270)
 	/* aux clk synthesizer register masks */
 	#define AUX_SYNT_ENB		31
 	#define AUX_EQ_SEL_SHIFT	30
@@ -152,7 +152,7 @@
 	#define AUX_YSCALE_SHIFT	0
 	#define AUX_YSCALE_MASK		0xFFF
 
-#define PERIP1_CLK_ENB		((unsigned int *)(MISC_BASE + 0x274))
+#define PERIP1_CLK_ENB		(MISC_BASE + 0x274)
 	/* PERIP1_CLK_ENB register masks */
 	#define BUS_CLK_ENB		0
 	#define SYSROM_CLK_ENB		1
@@ -186,7 +186,7 @@
 	#define ADC_CLK_ENB		30
 	#define RTC_CLK_ENB		31
 
-#define PERIP2_CLK_ENB		((unsigned int *)(MISC_BASE + 0x278))
+#define PERIP2_CLK_ENB		(MISC_BASE + 0x278)
 	/* PERIP2_CLK_ENB register masks */
 	#define DDR_CTRL_CLK_ENB	0
 	#define DDR_CORE_CLK_ENB	1
@@ -198,10 +198,10 @@
 	#define I2S_REFOUT_CLK_ENB	7
 	#define THSENS_CLK_ENB		8
 
-#define PERIP1_SW_RST		((unsigned int *)(MISC_BASE + 0x27c))
+#define PERIP1_SW_RST		(MISC_BASE + 0x27c)
 	#define JPEG_SOF_RST		28
-#define PERIP2_SW_RST		((unsigned int *)(MISC_BASE + 0x280))
-#define RAS_CLK_ENB		((unsigned int *)(MISC_BASE + 0x284))
+#define PERIP2_SW_RST		(MISC_BASE + 0x280)
+#define RAS_CLK_ENB		(MISC_BASE + 0x284)
 	/* RAS_CLK_ENB register masks */
 	#define ACLK_CLK_ENB		0
 	#define PCLK_CLK_ENB		1
@@ -221,9 +221,9 @@
 	#define SYNT1_CLK_ENB		15
 	#define SYNT2_CLK_ENB		16
 	#define SYNT3_CLK_ENB		17
-#define RAS_SW_RST		((unsigned int *)(MISC_BASE + 0x288))
-#define PLL1_SYNT		((unsigned int *)(MISC_BASE + 0x28c))
-#define I2S_CLK_CFG		((unsigned int *)(MISC_BASE + 0x290))
+#define RAS_SW_RST		(MISC_BASE + 0x288)
+#define PLL1_SYNT		(MISC_BASE + 0x28c)
+#define I2S_CLK_CFG		(MISC_BASE + 0x290)
 	/* I2S_CLK_CFG register mask */
 	#define I2S_SRC_PLLDIV2_VAL	0
 	#define I2S_SRC_CLK_VAL		0
@@ -249,16 +249,16 @@
 	#define I2S_SCLK_SHIFT		2
 
 /* Peripheral Configuration Registers */
-#define DMAC_HS_SEL		((unsigned int *)(MISC_BASE + 0x300))
-#define DMAC_SEL		((unsigned int *)(MISC_BASE + 0x304))
-#define DMAC_FLOW_SEL		((unsigned int *)(MISC_BASE + 0x308))
-#define DMAC_DIR_SEL		((unsigned int *)(MISC_BASE + 0x30c))
-#define DMAC_CFG		((unsigned int *)(MISC_BASE + 0x310))
-#define USBPHY_GEN_CFG		((unsigned int *)(MISC_BASE + 0x314))
-#define USBPHY_P1_CFG		((unsigned int *)(MISC_BASE + 0x318))
-#define USBPHY_P2_CFG		((unsigned int *)(MISC_BASE + 0x31c))
-#define USBPHY_P3_CFG		((unsigned int *)(MISC_BASE + 0x320))
-#define PCIE_CFG		((unsigned int *)(MISC_BASE + 0x324))
+#define DMAC_HS_SEL		(MISC_BASE + 0x300)
+#define DMAC_SEL		(MISC_BASE + 0x304)
+#define DMAC_FLOW_SEL		(MISC_BASE + 0x308)
+#define DMAC_DIR_SEL		(MISC_BASE + 0x30c)
+#define DMAC_CFG		(MISC_BASE + 0x310)
+#define USBPHY_GEN_CFG		(MISC_BASE + 0x314)
+#define USBPHY_P1_CFG		(MISC_BASE + 0x318)
+#define USBPHY_P2_CFG		(MISC_BASE + 0x31c)
+#define USBPHY_P3_CFG		(MISC_BASE + 0x320)
+#define PCIE_CFG		(MISC_BASE + 0x324)
 	/* PCIE CFG MASks */
 	#define PCIE2_CFG_AUX_CLK	(1 << 0)
 	#define PCIE1_CFG_AUX_CLK	(1 << 1)
@@ -279,15 +279,15 @@
 	#define PCIE2_CFG_VAL	(PCIE2_CFG_AUX_CLK | PCIE2_CFG_CORE_CLK \
 			| PCIE2_CFG_POWERUP_RESET | PCIE2_CFG_DEVICE_PRESENT)
 
-#define PCIE_MIPHY_CFG		((unsigned int *)(MISC_BASE + 0x328))
-#define PERIP_CFG		((unsigned int *)(MISC_BASE + 0x32c))
+#define PCIE_MIPHY_CFG		(MISC_BASE + 0x328)
+#define PERIP_CFG		(MISC_BASE + 0x32c)
 #define SDHCI_CFG		(SPEAR13XX_MISC_BASE + 0x32c)
 	#define MCIF_SEL_SHIFT	3
 	#define MCIF_SEL_MASK	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_SD	(0x1 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_CF	(0x2 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_XD	(0x3 << MCIF_SEL_SHIFT)
-#define FSMC_CFG		((unsigned int *)(MISC_BASE + 0x330))
+#define FSMC_CFG		(MISC_BASE + 0x330)
 	/* FSMC_CFG register masks */
 	#define FSMC_MEMSEL_MASK	0x3
 	#define FSMC_MEMSEL_SHIFT	0
@@ -298,124 +298,124 @@
 	#define NAND_BANK_SHIFT		2
 	#define NAND_DEV_WIDTH16	4
 
-#define MPMC_CTR_STS		((unsigned int *)(MISC_BASE + 0x334))
+#define MPMC_CTR_STS		(MISC_BASE + 0x334)
 
 /* Inter-Processor Communication Registers */
-#define PRC1_LOCK_CTR		((unsigned int *)(MISC_BASE + 0x500))
-#define PRC2_LOCK_CTR		((unsigned int *)(MISC_BASE + 0x504))
-#define PRC1_IRQ_CTR		((unsigned int *)(MISC_BASE + 0x508))
-#define PRC2_IRQ_CTR		((unsigned int *)(MISC_BASE + 0x51C))
+#define PRC1_LOCK_CTR		(MISC_BASE + 0x500)
+#define PRC2_LOCK_CTR		(MISC_BASE + 0x504)
+#define PRC1_IRQ_CTR		(MISC_BASE + 0x508)
+#define PRC2_IRQ_CTR		(MISC_BASE + 0x51C)
 
 /* Pad Configuration Registers */
-#define PAD_PU_CFG_1		((unsigned int *)(MISC_BASE + 0x600))
-#define PAD_PU_CFG_2		((unsigned int *)(MISC_BASE + 0x604))
-#define PAD_PU_CFG_3		((unsigned int *)(MISC_BASE + 0x608))
-#define PAD_PU_CFG_4		((unsigned int *)(MISC_BASE + 0x60c))
-#define PAD_PU_CFG_5		((unsigned int *)(MISC_BASE + 0x610))
-#define PAD_PU_CFG_6		((unsigned int *)(MISC_BASE + 0x614))
-#define PAD_PU_CFG_7		((unsigned int *)(MISC_BASE + 0x618))
-#define PAD_PU_CFG_8		((unsigned int *)(MISC_BASE + 0x61c))
-#define PAD_PD_CFG_1		((unsigned int *)(MISC_BASE + 0x620))
-#define PAD_PD_CFG_2		((unsigned int *)(MISC_BASE + 0x624))
-#define PAD_PD_CFG_3		((unsigned int *)(MISC_BASE + 0x628))
-#define PAD_PD_CFG_4		((unsigned int *)(MISC_BASE + 0x62c))
-#define PAD_PD_CFG_5		((unsigned int *)(MISC_BASE + 0x630))
-#define PAD_PD_CFG_6		((unsigned int *)(MISC_BASE + 0x634))
-#define PAD_PD_CFG_7		((unsigned int *)(MISC_BASE + 0x638))
-#define PAD_PD_CFG_8		((unsigned int *)(MISC_BASE + 0x63c))
-#define PAD_SLEEP_CFG		((unsigned int *)(MISC_BASE + 0x640))
-#define PAD_HYST_CFG		((unsigned int *)(MISC_BASE + 0x644))
-#define PAD_DRV_CFG		((unsigned int *)(MISC_BASE + 0x648))
-#define PAD_SLEW_CFG		((unsigned int *)(MISC_BASE + 0x64c))
-#define PAD_FUNCTION_EN_1	((unsigned int *)(MISC_BASE + 0x650))
-#define PAD_FUNCTION_EN_2	((unsigned int *)(MISC_BASE + 0x654))
-#define PAD_FUNCTION_EN_3	((unsigned int *)(MISC_BASE + 0x658))
-#define DDR_PAD_CFG		((unsigned int *)(MISC_BASE + 0x65c))
-#define THSENS_CFG		((unsigned int *)(MISC_BASE + 0x6c4))
+#define PAD_PU_CFG_1		(MISC_BASE + 0x600)
+#define PAD_PU_CFG_2		(MISC_BASE + 0x604)
+#define PAD_PU_CFG_3		(MISC_BASE + 0x608)
+#define PAD_PU_CFG_4		(MISC_BASE + 0x60c)
+#define PAD_PU_CFG_5		(MISC_BASE + 0x610)
+#define PAD_PU_CFG_6		(MISC_BASE + 0x614)
+#define PAD_PU_CFG_7		(MISC_BASE + 0x618)
+#define PAD_PU_CFG_8		(MISC_BASE + 0x61c)
+#define PAD_PD_CFG_1		(MISC_BASE + 0x620)
+#define PAD_PD_CFG_2		(MISC_BASE + 0x624)
+#define PAD_PD_CFG_3		(MISC_BASE + 0x628)
+#define PAD_PD_CFG_4		(MISC_BASE + 0x62c)
+#define PAD_PD_CFG_5		(MISC_BASE + 0x630)
+#define PAD_PD_CFG_6		(MISC_BASE + 0x634)
+#define PAD_PD_CFG_7		(MISC_BASE + 0x638)
+#define PAD_PD_CFG_8		(MISC_BASE + 0x63c)
+#define PAD_SLEEP_CFG		(MISC_BASE + 0x640)
+#define PAD_HYST_CFG		(MISC_BASE + 0x644)
+#define PAD_DRV_CFG		(MISC_BASE + 0x648)
+#define PAD_SLEW_CFG		(MISC_BASE + 0x64c)
+#define PAD_FUNCTION_EN_1	(MISC_BASE + 0x650)
+#define PAD_FUNCTION_EN_2	(MISC_BASE + 0x654)
+#define PAD_FUNCTION_EN_3	(MISC_BASE + 0x658)
+#define DDR_PAD_CFG		(MISC_BASE + 0x65c)
+#define THSENS_CFG		(MISC_BASE + 0x6c4)
 
 /* Compensation Configuration Registers */
-#define COMP_1V8_2V5_3V3__1_CFG	((unsigned int *)(MISC_BASE + 0x700))
-#define COMP_1V8_2V5_3V3__2_CFG	((unsigned int *)(MISC_BASE + 0x704))
-#define COMP_3V3_1_CFG		((unsigned int *)(MISC_BASE + 0x708))
-#define COMP_3V3_2_CFG		((unsigned int *)(MISC_BASE + 0x70c))
-#define COMP_DDR_CFG		((unsigned int *)(MISC_BASE + 0x710))
+#define COMP_1V8_2V5_3V3__1_CFG	(MISC_BASE + 0x700)
+#define COMP_1V8_2V5_3V3__2_CFG	(MISC_BASE + 0x704)
+#define COMP_3V3_1_CFG		(MISC_BASE + 0x708)
+#define COMP_3V3_2_CFG		(MISC_BASE + 0x70c)
+#define COMP_DDR_CFG		(MISC_BASE + 0x710)
 
 /* OTP Programming Registers */
-#define OTP_PROG_CTR		((unsigned int *)(MISC_BASE + 0x800))
-#define OTP_WDATA1_1		((unsigned int *)(MISC_BASE + 0x804))
-#define OTP_WDATA1_2		((unsigned int *)(MISC_BASE + 0x808))
-#define OTP_WDATA1_3		((unsigned int *)(MISC_BASE + 0x80c))
-#define OTP_WDATA1_4		((unsigned int *)(MISC_BASE + 0x810))
-#define OTP_WDATA1_5		((unsigned int *)(MISC_BASE + 0x814))
-#define OTP_WDATA1_6		((unsigned int *)(MISC_BASE + 0x818))
-#define OTP_WDATA1_7		((unsigned int *)(MISC_BASE + 0x81c))
-#define OTP_WDATA1_8		((unsigned int *)(MISC_BASE + 0x820))
-#define OTP_WDATA2_1		((unsigned int *)(MISC_BASE + 0x824))
-#define OTP_WDATA2_2		((unsigned int *)(MISC_BASE + 0x828))
-#define OTP_WDATA2_3		((unsigned int *)(MISC_BASE + 0x82c))
-#define OTP_WDATA2_4		((unsigned int *)(MISC_BASE + 0x830))
-#define OTP_WDATA2_5		((unsigned int *)(MISC_BASE + 0x834))
-#define OTP_WDATA2_6		((unsigned int *)(MISC_BASE + 0x838))
-#define OTP_WDATA2_7		((unsigned int *)(MISC_BASE + 0x83c))
-#define OTP_WDATA2_8		((unsigned int *)(MISC_BASE + 0x840))
-#define OTP_MASK_1		((unsigned int *)(MISC_BASE + 0x844))
-#define OTP_MASK_2		((unsigned int *)(MISC_BASE + 0x848))
-#define OTP_MASK_3		((unsigned int *)(MISC_BASE + 0x84c))
-#define OTP_MASK_4		((unsigned int *)(MISC_BASE + 0x850))
-#define OTP_MASK_5		((unsigned int *)(MISC_BASE + 0x854))
-#define OTP_MASK_6		((unsigned int *)(MISC_BASE + 0x858))
-#define OTP_MASK_7		((unsigned int *)(MISC_BASE + 0x85c))
-#define OTP_MASK_8		((unsigned int *)(MISC_BASE + 0x860))
-#define OTP_RDATA1_1		((unsigned int *)(MISC_BASE + 0x864))
-#define OTP_RDATA1_2		((unsigned int *)(MISC_BASE + 0x868))
-#define OTP_RDATA1_3		((unsigned int *)(MISC_BASE + 0x86c))
-#define OTP_RDATA1_4		((unsigned int *)(MISC_BASE + 0x870))
-#define OTP_RDATA1_5		((unsigned int *)(MISC_BASE + 0x874))
-#define OTP_RDATA1_6		((unsigned int *)(MISC_BASE + 0x878))
-#define OTP_RDATA1_7		((unsigned int *)(MISC_BASE + 0x87c))
-#define OTP_RDATA1_8		((unsigned int *)(MISC_BASE + 0x880))
-#define OTP_RDATA2_1		((unsigned int *)(MISC_BASE + 0x884))
-#define OTP_RDATA2_2		((unsigned int *)(MISC_BASE + 0x888))
-#define OTP_RDATA2_3		((unsigned int *)(MISC_BASE + 0x88c))
-#define OTP_RDATA2_4		((unsigned int *)(MISC_BASE + 0x890))
-#define OTP_RDATA2_5		((unsigned int *)(MISC_BASE + 0x894))
-#define OTP_RDATA2_6		((unsigned int *)(MISC_BASE + 0x898))
-#define OTP_RDATA2_7		((unsigned int *)(MISC_BASE + 0x89c))
-#define OTP_RDATA2_8		((unsigned int *)(MISC_BASE + 0x8a0))
-#define OTP_RDATAM_1		((unsigned int *)(MISC_BASE + 0x8a4))
-#define OTP_RDATAM_2		((unsigned int *)(MISC_BASE + 0x8a8))
-#define OTP_RDATAM_3		((unsigned int *)(MISC_BASE + 0x8ac))
-#define OTP_RDATAM_4		((unsigned int *)(MISC_BASE + 0x8b0))
-#define OTP_RDATAM_5		((unsigned int *)(MISC_BASE + 0x8b4))
-#define OTP_RDATAM_6		((unsigned int *)(MISC_BASE + 0x8b8))
-#define OTP_RDATAM_7		((unsigned int *)(MISC_BASE + 0x8bc))
-#define OTP_RDATAM_8		((unsigned int *)(MISC_BASE + 0x8c0))
+#define OTP_PROG_CTR		(MISC_BASE + 0x800)
+#define OTP_WDATA1_1		(MISC_BASE + 0x804)
+#define OTP_WDATA1_2		(MISC_BASE + 0x808)
+#define OTP_WDATA1_3		(MISC_BASE + 0x80c)
+#define OTP_WDATA1_4		(MISC_BASE + 0x810)
+#define OTP_WDATA1_5		(MISC_BASE + 0x814)
+#define OTP_WDATA1_6		(MISC_BASE + 0x818)
+#define OTP_WDATA1_7		(MISC_BASE + 0x81c)
+#define OTP_WDATA1_8		(MISC_BASE + 0x820)
+#define OTP_WDATA2_1		(MISC_BASE + 0x824)
+#define OTP_WDATA2_2		(MISC_BASE + 0x828)
+#define OTP_WDATA2_3		(MISC_BASE + 0x82c)
+#define OTP_WDATA2_4		(MISC_BASE + 0x830)
+#define OTP_WDATA2_5		(MISC_BASE + 0x834)
+#define OTP_WDATA2_6		(MISC_BASE + 0x838)
+#define OTP_WDATA2_7		(MISC_BASE + 0x83c)
+#define OTP_WDATA2_8		(MISC_BASE + 0x840)
+#define OTP_MASK_1		(MISC_BASE + 0x844)
+#define OTP_MASK_2		(MISC_BASE + 0x848)
+#define OTP_MASK_3		(MISC_BASE + 0x84c)
+#define OTP_MASK_4		(MISC_BASE + 0x850)
+#define OTP_MASK_5		(MISC_BASE + 0x854)
+#define OTP_MASK_6		(MISC_BASE + 0x858)
+#define OTP_MASK_7		(MISC_BASE + 0x85c)
+#define OTP_MASK_8		(MISC_BASE + 0x860)
+#define OTP_RDATA1_1		(MISC_BASE + 0x864)
+#define OTP_RDATA1_2		(MISC_BASE + 0x868)
+#define OTP_RDATA1_3		(MISC_BASE + 0x86c)
+#define OTP_RDATA1_4		(MISC_BASE + 0x870)
+#define OTP_RDATA1_5		(MISC_BASE + 0x874)
+#define OTP_RDATA1_6		(MISC_BASE + 0x878)
+#define OTP_RDATA1_7		(MISC_BASE + 0x87c)
+#define OTP_RDATA1_8		(MISC_BASE + 0x880)
+#define OTP_RDATA2_1		(MISC_BASE + 0x884)
+#define OTP_RDATA2_2		(MISC_BASE + 0x888)
+#define OTP_RDATA2_3		(MISC_BASE + 0x88c)
+#define OTP_RDATA2_4		(MISC_BASE + 0x890)
+#define OTP_RDATA2_5		(MISC_BASE + 0x894)
+#define OTP_RDATA2_6		(MISC_BASE + 0x898)
+#define OTP_RDATA2_7		(MISC_BASE + 0x89c)
+#define OTP_RDATA2_8		(MISC_BASE + 0x8a0)
+#define OTP_RDATAM_1		(MISC_BASE + 0x8a4)
+#define OTP_RDATAM_2		(MISC_BASE + 0x8a8)
+#define OTP_RDATAM_3		(MISC_BASE + 0x8ac)
+#define OTP_RDATAM_4		(MISC_BASE + 0x8b0)
+#define OTP_RDATAM_5		(MISC_BASE + 0x8b4)
+#define OTP_RDATAM_6		(MISC_BASE + 0x8b8)
+#define OTP_RDATAM_7		(MISC_BASE + 0x8bc)
+#define OTP_RDATAM_8		(MISC_BASE + 0x8c0)
 
 /* A9SM Registers */
-#define A9SM_CLUSTERID		((unsigned int *)(MISC_BASE + 0x900))
-#define A9SM_STATUS		((unsigned int *)(MISC_BASE + 0x904))
-#define A9SM_DEBUG		((unsigned int *)(MISC_BASE + 0x908))
-#define A9SM_FILTER		((unsigned int *)(MISC_BASE + 0x90c))
-#define A9SM_PARITY_CFG		((unsigned int *)(MISC_BASE + 0x910))
-#define A9SM_PARITY_ERR		((unsigned int *)(MISC_BASE + 0x914))
+#define A9SM_CLUSTERID		(MISC_BASE + 0x900)
+#define A9SM_STATUS		(MISC_BASE + 0x904)
+#define A9SM_DEBUG		(MISC_BASE + 0x908)
+#define A9SM_FILTER		(MISC_BASE + 0x90c)
+#define A9SM_PARITY_CFG		(MISC_BASE + 0x910)
+#define A9SM_PARITY_ERR		(MISC_BASE + 0x914)
 
 /* SOC ID Registers */
-#define DIE_ID_1		((unsigned int *)(MISC_BASE + 0xa00))
-#define DIE_ID_2		((unsigned int *)(MISC_BASE + 0xa04))
-#define DIE_ID_3		((unsigned int *)(MISC_BASE + 0xa08))
-#define DIE_ID_4		((unsigned int *)(MISC_BASE + 0xa0c))
-#define DIE_ID_VALID		((unsigned int *)(MISC_BASE + 0xa10))
+#define DIE_ID_1		(MISC_BASE + 0xa00)
+#define DIE_ID_2		(MISC_BASE + 0xa04)
+#define DIE_ID_3		(MISC_BASE + 0xa08)
+#define DIE_ID_4		(MISC_BASE + 0xa0c)
+#define DIE_ID_VALID		(MISC_BASE + 0xa10)
 
 /* SOC TEST & DEBUG Registers */
-#define MIPHY_TEST		((unsigned int *)(MISC_BASE + 0x1000))
-#define PCIE_MSTR_P0		((unsigned int *)(MISC_BASE + 0x1004))
-#define PCIE_AWMISC_P0		((unsigned int *)(MISC_BASE + 0x1008))
-#define PCIE_ARMISC_P0		((unsigned int *)(MISC_BASE + 0x100c))
-#define PCIE_MSTR_P1		((unsigned int *)(MISC_BASE + 0x1010))
-#define PCIE_AWMISC_P1		((unsigned int *)(MISC_BASE + 0x1014))
-#define PCIE_ARMISC_P1		((unsigned int *)(MISC_BASE + 0x1018))
-#define PCIE_MSTR_P2		((unsigned int *)(MISC_BASE + 0x101c))
-#define PCIE_AWMISC_P2		((unsigned int *)(MISC_BASE + 0x1020))
-#define PCIE_ARMISC_P2		((unsigned int *)(MISC_BASE + 0x1024))
+#define MIPHY_TEST		(MISC_BASE + 0x1000)
+#define PCIE_MSTR_P0		(MISC_BASE + 0x1004)
+#define PCIE_AWMISC_P0		(MISC_BASE + 0x1008)
+#define PCIE_ARMISC_P0		(MISC_BASE + 0x100c)
+#define PCIE_MSTR_P1		(MISC_BASE + 0x1010)
+#define PCIE_AWMISC_P1		(MISC_BASE + 0x1014)
+#define PCIE_ARMISC_P1		(MISC_BASE + 0x1018)
+#define PCIE_MSTR_P2		(MISC_BASE + 0x101c)
+#define PCIE_AWMISC_P2		(MISC_BASE + 0x1020)
+#define PCIE_ARMISC_P2		(MISC_BASE + 0x1024)
 
 #endif /* __MACH_MISC_REGS_H */

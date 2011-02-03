@@ -81,5 +81,5 @@ void __init fsmc_init_board_info(struct platform_device *pdev,
 		struct mtd_partition *partitions, unsigned int nr_partitions,
 		unsigned int width)
 {
-	fsmc_init_plat_data(pdev, partitions, nr_partitions, width);
+	fsmc_nor_set_plat_data(pdev, partitions, nr_partitions, width);
 }

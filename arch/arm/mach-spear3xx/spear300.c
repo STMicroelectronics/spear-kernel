@@ -14,14 +14,14 @@
 #include <linux/types.h>
 #include <linux/amba/pl061.h>
 #include <linux/ptrace.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/spear_adc_usr.h>
 #include <asm/irq.h>
+#include <plat/shirq.h>
+#include <plat/touchscreen.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/spear.h>
-#include <plat/nand.h>
-#include <plat/shirq.h>
-#include <plat/touchscreen.h>
 
 /* modes */
 #define NAND_MODE			(1 << 0)
@@ -527,7 +527,6 @@ static struct pmx_driver pmx_driver = {
 };
 
 /* Add spear300 specific devices here */
-
 /* CLCD device registration */
 struct amba_device spear300_clcd_device = {
 	.dev = {
@@ -545,7 +544,6 @@ struct amba_device spear300_clcd_device = {
 };
 
 /* touchscreen device registration */
-
 static struct spear_touchscreen touchscreen_info = {
 	.adc_channel_x = ADC_CHANNEL5,
 	.adc_channel_y = ADC_CHANNEL6,
@@ -563,8 +561,7 @@ struct platform_device spear300_touchscreen_device = {
 	.resource = NULL,
 };
 
-
-/* arm gpio1 device registeration */
+/* arm gpio1 device registration */
 static struct pl061_platform_data gpio1_plat_data = {
 	.gpio_base	= 8,
 	.irq_base	= SPEAR300_GPIO1_INT_BASE,
@@ -603,7 +600,7 @@ struct platform_device spear300_kbd_device = {
 };
 
 /* nand device registeration */
-static struct nand_platform_data nand0_platform_data;
+static struct fsmc_nand_platform_data nand0_platform_data;
 
 static struct resource nand0_resources[] = {
 	{
@@ -620,14 +617,14 @@ static struct resource nand0_resources[] = {
 };
 
 struct platform_device spear300_nand0_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = 0,
 	.resource = nand0_resources,
 	.num_resources = ARRAY_SIZE(nand0_resources),
 	.dev.platform_data = &nand0_platform_data,
 };
 
-static struct nand_platform_data nand1_platform_data;
+static struct fsmc_nand_platform_data nand1_platform_data;
 
 static struct resource nand1_resources[] = {
 	{
@@ -644,14 +641,14 @@ static struct resource nand1_resources[] = {
 };
 
 struct platform_device spear300_nand1_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = 1,
 	.resource = nand1_resources,
 	.num_resources = ARRAY_SIZE(nand1_resources),
 	.dev.platform_data = &nand1_platform_data,
 };
 
-static struct nand_platform_data nand2_platform_data;
+static struct fsmc_nand_platform_data nand2_platform_data;
 
 static struct resource nand2_resources[] = {
 	{
@@ -668,14 +665,14 @@ static struct resource nand2_resources[] = {
 };
 
 struct platform_device spear300_nand2_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = 2,
 	.resource = nand2_resources,
 	.num_resources = ARRAY_SIZE(nand2_resources),
 	.dev.platform_data = &nand2_platform_data,
 };
 
-static struct nand_platform_data nand3_platform_data;
+static struct fsmc_nand_platform_data nand3_platform_data;
 
 static struct resource nand3_resources[] = {
 	{
@@ -692,7 +689,7 @@ static struct resource nand3_resources[] = {
 };
 
 struct platform_device spear300_nand3_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = 3,
 	.resource = nand3_resources,
 	.num_resources = ARRAY_SIZE(nand3_resources),
@@ -804,7 +801,7 @@ void __init spear300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	/* call spear3xx family common init function */
 	spear3xx_init();
 
-	/* shared irq registeration */
+	/* shared irq registration */
 	shirq_ras1.regs.base = ioremap(SPEAR300_TELECOM_BASE, SZ_4K);
 	if (shirq_ras1.regs.base) {
 		ret = spear_shirq_register(&shirq_ras1);

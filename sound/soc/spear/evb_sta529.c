@@ -36,8 +36,8 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->dai->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->dai->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret = 0;
 	u32 freq, format, rate, channel;
 	u32 ref_clock, val;
@@ -86,30 +86,18 @@ static struct snd_soc_ops sta529_evb_ops = {
 static struct snd_soc_dai_link evb_dai = {
 	.name		= "SPEARSTA529",
 	.stream_name	= "STA529",
-	.cpu_dai	= &spear13xx_i2s_dai,
-	.codec_dai	= &sta529_dai,
+	.cpu_dai_name	= "spear13xx-i2s.0",
+	.platform_name	= "spear-pcm-audio",
+	.codec_dai_name	= "sta529-audio",
+	.codec_name	= "sta529-codec.0-001a",
 	.ops		= &sta529_evb_ops,
 };
 
 /* spear audio machine driver */
-static struct snd_soc_card snd_soc_sta529 = {
+static struct snd_soc_card snd_soc_evb = {
 	.name		= "spearevb",
-	.platform	= &spear13xx_soc_platform,
 	.dai_link	= &evb_dai,
 	.num_links	= 1,
-};
-
-/* evb audio private data */
-static struct sta529_setup_data evb_sta529_setup = {
-	.i2c_bus	= 0,
-	.i2c_address	= 0x1a,
-};
-
-/* spear audio subsystem */
-static struct snd_soc_device evb_sta529_snd_devdata = {
-	.card		= &snd_soc_sta529,
-	.codec_dev	= &soc_codec_dev_sta529,
-	.codec_data	= &evb_sta529_setup,
 };
 
 static struct platform_device *evb_snd_device;
@@ -118,15 +106,19 @@ static int __init spear_init(void)
 {
 	int ret;
 
-	evb_snd_device = platform_device_alloc("soc-audio", -1);
-	if (!evb_snd_device)
+	/* Create and register platform device */
+	evb_snd_device = platform_device_alloc("soc-audio", 0);
+	if (!evb_snd_device) {
+		printk(KERN_ERR "platform_device_alloc fails\n");
 		return -ENOMEM;
+	}
 
-	platform_set_drvdata(evb_snd_device, &evb_sta529_snd_devdata);
-	evb_sta529_snd_devdata.dev = &evb_snd_device->dev;
+	platform_set_drvdata(evb_snd_device, &snd_soc_evb);
 	ret = platform_device_add(evb_snd_device);
-	if (ret)
+	if (ret) {
+		printk(KERN_ERR "Unable to add platform device\n");
 		platform_device_put(evb_snd_device);
+	}
 
 	return ret;
 }

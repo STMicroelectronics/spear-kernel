@@ -828,7 +828,7 @@ static int __init spear13xx_pcie_init(void)
 			 * here. But it is done currently during board
 			 * init routne*/
 			clk = clk_get_sys("pcie1", NULL);
-			if (!clk) {
+			if (IS_ERR(clk)) {
 				pr_err("%s:couldn't get clk for pcie1\n",
 						__func__);
 				continue;
@@ -843,7 +843,7 @@ static int __init spear13xx_pcie_init(void)
 			 * here. But it is done currently during board
 			 * init routne*/
 			clk = clk_get_sys("pcie2", NULL);
-			if (!clk) {
+			if (IS_ERR(clk)) {
 				pr_err("%s:couldn't get clk for pcie2\n",
 						__func__);
 				continue;
@@ -961,10 +961,10 @@ static void spear13xx_msi_nop(unsigned int irq)
 static struct irq_chip spear13xx_msi_chip = {
 	.name = "PCI-MSI",
 	.ack = spear13xx_msi_nop,
-	.enable = unmask_msi_irq,
-	.disable = mask_msi_irq,
-	.mask = mask_msi_irq,
-	.unmask = unmask_msi_irq,
+	.irq_enable = unmask_msi_irq,
+	.irq_disable = mask_msi_irq,
+	.irq_mask = mask_msi_irq,
+	.irq_unmask = unmask_msi_irq,
 };
 
 /*
@@ -994,7 +994,7 @@ static int get_irq(int nvec, struct msi_desc *desc, int *pos)
 		}
 	}
 
-	irq = (SPEAR_MSI0_INT_BASE + (pp->port * SPEAR_NUM_MSI_IRQS)) + pos0;;
+	irq = (SPEAR_MSI0_INT_BASE + (pp->port * SPEAR_NUM_MSI_IRQS)) + pos0;
 
 	if ((irq + nvec) > (SPEAR_MSI0_INT_END
 				+ (pp->port * SPEAR_NUM_MSI_IRQS)))

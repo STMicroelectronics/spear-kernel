@@ -243,6 +243,16 @@ static struct gpio_led ek_leds[] = {
 
 
 /*
+ * Touchscreen
+ */
+static struct at91_tsadcc_data ek_tsadcc_data = {
+	.adc_clock		= 1000000,
+	.pendet_debounce	= 0x0f,
+	.ts_sample_hold_time	= 0x03,
+};
+
+
+/*
  * GPIO Buttons
  */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -310,7 +320,7 @@ static void __init ek_board_init(void)
 	/* AC97 */
 	at91_add_device_ac97(&ek_ac97_data);
 	/* Touch Screen Controller */
-	at91_add_device_tsadcc();
+	at91_add_device_tsadcc(&ek_tsadcc_data);
 	/* LEDs */
 	at91_gpio_leds(ek_leds, ARRAY_SIZE(ek_leds));
 	/* Push Buttons */
@@ -319,8 +329,6 @@ static void __init ek_board_init(void)
 
 MACHINE_START(AT91SAM9RLEK, "Atmel AT91SAM9RL-EK")
 	/* Maintainer: Atmel */
-	.phys_io	= AT91_BASE_SYS,
-	.io_pg_offst	= (AT91_VA_BASE_SYS >> 18) & 0xfffc,
 	.boot_params	= AT91_SDRAM_BASE + 0x100,
 	.timer		= &at91sam926x_timer,
 	.map_io		= ek_map_io,

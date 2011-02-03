@@ -28,6 +28,7 @@
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <plat/jpeg.h>
 #include "designware_jpeg.h"
 
@@ -249,17 +250,17 @@ static void jpeg_flush(void)
  */
 static void jpeg_abort(s32 error)
 {
-	struct dma_chan *dma_chan;
+	struct dma_chan *dchan;
 
 	/* if dma is busy doing transfer with jpeg, then abort them */
 	if (g_drv_data->dma_chan[JPEG_READ]) {
-		dma_chan = g_drv_data->dma_chan[JPEG_READ];
-		dma_chan->device->device_terminate_all(dma_chan);
+		dchan = g_drv_data->dma_chan[JPEG_READ];
+		dchan->device->device_control(dchan, DMA_TERMINATE_ALL, 0);
 	}
 
 	if (g_drv_data->dma_chan[JPEG_WRITE]) {
-		dma_chan = g_drv_data->dma_chan[JPEG_WRITE];
-		dma_chan->device->device_terminate_all(dma_chan);
+		dchan = g_drv_data->dma_chan[JPEG_WRITE];
+		dchan->device->device_control(dchan, DMA_TERMINATE_ALL, 0);
 	}
 
 	/*reset jpeg hardware and reset all jpeg flags.*/
@@ -719,8 +720,8 @@ static s32 dma_status(enum jpeg_dev_type dev_type, size_t size)
 	struct dma_chan *chan = g_drv_data->dma_chan[dev_type];
 
 	put_sg(dev_type);
-	status = chan->device->device_is_tx_complete(chan,
-			g_drv_data->cookie[dev_type], NULL, NULL);
+	status = dma_async_is_tx_complete(chan, g_drv_data->cookie[dev_type],
+			NULL, NULL);
 
 	if (status != DMA_SUCCESS) {
 		dev_err(&g_drv_data->pdev->dev, "%s dma xfer hang. src image "
@@ -730,11 +731,13 @@ static s32 dma_status(enum jpeg_dev_type dev_type, size_t size)
 		/* if dma is busy doing transfer with jpeg, then abort them */
 		if (g_drv_data->dma_chan[JPEG_READ]) {
 			chan = g_drv_data->dma_chan[JPEG_READ];
-			chan->device->device_terminate_all(chan);
+			chan->device->device_control(chan, DMA_TERMINATE_ALL,
+					0);
 		}
 		if (g_drv_data->dma_chan[JPEG_WRITE]) {
 			chan = g_drv_data->dma_chan[JPEG_WRITE];
-			chan->device->device_terminate_all(chan);
+			chan->device->device_control(chan, DMA_TERMINATE_ALL,
+					0);
 		}
 		return -EAGAIN;
 	}
@@ -1039,12 +1042,14 @@ static s32 desigware_jpeg_release(struct inode *inode, struct file *file)
 
 		if (g_drv_data->dma_chan[JPEG_WRITE]) {
 			dma_chan = g_drv_data->dma_chan[JPEG_WRITE];
-			dma_chan->device->device_terminate_all(dma_chan);
+			dma_chan->device->device_control(dma_chan,
+					DMA_TERMINATE_ALL, 0);
 			dma_release_channel(dma_chan);
 		}
 		if (g_drv_data->dma_chan[JPEG_READ]) {
 			dma_chan = g_drv_data->dma_chan[JPEG_READ];
-			dma_chan->device->device_terminate_all(dma_chan);
+			dma_chan->device->device_control(dma_chan,
+					DMA_TERMINATE_ALL, 0);
 			dma_release_channel(dma_chan);
 		}
 
@@ -1062,20 +1067,18 @@ static s32 desigware_jpeg_release(struct inode *inode, struct file *file)
 
 /**
  * desigware_jpeg_ioctl - IOCTL for performing different types of RW operations.
- * @inode: used by the kernel internally to represent files.
  * @file: represents a open file in kernel.
  * @cmd: ioctl command representing particular operation.
  * @buf: buffer for IO.
  */
-static s32 desigware_jpeg_ioctl(struct inode *inode, struct file *file, u32 cmd,
-		unsigned long buf)
+static long desigware_jpeg_ioctl(struct file *file, u32 cmd, unsigned long buf)
 {
 	enum jpeg_dev_type dev_type;
 	s32 status = 0;
 	u32 len = 0;
 
 	/* getting the minor number of the caller */
-	dev_type = (enum jpeg_dev_type)iminor(inode);
+	dev_type = (enum jpeg_dev_type)iminor(file->f_mapping->host);
 
 	switch (dev_type) {
 	case JPEG_READ:
@@ -1195,13 +1198,13 @@ static const struct file_operations desigware_jpeg_fops[MAX_DEV] = {
 		.owner	= THIS_MODULE,
 		.open = desigware_jpeg_open,
 		.release = desigware_jpeg_release,
-		.ioctl	= desigware_jpeg_ioctl,
+		.unlocked_ioctl = desigware_jpeg_ioctl,
 		.mmap	= desigware_jpeg_rmmap
 	}, {
 		.owner	= THIS_MODULE,
 		.open = desigware_jpeg_open,
 		.release = desigware_jpeg_release,
-		.ioctl	= desigware_jpeg_ioctl,
+		.unlocked_ioctl = desigware_jpeg_ioctl,
 		.mmap	= desigware_jpeg_wmmap
 	}
 };

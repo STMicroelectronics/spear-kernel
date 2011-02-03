@@ -59,7 +59,11 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 		return ret;
 	}
 
-	/* set the timing */
+	/*
+	 * Note: These are relaxed NOR device timings. Nor devices on spear
+	 * eval machines are working fine with these timings. Specific board
+	 * files can optimize these timings based on devices found on board.
+	 */
 	writel(0x10, emi_reg_base + (EMI_BANK_REG_SIZE * bank) + TAP_REG);
 	writel(0x05, emi_reg_base + (EMI_BANK_REG_SIZE * bank) + TSDP_REG);
 	writel(0x0a, emi_reg_base + (EMI_BANK_REG_SIZE * bank) + TDPW_REG);
@@ -94,9 +98,20 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 	return 0;
 }
 
-void __init emi_init_board_info(struct platform_device *pdev,
-		struct mtd_partition *partitions, unsigned int nr_partitions,
-		unsigned int width)
+void __init
+emi_init_board_info(struct platform_device *pdev, struct resource *resources,
+		int res_num, struct mtd_partition *partitions,
+		unsigned int nr_partitions, unsigned int width)
 {
-	emi_init_plat_data(pdev, partitions, nr_partitions, width);
+	struct physmap_flash_data *emi_plat_data = dev_get_platdata(&pdev->dev);
+
+	pdev->resource = resources;
+	pdev->num_resources = res_num;
+
+	if (partitions) {
+		emi_plat_data->parts = partitions;
+		emi_plat_data->nr_parts = nr_partitions;
+	}
+
+	emi_plat_data->width = width;
 }

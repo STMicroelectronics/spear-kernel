@@ -29,15 +29,7 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
-	pr_info("Going to reboot...\n");
-
-	/* let above information be printed */
-	msleep(1000);
-
 	writel(0x01, SYS_SW_RES);
-	/* wait for system to rest */
-	while (1)
-		;
 }
 
 #endif /* __MACH_SYSTEM_H */

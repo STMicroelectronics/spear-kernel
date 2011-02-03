@@ -11,12 +11,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <asm/cacheflush.h>
-#include <asm/hardware/gic.h>
-#include <asm/localtimer.h>
-#include <asm/mach-types.h>
-#include <asm/smp_scu.h>
-#include <asm/unified.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/errno.h>
@@ -24,6 +18,13 @@
 #include <linux/io.h>
 #include <linux/jiffies.h>
 #include <linux/smp.h>
+#include <asm/cacheflush.h>
+#include <asm/hardware/gic.h>
+#include <asm/localtimer.h>
+#include <asm/mach-types.h>
+#include <asm/smp_scu.h>
+#include <asm/system.h>
+#include <asm/unified.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
@@ -91,27 +92,8 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * Note that "pen_release" is the hardware CPU ID, whereas
 	 * "cpu" is Linux's internal ID.
 	 */
-
-	/*
-	 * Note: Following is important otherwise cpu2 doesn't come up
-	 * as secondary_data must be flushed before pen_release also
-	 */
-
-	flush_cache_all();
 	pen_release = cpu;
 	flush_cache_all();
-
-	/*
-	 * XXX
-	 *
-	 * This is a later addition to the booting protocol: the
-	 * bootMonitor now puts secondary cores into WFI, so
-	 * poke_milo() no longer gets the cores moving; we need
-	 * to send a soft interrupt to wake the secondary core.
-	 * Use smp_cross_call() for this, since there's little
-	 * point duplicating the code here
-	 */
-	smp_cross_call(cpumask_of(cpu));
 
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
@@ -131,7 +113,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	return pen_release != -1 ? -ENOSYS : 0;
 }
 
-static void __init poke_milo(void)
+static void __init wakeup_secondary(void)
 {
 	/* nobody is to be released from the pen yet */
 	pen_release = -1;
@@ -140,6 +122,7 @@ static void __init poke_milo(void)
 	 * Write the address of secondary startup into the system-wide
 	 * location (presently it is in SRAM). The BootMonitor waits
 	 * for this register to become non-zero.
+	 * We must also send an sev to wake it up
 	 */
 	__raw_writel(BSYM(virt_to_phys(spear13xx_secondary_startup)),
 			__io_address(SPEAR13XX_SYS_LOCATION));
@@ -149,7 +132,7 @@ static void __init poke_milo(void)
 	/*
 	 * Send a 'sev' to wake the secondary core from WFE.
 	 */
-	set_event();
+	sev();
 }
 
 /*
@@ -202,10 +185,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 
 	/*
 	 * Initialise the SCU if there are more than one CPU and let
-	 * them know where to start. Note that, on modern versions of
-	 * MILO, the "poke" doesn't actually do anything until each
-	 * individual core is sent a soft interrupt to get it out of
-	 * WFI
+	 * them know where to start.
 	 */
 	if (max_cpus > 1) {
 		/*
@@ -215,6 +195,6 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		percpu_timer_setup();
 
 		scu_enable(scu_base_addr());
-		poke_milo();
+		wakeup_secondary();
 	}
 }

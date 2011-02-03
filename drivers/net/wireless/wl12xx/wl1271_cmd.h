@@ -29,27 +29,34 @@
 
 struct acx_header;
 
-int wl1271_cmd_send(struct wl1271 *wl, u16 type, void *buf, size_t buf_len);
-int wl1271_cmd_join(struct wl1271 *wl, u8 bss_type, u8 dtim_interval,
-		    u16 beacon_interval, u8 wait);
+int wl1271_cmd_send(struct wl1271 *wl, u16 id, void *buf, size_t len,
+		    size_t res_len);
+int wl1271_cmd_general_parms(struct wl1271 *wl);
+int wl1271_cmd_radio_parms(struct wl1271 *wl);
+int wl1271_cmd_ext_radio_parms(struct wl1271 *wl);
+int wl1271_cmd_join(struct wl1271 *wl, u8 bss_type);
 int wl1271_cmd_test(struct wl1271 *wl, void *buf, size_t buf_len, u8 answer);
 int wl1271_cmd_interrogate(struct wl1271 *wl, u16 id, void *buf, size_t len);
 int wl1271_cmd_configure(struct wl1271 *wl, u16 id, void *buf, size_t len);
-int wl1271_cmd_data_path(struct wl1271 *wl, u8 channel, bool enable);
-int wl1271_cmd_ps_mode(struct wl1271 *wl, u8 ps_mode);
+int wl1271_cmd_data_path(struct wl1271 *wl, bool enable);
+int wl1271_cmd_ps_mode(struct wl1271 *wl, u8 ps_mode, u32 rates, bool send);
 int wl1271_cmd_read_memory(struct wl1271 *wl, u32 addr, void *answer,
 			   size_t len);
-int wl1271_cmd_scan(struct wl1271 *wl, u8 *ssid, size_t len,
-		    u8 active_scan, u8 high_prio, u8 num_channels,
-		    u8 probe_requests);
 int wl1271_cmd_template_set(struct wl1271 *wl, u16 template_id,
-			    void *buf, size_t buf_len);
+			    void *buf, size_t buf_len, int index, u32 rates);
 int wl1271_cmd_build_null_data(struct wl1271 *wl);
 int wl1271_cmd_build_ps_poll(struct wl1271 *wl, u16 aid);
-int wl1271_cmd_build_probe_req(struct wl1271 *wl, u8 *ssid, size_t ssid_len);
+int wl1271_cmd_build_probe_req(struct wl1271 *wl,
+			       const u8 *ssid, size_t ssid_len,
+			       const u8 *ie, size_t ie_len, u8 band);
+int wl1271_build_qos_null_data(struct wl1271 *wl);
+int wl1271_cmd_build_klv_null_data(struct wl1271 *wl);
 int wl1271_cmd_set_default_wep_key(struct wl1271 *wl, u8 id);
 int wl1271_cmd_set_key(struct wl1271 *wl, u16 action, u8 id, u8 key_type,
-		       u8 key_size, const u8 *key, const u8 *addr);
+		       u8 key_size, const u8 *key, const u8 *addr,
+		       u32 tx_seq_32, u16 tx_seq_16);
+int wl1271_cmd_disconnect(struct wl1271 *wl);
+int wl1271_cmd_set_sta_state(struct wl1271 *wl);
 
 enum wl1271_commands {
 	CMD_INTERROGATE     = 1,    /*use this to read information elements*/
@@ -94,6 +101,11 @@ enum wl1271_commands {
 
 #define MAX_CMD_PARAMS 572
 
+enum {
+	CMD_TEMPL_KLV_IDX_NULL_DATA = 0,
+	CMD_TEMPL_KLV_IDX_MAX = 4
+};
+
 enum cmd_templ {
 	CMD_TEMPL_NULL_DATA = 0,
 	CMD_TEMPL_BEACON,
@@ -116,20 +128,21 @@ enum cmd_templ {
 /* unit ms */
 #define WL1271_COMMAND_TIMEOUT     2000
 #define WL1271_CMD_TEMPL_MAX_SIZE  252
+#define WL1271_EVENT_TIMEOUT       750
 
 struct wl1271_cmd_header {
-	u16 id;
-	u16 status;
+	__le16 id;
+	__le16 status;
 	/* payload */
 	u8 data[0];
-} __attribute__ ((packed));
+} __packed;
 
 #define WL1271_CMD_MAX_PARAMS 572
 
 struct wl1271_command {
 	struct wl1271_cmd_header header;
 	u8  parameters[WL1271_CMD_MAX_PARAMS];
-} __attribute__ ((packed));
+} __packed;
 
 enum {
 	CMD_MAILBOX_IDLE		=  0,
@@ -149,41 +162,6 @@ enum {
 	MAX_COMMAND_STATUS		= 0xff
 };
 
-
-/*
- * CMD_READ_MEMORY
- *
- * The host issues this command to read the WiLink device memory/registers.
- *
- * Note: The Base Band address has special handling (16 bits registers and
- * addresses). For more information, see the hardware specification.
- */
-/*
- * CMD_WRITE_MEMORY
- *
- * The host issues this command to write the WiLink device memory/registers.
- *
- * The Base Band address has special handling (16 bits registers and
- * addresses). For more information, see the hardware specification.
- */
-#define MAX_READ_SIZE 256
-
-struct cmd_read_write_memory {
-	struct wl1271_cmd_header header;
-
-	/* The address of the memory to read from or write to.*/
-	u32 addr;
-
-	/* The amount of data in bytes to read from or write to the WiLink
-	 * device.*/
-	u32 size;
-
-	/* The actual value read from or written to the Wilink. The source
-	   of this field is the Host in WRITE command or the Wilink in READ
-	   command. */
-	u8 value[MAX_READ_SIZE];
-};
-
 #define CMDMBOX_HEADER_LEN 4
 #define CMDMBOX_INFO_ELEM_HEADER_LEN 4
 
@@ -196,22 +174,23 @@ enum {
 
 #define WL1271_JOIN_CMD_CTRL_TX_FLUSH     0x80 /* Firmware flushes all Tx */
 #define WL1271_JOIN_CMD_TX_SESSION_OFFSET 1
+#define WL1271_JOIN_CMD_BSS_TYPE_5GHZ 0x10
 
 struct wl1271_cmd_join {
 	struct wl1271_cmd_header header;
 
-	u32 bssid_lsb;
-	u16 bssid_msb;
-	u16 beacon_interval; /* in TBTTs */
-	u32 rx_config_options;
-	u32 rx_filter_options;
+	__le32 bssid_lsb;
+	__le16 bssid_msb;
+	__le16 beacon_interval; /* in TBTTs */
+	__le32 rx_config_options;
+	__le32 rx_filter_options;
 
 	/*
 	 * The target uses this field to determine the rate at
 	 * which to transmit control frame responses (such as
 	 * ACK or CTS frames).
 	 */
-	u32 basic_rate_set;
+	__le32 basic_rate_set;
 	u8 dtim_interval;
 	/*
 	 * bits 0-2: This bitwise field specifies the type
@@ -228,28 +207,30 @@ struct wl1271_cmd_join {
 	u8 ssid[IW_ESSID_MAX_SIZE];
 	u8 ctrl; /* JOIN_CMD_CTRL_* */
 	u8 reserved[3];
-} __attribute__ ((packed));
+} __packed;
 
 struct cmd_enabledisable_path {
 	struct wl1271_cmd_header header;
 
 	u8 channel;
 	u8 padding[3];
-} __attribute__ ((packed));
+} __packed;
+
+#define WL1271_RATE_AUTOMATIC  0
 
 struct wl1271_cmd_template_set {
 	struct wl1271_cmd_header header;
 
-	u16 len;
+	__le16 len;
 	u8 template_type;
 	u8 index;  /* relevant only for KLV_TEMPLATE type */
-	u32 enabled_rates;
+	__le32 enabled_rates;
 	u8 short_retry_limit;
 	u8 long_retry_limit;
 	u8 aflags;
 	u8 reserved;
 	u8 template_data[WL1271_CMD_TEMPL_MAX_SIZE];
-} __attribute__ ((packed));
+} __packed;
 
 #define TIM_ELE_ID    5
 #define PARTIAL_VBM_MAX    251
@@ -261,7 +242,7 @@ struct wl1271_tim {
 	u8 dtim_period;
 	u8 bitmap_ctrl;
 	u8 pvb_field[PARTIAL_VBM_MAX]; /* Partial Virtual Bitmap */
-} __attribute__ ((packed));
+} __packed;
 
 enum wl1271_cmd_ps_mode {
 	STATION_ACTIVE_MODE,
@@ -280,17 +261,12 @@ struct wl1271_cmd_ps_params {
 	  * to power save mode.
 	  */
 	u8 hang_over_period;
-	u32 null_data_rate;
-} __attribute__ ((packed));
+	__le32 null_data_rate;
+} __packed;
 
 /* HW encryption keys */
 #define NUM_ACCESS_CATEGORIES_COPY 4
 #define MAX_KEY_SIZE 32
-
-/* When set, disable HW encryption */
-#define DF_ENCRYPTION_DISABLE      0x01
-/* When set, disable HW decryption */
-#define DF_SNIFF_MODE_ENABLE       0x80
 
 enum wl1271_cmd_key_action {
 	KEY_ADD_OR_REPLACE = 1,
@@ -304,7 +280,7 @@ enum wl1271_cmd_key_type {
 	KEY_WEP  = 1,
 	KEY_TKIP = 2,
 	KEY_AES  = 3,
-	KEY_GEM  = 4
+	KEY_GEM  = 4,
 };
 
 /* FIXME: Add description for key-types */
@@ -316,9 +292,9 @@ struct wl1271_cmd_set_keys {
 	u8 addr[ETH_ALEN];
 
 	/* key_action_e */
-	u16 key_action;
+	__le16 key_action;
 
-	u16 reserved_1;
+	__le16 reserved_1;
 
 	/* key size in bytes */
 	u8 key_size;
@@ -334,76 +310,14 @@ struct wl1271_cmd_set_keys {
 	u8 id;
 	u8 reserved_2[6];
 	u8 key[MAX_KEY_SIZE];
-	u16 ac_seq_num16[NUM_ACCESS_CATEGORIES_COPY];
-	u32 ac_seq_num32[NUM_ACCESS_CATEGORIES_COPY];
-} __attribute__ ((packed));
-
-
-#define WL1271_SCAN_MAX_CHANNELS       24
-#define WL1271_SCAN_DEFAULT_TAG        1
-#define WL1271_SCAN_CURRENT_TX_PWR     0
-#define WL1271_SCAN_OPT_ACTIVE         0
-#define WL1271_SCAN_OPT_PASSIVE	       1
-#define WL1271_SCAN_OPT_PRIORITY_HIGH  4
-#define WL1271_SCAN_CHAN_MIN_DURATION  30000  /* TU */
-#define WL1271_SCAN_CHAN_MAX_DURATION  60000  /* TU */
-
-struct basic_scan_params {
-	u32 rx_config_options;
-	u32 rx_filter_options;
-	/* Scan option flags (WL1271_SCAN_OPT_*) */
-	u16 scan_options;
-	/* Number of scan channels in the list (maximum 30) */
-	u8 num_channels;
-	/* This field indicates the number of probe requests to send
-	   per channel for an active scan */
-	u8 num_probe_requests;
-	/* Rate bit field for sending the probes */
-	u32 tx_rate;
-	u8 tid_trigger;
-	u8 ssid_len;
-	/* in order to align */
-	u8 padding1[2];
-	u8 ssid[IW_ESSID_MAX_SIZE];
-	/* Band to scan */
-	u8 band;
-	u8 use_ssid_list;
-	u8 scan_tag;
-	u8 padding2;
-} __attribute__ ((packed));
-
-struct basic_scan_channel_params {
-	/* Duration in TU to wait for frames on a channel for active scan */
-	u32 min_duration;
-	u32 max_duration;
-	u32 bssid_lsb;
-	u16 bssid_msb;
-	u8 early_termination;
-	u8 tx_power_att;
-	u8 channel;
-	/* FW internal use only! */
-	u8 dfs_candidate;
-	u8 activity_detected;
-	u8 pad;
-} __attribute__ ((packed));
-
-struct wl1271_cmd_scan {
-	struct wl1271_cmd_header header;
-
-	struct basic_scan_params params;
-	struct basic_scan_channel_params channels[WL1271_SCAN_MAX_CHANNELS];
-} __attribute__ ((packed));
-
-struct wl1271_cmd_trigger_scan_to {
-	struct wl1271_cmd_header header;
-
-	u32 timeout;
-};
+	__le16 ac_seq_num16[NUM_ACCESS_CATEGORIES_COPY];
+	__le32 ac_seq_num32[NUM_ACCESS_CATEGORIES_COPY];
+} __packed;
 
 struct wl1271_cmd_test_header {
 	u8 id;
 	u8 padding[3];
-};
+} __packed;
 
 enum wl1271_channel_tune_bands {
 	WL1271_CHANNEL_TUNE_BAND_2_4,
@@ -411,11 +325,55 @@ enum wl1271_channel_tune_bands {
 	WL1271_CHANNEL_TUNE_BAND_4_9
 };
 
-#define WL1271_PD_REFERENCE_POINT_BAND_B_G 0
+#define WL1271_PD_REFERENCE_POINT_BAND_B_G  0
 
-#define TEST_CMD_P2G_CAL                   0x02
-#define TEST_CMD_CHANNEL_TUNE              0x0d
-#define TEST_CMD_UPDATE_PD_REFERENCE_POINT 0x1d
+#define TEST_CMD_P2G_CAL                    0x02
+#define TEST_CMD_CHANNEL_TUNE               0x0d
+#define TEST_CMD_UPDATE_PD_REFERENCE_POINT  0x1d
+#define TEST_CMD_INI_FILE_RADIO_PARAM       0x19
+#define TEST_CMD_INI_FILE_GENERAL_PARAM     0x1E
+#define TEST_CMD_INI_FILE_RF_EXTENDED_PARAM 0x26
+
+struct wl1271_general_parms_cmd {
+	struct wl1271_cmd_header header;
+
+	struct wl1271_cmd_test_header test;
+
+	struct wl1271_ini_general_params general_params;
+
+	u8 sr_debug_table[WL1271_INI_MAX_SMART_REFLEX_PARAM];
+	u8 sr_sen_n_p;
+	u8 sr_sen_n_p_gain;
+	u8 sr_sen_nrn;
+	u8 sr_sen_prn;
+	u8 padding[3];
+} __packed;
+
+struct wl1271_radio_parms_cmd {
+	struct wl1271_cmd_header header;
+
+	struct wl1271_cmd_test_header test;
+
+	/* Static radio parameters */
+	struct wl1271_ini_band_params_2 static_params_2;
+	struct wl1271_ini_band_params_5 static_params_5;
+
+	/* Dynamic radio parameters */
+	struct wl1271_ini_fem_params_2 dyn_params_2;
+	u8 padding2;
+	struct wl1271_ini_fem_params_5 dyn_params_5;
+	u8 padding3[2];
+} __packed;
+
+struct wl1271_ext_radio_parms_cmd {
+	struct wl1271_cmd_header header;
+
+	struct wl1271_cmd_test_header test;
+
+	u8 tx_per_channel_power_compensation_2[CONF_TX_PWR_COMPENSATION_LEN_2];
+	u8 tx_per_channel_power_compensation_5[CONF_TX_PWR_COMPENSATION_LEN_5];
+	u8 padding[3];
+} __packed;
 
 struct wl1271_cmd_cal_channel_tune {
 	struct wl1271_cmd_header header;
@@ -425,19 +383,19 @@ struct wl1271_cmd_cal_channel_tune {
 	u8 band;
 	u8 channel;
 
-	u16 radio_status;
-} __attribute__ ((packed));
+	__le16 radio_status;
+} __packed;
 
 struct wl1271_cmd_cal_update_ref_point {
 	struct wl1271_cmd_header header;
 
 	struct wl1271_cmd_test_header test;
 
-	s32 ref_power;
-	s32 ref_detector;
+	__le32 ref_power;
+	__le32 ref_detector;
 	u8  sub_band;
 	u8  padding[3];
-} __attribute__ ((packed));
+} __packed;
 
 #define MAX_TLV_LENGTH         400
 #define	MAX_NVS_VERSION_LENGTH 12
@@ -449,16 +407,53 @@ struct wl1271_cmd_cal_p2g {
 
 	struct wl1271_cmd_test_header test;
 
-	u16 len;
+	__le16 len;
 	u8  buf[MAX_TLV_LENGTH];
 	u8  type;
 	u8  padding;
 
-	s16 radio_status;
+	__le16 radio_status;
 	u8  nvs_version[MAX_NVS_VERSION_LENGTH];
 
 	u8  sub_band_mask;
 	u8  padding2;
-} __attribute__ ((packed));
+} __packed;
+
+
+/*
+ * There are three types of disconnections:
+ *
+ * DISCONNECT_IMMEDIATE: the fw doesn't send any frames
+ * DISCONNECT_DEAUTH:    the fw generates a DEAUTH request with the reason
+ *                       we have passed
+ * DISCONNECT_DISASSOC:  the fw generates a DESASSOC request with the reason
+ *                       we have passed
+ */
+enum wl1271_disconnect_type {
+	DISCONNECT_IMMEDIATE,
+	DISCONNECT_DEAUTH,
+	DISCONNECT_DISASSOC
+};
+
+struct wl1271_cmd_disconnect {
+	struct wl1271_cmd_header header;
+
+	__le32 rx_config_options;
+	__le32 rx_filter_options;
+
+	__le16 reason;
+	u8  type;
+
+	u8  padding;
+} __packed;
+
+#define WL1271_CMD_STA_STATE_CONNECTED  1
+
+struct wl1271_cmd_set_sta_state {
+	struct wl1271_cmd_header header;
+
+	u8 state;
+	u8 padding[3];
+} __packed;
 
 #endif /* __WL1271_CMD_H__ */

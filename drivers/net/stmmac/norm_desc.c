@@ -1,33 +1,31 @@
 /*******************************************************************************
- * This contains the functions to handle the normal descriptors.
- *
- * Copyright (C) 2007-2009 STMicroelectronics Ltd
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
- */
+  This contains the functions to handle the normal descriptors.
 
-#include <linux/netdevice.h>
-#include <linux/stmmac.h>
+  Copyright (C) 2007-2009  STMicroelectronics Ltd
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+*******************************************************************************/
+
 #include "common.h"
 
 static int ndesc_get_tx_status(void *data, struct stmmac_extra_stats *x,
-		struct dma_desc *p, unsigned long ioaddr)
+			       struct dma_desc *p, void __iomem *ioaddr)
 {
 	int ret = 0;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
@@ -46,8 +44,8 @@ static int ndesc_get_tx_status(void *data, struct stmmac_extra_stats *x,
 			stats->tx_carrier_errors++;
 		}
 		if (unlikely((p->des01.tx.excessive_deferral) ||
-			(p->des01.tx.excessive_collisions) ||
-			(p->des01.tx.late_collision)))
+			     (p->des01.tx.excessive_collisions) ||
+			     (p->des01.tx.late_collision)))
 			stats->collisions += p->des01.tx.collision_count;
 		ret = -1;
 	}
@@ -69,24 +67,17 @@ static int ndesc_get_tx_len(struct dma_desc *p)
 
 /* This function verifies if each incoming frame has some errors
  * and, if required, updates the multicast statistics.
- * In case of success, it returns good_frame becasue the device
- * is able to compute the csum in HW. The frame_too_long bit serves
- * the purpose of indiacting the csum error.
- */
+ * In case of success, it returns csum_none becasue the device
+ * is not able to compute the csum in HW. */
 static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-		struct dma_desc *p, int csum_engine)
+			       struct dma_desc *p, int csum_engine, u32 mac_id)
 {
+	int ret = csum_none;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
-	int ret;
-
-	if (csum_engine == STMAC_TYPE_0)
-		ret = csum_none;
-	else
-		ret = good_frame;
 
 	if (unlikely(p->des01.rx.last_descriptor == 0)) {
 		pr_warning("ndesc Error: Oversized Ethernet "
-				"frame spanned multiple buffers\n");
+			   "frame spanned multiple buffers\n");
 		stats->rx_length_errors++;
 		return discard_frame;
 	}
@@ -114,7 +105,7 @@ static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 		ret = discard_frame;
 
 	if (unlikely(p->des01.rx.length_error)) {
-		x->rx_lenght++;
+		x->rx_length++;
 		ret = discard_frame;
 	}
 	if (unlikely(p->des01.rx.mii_error)) {
@@ -129,7 +120,7 @@ static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 }
 
 static void ndesc_init_rx_desc(struct dma_desc *p, unsigned int ring_size,
-				int disable_rx_ic)
+			       int disable_rx_ic)
 {
 	int i;
 	for (i = 0; i < ring_size; i++) {
@@ -141,7 +132,6 @@ static void ndesc_init_rx_desc(struct dma_desc *p, unsigned int ring_size,
 			p->des01.rx.disable_ic = 1;
 		p++;
 	}
-	return;
 }
 
 static void ndesc_init_tx_desc(struct dma_desc *p, unsigned int ring_size)
@@ -153,7 +143,6 @@ static void ndesc_init_tx_desc(struct dma_desc *p, unsigned int ring_size)
 			p->des01.tx.end_ring = 1;
 		p++;
 	}
-	return;
 }
 
 static int ndesc_get_tx_owner(struct dma_desc *p)
@@ -185,30 +174,13 @@ static void ndesc_release_tx_desc(struct dma_desc *p)
 {
 	int ter = p->des01.tx.end_ring;
 
-	/* clean field used within the xmit */
-	p->des01.tx.first_segment = 0;
-	p->des01.tx.last_segment = 0;
-	p->des01.tx.buffer1_size = 0;
-
-	/* clean status reported */
-	p->des01.tx.error_summary = 0;
-	p->des01.tx.underflow_error = 0;
-	p->des01.tx.no_carrier = 0;
-	p->des01.tx.loss_carrier = 0;
-	p->des01.tx.excessive_deferral = 0;
-	p->des01.tx.excessive_collisions = 0;
-	p->des01.tx.late_collision = 0;
-	p->des01.tx.heartbeat_fail = 0;
-	p->des01.tx.deferred = 0;
-
+	memset(p, 0, offsetof(struct dma_desc, des2));
 	/* set termination field */
 	p->des01.tx.end_ring = ter;
-
-	return;
 }
 
 static void ndesc_prepare_tx_desc(struct dma_desc *p, int is_fs, int len,
-		int csum_flag)
+				  int csum_flag)
 {
 	p->des01.tx.first_segment = is_fs;
 	p->des01.tx.buffer1_size = len;
@@ -230,7 +202,7 @@ static int ndesc_get_rx_frame_len(struct dma_desc *p)
 	return p->des01.rx.frame_length;
 }
 
-struct stmmac_desc_ops ndesc_ops = {
+const struct stmmac_desc_ops ndesc_ops = {
 	.tx_status = ndesc_get_tx_status,
 	.rx_status = ndesc_get_rx_status,
 	.get_tx_len = ndesc_get_tx_len,

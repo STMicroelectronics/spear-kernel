@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
 #include <linux/clk.h>
@@ -400,7 +401,7 @@ static s32 dma_xfer(u32 len, void *digital_volt)
 		goto out_map_single;
 
 out_slave_sg:
-	chan->device->device_terminate_all(chan);
+	chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 	g_drv_data->flag_arrived = 0;
 
 out_map_single:
@@ -1131,8 +1132,7 @@ spear_adc_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
 	return status;
 }
 
-static int spear_adc_ioctl(struct inode *inode, struct file *file,
-		unsigned int cmd, unsigned long arg)
+static long spear_adc_ioctl(struct file *file, u32 cmd, unsigned long arg)
 {
 	enum adc_chan_id chan_id;
 	s32 status = 0;
@@ -1234,7 +1234,7 @@ static const struct file_operations spear_adc_fops = {
 	.open = spear_adc_open,
 	.release = spear_adc_release,
 	.read	= spear_adc_read,
-	.ioctl	= spear_adc_ioctl
+	.unlocked_ioctl = spear_adc_ioctl
 };
 
 static s32 spear_adc_probe(struct platform_device *pdev)

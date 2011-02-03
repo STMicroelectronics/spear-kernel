@@ -11,23 +11,24 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <asm/mach/arch.h>
-#include <asm/mach-types.h>
+#include <linux/gpio.h>
+#include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
-#include <linux/mmc/sdhci-spear.h>
-#include <mach/generic.h>
-#include <mach/gpio.h>
-#include <mach/spear.h>
+#include <asm/mach/arch.h>
+#include <asm/mach-types.h>
 #include <plat/adc.h>
+#include <plat/fsmc.h>
 #include <plat/jpeg.h>
 #include <plat/keyboard.h>
-#include <plat/nand.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
+#include <mach/generic.h>
+#include <mach/spear.h>
 
 /* ethernet phy device */
 static struct plat_stmmacphy_data phy_private_data = {
@@ -44,7 +45,7 @@ static struct resource phy_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-struct platform_device spear300_phy_device = {
+static struct platform_device spear300_phy_device = {
 	.name = "stmmacphy",
 	.id = -1,
 	.num_resources = 1,
@@ -111,11 +112,14 @@ static struct sdhci_plat_data sdhci_plat_data = {
 };
 
 /* keyboard specific platform data */
-static DECLARE_KEYMAP(spear_keymap);
+static DECLARE_KEYMAP(keymap);
+static struct matrix_keymap_data keymap_data = {
+	.keymap = keymap,
+	.keymap_size = ARRAY_SIZE(keymap),
+};
 
 static struct kbd_platform_data kbd_data = {
-	.keymap = spear_keymap,
-	.keymapsize = ARRAY_SIZE(spear_keymap),
+	.keymap = &keymap_data,
 	.rep = 1,
 };
 
@@ -145,7 +149,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 0,
-		.mode = 0,
+		.mode = SPI_MODE_1,
 	}, {
 #endif
 		.modalias = "m25p80",
@@ -153,17 +157,14 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 1,
-		.mode = 0,
+		.mode = SPI_MODE_1,
 	}
 };
 
-static void __init spi_init(void)
-{
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-}
-
 static void __init spear300_evb_init(void)
 {
+	unsigned int i;
+
 	/* set adc platform data */
 	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
@@ -175,8 +176,8 @@ static void __init spear300_evb_init(void)
 	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
 
 	/* set nand0 device's plat data */
-	nand_set_plat_data(&spear300_nand0_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			SPEAR_NAND_BW8);
+	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);
@@ -198,9 +199,10 @@ static void __init spear300_evb_init(void)
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
-	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
+	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
+		amba_device_register(amba_devs[i], &iomem_resource);
 
-	spi_init();
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(SPEAR300, "ST-SPEAR300-EVB")

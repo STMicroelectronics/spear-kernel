@@ -11,6 +11,12 @@
 #define IO_APIC_DEFAULT_PHYS_BASE	0xfec00000
 #define	APIC_DEFAULT_PHYS_BASE		0xfee00000
 
+/*
+ * This is the IO-APIC register space as specified
+ * by Intel docs:
+ */
+#define IO_APIC_SLOT_SIZE		1024
+
 #define	APIC_ID		0x20
 
 #define	APIC_LVR	0x30
@@ -125,6 +131,7 @@
 #define APIC_EILVTn(n)	(0x500 + 0x10 * n)
 #define		APIC_EILVT_NR_AMD_K8	1	/* # of extended interrupts */
 #define		APIC_EILVT_NR_AMD_10H	4
+#define		APIC_EILVT_NR_MAX	APIC_EILVT_NR_AMD_10H
 #define		APIC_EILVT_LVTOFF(x)	(((x) >> 4) & 0xF)
 #define		APIC_EILVT_MSG_FIX	0x0
 #define		APIC_EILVT_MSG_SMI	0x2

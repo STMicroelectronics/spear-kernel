@@ -593,6 +593,8 @@ static struct clk gpio_clk = {
 	.recalc = &follow_parent,
 };
 
+static struct clk dummy_apb_pclk;
+
 #if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
 	defined(CONFIG_MACH_SPEAR320)
 /* fsmc clock */
@@ -652,6 +654,7 @@ static struct clk kbd_clk = {
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
+
 #endif
 
 /* spear310 machine specific clock structures */
@@ -725,6 +728,7 @@ static struct clk pwm_clk = {
 
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
+	{ .con_id = "apb_pclk",		.clk = &dummy_apb_pclk},
 	/* root clks */
 	{ .con_id = "osc_32k_clk",	.clk = &osc_32k_clk},
 	{ .con_id = "osc_24m_clk",	.clk = &osc_24m_clk},
@@ -804,8 +808,8 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
 	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
-	{ .dev_id = "spear_can.0",	.clk = &can0_clk},
-	{ .dev_id = "spear_can.1",	.clk = &can1_clk},
+	{ .dev_id = "c_can_platform.0",	.clk = &can0_clk},
+	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
 	{ .dev_id = "uart1",		.clk = &uart1_clk},

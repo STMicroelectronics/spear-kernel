@@ -11,10 +11,7 @@
  *
  * Data sheet: ARM DDI 0190B, September 2000
  */
-
-#include <linux/clk.h>
 #include <linux/spinlock.h>
-#include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/module.h>
 #include <linux/list.h>
@@ -27,6 +24,7 @@
 #include <linux/device.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/pl061.h>
+#include <linux/slab.h>
 
 #define GPIODIR 0x400
 #define GPIOIS  0x404
@@ -58,25 +56,7 @@ struct pl061_gpio {
 	void __iomem		*base;
 	unsigned		irq_base;
 	struct gpio_chip	gc;
-	struct clk		*clk;
 };
-
-static int pl061_request(struct gpio_chip *gc, unsigned offset)
-{
-	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
-
-	if (offset >= gc->ngpio)
-		return -EINVAL;
-
-	return clk_enable(chip->clk);
-}
-
-static void pl061_free(struct gpio_chip *gc, unsigned offset)
-{
-	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
-
-	clk_disable(chip->clk);
-}
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
 {
@@ -184,7 +164,7 @@ static int pl061_irq_type(unsigned irq, unsigned trigger)
 	unsigned long flags;
 	u8 gpiois, gpioibe, gpioiev;
 
-	if (offset < 0 || offset > PL061_GPIO_NR)
+	if (offset < 0 || offset >= PL061_GPIO_NR)
 		return -EINVAL;
 
 	spin_lock_irqsave(&chip->irq_lock, flags);
@@ -246,13 +226,13 @@ static void pl061_irq_handler(unsigned irq, struct irq_desc *desc)
 		if (pending == 0)
 			continue;
 
-		for_each_bit(offset, &pending, PL061_GPIO_NR)
+		for_each_set_bit(offset, &pending, PL061_GPIO_NR)
 			generic_handle_irq(pl061_to_irq(&chip->gc, offset));
 	}
 	desc->chip->unmask(irq);
 }
 
-static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
+static int pl061_probe(struct amba_device *dev, struct amba_id *id)
 {
 	struct pl061_platform_data *pdata;
 	struct pl061_gpio *chip;
@@ -280,18 +260,9 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 		goto release_region;
 	}
 
-	chip->clk = clk_get(&dev->dev, NULL);
-	if (IS_ERR(chip->clk)) {
-		ret = PTR_ERR(chip->clk);
-		/* clk Not present */
-		if (ret == -ENOENT)
-			chip->clk = NULL;
-		else
-			goto iounmap;
-	} else {
-		chip->gc.request = pl061_request;
-		chip->gc.free = pl061_free;
-	}
+	spin_lock_init(&chip->lock);
+	spin_lock_init(&chip->irq_lock);
+	INIT_LIST_HEAD(&chip->list);
 
 	chip->gc.direction_input = pl061_direction_input;
 	chip->gc.direction_output = pl061_direction_output;
@@ -306,13 +277,9 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 
 	chip->irq_base = pdata->irq_base;
 
-	spin_lock_init(&chip->lock);
-	spin_lock_init(&chip->irq_lock);
-	INIT_LIST_HEAD(&chip->list);
-
 	ret = gpiochip_add(&chip->gc);
 	if (ret)
-		goto free_clk;
+		goto iounmap;
 
 	/*
 	 * irq_chip support
@@ -325,7 +292,7 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 	irq = dev->irq[0];
 	if (irq < 0) {
 		ret = -ENODEV;
-		goto free_clk;
+		goto iounmap;
 	}
 	set_irq_chained_handler(irq, pl061_irq_handler);
 	if (!test_and_set_bit(irq, init_irq)) { /* list initialized? */
@@ -333,7 +300,7 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 		if (chip_list == NULL) {
 			clear_bit(irq, init_irq);
 			ret = -ENOMEM;
-			goto free_clk;
+			goto iounmap;
 		}
 		INIT_LIST_HEAD(chip_list);
 		set_irq_data(irq, chip_list);
@@ -356,9 +323,6 @@ static int __init pl061_probe(struct amba_device *dev, struct amba_id *id)
 
 	return 0;
 
-free_clk:
-	if (chip->clk)
-		clk_put(chip->clk);
 iounmap:
 	iounmap(chip->base);
 release_region:
@@ -369,7 +333,7 @@ free_mem:
 	return ret;
 }
 
-static struct amba_id pl061_ids[] __initdata = {
+static struct amba_id pl061_ids[] = {
 	{
 		.id	= 0x00041061,
 		.mask	= 0x000fffff,

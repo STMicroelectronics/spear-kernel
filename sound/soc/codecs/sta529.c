@@ -20,6 +20,7 @@
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/slab.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -47,16 +48,20 @@ static const u8 sta529_reg[STA529_CACHEREGNUM] = {
 	0x00, 0x00,
 };
 
+struct sta529 {
+	unsigned int sysclk;
+	enum snd_soc_control_type control_type;
+	void *control_data;
+};
 static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_SINGLE("Master Playback Volume", STA529_MVOL, 0, 127, 1),
 	SOC_SINGLE("Left Playback Volume", STA529_LVOL, 0, 127, 1),
 	SOC_SINGLE("Right Playback Volume", STA529_RVOL, 0, 127, 1),
 };
 
-static struct snd_soc_device *sta529_socdev;
-
 /* reading from register cache: sta529 register value */
-u8 sta529_read_reg_cache(struct snd_soc_codec *codec, u32 reg)
+static inline unsigned int
+sta529_read_reg_cache(struct snd_soc_codec *codec, u32 reg)
 {
 	u8 *cache = codec->reg_cache;
 
@@ -172,17 +177,16 @@ sta529_set_bias_level(struct snd_soc_codec *codec,
 {
 	u16 sts;
 
+	sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
+
 	switch (level) {
 	case SND_SOC_BIAS_ON:
-		spear_sta529_mute(codec->dai, 0);
-		break;
 	case SND_SOC_BIAS_PREPARE:
-		spear_sta529_mute(codec->dai, 1);
+		sta529_write(codec, STA529_FFXCFG0, sts & POWER_STBY);
 		break;
 	case SND_SOC_BIAS_STANDBY:
 	case SND_SOC_BIAS_OFF:
-		sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
-		sta529_write(codec, STA529_FFXCFG0, sts & POWER_STBY);
+		sta529_write(codec, STA529_FFXCFG0, sts | ~POWER_STBY);
 
 		break;
 	}
@@ -200,8 +204,8 @@ static struct snd_soc_dai_ops sta529_dai_ops = {
 	.set_sysclk	= spear_sta_set_dai_sysclk,
 };
 
-struct snd_soc_dai sta529_dai = {
-	.name = "STA529",
+static struct snd_soc_dai_driver sta529_dai = {
+	.name = "sta529-audio",
 	.playback = {
 		.stream_name = "Playback",
 		.channels_min = 2,
@@ -218,227 +222,50 @@ struct snd_soc_dai sta529_dai = {
 	},
 	.ops	= &sta529_dai_ops,
 };
-EXPORT_SYMBOL_GPL(sta529_dai);
 
-typedef unsigned int (*codec_read)(struct snd_soc_codec *, unsigned int);
-/*
- * initialise the sta529 driver
- * register the mixer and dsp interfaces with the kernel
- */
-static int sta529_init(struct snd_soc_device *socdev)
+static int spear_sta529_probe(struct snd_soc_codec *codec)
 {
-	struct snd_soc_codec *codec = socdev->card->codec;
-	int ret , i ;
+	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
+	int i ;
 	u8 *cache ;
 	u8 data[2];
 
-	codec->name = "STA529";
-	codec->owner = THIS_MODULE;
-	codec->read = (codec_read)sta529_read_reg_cache;
-	codec->write = sta529_write;
-	codec->set_bias_level = sta529_set_bias_level;
-	codec->dai = &sta529_dai;
-	codec->num_dai = 1;
-	codec->reg_cache_size = ARRAY_SIZE(sta529_reg);
-	codec->reg_cache = kmemdup(sta529_reg, sizeof(sta529_reg), GFP_KERNEL);
+	dev_info(codec->dev, "spear Audio Codec %s", STA529_VERSION);
 
-	if (codec->reg_cache == NULL)
-		return -ENOMEM;
+	codec->control_data = sta529->control_data;
+	codec->hw_write = (hw_write_t)i2c_master_send;
+	codec->hw_read = NULL;
+	sta529_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	snd_soc_add_controls(codec, sta529_snd_controls,
+			ARRAY_SIZE(sta529_snd_controls));
 
 	cache = codec->reg_cache;
-
-	/* register pcms */
-	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
-	if (ret < 0) {
-		dev_err(socdev->dev, "sta529: failed to create pcms\n");
-		goto pcm_err;
-	}
-
 	for (i = 0; i < ARRAY_SIZE(sta529_reg); i++) {
 		data[0] = i;
 		data[1] = cache[i];
 		codec->hw_write(codec->control_data, data, NUM_OF_MSG);
 	}
-
-	/* power on device */
-	sta529_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-
-	snd_soc_add_controls(codec, sta529_snd_controls,
-			ARRAY_SIZE(sta529_snd_controls));
-	ret = snd_soc_init_card(socdev);
-	if (ret < 0) {
-		dev_err(socdev->dev, "sta529: failed to register card\n");
-		goto card_err;
-	}
-
-	return ret;
-
-card_err:
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
-pcm_err:
-	kfree(codec->reg_cache);
-
-	return ret;
-}
-
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-static int
-sta529_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
-{
-	struct snd_soc_device *socdev = sta529_socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
-	int ret;
-
-	if (!i2c_check_functionality(i2c->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
-		return -EINVAL;
-
-	i2c_set_clientdata(i2c, codec);
-	codec->dev = &i2c->dev;
-	codec->control_data = i2c;
-
-	ret = sta529_init(socdev);
-	if (ret < 0)
-		dev_err(socdev->dev, "failed to initialise sta529\n");
-
-	return ret;
-}
-
-static int sta529_i2c_remove(struct i2c_client *client)
-{
-	struct snd_soc_codec *codec = i2c_get_clientdata(client);
-
-	kfree(codec->reg_cache);
-
 	return 0;
-}
-
-static const struct i2c_device_id sta529_i2c_id[] = {
-	{ "sta529", 0 },
-	{ }
-};
-MODULE_DEVICE_TABLE(i2c, sta529_i2c_id);
-
-static struct i2c_driver sta529_i2c_driver = {
-	.driver = {
-		.name = "STA529_I2C Codec",
-		.owner = THIS_MODULE,
-	},
-	.probe		= sta529_i2c_probe,
-	.remove		= sta529_i2c_remove,
-	.id_table	= sta529_i2c_id,
-};
-
-static int
-sta529_add_i2c_device(struct platform_device *pdev,
-		const struct sta529_setup_data *setup)
-{
-	struct i2c_board_info info;
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-	int ret;
-
-	ret = i2c_add_driver(&sta529_i2c_driver);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "can't add i2c driver\n");
-		return ret;
-	}
-
-	memset(&info, 0, sizeof(struct i2c_board_info));
-	info.addr = setup->i2c_address;
-	strlcpy(info.type, "sta529", I2C_NAME_SIZE);
-
-	adapter = i2c_get_adapter(setup->i2c_bus);
-	if (!adapter) {
-		dev_err(&pdev->dev, "can't get i2c adapter %d\n",
-				setup->i2c_bus);
-		goto err_driver;
-	}
-
-	client = i2c_new_device(adapter, &info);
-	if (!client) {
-		dev_err(&pdev->dev, "can't add i2c device at 0x%x\n",
-				(unsigned int)info.addr);
-		goto err_driver;
-	}
-	i2c_put_adapter(adapter);
-
-	return 0;
-
-err_driver:
-	i2c_del_driver(&sta529_i2c_driver);
-	return -ENODEV;
-}
-#endif
-
-static int spear_sta529_probe(struct platform_device *pdev)
-{
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct sta529_setup_data *setup;
-	struct snd_soc_codec *codec;
-	int ret = 0;
-
-	dev_info(&pdev->dev, "spear Audio Codec %s", STA529_VERSION);
-
-	setup = socdev->codec_data;
-	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
-	if (codec == NULL)
-		return -ENOMEM;
-
-	socdev->card->codec = codec;
-	mutex_init(&codec->mutex);
-	INIT_LIST_HEAD(&codec->dapm_widgets);
-	INIT_LIST_HEAD(&codec->dapm_paths);
-	sta529_socdev = socdev;
-
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	if (setup->i2c_address) {
-		codec->hw_write = (hw_write_t) i2c_master_send;
-		ret = sta529_add_i2c_device(pdev, setup);
-	}
-	if (ret != 0)
-		kfree(codec);
-#endif
-	return ret;
 }
 
 /* power down chip */
-static int spear_sta529_remove(struct platform_device *pdev)
+static int spear_sta529_remove(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
-	if (codec->control_data)
-		sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
-
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	if (codec->control_data)
-		i2c_unregister_device(codec->control_data);
-	i2c_del_driver(&sta529_i2c_driver);
-#endif
-	kfree(codec);
-
-	return 0;
-}
-
-static int spear_sta529_suspend(struct platform_device *pdev, pm_message_t
-		state)
-{
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
 	sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
 
-static int spear_sta529_resume(struct platform_device *pdev)
+static int spear_sta529_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
+	sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
+
+	return 0;
+}
+
+static int spear_sta529_resume(struct snd_soc_codec *codec)
+{
 	int i;
 	u8 data[2];
 	u8 *cache = codec->reg_cache;
@@ -455,23 +282,82 @@ static int spear_sta529_resume(struct platform_device *pdev)
 	return 0;
 }
 
-struct snd_soc_codec_device soc_codec_dev_sta529 = {
+struct snd_soc_codec_driver soc_codec_dev_sta529 = {
+	.reg_cache_size = ARRAY_SIZE(sta529_reg),
+	.reg_word_size = sizeof(u8),
+	.reg_cache_default = sta529_reg,
 	.probe = spear_sta529_probe,
 	.remove = spear_sta529_remove,
 	.suspend = spear_sta529_suspend,
 	.resume = spear_sta529_resume,
+	.read = sta529_read_reg_cache,
+	.write = sta529_write,
+	.set_bias_level = sta529_set_bias_level,
 };
-EXPORT_SYMBOL_GPL(soc_codec_dev_sta529);
+
+static __devinit int sta529_i2c_probe(struct i2c_client *i2c,
+		const struct i2c_device_id *id)
+{
+	struct sta529 *sta529;
+	int ret;
+
+	if (!i2c_check_functionality(i2c->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+		return -EINVAL;
+
+	sta529 = kzalloc(sizeof(struct sta529), GFP_KERNEL);
+	if (sta529 == NULL)
+		return -ENOMEM;
+
+	i2c_set_clientdata(i2c, sta529);
+	sta529->control_data = i2c;
+	sta529->control_type = SND_SOC_I2C;
+
+	ret = snd_soc_register_codec(&i2c->dev,
+			&soc_codec_dev_sta529, &sta529_dai, 1);
+	if (ret < 0)
+		kfree(sta529);
+	return ret;
+}
+
+static int sta529_i2c_remove(struct i2c_client *client)
+{
+	snd_soc_unregister_codec(&client->dev);
+	kfree(i2c_get_clientdata(client));
+	return 0;
+}
+
+static const struct i2c_device_id sta529_i2c_id[] = {
+	{ "sta529", 0 },
+	{ }
+};
+MODULE_DEVICE_TABLE(i2c, sta529_i2c_id);
+
+static struct i2c_driver sta529_i2c_driver = {
+	.driver = {
+		.name = "sta529-codec",
+		.owner = THIS_MODULE,
+	},
+	.probe		= sta529_i2c_probe,
+	.remove		= __devexit_p(sta529_i2c_remove),
+	.id_table	= sta529_i2c_id,
+};
 
 static int __init sta529_modinit(void)
 {
-	return snd_soc_register_dai(&sta529_dai);
+	int ret = 0;
+
+	ret = i2c_add_driver(&sta529_i2c_driver);
+	if (ret != 0)
+		printk(KERN_ERR "Failed to reg sta529 I2C driver: %d\n", ret);
+
+	return ret;
+
 }
 module_init(sta529_modinit);
 
 static void __exit sta529_exit(void)
 {
-	snd_soc_unregister_dai(&sta529_dai);
+	i2c_del_driver(&sta529_i2c_driver);
 }
 module_exit(sta529_exit);
 

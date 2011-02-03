@@ -16,9 +16,9 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <asm/mach-types.h>
+#include <plat/clock.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
-#include <plat/clock.h>
 
 /* root clks */
 /* 24 MHz oscillator clock */
@@ -922,7 +922,7 @@ static struct clk gmac0_clk = {
 static struct clk fsmc_clk = {
 	.pclk = &ahb_clk,
 	.en_reg = PERIP1_CLK_ENB,
-	.en_reg_bit = SMI_CLK_ENB,
+	.en_reg_bit = FSMC_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
@@ -1336,7 +1336,7 @@ static struct pclk_info phy_pclk_info[] = {
 static struct pclk_sel phy_smii_rgmii_pclk_sel = {
 	.pclk_info = phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(phy_pclk_info),
-	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
+	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
 	.pclk_sel_mask = SPEAR1310_SMII_PHY_CLK_MASK,
 };
 
@@ -1344,7 +1344,7 @@ static struct pclk_sel phy_smii_rgmii_pclk_sel = {
 static struct pclk_sel phy_rmii_pclk_sel = {
 	.pclk_info = phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(phy_pclk_info),
-	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
+	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
 	.pclk_sel_mask = SPEAR1310_RMII_PHY_CLK_MASK,
 };
 
@@ -1449,8 +1449,11 @@ static struct clk tdm_clk = {
 
 #endif
 
+static struct clk dummy_apb_pclk;
+
 /* array of all spear 13xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
+	{ .con_id = "apb_pclk",		.clk = &dummy_apb_pclk},
 	/* root clks */
 	{.con_id = "osc1_24m_clk",	.clk = &osc1_24m_clk},
 	{.con_id = "osc2_32k_clk",	.clk = &osc2_32k_clk},
@@ -1526,10 +1529,10 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "uart",		.clk = &uart_clk},
 
 	/* clock derived from ahb clk */
-	{.dev_id = "designware_udc",	.clk = &usbd_clk},
 	{.dev_id = "smi",		.clk = &smi_clk},
 	{.con_id = "usbh.0_clk",	.clk = &uhci0_clk},
 	{.con_id = "usbh.1_clk",	.clk = &uhci1_clk},
+	{.dev_id = "designware_udc",	.clk = &usbd_clk},
 	{.dev_id = "i2c_designware.0",	.clk = &i2c_clk},
 	{.dev_id = "dw_dmac.0",		.clk = &dma0_clk},
 	{.dev_id = "dw_dmac.1",		.clk = &dma1_clk},
@@ -1565,8 +1568,8 @@ static struct clk_lookup spear1300_clk_lookups[] = {
 /* array of all spear 1310 clock lookups */
 #ifdef CONFIG_MACH_SPEAR1310
 static struct clk_lookup spear1310_clk_lookups[] = {
-	{.dev_id = "spear_can.0",	.clk = &can0_clk},
-	{.dev_id = "spear_can.1",	.clk = &can1_clk},
+	{.dev_id = "c_can_platform.0",	.clk = &can0_clk},
+	{.dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{.dev_id = "stmmaceth.1",	.clk = &gmac_ras1_clk},
 	{.dev_id = "stmmaceth.2",	.clk = &gmac_ras2_clk},
 	{.dev_id = "stmmaceth.3",	.clk = &gmac_ras3_clk},

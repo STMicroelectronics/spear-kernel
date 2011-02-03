@@ -56,7 +56,7 @@ struct pclk_info {
 struct pclk_sel {
 	struct pclk_info *pclk_info;
 	u8 pclk_count;
-	unsigned int *pclk_sel_reg;
+	void __iomem *pclk_sel_reg;
 	unsigned int pclk_sel_mask;
 };
 
@@ -99,7 +99,7 @@ struct clk {
 	unsigned int usage_count;
 	unsigned int flags;
 	unsigned long rate;
-	unsigned int *en_reg;
+	void __iomem *en_reg;
 	u8 en_reg_bit;
 	const struct clkops *ops;
 	int (*recalc) (struct clk *clk, unsigned long *rate,
@@ -139,8 +139,8 @@ struct vco_clk_masks {
 };
 
 struct vco_clk_config {
-	u32 *mode_reg;
-	u32 *cfg_reg;
+	void __iomem *mode_reg;
+	void __iomem *cfg_reg;
 	struct vco_clk_masks *masks;
 };
 
@@ -159,7 +159,7 @@ struct bus_clk_masks {
 };
 
 struct bus_clk_config {
-	u32 *reg;
+	void __iomem *reg;
 	struct bus_clk_masks *masks;
 };
 
@@ -181,7 +181,7 @@ struct aux_clk_masks {
 };
 
 struct aux_clk_config {
-	u32 *synth_reg;
+	void __iomem *synth_reg;
 	struct aux_clk_masks *masks;
 };
 
@@ -201,7 +201,7 @@ struct gpt_clk_masks {
 };
 
 struct gpt_clk_config {
-	u32 *synth_reg;
+	void __iomem *synth_reg;
 	struct gpt_clk_masks *masks;
 };
 
@@ -218,7 +218,7 @@ struct frac_synth_masks {
 };
 
 struct frac_synth_clk_config {
-	u32 *synth_reg;
+	void __iomem *synth_reg;
 	struct frac_synth_masks *masks;
 };
 

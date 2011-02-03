@@ -13,17 +13,13 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/init.h>
-#include <linux/ioport.h>
 #include <linux/io.h>
 #include <linux/irq.h>
-#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/rtc.h>
+#include <linux/slab.h>
 #include <linux/spinlock.h>
-#include <linux/types.h>
-#include <linux/wait.h>
-#include <asm/mach/time.h>
 
 /* RTC registers */
 #define TIME_REG		0x00
@@ -330,67 +326,7 @@ static int spear_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alm)
 
 	return 0;
 }
-
-#ifdef CONFIG_RTC_INTF_DEV
-static int
-spear_rtc_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct rtc_device *rtc = platform_get_drvdata(pdev);
-	struct spear_rtc_config *config = dev_get_drvdata(&rtc->dev);
-	struct rtc_time tm;
-	struct rtc_wkalrm alm;
-	void __user *uarg = (void __user *)arg;
-	int err = 0;
-
-	switch (cmd) {
-		/* AIE = Alarm Interrupt Enable */
-	case RTC_AIE_OFF:
-		spear_rtc_disable_interrupt(config);
-		break;
-	case RTC_AIE_ON:
-		spear_rtc_enable_interrupt(config);
-		break;
-	case RTC_SET_TIME:
-		if (copy_from_user(&tm, uarg, sizeof(tm)))
-			return -EFAULT;
-		return spear_rtc_set_time(dev, &tm);
-	case RTC_RD_TIME:
-		err = spear_rtc_read_time(dev, &tm);
-		if (err < 0)
-			return err;
-
-		if (copy_to_user(uarg, &tm, sizeof(tm)))
-			return -EFAULT;
-		break;
-	case RTC_ALM_SET:
-		if (copy_from_user(&alm.time, uarg, sizeof(tm)))
-			return -EFAULT;
-		alm.enabled = 0;
-		alm.pending = 0;
-		spear_rtc_set_alarm(dev, &alm);
-		break;
-	case RTC_ALM_READ:
-		err = spear_rtc_read_alarm(dev, &alm);
-		if (err < 0)
-			return err;
-
-		if (copy_to_user(uarg, &alm.time, sizeof(tm)))
-			return -EFAULT;
-		break;
-	default:
-		return -ENOIOCTLCMD;
-	}
-
-	return 0;
-}
-
-#else
-#define spear_rtc_ioctl	NULL
-#endif
-
 static struct rtc_class_ops spear_rtc_ops = {
-	.ioctl = spear_rtc_ioctl,
 	.read_time = spear_rtc_read_time,
 	.set_time = spear_rtc_set_time,
 	.read_alarm = spear_rtc_read_alarm,
@@ -439,6 +375,8 @@ static int __devinit spear_rtc_probe(struct platform_device *pdev)
 		goto err_disable_clock;
 	}
 
+	spin_lock_init(&config->lock);
+
 	rtc = rtc_device_register(pdev->name, &pdev->dev, &spear_rtc_ops,
 			THIS_MODULE);
 	if (IS_ERR(rtc)) {
@@ -447,10 +385,9 @@ static int __devinit spear_rtc_probe(struct platform_device *pdev)
 		status = PTR_ERR(rtc);
 		goto err_iounmap;
 	}
+
 	platform_set_drvdata(pdev, rtc);
 	dev_set_drvdata(&rtc->dev, config);
-
-	spin_lock_init(&config->lock);
 
 	/* alarm irqs */
 	irq = platform_get_irq(pdev, 0);
@@ -576,7 +513,6 @@ static struct platform_driver spear_rtc_driver = {
 	.shutdown = spear_rtc_shutdown,
 	.driver = {
 		.name = "rtc-spear",
-		.owner = THIS_MODULE,
 	},
 };
 
@@ -592,6 +528,7 @@ static void __exit rtc_exit(void)
 }
 module_exit(rtc_exit);
 
-MODULE_ALIAS("rtc-spear");
-MODULE_AUTHOR("Rajeev Kumar");
+MODULE_ALIAS("platform:rtc-spear");
+MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
+MODULE_DESCRIPTION("ST SPEAr Realtime Clock Driver (RTC)");
 MODULE_LICENSE("GPL");

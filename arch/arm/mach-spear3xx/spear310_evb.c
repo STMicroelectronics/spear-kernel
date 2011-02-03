@@ -11,25 +11,26 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <asm/mach/arch.h>
-#include <asm/mach-types.h>
+#include <linux/gpio.h>
 #include <linux/mtd/nand.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <asm/mach/arch.h>
+#include <asm/mach-types.h>
+#include <plat/adc.h>
+#include <plat/fsmc.h>
+#include <plat/hdlc.h>
+#include <plat/jpeg.h>
+#include <plat/smi.h>
+#include <plat/spi.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
-#include <mach/gpio.h>
 #include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
 #include <mach/spear.h>
-#include <plat/adc.h>
-#include <plat/jpeg.h>
-#include <plat/nand.h>
-#include <plat/smi.h>
-#include <plat/spi.h>
-#include <plat/hdlc.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 
@@ -38,6 +39,15 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
 	PARTITION("Kernel", 0x80000, 24 * 0x20000),
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
+};
+
+/* emi nor flash resources registeration */
+static struct resource emi_nor_resources[] = {
+	{
+		.start	= SPEAR310_EMI_MEM_0_BASE,
+		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
 };
 
 /* ethernet device */
@@ -55,7 +65,7 @@ static struct resource phy_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear310_phy0_device = {
+static struct platform_device spear310_phy_device = {
 	.name = "stmmacphy",
 	.id = -1,
 	.num_resources = 1,
@@ -151,7 +161,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_eth_macb3_device,
 	&spear310_eth_macb4_device,
 	&spear310_nand_device,
-	&spear310_phy0_device,
+	&spear310_phy_device,
 	&spear310_plgpio_device,
 	&spear310_tdm_hdlc_device,
 	&spear310_rs485_0_device,
@@ -197,21 +207,16 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 0,
-		.mode = 0,
+		.mode = SPI_MODE_1,
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
 		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 1,
-		.mode = 0,
+		.mode = SPI_MODE_1,
 	}
 };
-
-static void __init spi_init(void)
-{
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-}
 
 #define ENABLE_MEM_CLK	1
 static void macb_enable_mem_clk(void)
@@ -234,6 +239,12 @@ static void macb_enable_mem_clk(void)
 
 static void __init spear310_evb_init(void)
 {
+	unsigned int i;
+
+	/* set nand device's plat data */
+	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+
 	/* set adc platform data */
 	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
@@ -241,18 +252,11 @@ static void __init spear310_evb_init(void)
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
 			&spear3xx_dmac_device.dev);
 
-	/* set nand device's plat data */
-	nand_set_plat_data(&spear310_nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			SPEAR_NAND_BW8);
-
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
-
-	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&spear3xx_smi_device);
 
 	/* initialize macb related data in macb plat data */
 	macb_enable_mem_clk();
@@ -261,26 +265,31 @@ static void __init spear310_evb_init(void)
 	macb_set_plat_data(&spear310_eth_macb3_device, &spear310_macb3_data);
 	macb_set_plat_data(&spear310_eth_macb4_device, &spear310_macb4_data);
 
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear3xx_smi_device);
+
 	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&spear310_emi_nor_device, partition_info,
+	emi_init_board_info(&spear310_emi_nor_device, emi_nor_resources,
+			ARRAY_SIZE(emi_nor_resources), partition_info,
 			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH32);
-
-	/* Add Platform Devices */
-	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
-
-	/* Add Amba Devices */
-	spear_amba_device_register(amba_devs, ARRAY_SIZE(amba_devs));
-
-	 /*
-	  * Note: Remove the comment to enable E1 interface for one HDLC port
-	  */
-	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 
 	/* Initialize emi regiters */
 	emi_init(&spear310_emi_nor_device, SPEAR310_EMI_REG_BASE, 0,
 			EMI_FLASH_WIDTH32);
 
-	spi_init();
+	/* Add Platform Devices */
+	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
+
+	/* Add Amba Devices */
+	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
+		amba_device_register(amba_devs[i], &iomem_resource);
+
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 }
 
 MACHINE_START(SPEAR310, "ST-SPEAR310-EVB")

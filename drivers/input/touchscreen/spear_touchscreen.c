@@ -24,6 +24,7 @@
 #include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/freezer.h>
+#include <linux/slab.h>
 #include <plat/touchscreen.h>
 #include "../../char/spear_adc.h"
 

@@ -20,9 +20,9 @@
 #include <linux/ioport.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <asm/mach-types.h>
-#include <mach/gpio.h>
 
 #define MAX_GPIO_PER_REG		32
 #define PIN_OFFSET(pin)			(pin % MAX_GPIO_PER_REG)
@@ -285,8 +285,14 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 	if (offset >= DIV_ROUND_UP(plgpio->chip.ngpio, size))
 		return -EINVAL;
 
+#ifdef CONFIG_ARCH_SPEAR13XX
+	if (trigger != IRQ_TYPE_EDGE_RISING)
+		return -EINVAL;
+#else
 	if (trigger != IRQ_TYPE_LEVEL_HIGH)
 		return -EINVAL;
+#endif
+
 	return 0;
 }
 
@@ -329,7 +335,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 		if (count < MAX_GPIO_PER_REG)
 			pending &= (1 << count) - 1;
 
-		for_each_bit(offset, &pending, MAX_GPIO_PER_REG) {
+		for_each_set_bit(offset, &pending, MAX_GPIO_PER_REG) {
 			/* get correct pin for "offset" */
 			if (plgpio->o2p && (plgpio->p2o_regs & PTO_MIS_REG)) {
 				pin = plgpio->o2p(offset);

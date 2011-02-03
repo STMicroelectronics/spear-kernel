@@ -1,108 +1,99 @@
 /*******************************************************************************
- * This contains the functions to handle the enhanced descriptors.
- *
- * Copyright (C) 2007-2009  STMicroelectronics Ltd
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
- */
+  This contains the functions to handle the enhanced descriptors.
 
-#include <linux/netdevice.h>
+  Copyright (C) 2007-2009  STMicroelectronics Ltd
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+*******************************************************************************/
+#include <linux/platform_device.h>
 #include <linux/stmmac.h>
 #include "common.h"
 
-#undef ENH_DESC_DEBUG
-/*#define ENH_DESC_DEBUG*/
-#ifdef ENH_DEC__DEBUG
-#define DBG(fmt, args...) printk(fmt, ## args)
-#else
-#define DBG(fmt, args...) do { } while (0)
-#endif
-
 static int enh_desc_get_tx_status(void *data, struct stmmac_extra_stats *x,
-				struct dma_desc *p, unsigned long ioaddr)
+				  struct dma_desc *p, void __iomem *ioaddr)
 {
 	int ret = 0;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
 
 	if (unlikely(p->des01.etx.error_summary)) {
-		DBG(KERN_ERR "GMAC TX error... 0x%08x\n", p->des01.etx);
+		CHIP_DBG(KERN_ERR "GMAC TX error... 0x%08x\n", p->des01.etx);
 		if (unlikely(p->des01.etx.jabber_timeout)) {
-			DBG(KERN_ERR "\tjabber_timeout error\n");
+			CHIP_DBG(KERN_ERR "\tjabber_timeout error\n");
 			x->tx_jabber++;
 		}
 
 		if (unlikely(p->des01.etx.frame_flushed)) {
-			DBG(KERN_ERR "\tframe_flushed error\n");
+			CHIP_DBG(KERN_ERR "\tframe_flushed error\n");
 			x->tx_frame_flushed++;
-			gmac_flush_tx_fifo(ioaddr);
+			dwmac_dma_flush_tx_fifo(ioaddr);
 		}
 
 		if (unlikely(p->des01.etx.loss_carrier)) {
-			DBG(KERN_ERR "\tloss_carrier error\n");
+			CHIP_DBG(KERN_ERR "\tloss_carrier error\n");
 			x->tx_losscarrier++;
 			stats->tx_carrier_errors++;
 		}
 		if (unlikely(p->des01.etx.no_carrier)) {
-			DBG(KERN_ERR "\tno_carrier error\n");
+			CHIP_DBG(KERN_ERR "\tno_carrier error\n");
 			x->tx_carrier++;
 			stats->tx_carrier_errors++;
 		}
 		if (unlikely(p->des01.etx.late_collision)) {
-			DBG(KERN_ERR "\tlate_collision error\n");
+			CHIP_DBG(KERN_ERR "\tlate_collision error\n");
 			stats->collisions += p->des01.etx.collision_count;
 		}
 		if (unlikely(p->des01.etx.excessive_collisions)) {
-			DBG(KERN_ERR "\texcessive_collisions\n");
+			CHIP_DBG(KERN_ERR "\texcessive_collisions\n");
 			stats->collisions += p->des01.etx.collision_count;
 		}
 		if (unlikely(p->des01.etx.excessive_deferral)) {
-			DBG(KERN_INFO "\texcessive tx_deferral\n");
+			CHIP_DBG(KERN_INFO "\texcessive tx_deferral\n");
 			x->tx_deferred++;
 		}
 
 		if (unlikely(p->des01.etx.underflow_error)) {
-			DBG(KERN_ERR "\tunderflow error\n");
-			gmac_flush_tx_fifo(ioaddr);
+			CHIP_DBG(KERN_ERR "\tunderflow error\n");
+			dwmac_dma_flush_tx_fifo(ioaddr);
 			x->tx_underflow++;
 		}
 
 		if (unlikely(p->des01.etx.ip_header_error)) {
-			DBG(KERN_ERR "\tTX IP header csum error\n");
+			CHIP_DBG(KERN_ERR "\tTX IP header csum error\n");
 			x->tx_ip_header_error++;
 		}
 
 		if (unlikely(p->des01.etx.payload_error)) {
-			DBG(KERN_ERR "\tAddr/Payload csum error\n");
+			CHIP_DBG(KERN_ERR "\tAddr/Payload csum error\n");
 			x->tx_payload_error++;
-			gmac_flush_tx_fifo(ioaddr);
+			dwmac_dma_flush_tx_fifo(ioaddr);
 		}
 
 		ret = -1;
 	}
 
 	if (unlikely(p->des01.etx.deferred)) {
-		DBG(KERN_INFO "GMAC TX status: tx deferred\n");
+		CHIP_DBG(KERN_INFO "GMAC TX status: tx deferred\n");
 		x->tx_deferred++;
 	}
 #ifdef STMMAC_VLAN_TAG_USED
 	if (p->des01.etx.vlan_frame) {
-		DBG(KERN_INFO "GMAC TX status: VLAN frame\n");
+		CHIP_DBG(KERN_INFO "GMAC TX status: VLAN frame\n");
 		x->tx_vlan++;
 	}
 #endif
@@ -115,7 +106,10 @@ static int enh_desc_get_tx_len(struct dma_desc *p)
 	return p->des01.etx.buffer1_size;
 }
 
-static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
+#define GMAC_VERSION_35	0x35
+
+static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err,
+		u32 mac_id)
 {
 	int ret = good_frame;
 	u32 status = (type << 2 | ipc_err << 1 | payload_err) & 0x7;
@@ -132,69 +126,69 @@ static int enh_desc_coe_rdes0(int ipc_err, int type, int payload_err)
 	 *      0 1 0 | Reserved.
 	 */
 	if (status == 0x0) {
-		DBG(KERN_INFO "RX Des0 status: IEEE 802.3 Type frame.\n");
-		ret = good_frame;
+		CHIP_DBG(KERN_INFO "RX Des0 status: IEEE 802.3 Type frame.\n");
+		ret = llc_snap;
 	} else if (status == 0x4) {
-		DBG(KERN_INFO "RX Des0 status: IPv4/6 No CSUM errorS.\n");
+		CHIP_DBG(KERN_INFO "RX Des0 status: IPv4/6 No CSUM errorS.\n");
 		ret = good_frame;
 	} else if (status == 0x5) {
-		DBG(KERN_ERR "RX Des0 status: IPv4/6 Payload Error.\n");
+		CHIP_DBG(KERN_ERR "RX Des0 status: IPv4/6 Payload Error.\n");
 		ret = csum_none;
 	} else if (status == 0x6) {
-		DBG(KERN_ERR "RX Des0 status: IPv4/6 Header Error.\n");
+		CHIP_DBG(KERN_ERR "RX Des0 status: IPv4/6 Header Error.\n");
 		ret = csum_none;
 	} else if (status == 0x7) {
-		DBG(KERN_ERR
-			"RX Des0 status: IPv4/6 Header and Payload Error.\n");
+		CHIP_DBG(KERN_ERR
+		    "RX Des0 status: IPv4/6 Header and Payload Error.\n");
 		ret = csum_none;
 	} else if (status == 0x1) {
-		DBG(KERN_ERR
-			"RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
-		ret = csum_none;
+		CHIP_DBG(KERN_ERR
+		    "RX Des0 status: IPv4/6 unsupported IP PAYLOAD.\n");
+		ret = (mac_id >= GMAC_VERSION_35) ? discard_frame : csum_none;
 	} else if (status == 0x3) {
-		DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
-		ret = csum_none;
+		CHIP_DBG(KERN_ERR "RX Des0 status: No IPv4, IPv6 frame.\n");
+		ret = (mac_id >= GMAC_VERSION_35) ? discard_frame : csum_none;
 	}
 	return ret;
 }
 
 static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-				struct dma_desc *p, int csum_engine)
+		struct dma_desc *p, int csum_engine, u32 mac_id)
 {
 	int ret = good_frame;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
 
 	if (unlikely(p->des01.erx.error_summary)) {
-		DBG(KERN_ERR "GMAC RX Error Summary 0x%08x\n",
-				p->des01.erx);
+		CHIP_DBG(KERN_ERR "GMAC RX Error Summary 0x%08x\n",
+				  p->des01.erx);
 		if (unlikely(p->des01.erx.descriptor_error)) {
-			DBG(KERN_ERR "\tdescriptor error\n");
+			CHIP_DBG(KERN_ERR "\tdescriptor error\n");
 			x->rx_desc++;
 			stats->rx_length_errors++;
 		}
 		if (unlikely(p->des01.erx.overflow_error)) {
-			DBG(KERN_ERR "\toverflow error\n");
+			CHIP_DBG(KERN_ERR "\toverflow error\n");
 			x->rx_gmac_overflow++;
 		}
 
 		if (unlikely(p->des01.erx.ipc_csum_error))
-			DBG(KERN_ERR "\tIPC Csum Error/Giant frame\n");
+			CHIP_DBG(KERN_ERR "\tIPC Csum Error/Giant frame\n");
 
 		if (unlikely(p->des01.erx.late_collision)) {
-			DBG(KERN_ERR "\tlate_collision error\n");
+			CHIP_DBG(KERN_ERR "\tlate_collision error\n");
 			stats->collisions++;
 			stats->collisions++;
 		}
 		if (unlikely(p->des01.erx.receive_watchdog)) {
-			DBG(KERN_ERR "\treceive_watchdog error\n");
+			CHIP_DBG(KERN_ERR "\treceive_watchdog error\n");
 			x->rx_watchdog++;
 		}
 		if (unlikely(p->des01.erx.error_gmii)) {
-			DBG(KERN_ERR "\tReceive Error\n");
+			CHIP_DBG(KERN_ERR "\tReceive Error\n");
 			x->rx_mii++;
 		}
 		if (unlikely(p->des01.erx.crc_error)) {
-			DBG(KERN_ERR "\tCRC error\n");
+			CHIP_DBG(KERN_ERR "\tCRC error\n");
 			x->rx_crc++;
 			stats->rx_crc_errors++;
 		}
@@ -208,32 +202,32 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 	if (csum_engine != STMAC_TYPE_0)
 		ret = enh_desc_coe_rdes0(p->des01.erx.ipc_csum_error,
 			p->des01.erx.frame_type,
-			p->des01.erx.payload_csum_error);
+			p->des01.erx.payload_csum_error, mac_id);
 	else
 		ret = csum_none;
 
 	if (unlikely(p->des01.erx.dribbling)) {
-		DBG(KERN_ERR "GMAC RX: dribbling error\n");
+		CHIP_DBG(KERN_ERR "GMAC RX: dribbling error\n");
 		ret = discard_frame;
 	}
 	if (unlikely(p->des01.erx.sa_filter_fail)) {
-		DBG(KERN_ERR "GMAC RX : Source Address filter fail\n");
+		CHIP_DBG(KERN_ERR "GMAC RX : Source Address filter fail\n");
 		x->sa_rx_filter_fail++;
 		ret = discard_frame;
 	}
 	if (unlikely(p->des01.erx.da_filter_fail)) {
-		DBG(KERN_ERR "GMAC RX : Dest Address filter fail\n");
+		CHIP_DBG(KERN_ERR "GMAC RX : Dest Address filter fail\n");
 		x->da_rx_filter_fail++;
 		ret = discard_frame;
 	}
 	if (unlikely(p->des01.erx.length_error)) {
-		DBG(KERN_ERR "GMAC RX: length_error error\n");
-		x->rx_lenght++;
+		CHIP_DBG(KERN_ERR "GMAC RX: length_error error\n");
+		x->rx_length++;
 		ret = discard_frame;
 	}
 #ifdef STMMAC_VLAN_TAG_USED
 	if (p->des01.erx.vlan_tag) {
-		DBG(KERN_INFO "GMAC RX: VLAN frame tagged\n");
+		CHIP_DBG(KERN_INFO "GMAC RX: VLAN frame tagged\n");
 		x->rx_vlan++;
 	}
 #endif
@@ -241,7 +235,7 @@ static int enh_desc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 }
 
 static void enh_desc_init_rx_desc(struct dma_desc *p, unsigned int ring_size,
-				int disable_rx_ic)
+				  int disable_rx_ic)
 {
 	int i;
 	for (i = 0; i < ring_size; i++) {
@@ -255,7 +249,6 @@ static void enh_desc_init_rx_desc(struct dma_desc *p, unsigned int ring_size,
 			p->des01.erx.disable_ic = 1;
 		p++;
 	}
-	return;
 }
 
 static void enh_desc_init_tx_desc(struct dma_desc *p, unsigned int ring_size)
@@ -268,8 +261,6 @@ static void enh_desc_init_tx_desc(struct dma_desc *p, unsigned int ring_size)
 			p->des01.etx.end_ring = 1;
 		p++;
 	}
-
-	return;
 }
 
 static int enh_desc_get_tx_owner(struct dma_desc *p)
@@ -301,14 +292,12 @@ static void enh_desc_release_tx_desc(struct dma_desc *p)
 {
 	int ter = p->des01.etx.end_ring;
 
-	memset(p, 0, sizeof(struct dma_desc));
+	memset(p, 0, offsetof(struct dma_desc, des2));
 	p->des01.etx.end_ring = ter;
-
-	return;
 }
 
 static void enh_desc_prepare_tx_desc(struct dma_desc *p, int is_fs, int len,
-				 int csum_flag)
+				     int csum_flag)
 {
 	p->des01.etx.first_segment = is_fs;
 	if (unlikely(len > BUF_SIZE_4KiB)) {
@@ -337,7 +326,7 @@ static int enh_desc_get_rx_frame_len(struct dma_desc *p)
 	return p->des01.erx.frame_length;
 }
 
-struct stmmac_desc_ops enh_desc_ops = {
+const struct stmmac_desc_ops enh_desc_ops = {
 	.tx_status = enh_desc_get_tx_status,
 	.rx_status = enh_desc_get_rx_status,
 	.get_tx_len = enh_desc_get_tx_len,

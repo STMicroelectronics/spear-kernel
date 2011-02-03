@@ -497,8 +497,8 @@ pl080_prep_dma_memset(struct dma_chan *chan, dma_addr_t dest, int value, size_t
 	value |= value << 16;
 
 	pl080c->memset_value = value;
-	dma_cache_maint(&pl080c->memset_value, sizeof(pl080c->memset_value),
-			DMA_TO_DEVICE);
+	dma_map_single(chan2parent(chan), &pl080c->memset_value,
+			sizeof(pl080c->memset_value), DMA_TO_DEVICE);
 
 	dev_vdbg(chan2dev(chan), "prep_dma_memset d0x%x s0x%d l0x%zx f0x%lx\n",
 			dest, value, len, flags);
@@ -887,19 +887,27 @@ err_desc_get:
 }
 
 /**
- * pl080_terminate_all - terminate all pending operations
+ * pl080_control - control pending operations
  * @chan: structure representing dma channel to be used for this operation
+ * @cmd: cmd, eg: DMA_TERMINATE_ALL
+ * @arg: arguments
  *
- * This function terminates all xfers related to a channel. This will stop all
+ * This function controls existing xfer on a channel.
+ * Currently we only support xfer terminat. This will stop all
  * ongoing xfers and data consistency will not be guaranteed for any ongoing
  * xfer
  */
-static void pl080_terminate_all(struct dma_chan *chan)
+static int pl080_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
+		unsigned long arg)
 {
 	struct pl080_dma_chan	*pl080c = to_pl080_dma_chan(chan);
 	struct pl080_desc		*desc, *_desc;
 	LIST_HEAD(list);
 	unsigned long flags;
+
+	/* Only supports DMA_TERMINATE_ALL */
+	if (cmd != DMA_TERMINATE_ALL)
+		return -ENXIO;
 
 	/*
 	 * this is only called when something went wrong elsewhere, so
@@ -920,22 +928,21 @@ static void pl080_terminate_all(struct dma_chan *chan)
 	/* flush all pending and queued descriptors */
 	list_for_each_entry_safe(desc, _desc, &list, desc_node)
 		pl080c_descriptor_complete(pl080c, desc);
+
+	return 0;
 }
 
 /**
- * pl080_is_tx_complete - returns DMA transaction status
+ * pl080_tx_status - returns DMA transaction status
  * @chan: structure representing dma channel to be used for this operation
  * @cookie: transaction identifier to test status of
- * @done: pointer to save last completed transaction
- * @used: pointer to save last cookie value handed out
+ * @txstate: dma tx_state pointer
  *
  * This function returns the DMA transaction status on a dma channel. It will
  * return one of the values from enum dma_status.
  */
-static enum dma_status
-pl080_is_tx_complete(struct dma_chan *chan,
-		dma_cookie_t cookie,
-		dma_cookie_t *done, dma_cookie_t *used)
+static enum dma_status pl080_tx_status(struct dma_chan *chan,
+		dma_cookie_t cookie, struct dma_tx_state *txstate)
 {
 	struct pl080_dma_chan	*pl080c = to_pl080_dma_chan(chan);
 	dma_cookie_t		last_used;
@@ -955,10 +962,7 @@ pl080_is_tx_complete(struct dma_chan *chan,
 		ret = dma_async_is_complete(cookie, last_complete, last_used);
 	}
 
-	if (done)
-		*done = last_complete;
-	if (used)
-		*used = last_used;
+	dma_set_tx_state(txstate, last_complete, last_used, 0);
 
 	return ret;
 }
@@ -1223,8 +1227,8 @@ static int __init pl080_dma_probe(struct platform_device *pdev)
 	pl080->dma.device_prep_dma_memcpy = pl080_prep_dma_memcpy;
 	pl080->dma.device_prep_dma_memset = pl080_prep_dma_memset;
 	pl080->dma.device_prep_slave_sg = pl080_prep_slave_sg;
-	pl080->dma.device_terminate_all = pl080_terminate_all;
-	pl080->dma.device_is_tx_complete = pl080_is_tx_complete;
+	pl080->dma.device_control = pl080_control;
+	pl080->dma.device_tx_status = pl080_tx_status;
 	pl080->dma.device_issue_pending = pl080_issue_pending;
 
 	dma_writel(pl080, CFG, PL080_CFG_DMA_EN | PL080_CHAN_CFG_ENDIAN_M1(0) |

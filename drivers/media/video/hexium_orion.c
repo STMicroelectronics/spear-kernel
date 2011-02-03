@@ -230,7 +230,6 @@ static int hexium_probe(struct saa7146_dev *dev)
 	saa7146_write(dev, MC2, (MASK_09 | MASK_25 | MASK_10 | MASK_26));
 
 	hexium->i2c_adapter = (struct i2c_adapter) {
-		.class = I2C_CLASS_TV_ANALOG,
 		.name = "hexium orion",
 	};
 	saa7146_i2c_adapter_prepare(dev, &hexium->i2c_adapter, SAA7146_I2C_BUS_BIT_RATE_480);
@@ -350,7 +349,7 @@ static int vidioc_s_input(struct file *file, void *fh, unsigned int input)
 	struct saa7146_dev *dev = ((struct saa7146_fh *)fh)->dev;
 	struct hexium *hexium = (struct hexium *) dev->ext_priv;
 
-	if (input < 0 || input >= HEXIUM_INPUTS)
+	if (input >= HEXIUM_INPUTS)
 		return -EINVAL;
 
 	hexium->cur_input = input;

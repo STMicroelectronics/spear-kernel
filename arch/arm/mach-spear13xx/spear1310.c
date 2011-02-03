@@ -13,16 +13,16 @@
 
 #include <linux/clk.h>
 #include <linux/mtd/physmap.h>
+#include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/stmmac.h>
 #include <asm/irq.h>
 #include <asm/delay.h>
+#include <plat/hdlc.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
-#include <plat/clock.h>
-#include <mach/gpio.h>
-#include <plat/hdlc.h>
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -441,7 +441,7 @@ static struct resource can0_resources[] = {
 };
 
 struct platform_device spear1310_can0_device = {
-	.name = "spear_can",
+	.name = "c_can_platform",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
 	.resource = can0_resources,
@@ -459,7 +459,7 @@ static struct resource can1_resources[] = {
 };
 
 struct platform_device spear1310_can1_device = {
-	.name = "spear_can",
+	.name = "c_can_platform",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
@@ -470,9 +470,11 @@ static struct plat_stmmacenet_data ether1_platform_data = {
 	.bus_id = 1,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 0,
+	.tx_coe = 0,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth1_resources[] = {
@@ -493,7 +495,6 @@ static struct resource eth1_resources[] = {
 };
 
 static u64 eth1_dma_mask = ~(u32) 0;
-
 struct platform_device spear1310_eth1_device = {
 	.name = "stmmaceth",
 	.id = 1,
@@ -511,9 +512,11 @@ static struct plat_stmmacenet_data ether2_platform_data = {
 	.bus_id = 2,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 0,
+	.tx_coe = 0,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth2_resources[] = {
@@ -534,7 +537,6 @@ static struct resource eth2_resources[] = {
 };
 
 static u64 eth2_dma_mask = ~(u32) 0;
-
 struct platform_device spear1310_eth2_device = {
 	.name = "stmmaceth",
 	.id = 2,
@@ -552,9 +554,11 @@ static struct plat_stmmacenet_data ether3_platform_data = {
 	.bus_id = 3,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 0,
+	.tx_coe = 0,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth3_resources[] = {
@@ -575,7 +579,6 @@ static struct resource eth3_resources[] = {
 };
 
 static u64 eth3_dma_mask = ~(u32) 0;
-
 struct platform_device spear1310_eth3_device = {
 	.name = "stmmaceth",
 	.id = 3,
@@ -593,9 +596,11 @@ static struct plat_stmmacenet_data ether4_platform_data = {
 	.bus_id = 4,
 	.has_gmac = 1,
 	.enh_desc = 1,
-	.tx_csum = 0,
+	.tx_coe = 0,
 	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_0,
+	.bugged_jumbo = 0,
+	.features = NETIF_F_HW_CSUM,
 };
 
 static struct resource eth4_resources[] = {
@@ -616,7 +621,6 @@ static struct resource eth4_resources[] = {
 };
 
 static u64 eth4_dma_mask = ~(u32) 0;
-
 struct platform_device spear1310_eth4_device = {
 	.name = "stmmaceth",
 	.id = 4,
@@ -688,6 +692,24 @@ struct platform_device spear1310_plgpio_device = {
 	.resource = plgpio_resources,
 };
 
+/* fsmc nor flash device registeration */
+static struct physmap_flash_data ras_fsmc_norflash_data;
+static struct resource ras_fsmc_nor_resources[] = {
+	{
+		.start	= SPEAR1310_FSMC1_CS3_BASE,
+		.end	= SPEAR1310_FSMC1_CS3_BASE + SZ_64M - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1310_ras_fsmc_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.resource = ras_fsmc_nor_resources,
+	.num_resources = ARRAY_SIZE(ras_fsmc_nor_resources),
+	.dev.platform_data = &ras_fsmc_norflash_data,
+};
+
 static struct tdm_hdlc_platform_data tdm_hdlc_0_plat_data = {
 	.ip_type = SPEAR1310_TDM_HDLC,
 	.nr_channel = 2,
@@ -697,7 +719,7 @@ static struct tdm_hdlc_platform_data tdm_hdlc_0_plat_data = {
 static struct resource tdm_hdlc_0_resources[] = {
 	{
 		.start = SPEAR1310_TDM_E1_0_BASE,
-		.end   = SPEAR1310_TDM_E1_0_BASE + SZ_4K - 1,
+		.end = SPEAR1310_TDM_E1_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = IRQ_TDM0,
@@ -725,7 +747,7 @@ static struct tdm_hdlc_platform_data tdm_hdlc_1_plat_data = {
 static struct resource tdm_hdlc_1_resources[] = {
 	{
 		.start = SPEAR1310_TDM_E1_1_BASE,
-		.end   = SPEAR1310_TDM_E1_1_BASE + SZ_4K - 1,
+		.end = SPEAR1310_TDM_E1_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = IRQ_TDM1,
@@ -761,7 +783,7 @@ static struct rs485_hdlc_platform_data rs485_1_plat_data = {
 static struct resource rs485_0_resources[] = {
 	{
 		.start = SPEAR1310_RS485_0_BASE,
-		.end   = SPEAR1310_RS485_0_BASE + SZ_4K - 1,
+		.end = SPEAR1310_RS485_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = IRQ_RS4850,
@@ -772,7 +794,7 @@ static struct resource rs485_0_resources[] = {
 static struct resource rs485_1_resources[] = {
 	{
 		.start = SPEAR1310_RS485_1_BASE,
-		.end   = SPEAR1310_RS485_1_BASE + SZ_4K - 1,
+		.end = SPEAR1310_RS485_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = IRQ_RS4851,
@@ -800,25 +822,6 @@ struct platform_device spear1310_rs485_1_device = {
 	},
 	.num_resources = ARRAY_SIZE(rs485_1_resources),
 	.resource = rs485_1_resources,
-};
-
-/* fsmc nor flash device registeration */
-static struct physmap_flash_data ras_fsmc_norflash_data;
-
-static struct resource ras_fsmc_nor_resources[] = {
-	{
-		.start	= SPEAR1310_FSMC1_CS3_BASE,
-		.end	= SPEAR1310_FSMC1_CS3_BASE + SZ_64M - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-struct platform_device spear1310_ras_fsmc_nor_device = {
-	.name	= "physmap-flash",
-	.id	= -1,
-	.resource = ras_fsmc_nor_resources,
-	.num_resources = ARRAY_SIZE(ras_fsmc_nor_resources),
-	.dev.platform_data = &ras_fsmc_norflash_data,
 };
 
 static void tdm_hdlc_setup(void)
@@ -866,6 +869,23 @@ free_synth_clk:
 	clk_put(synth_clk);
 free_vco_clk:
 	clk_put(vco_clk);
+}
+
+/* Following will create 1310 specific static virtual/physical mappings */
+struct map_desc spear1310_io_desc[] __initdata = {
+	{
+		.virtual	= IO_ADDRESS(SPEAR1310_RAS_BASE),
+		.pfn		= __phys_to_pfn(SPEAR1310_RAS_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+};
+
+/* This will create static memory mapping for selected devices */
+void __init spear1310_map_io(void)
+{
+	spear13xx_map_io();
+	iotable_init(spear1310_io_desc, ARRAY_SIZE(spear1310_io_desc));
 }
 
 void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,

@@ -23,6 +23,7 @@
 #define RTL8187_EEPROM_TXPWR_CHAN_1	0x16	/* 3 channels */
 #define RTL8187_EEPROM_TXPWR_CHAN_6	0x1B	/* 2 channels */
 #define RTL8187_EEPROM_TXPWR_CHAN_4	0x3D	/* 2 channels */
+#define RTL8187_EEPROM_SELECT_GPIO	0x3B
 
 #define RTL8187_REQT_READ	0xC0
 #define RTL8187_REQT_WRITE	0x40
@@ -30,6 +31,9 @@
 #define RTL8187_REQ_SET_REG	0x05
 
 #define RTL8187_MAX_RX		0x9C4
+
+#define RFKILL_MASK_8187_89_97	0x2
+#define RFKILL_MASK_8198	0x4
 
 struct rtl8187_rx_info {
 	struct urb *urb;
@@ -43,7 +47,7 @@ struct rtl8187_rx_hdr {
 	u8 agc;
 	u8 reserved;
 	__le64 mac_time;
-} __attribute__((packed));
+} __packed;
 
 struct rtl8187b_rx_hdr {
 	__le32 flags;
@@ -55,7 +59,7 @@ struct rtl8187b_rx_hdr {
 	__le16 snr_long2end;
 	s8 pwdb_g12;
 	u8 fot;
-} __attribute__((packed));
+} __packed;
 
 /* {rtl8187,rtl8187b}_tx_info is in skb */
 
@@ -64,7 +68,7 @@ struct rtl8187_tx_hdr {
 	__le16 rts_duration;
 	__le16 len;
 	__le32 retry;
-} __attribute__((packed));
+} __packed;
 
 struct rtl8187b_tx_hdr {
 	__le32 flags;
@@ -76,7 +80,7 @@ struct rtl8187b_tx_hdr {
 	__le32 unused_3;
 	__le32 retry;
 	__le32 unused_4[2];
-} __attribute__((packed));
+} __packed;
 
 enum {
 	DEVICE_RTL8187,
@@ -88,7 +92,7 @@ struct rtl8187_priv {
 	struct rtl818x_csr *map;
 	const struct rtl818x_rf_ops *rf;
 	struct ieee80211_vif *vif;
-	int mode;
+
 	/* The mutex protects the TX loopback state.
 	 * Any attempt to set channels concurrently locks the device.
 	 */
@@ -104,6 +108,7 @@ struct rtl8187_priv {
 	struct delayed_work work;
 	struct ieee80211_hw *dev;
 #ifdef CONFIG_RTL8187_LEDS
+	struct rtl8187_led led_radio;
 	struct rtl8187_led led_tx;
 	struct rtl8187_led led_rx;
 	struct delayed_work led_on;
@@ -119,10 +124,10 @@ struct rtl8187_priv {
 	} hw_rev;
 	struct sk_buff_head rx_queue;
 	u8 signal;
-	u8 quality;
 	u8 noise;
 	u8 slot_time;
 	u8 aifsn[4];
+	u8 rfkill_mask;
 	struct {
 		__le64 buf;
 		struct sk_buff_head queue;

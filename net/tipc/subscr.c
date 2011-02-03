@@ -364,9 +364,9 @@ static struct subscription *subscr_subscribe(struct tipc_subscr *s,
 	sub->seq.upper = htohl(s->seq.upper, swap);
 	sub->timeout = htohl(s->timeout, swap);
 	sub->filter = htohl(s->filter, swap);
-	if ((!(sub->filter & TIPC_SUB_PORTS)
-	     == !(sub->filter & TIPC_SUB_SERVICE))
-	    || (sub->seq.lower > sub->seq.upper)) {
+	if ((!(sub->filter & TIPC_SUB_PORTS) ==
+	     !(sub->filter & TIPC_SUB_SERVICE)) ||
+	    (sub->seq.lower > sub->seq.upper)) {
 		warn("Subscription rejected, illegal request\n");
 		kfree(sub);
 		subscr_terminate(subscriber);
@@ -606,12 +606,3 @@ void tipc_subscr_stop(void)
 		topsrv.user_ref = 0;
 	}
 }
-
-
-int tipc_ispublished(struct tipc_name const *name)
-{
-	u32 domain = 0;
-
-	return(tipc_nametbl_translate(name->type, name->instance,&domain) != 0);
-}
-

@@ -1,32 +1,29 @@
 /*******************************************************************************
- *
- * Copyright (C) 2007-2009 STMicroelectronics Ltd
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+  Copyright (C) 2007-2009  STMicroelectronics Ltd
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
-#define DRV_MODULE_VERSION	"Oct_09"
-
-#if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
-#define STMMAC_VLAN_TAG_USED
-#include <linux/if_vlan.h>
-#endif
+#define DRV_MODULE_VERSION	"Apr_2010"
+#include <asm/mach-types.h>
+#include <linux/platform_device.h>
+#include <linux/stmmac.h>
 #include <linux/clk.h>
 
 #include "common.h"
@@ -54,26 +51,24 @@ struct stmmac_priv {
 
 	struct net_device *dev;
 	int is_gmac;
-	int enh_desc;
-	int tx_csum;
 	dma_addr_t dma_rx_phy;
 	unsigned int dma_rx_size;
-	int rx_csum;
 	unsigned int dma_buf_sz;
 	struct device *device;
 	struct mac_device_info *hw;
+	void __iomem *ioaddr;
 
 	struct stmmac_extra_stats xstats;
 	struct napi_struct napi;
 
 	phy_interface_t phy_interface;
 	int pbl;
-	int disable_readahead;
 	int bus_id;
 	int phy_addr;
 	int phy_mask;
 	int (*phy_reset) (void *priv);
 	void (*fix_mac_speed) (void *priv, unsigned int speed);
+	void (*bus_setup)(void __iomem *ioaddr);
 	void *bsp_priv;
 
 	int phy_irq;
@@ -84,6 +79,7 @@ struct stmmac_priv {
 	unsigned int flow_ctrl;
 	unsigned int pause;
 	struct mii_bus *mii;
+	int mii_clk_csr;
 
 	u32 msg_enable;
 	spinlock_t lock;
@@ -96,12 +92,42 @@ struct stmmac_priv {
 #ifdef STMMAC_VLAN_TAG_USED
 	struct vlan_group *vlgrp;
 #endif
+	int enh_desc;
+	int rx_coe;
+	int csum_off_engine;
+	int bugged_jumbo;
+	int no_csum_insertion;
 	struct clk *stmmac_clk;
-	int	csum_off_engine;
+	unsigned long features;
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block stmmac_notifier_blk;
+#endif
 };
+
+#ifdef CONFIG_STM_DRIVERS
+#include <linux/stm/pad.h>
+static inline int stmmac_claim_resource(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct plat_stmmacenet_data *plat_dat = pdev->dev.platform_data;
+
+	/* Pad routing setup */
+	if (IS_ERR(devm_stm_pad_claim(&pdev->dev, plat_dat->pad_config,
+			dev_name(&pdev->dev)))) {
+		printk(KERN_ERR "%s: Failed to request pads!\n", __func__);
+		ret = -ENODEV;
+	}
+	return ret;
+}
+#else
+static inline int stmmac_claim_resource(struct platform_device *pdev)
+{
+	return 0;
+}
+#endif
 
 extern int stmmac_mdio_unregister(struct net_device *ndev);
 extern int stmmac_mdio_register(struct net_device *ndev);
 extern void stmmac_set_ethtool_ops(struct net_device *netdev);
-extern struct stmmac_desc_ops enh_desc_ops;
-extern struct stmmac_desc_ops ndesc_ops;
+extern const struct stmmac_desc_ops enh_desc_ops;
+extern const struct stmmac_desc_ops ndesc_ops;

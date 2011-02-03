@@ -1,25 +1,25 @@
 /*******************************************************************************
- * STMMAC external timer support.
- *
- * Copyright (C) 2007-2009 STMicroelectronics Ltd
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+  STMMAC external timer support.
+
+  Copyright (C) 2007-2009  STMicroelectronics Ltd
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
 #include <linux/kernel.h>
@@ -31,8 +31,6 @@ static void stmmac_timer_handler(void *data)
 	struct net_device *dev = (struct net_device *)data;
 
 	stmmac_schedule(dev);
-
-	return;
 }
 
 #define STMMAC_TIMER_MSG(timer, freq) \
@@ -47,13 +45,11 @@ static void stmmac_rtc_start(unsigned int new_freq)
 {
 	rtc_irq_set_freq(stmmac_rtc, &stmmac_task, new_freq);
 	rtc_irq_set_state(stmmac_rtc, &stmmac_task, 1);
-	return;
 }
 
 static void stmmac_rtc_stop(void)
 {
 	rtc_irq_set_state(stmmac_rtc, &stmmac_task, 0);
-	return;
 }
 
 int stmmac_open_ext_timer(struct net_device *dev, struct stmmac_timer *tm)
@@ -102,13 +98,11 @@ static void stmmac_tmu_start(unsigned int new_freq)
 {
 	clk_set_rate(timer_clock, new_freq);
 	clk_enable(timer_clock);
-	return;
 }
 
 static void stmmac_tmu_stop(void)
 {
 	clk_disable(timer_clock);
-	return;
 }
 
 int stmmac_open_ext_timer(struct net_device *dev, struct stmmac_timer *tm)

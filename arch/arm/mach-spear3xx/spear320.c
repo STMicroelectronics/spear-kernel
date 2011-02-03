@@ -16,12 +16,12 @@
 #include <linux/ptrace.h>
 #include <linux/types.h>
 #include <linux/mmc/sdhci-spear.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
-#include <mach/gpio.h>
-#include <plat/nand.h>
 #include <plat/shirq.h>
+#include <mach/generic.h>
+#include <mach/gpio.h>
+#include <mach/spear.h>
 
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)
@@ -676,6 +676,51 @@ struct amba_device spear320_uart2_device = {
 	.irq = {SPEAR320_VIRQ_UART2, NO_IRQ},
 };
 
+/* CAN device registeration */
+static struct resource can0_resources[] = {
+	{
+		.start = SPEAR320_CAN0_BASE,
+		.end = SPEAR320_CAN0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM | IORESOURCE_MEM_32BIT,
+	}, {
+		.start = SPEAR320_VIRQ_CANU,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_can0_device = {
+	.name = "c_can_platform",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(can0_resources),
+	.resource = can0_resources,
+};
+
+static struct resource can1_resources[] = {
+	{
+		.start = SPEAR320_CAN1_BASE,
+		.end = SPEAR320_CAN1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM | IORESOURCE_MEM_32BIT,
+	}, {
+		.start = SPEAR320_VIRQ_CANL,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320_can1_device = {
+	.name = "c_can_platform",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(can1_resources),
+	.resource = can1_resources,
+};
+
+/* emi nor flash device registeration */
+static struct physmap_flash_data emi_norflash_data;
+struct platform_device spear320_emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.dev.platform_data = &emi_norflash_data,
+};
+
 /* SPEAr320 RAS ethernet devices */
 static u64 macb0_dmamask = ~0;
 static struct resource macb0_smii_resources[] = {
@@ -745,77 +790,6 @@ struct platform_device spear320_eth_macb1_smii = {
 	.num_resources = ARRAY_SIZE(macb1_smii_resources),
 };
 
-/* emi nor flash device registeration */
-static struct physmap_flash_data emi_norflash_data;
-
-static struct resource emi_nor_resources[] = {
-	{
-		.start	= SPEAR320_EMI_MEM_0_BASE,
-		.end	= SPEAR320_EMI_MEM_0_BASE + SPEAR320_EMI_MEM_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-struct platform_device spear320_emi_nor_device = {
-	.name	= "physmap-flash",
-	.id	= -1,
-	.resource = emi_nor_resources,
-	.num_resources = ARRAY_SIZE(emi_nor_resources),
-	.dev.platform_data = &emi_norflash_data,
-};
-
-/* plgpio device registeration */
-static struct plgpio_platform_data plgpio_plat_data = {
-	.gpio_base = 8,
-	.irq_base = SPEAR3XX_PLGPIO_INT_BASE,
-	.gpio_count = SPEAR3XX_PLGPIO_COUNT,
-	.regs = {
-		.enb = SPEAR320_PLGPIO_ENB_OFF,
-		.wdata = SPEAR320_PLGPIO_WDATA_OFF,
-		.dir = SPEAR320_PLGPIO_DIR_OFF,
-		.ie = SPEAR320_PLGPIO_IE_OFF,
-		.rdata = SPEAR320_PLGPIO_RDATA_OFF,
-		.mis = SPEAR320_PLGPIO_MIS_OFF,
-	},
-};
-
-/* CAN device registeration */
-static struct resource can0_resources[] = {
-	{
-		.start = SPEAR320_CAN0_BASE,
-		.end = SPEAR320_CAN0_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR320_VIRQ_CANU,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear320_can0_device = {
-	.name = "spear_can",
-	.id = 0,
-	.num_resources = ARRAY_SIZE(can0_resources),
-	.resource = can0_resources,
-};
-
-static struct resource can1_resources[] = {
-	{
-		.start = SPEAR320_CAN1_BASE,
-		.end = SPEAR320_CAN1_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR320_VIRQ_CANL,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear320_can1_device = {
-	.name = "spear_can",
-	.id = 1,
-	.num_resources = ARRAY_SIZE(can1_resources),
-	.resource = can1_resources,
-};
-
 /* i2c1 device registeration */
 static struct resource i2c1_resources[] = {
 	{
@@ -839,7 +813,7 @@ struct platform_device spear320_i2c1_device = {
 };
 
 /* nand device registeration */
-static struct nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data;
 
 static struct resource nand_resources[] = {
 	{
@@ -856,11 +830,26 @@ static struct resource nand_resources[] = {
 };
 
 struct platform_device spear320_nand_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
 	.dev.platform_data = &nand_platform_data,
+};
+
+/* plgpio device registeration */
+static struct plgpio_platform_data plgpio_plat_data = {
+	.gpio_base = 8,
+	.irq_base = SPEAR3XX_PLGPIO_INT_BASE,
+	.gpio_count = SPEAR3XX_PLGPIO_COUNT,
+	.regs = {
+		.enb = SPEAR320_PLGPIO_ENB_OFF,
+		.wdata = SPEAR320_PLGPIO_WDATA_OFF,
+		.dir = SPEAR320_PLGPIO_DIR_OFF,
+		.ie = SPEAR320_PLGPIO_IE_OFF,
+		.rdata = SPEAR320_PLGPIO_RDATA_OFF,
+		.mis = SPEAR320_PLGPIO_MIS_OFF,
+	},
 };
 
 static struct resource plgpio_resources[] = {
@@ -1076,7 +1065,7 @@ void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	/* call spear3xx family common init function */
 	spear3xx_init();
 
-	/* shared irq registeration */
+	/* shared irq registration */
 	base = ioremap(SPEAR320_SOC_CONFIG_BASE, SZ_4K);
 	if (base) {
 		/* shirq 1 */

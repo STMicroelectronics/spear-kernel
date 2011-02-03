@@ -56,18 +56,15 @@ static void spi##id##_##type##_cs_control(u32 control)	\
 /* This will define CHIP_INFO structure for a specific spi slave */
 #define DECLARE_SPI_CHIP_INFO(id, type, chip_select_control)	\
 static struct pl022_config_chip spi##id##_##type##_chip_info = {\
-	.lbm = LOOPBACK_DISABLED,			\
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,		\
 	.hierarchy = SSP_MASTER,			\
 	.slave_tx_disable = 0,				\
-	.endian_tx = SSP_TX_LSB,			\
-	.endian_rx = SSP_RX_LSB,			\
-	.data_size = SSP_DATA_BITS_8,			\
 	.com_mode = INTERRUPT_TRANSFER,			\
 	.rx_lev_trig = SSP_RX_1_OR_MORE_ELEM,		\
 	.tx_lev_trig = SSP_TX_1_OR_MORE_EMPTY_LOC,	\
-	.clk_phase = SSP_CLK_SECOND_EDGE,		\
-	.clk_pol = SSP_CLK_POL_IDLE_LOW,		\
+	.ctrl_len = SSP_BITS_12,			\
+	.wait_state = SSP_MWIRE_WAIT_ZERO,		\
+	.duplex = SSP_MICROWIRE_CHANNEL_FULL_DUPLEX,	\
 	.cs_control = chip_select_control,		\
 };
 

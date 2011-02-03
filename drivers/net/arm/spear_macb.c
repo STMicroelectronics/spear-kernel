@@ -1253,19 +1253,15 @@ static int hash_get_index(__u8 *addr)
  */
 static void macb_sethashtable(struct net_device *dev)
 {
-	struct dev_mc_list *curr;
+	struct netdev_hw_addr *ha;
 	unsigned long mc_filter[2];
-	unsigned int i, bitnr;
+	unsigned int bitnr;
 	struct macb *bp = netdev_priv(dev);
 
 	mc_filter[0] = mc_filter[1] = 0;
 
-	curr = dev->mc_list;
-	for (i = 0; i < dev->mc_count; i++, curr = curr->next) {
-		if (!curr)
-			break;	/* unexpected end of list */
-
-		bitnr = hash_get_index(curr->dmi_addr);
+	netdev_for_each_mc_addr(ha, dev) {
+		bitnr = hash_get_index(ha->addr);
 		mc_filter[bitnr >> 5] |= 1 << (bitnr & 31);
 	}
 
@@ -1298,13 +1294,10 @@ static void macb_set_rx_mode(struct net_device *dev)
 		macb_writel(bp, HRT, -1);
 		cfg |= MACB_BIT(NCFGR_MTI);
 		dev_info(&bp->pdev->dev, "enable all multicast mode.\n");
-	} else if (dev->mc_count > 0) {
+	} else if (!netdev_mc_empty(dev)) {
 		/* Enable specific multicasts */
 		macb_sethashtable(dev);
 		cfg |= MACB_BIT(NCFGR_MTI);
-		dev_info(&bp->pdev->dev,
-			 "Enable specific multicasts. the mc_count = %d.\n",
-			 dev->mc_count);
 	} else if (dev->flags & (~IFF_ALLMULTI)) {
 		/* Disable all multicast mode */
 		macb_writel(bp, HRB, 0);
@@ -1479,7 +1472,7 @@ static int macb_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 		dev_info(&bp->pdev->dev, "The phydev dev is NULL.\n");
 		return -ENODEV;
 	}
-	return phy_mii_ioctl(phydev, if_mii(rq), cmd);
+	return phy_mii_ioctl(phydev, rq, cmd);
 #endif
 
 }

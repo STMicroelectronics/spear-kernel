@@ -471,7 +471,7 @@ static void mark_ddr_ancestors(struct clk *dclk)
 }
 
 /**
- * round_rate - Returns index of closest programmable rate in rate_config tbl
+ * round_rate_index - return closest programmable rate index in rate_config tbl
  * @clk: ptr to clock structure
  * @drate: desired rate
  * @rate: final rate will be returned in this variable only.
@@ -482,7 +482,8 @@ static void mark_ddr_ancestors(struct clk *dclk)
  * in incrementing order of clk rates.
  * If drate passed is zero then default rate is programmed.
  */
-static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
+static int
+round_rate_index(struct clk *clk, unsigned long drate, unsigned long *rate)
 {
 	unsigned long tmp = 0, prev_rate = 0;
 	int index;
@@ -490,12 +491,8 @@ static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
 	if (!clk->calc_rate)
 		return -EFAULT;
 
-	/* Set default rate if desired rate is 0 */
-	if (!drate) {
-		index = clk->rate_config.default_index;
-		*rate = clk->calc_rate(clk, index);
-		return index;
-	}
+	if (!drate)
+		return -EINVAL;
 
 	/*
 	 * This loops ends on two conditions:
@@ -523,6 +520,26 @@ static int round_rate(struct clk *clk, unsigned long drate, unsigned long *rate)
 
 	return index;
 }
+
+/**
+ * clk_round_rate - adjust a rate to the exact rate a clock can provide
+ * @clk: clock source
+ * @rate: desired clock rate in Hz
+ *
+ * Returns rounded clock rate in Hz, or negative errno.
+ */
+long clk_round_rate(struct clk *clk, unsigned long drate)
+{
+	long rate = 0;
+	int index;
+
+	index = round_rate_index(clk, drate, &rate);
+	if (index >= 0)
+		return rate;
+	else
+		return index;
+}
+EXPORT_SYMBOL(clk_round_rate);
 
 /*All below functions are called with lock held */
 
@@ -596,7 +613,7 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	unsigned long val, rate;
 	int i;
 
-	i = round_rate(clk, desired_rate, &rate);
+	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
 
@@ -694,7 +711,7 @@ int bus_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	unsigned long val, rate;
 	int i;
 
-	i = round_rate(clk, desired_rate, &rate);
+	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
 
@@ -778,7 +795,7 @@ int aux_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	unsigned long val, rate;
 	int i;
 
-	i = round_rate(clk, desired_rate, &rate);
+	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
 
@@ -846,7 +863,7 @@ int gpt_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	unsigned long val, rate;
 	int i;
 
-	i = round_rate(clk, desired_rate, &rate);
+	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
 
@@ -926,7 +943,7 @@ int frac_synth_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 	unsigned long val, rate;
 	int i;
 
-	i = round_rate(clk, desired_rate, &rate);
+	i = round_rate_index(clk, desired_rate, &rate);
 	if (i < 0)
 		return i;
 

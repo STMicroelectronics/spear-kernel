@@ -25,6 +25,7 @@
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
+#include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>

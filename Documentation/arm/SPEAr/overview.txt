@@ -9,7 +9,7 @@ Introduction
 
   The ST Microelectronics SPEAr range of ARM9/CortexA9 System-on-Chip CPUs are
   supported by the 'spear' platform of ARM Linux. Currently SPEAr300,
-  SPEAr310, SPEAr320, SPEAr600 and SPEAr1300 SOCs are supported.
+  SPEAr310, SPEAr320, SPEAr600, SPEAr1300 and SPEAr1310 SOCs are supported.
   SPEAr3XX and SPEAr6XX are based on ARM9 whereas SPEAr13XX is based on latest
   ARM Cortex A9 CPUs.
 
@@ -29,15 +29,19 @@ Introduction
 	- SPEAr13XX (13XX SOC series, based on ARM CORTEXA9)
 		- SPEAr1300 (SOC)
 			- SPEAr1300_EVB (Evaluation Board)
+		- SPEAr1310 (SOC)
+			- SPEAr1310_EVB (Evaluation Board)
+		- SPEAr900 (SOC)
+			- SPEAr900_EVB (Evaluation Board)
 
   Configuration
   -------------
 
-  A generic configuration is provided for each SPEAr family, and can be used as
-  the default by
-	#make ARCH=arm spear6xx_defconfig
-	#make ARCH=arm spear3xx_defconfig
+  A generic configuration is provided for each machine family, and can be used as the
+  default by
 	#make ARCH=arm spear13xx_defconfig
+	#make ARCH=arm spear3xx_defconfig
+	#make ARCH=arm spear6xx_defconfig
 
   Compilation
   -----------
@@ -51,7 +55,7 @@ Introduction
 
   export ARCH=arm
   export CROSS_COMPILE=arm-ca9-linux-
-	
+
   Layout
   ------
 

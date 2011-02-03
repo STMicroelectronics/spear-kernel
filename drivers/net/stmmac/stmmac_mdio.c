@@ -1,39 +1,83 @@
-/*
- * STMMAC Ethernet Driver -- MDIO bus implementation
- * Provides Bus interface for MII registers
- *
- * Copyright (C) 2007-2009 STMicroelectronics Ltd
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
- */
+/*******************************************************************************
+  STMMAC Ethernet Driver -- MDIO bus implementation
+  Provides Bus interface for MII registers
 
-#include <linux/netdevice.h>
+  Copyright (C) 2007-2009  STMicroelectronics Ltd
+
+  This program is free software; you can redistribute it and/or modify it
+  under the terms and conditions of the GNU General Public License,
+  version 2, as published by the Free Software Foundation.
+
+  This program is distributed in the hope it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+  more details.
+
+  You should have received a copy of the GNU General Public License along with
+  this program; if not, write to the Free Software Foundation, Inc.,
+  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+  The full GNU General Public License is included in this distribution in
+  the file called "COPYING".
+
+  Author: Carl Shaw <carl.shaw@st.com>
+  Maintainer: Giuseppe Cavallaro <peppe.cavallaro@st.com>
+*******************************************************************************/
+
 #include <linux/mii.h>
 #include <linux/phy.h>
-#include <asm/mach-types.h>
+#include <linux/slab.h>
 
 #include "stmmac.h"
 
 #define MII_BUSY 0x00000001
 #define MII_WRITE 0x00000002
 
+/* CSR Frequency Access*/
+#define F_20M	20000000
+#define F_35M	35000000
+#define F_60M	60000000
+#define F_100M	100000000
+#define F_150M	150000000
+#define F_250M	50000000
+#define F_300M	300000000
+
+/* MDC Clock Selection */
+#define	STMMAC_CLK_RANGE_60_100M	0	/* MDC = Clk/42 */
+#define	STMMAC_CLK_RANGE_100_150M	1	/* MDC = Clk/62 */
+#define	STMMAC_CLK_RANGE_20_35M		2	/* MDC = Clk/16 */
+#define	STMMAC_CLK_RANGE_35_60M		3	/* MDC = Clk/26 */
+#define	STMMAC_CLK_RANGE_150_250M	4	/* MDC = Clk/102 */
+#define	STMMAC_CLK_RANGE_250_300M	5	/* MDC = Clk/122 */
 u32 *mac1_bus;
+
+static int stmmac_get_mac_clk(struct stmmac_priv *priv)
+{
+	u32 clk_rate = clk_get_rate(priv->stmmac_clk);
+
+	/*
+	 * Decide on the MDC clock dynamically based on the
+	 * csr clock input.
+	 * This is helpfull in case the cpu frequency is changed
+	 * on the run using the cpu freq framework, and based
+	 * on that the bus frequency is also changed.
+	 */
+	if ((clk_rate >= F_20M) && (clk_rate < F_35M))
+		return STMMAC_CLK_RANGE_20_35M;
+	else if ((clk_rate >= F_35M) && (clk_rate < F_60M))
+		return STMMAC_CLK_RANGE_35_60M;
+	else if ((clk_rate >= F_60M) && (clk_rate < F_100M))
+		return STMMAC_CLK_RANGE_60_100M;
+	else if ((clk_rate >= F_100M) && (clk_rate < F_150M))
+		return STMMAC_CLK_RANGE_100_150M;
+	else if ((clk_rate >= F_150M) && (clk_rate < F_250M))
+		return STMMAC_CLK_RANGE_150_250M;
+	else if ((clk_rate >= F_250M) && (clk_rate < F_300M))
+		return STMMAC_CLK_RANGE_250_300M;
+	else
+		return STMMAC_CLK_RANGE_150_250M;
+
+}
 /**
  * stmmac_mdio_read
  * @bus: points to the mii_bus structure
@@ -63,9 +107,18 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	ioaddr = ndev->base_addr;
 	mii_address = priv->hw->mii.addr;
 	mii_data = priv->hw->mii.data;
+
+	/*
+	 * If the clock framework is supported in the architecture code
+	 * then dynamically select the mdio clock,
+	 * Else the platform code would provide the csr clock
+	 */
+	if (priv->stmmac_clk)
+		priv->mii_clk_csr = stmmac_get_mac_clk(priv);
+
 	regValue = (((phyaddr << 11) & (0x0000F800)) |
 			((phyreg << 6) & (0x000007C0)));
-	regValue |= MII_BUSY;	/* in case of GMAC */
+	regValue |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
 	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
 	writel(regValue, ioaddr + mii_address);
@@ -86,14 +139,14 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
  * Description: it writes the data into the MII register from within the device.
  */
 static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
-				u16 phydata)
+			     u16 phydata)
 {
-	u16 value;
 	struct net_device *ndev;
 	struct stmmac_priv *priv;
 	unsigned long ioaddr;
 	unsigned int mii_address;
 	unsigned int mii_data;
+	u16 value;
 
 	ndev = bus->priv;
 	priv = netdev_priv(ndev);
@@ -101,13 +154,23 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	if (machine_is_spear1310() && mac1_bus)
 		ndev = (struct net_device *)mac1_bus;
 
-	ioaddr = ndev->base_addr;
 	mii_address = priv->hw->mii.addr;
 	mii_data = priv->hw->mii.data;
+	ioaddr = ndev->base_addr;
+
+	/*
+	 * If the clock framework is supported in the architecture code
+	 * then dynamically select the mdio clock,
+	 * Else the platform code would provide the csr clock
+	 */
+	if (priv->stmmac_clk)
+		priv->mii_clk_csr = stmmac_get_mac_clk(priv);
+
 	value =
-		(((phyaddr << 11) & (0x0000F800)) |
-		 ((phyreg << 6) & (0x000007C0))) | MII_WRITE;
-	value |= MII_BUSY;
+	(((phyaddr << 11) & (0x0000F800)) | ((phyreg << 6) & (0x000007C0)))
+		| MII_WRITE;
+
+	value |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
 	/* Wait until any existing MII operation is complete */
 	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
@@ -131,7 +194,6 @@ static int stmmac_mdio_reset(struct mii_bus *bus)
 {
 	struct net_device *ndev = bus->priv;
 	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned long ioaddr = ndev->base_addr;
 	unsigned int mii_address = priv->hw->mii.addr;
 
 	if (priv->phy_reset) {
@@ -143,7 +205,7 @@ static int stmmac_mdio_reset(struct mii_bus *bus)
 	 * It doesn't complete its reset until at least one clock cycle
 	 * on MDC, so perform a dummy mdio read.
 	 */
-	writel(0, ioaddr + mii_address);
+	writel(0, priv->ioaddr + mii_address);
 
 	return 0;
 }
@@ -184,10 +246,6 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->irq = irqlist;
 	new_bus->phy_mask = priv->phy_mask;
 	new_bus->parent = priv->device;
-
-	if (machine_is_spear1310() && (priv->bus_id == 0))
-			mac1_bus = (u32 *)ndev;
-
 	err = mdiobus_register(new_bus);
 	if (err != 0) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
@@ -206,15 +264,16 @@ int stmmac_mdio_register(struct net_device *ndev)
 				irqlist[addr] = priv->phy_irq;
 			}
 			pr_info("%s: PHY ID %08x at %d IRQ %d (%s)%s\n",
-				ndev->name, phydev->phy_id, addr,
-				phydev->irq, dev_name(&phydev->dev),
-				(addr == priv->phy_addr) ? " active" : "");
+			       ndev->name, phydev->phy_id, addr,
+			       phydev->irq, dev_name(&phydev->dev),
+			       (addr == priv->phy_addr) ? " active" : "");
 			found = 1;
 		}
 	}
 
 	if (!found)
 		pr_warning("%s: No PHY found\n", ndev->name);
+
 	return 0;
 bus_register_fail:
 	kfree(irqlist);

@@ -57,24 +57,9 @@
 #define EMI_CNTL_ENBBYTER	(1 << 3)
 #define EMI_CNTL_ENBBYTERW	(EMI_CNTL_ENBBYTER | EMI_CNTL_ENBBYTEW)
 
-static inline void emi_init_plat_data(struct platform_device *pdev,
-		struct mtd_partition *partitions, unsigned int nr_partitions,
-		unsigned int width)
-{
-	struct physmap_flash_data *emi_plat_data;
-	emi_plat_data = dev_get_platdata(&pdev->dev);
-
-	if (partitions) {
-		emi_plat_data->parts = partitions;
-		emi_plat_data->nr_parts = nr_partitions;
-	}
-
-	emi_plat_data->width = width;
-}
-
 extern int __init emi_init(struct platform_device *pdev, unsigned long base,
 		u32 bank, u32 width);
 extern void __init emi_init_board_info(struct platform_device *pdev,
-		struct mtd_partition *partitions, unsigned int nr_partitions,
-		unsigned int width);
+		struct resource *resources, int res_num, struct mtd_partition
+		*partitions, unsigned int nr_partitions, unsigned int width);
 #endif

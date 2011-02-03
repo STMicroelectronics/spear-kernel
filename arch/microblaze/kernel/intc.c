@@ -42,8 +42,16 @@ unsigned int nr_irq;
 
 static void intc_enable_or_unmask(unsigned int irq)
 {
+	unsigned long mask = 1 << irq;
 	pr_debug("enable_or_unmask: %d\n", irq);
-	out_be32(INTC_BASE + SIE, 1 << irq);
+	out_be32(INTC_BASE + SIE, mask);
+
+	/* ack level irqs because they can't be acked during
+	 * ack function since the handle_level_irq function
+	 * acks the irq before calling the interrupt handler
+	 */
+	if (irq_desc[irq].status & IRQ_LEVEL)
+		out_be32(INTC_BASE + IAR, mask);
 }
 
 static void intc_disable_or_mask(unsigned int irq)
@@ -118,11 +126,8 @@ void __init init_IRQ(void)
 				0
 			};
 #endif
-	static char *intc_list[] = {
+	const char * const intc_list[] = {
 				"xlnx,xps-intc-1.00.a",
-				"xlnx,opb-intc-1.00.c",
-				"xlnx,opb-intc-1.00.b",
-				"xlnx,opb-intc-1.00.a",
 				NULL
 			};
 
@@ -133,12 +138,15 @@ void __init init_IRQ(void)
 	}
 	BUG_ON(!intc);
 
-	intc_baseaddr = *(int *) of_get_property(intc, "reg", NULL);
+	intc_baseaddr = be32_to_cpup(of_get_property(intc,
+								"reg", NULL));
 	intc_baseaddr = (unsigned long) ioremap(intc_baseaddr, PAGE_SIZE);
-	nr_irq = *(int *) of_get_property(intc, "xlnx,num-intr-inputs", NULL);
+	nr_irq = be32_to_cpup(of_get_property(intc,
+						"xlnx,num-intr-inputs", NULL));
 
 	intr_type =
-		*(int *) of_get_property(intc, "xlnx,kind-of-intr", NULL);
+		be32_to_cpup(of_get_property(intc,
+						"xlnx,kind-of-intr", NULL));
 	if (intr_type >= (1 << (nr_irq + 1)))
 		printk(KERN_INFO " ERROR: Mismatch in kind-of-intr param\n");
 

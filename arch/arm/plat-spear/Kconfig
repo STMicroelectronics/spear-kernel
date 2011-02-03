@@ -37,13 +37,6 @@ source "arch/arm/mach-spear13xx/Kconfig"
 source "arch/arm/mach-spear3xx/Kconfig"
 source "arch/arm/mach-spear6xx/Kconfig"
 
-config SPEAR_CLCD
-	bool "SPEAr CLCD"
-	depends on FB_ARMCLCD && (ARCH_SPEAR6XX || MACH_SPEAR300 || MACH_SPEAR320)
-	default y
-	help
-	  Support for CLCD device driver over SPEAr platform.
-
 config SPEAR_PWM
 	tristate "SPEAr Pulse Width Modulator"
 	depends on MACH_SPEAR320

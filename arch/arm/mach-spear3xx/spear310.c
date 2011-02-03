@@ -13,13 +13,13 @@
 
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
-#include <mach/gpio.h>
-#include <plat/nand.h>
 #include <plat/hdlc.h>
 #include <plat/shirq.h>
+#include <mach/generic.h>
+#include <mach/gpio.h>
+#include <mach/spear.h>
 
 /* pad multiplexing support */
 
@@ -355,7 +355,7 @@ struct platform_device spear310_eth_macb4_device = {
 };
 
 /* nand device registeration */
-static struct nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data;
 
 static struct resource nand_resources[] = {
 	{
@@ -372,7 +372,7 @@ static struct resource nand_resources[] = {
 };
 
 struct platform_device spear310_nand_device = {
-	.name = "nand",
+	.name = "fsmc-nand",
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
@@ -417,20 +417,9 @@ int spear300_o2p(int offset)
 
 /* emi nor flash device registeration */
 static struct physmap_flash_data emi_norflash_data;
-
-static struct resource emi_nor_resources[] = {
-	{
-		.start	= SPEAR310_EMI_MEM_0_BASE,
-		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
 struct platform_device spear310_emi_nor_device = {
 	.name	= "physmap-flash",
 	.id	= -1,
-	.resource = emi_nor_resources,
-	.num_resources = ARRAY_SIZE(emi_nor_resources),
 	.dev.platform_data = &emi_norflash_data,
 };
 
@@ -483,7 +472,7 @@ static struct tdm_hdlc_platform_data tdm_hdlc_plat_data = {
 static struct resource tdm_hdlc_resources[] = {
 	{
 		.start = SPEAR310_HDLC_BASE,
-		.end   = SPEAR310_HDLC_BASE + SZ_4K - 1,
+		.end = SPEAR310_HDLC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = SPEAR310_VIRQ_TDM_HDLC,
@@ -519,7 +508,7 @@ static struct rs485_hdlc_platform_data rs485_1_plat_data = {
 static struct resource rs485_0_resources[] = {
 	{
 		.start = SPEAR310_RS485_0_BASE,
-		.end   = SPEAR310_RS485_0_BASE + SZ_4K - 1,
+		.end = SPEAR310_RS485_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = SPEAR310_VIRQ_RS485_0,
@@ -530,7 +519,7 @@ static struct resource rs485_0_resources[] = {
 static struct resource rs485_1_resources[] = {
 	{
 		.start = SPEAR310_RS485_1_BASE,
-		.end   = SPEAR310_RS485_1_BASE + SZ_4K - 1,
+		.end = SPEAR310_RS485_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = SPEAR310_VIRQ_RS485_1,
@@ -559,7 +548,6 @@ struct platform_device spear310_rs485_1_device = {
 	.num_resources = ARRAY_SIZE(rs485_1_resources),
 	.resource = rs485_1_resources,
 };
-
 
 /* spear3xx shared irq */
 static struct shirq_dev_config shirq_ras1_config[] = {
@@ -687,7 +675,7 @@ void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	/* call spear3xx family common init function */
 	spear3xx_init();
 
-	/* shared irq registeration */
+	/* shared irq registration */
 	base = ioremap(SPEAR310_SOC_CONFIG_BASE, SZ_4K);
 	if (base) {
 		/* shirq 1 */

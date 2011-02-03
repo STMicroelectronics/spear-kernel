@@ -1,7 +1,7 @@
 /*
  * arch/arm/plat-spear/time.c
  *
- * Copyright (C) 2009 ST Microelectronics
+ * Copyright (C) 2010 ST Microelectronics
  * Shiraz Hashim<shiraz.hashim@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -58,58 +58,18 @@
 
 #define INT_STATUS		0x1
 
+/*
+ * Minimum clocksource/clockevent timer range in seconds
+ */
+#define SPEAR_MIN_RANGE 4
+
 static __iomem void *gpt_base;
 static struct clk *gpt_clk;
-
-/* following defines the parent clock to be used */
-#ifdef CONFIG_ARCH_SPEAR13XX
-static char pclk_name[] = "osc1_24m_clk";
-#else
-static char pclk_name[] = "pll3_48m_clk";
-#endif
 
 static void clockevent_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *clk_event_dev);
 static int clockevent_next_event(unsigned long evt,
 				 struct clock_event_device *clk_event_dev);
-
-/*
- * Following clocksource_set_clock and clockevent_set_clock picked
- * from arch/mips/kernel/time.c
- */
-
-void __init clocksource_set_clock(struct clocksource *cs, unsigned int clock)
-{
-	u64 temp;
-	u32 shift;
-
-	/* Find a shift value */
-	for (shift = 32; shift > 0; shift--) {
-		temp = (u64) NSEC_PER_SEC << shift;
-		do_div(temp, clock);
-		if ((temp >> 32) == 0)
-			break;
-	}
-	cs->shift = shift;
-	cs->mult = (u32) temp;
-}
-
-void __init clockevent_set_clock(struct clock_event_device *cd,
-	unsigned int clock)
-{
-	u64 temp;
-	u32 shift;
-
-	/* Find a shift value */
-	for (shift = 32; shift > 0; shift--) {
-		temp = (u64) clock << shift;
-		do_div(temp, NSEC_PER_SEC);
-		if ((temp >> 32) == 0)
-			break;
-	}
-	cd->shift = shift;
-	cd->mult = (u32) temp;
-}
 
 static cycle_t clocksource_read_cycles(struct clocksource *cs)
 {
@@ -145,7 +105,7 @@ static void spear_clocksource_init(void)
 	val |= CTRL_ENABLE ;
 	writew(val, gpt_base + CR(CLKSRC));
 
-	clocksource_set_clock(&clksrc, tick_rate);
+	clocksource_calc_mult_shift(&clksrc, tick_rate, SPEAR_MIN_RANGE);
 
 	/* register the clocksource */
 	clocksource_register(&clksrc);
@@ -240,7 +200,7 @@ static void __init spear_clockevent_init(void)
 	tick_rate = clk_get_rate(gpt_clk);
 	tick_rate >>= CTRL_PRESCALER16;
 
-	clockevent_set_clock(&clkevt, tick_rate);
+	clockevents_calc_mult_shift(&clkevt, tick_rate, SPEAR_MIN_RANGE);
 
 	clkevt.max_delta_ns = clockevent_delta2ns(0xfff0,
 			&clkevt);
@@ -255,7 +215,6 @@ static void __init spear_clockevent_init(void)
 
 void __init spear_setup_timer(void)
 {
-	struct clk *clk;
 	int ret;
 
 	if (!request_mem_region(SPEAR_GPT0_BASE, SZ_1K, "gpt0")) {
@@ -274,17 +233,6 @@ void __init spear_setup_timer(void)
 		pr_err("%s:couldn't get clk for gpt\n", __func__);
 		goto err_iomap;
 	}
-
-	/* get the parent clock */
-	clk = clk_get(NULL, pclk_name);
-
-	if (!clk) {
-		pr_err("%s:couldn't get %s as parent for gpt\n",
-				__func__, pclk_name);
-		goto err_iomap;
-	}
-
-	clk_set_parent(gpt_clk, clk);
 
 	ret = clk_enable(gpt_clk);
 	if (ret < 0) {

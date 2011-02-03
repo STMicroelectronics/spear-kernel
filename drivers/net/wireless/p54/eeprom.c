@@ -20,8 +20,10 @@
 #include <linux/firmware.h>
 #include <linux/etherdevice.h>
 #include <linux/sort.h>
+#include <linux/slab.h>
 
 #include <net/mac80211.h>
+#include <linux/crc-ccitt.h>
 
 #include "p54.h"
 #include "eeprom.h"
@@ -126,7 +128,7 @@ static int p54_generate_band(struct ieee80211_hw *dev,
 	int ret = -ENOMEM;
 
 	if ((!list->entries) || (!list->band_channel_num[band]))
-		return 0;
+		return -EINVAL;
 
 	tmp = kzalloc(sizeof(*tmp), GFP_KERNEL);
 	if (!tmp)
@@ -148,16 +150,16 @@ static int p54_generate_band(struct ieee80211_hw *dev,
 			continue;
 
 		if (list->channels[i].data != CHAN_HAS_ALL) {
-			printk(KERN_ERR "%s:%s%s%s is/are missing for "
-					"channel:%d [%d MHz].\n",
-			       wiphy_name(dev->wiphy),
-			       (list->channels[i].data & CHAN_HAS_CAL ? "" :
-				" [iqauto calibration data]"),
-			       (list->channels[i].data & CHAN_HAS_LIMIT ? "" :
-				" [output power limits]"),
-			       (list->channels[i].data & CHAN_HAS_CURVE ? "" :
-				" [curve data]"),
-			       list->channels[i].index, list->channels[i].freq);
+			wiphy_err(dev->wiphy,
+				  "%s%s%s is/are missing for channel:%d [%d MHz].\n",
+				  (list->channels[i].data & CHAN_HAS_CAL ? "" :
+				   " [iqauto calibration data]"),
+				  (list->channels[i].data & CHAN_HAS_LIMIT ? "" :
+				   " [output power limits]"),
+				  (list->channels[i].data & CHAN_HAS_CURVE ? "" :
+				   " [curve data]"),
+				  list->channels[i].index, list->channels[i].freq);
+			continue;
 		}
 
 		tmp->channels[j].band = list->channels[i].band;
@@ -165,7 +167,15 @@ static int p54_generate_band(struct ieee80211_hw *dev,
 		j++;
 	}
 
-	tmp->n_channels = list->band_channel_num[band];
+	if (j == 0) {
+		wiphy_err(dev->wiphy, "Disabling totally damaged %d GHz band\n",
+			  (band == IEEE80211_BAND_2GHZ) ? 2 : 5);
+
+		ret = -ENODATA;
+		goto err_out;
+	}
+
+	tmp->n_channels = j;
 	old = priv->band_table[band];
 	priv->band_table[band] = tmp;
 	if (old) {
@@ -228,14 +238,14 @@ static int p54_generate_channel_lists(struct ieee80211_hw *dev)
 	struct p54_common *priv = dev->priv;
 	struct p54_channel_list *list;
 	unsigned int i, j, max_channel_num;
-	int ret = -ENOMEM;
+	int ret = 0;
 	u16 freq;
 
 	if ((priv->iq_autocal_len != priv->curve_data->entries) ||
 	    (priv->iq_autocal_len != priv->output_limit->entries))
-		printk(KERN_ERR "%s: EEPROM is damaged... you may not be able"
-				"to use all channels with this device.\n",
-				wiphy_name(dev->wiphy));
+		wiphy_err(dev->wiphy,
+			  "Unsupported or damaged EEPROM detected. "
+			  "You may not be able to use all channels.\n");
 
 	max_channel_num = max_t(unsigned int, priv->output_limit->entries,
 				priv->iq_autocal_len);
@@ -243,14 +253,18 @@ static int p54_generate_channel_lists(struct ieee80211_hw *dev)
 				priv->curve_data->entries);
 
 	list = kzalloc(sizeof(*list), GFP_KERNEL);
-	if (!list)
+	if (!list) {
+		ret = -ENOMEM;
 		goto free;
+	}
 
 	list->max_entries = max_channel_num;
 	list->channels = kzalloc(sizeof(struct p54_channel_entry) *
 				 max_channel_num, GFP_KERNEL);
-	if (!list->channels)
+	if (!list->channels) {
+		ret = -ENOMEM;
 		goto free;
+	}
 
 	for (i = 0; i < max_channel_num; i++) {
 		if (i < priv->iq_autocal_len) {
@@ -282,13 +296,8 @@ static int p54_generate_channel_lists(struct ieee80211_hw *dev)
 	     p54_compare_channels, NULL);
 
 	for (i = 0, j = 0; i < IEEE80211_NUM_BANDS; i++) {
-		if (list->band_channel_num[i]) {
-			ret = p54_generate_band(dev, list, i);
-			if (ret)
-				goto free;
-
+		if (p54_generate_band(dev, list, i) == 0)
 			j++;
-		}
 	}
 	if (j == 0) {
 		/* no useable band available. */
@@ -411,15 +420,14 @@ static void p54_parse_rssical(struct ieee80211_hw *dev, void *data, int len,
 	int i;
 
 	if (len != (entry_size * num_entries)) {
-		printk(KERN_ERR "%s: unknown rssi calibration data packing "
-				 " type:(%x) len:%d.\n",
-		       wiphy_name(dev->wiphy), type, len);
+		wiphy_err(dev->wiphy,
+			  "unknown rssi calibration data packing type:(%x) len:%d.\n",
+			  type, len);
 
 		print_hex_dump_bytes("rssical:", DUMP_PREFIX_NONE,
 				     data, len);
 
-		printk(KERN_ERR "%s: please report this issue.\n",
-			wiphy_name(dev->wiphy));
+		wiphy_err(dev->wiphy, "please report this issue.\n");
 		return;
 	}
 
@@ -437,15 +445,14 @@ static void p54_parse_default_country(struct ieee80211_hw *dev,
 	struct pda_country *country;
 
 	if (len != sizeof(*country)) {
-		printk(KERN_ERR "%s: found possible invalid default country "
-				"eeprom entry. (entry size: %d)\n",
-		       wiphy_name(dev->wiphy), len);
+		wiphy_err(dev->wiphy,
+			  "found possible invalid default country eeprom entry. (entry size: %d)\n",
+			  len);
 
 		print_hex_dump_bytes("country:", DUMP_PREFIX_NONE,
 				     data, len);
 
-		printk(KERN_ERR "%s: please report this issue.\n",
-			wiphy_name(dev->wiphy));
+		wiphy_err(dev->wiphy, "please report this issue.\n");
 		return;
 	}
 
@@ -470,8 +477,8 @@ static int p54_convert_output_limits(struct ieee80211_hw *dev,
 		return -EINVAL;
 
 	if (data[0] != 0) {
-		printk(KERN_ERR "%s: unknown output power db revision:%x\n",
-		       wiphy_name(dev->wiphy), data[0]);
+		wiphy_err(dev->wiphy, "unknown output power db revision:%x\n",
+			  data[0]);
 		return -EINVAL;
 	}
 
@@ -536,6 +543,7 @@ int p54_parse_eeprom(struct ieee80211_hw *dev, void *eeprom, int len)
 	int err;
 	u8 *end = (u8 *)eeprom + len;
 	u16 synth = 0;
+	u16 crc16 = ~0;
 
 	wrap = (struct eeprom_pda_wrap *) eeprom;
 	entry = (void *)wrap->data + le16_to_cpu(wrap->len);
@@ -579,10 +587,9 @@ int p54_parse_eeprom(struct ieee80211_hw *dev, void *eeprom, int len)
 				err = p54_convert_rev1(dev, curve_data);
 				break;
 			default:
-				printk(KERN_ERR "%s: unknown curve data "
-						"revision %d\n",
-						wiphy_name(dev->wiphy),
-						curve_data->cal_method_rev);
+				wiphy_err(dev->wiphy,
+					  "unknown curve data revision %d\n",
+					  curve_data->cal_method_rev);
 				err = -ENODEV;
 				break;
 			}
@@ -591,13 +598,13 @@ int p54_parse_eeprom(struct ieee80211_hw *dev, void *eeprom, int len)
 			}
 			break;
 		case PDR_PRISM_ZIF_TX_IQ_CALIBRATION:
-			priv->iq_autocal = kmalloc(data_len, GFP_KERNEL);
+			priv->iq_autocal = kmemdup(entry->data, data_len,
+						   GFP_KERNEL);
 			if (!priv->iq_autocal) {
 				err = -ENOMEM;
 				goto err;
 			}
 
-			memcpy(priv->iq_autocal, entry->data, data_len);
 			priv->iq_autocal_len = data_len / sizeof(struct pda_iq_autocal_entry);
 			break;
 		case PDR_DEFAULT_COUNTRY:
@@ -652,20 +659,33 @@ int p54_parse_eeprom(struct ieee80211_hw *dev, void *eeprom, int len)
 			}
 			break;
 		case PDR_END:
-			/* make it overrun */
-			entry_len = len;
+			crc16 = ~crc_ccitt(crc16, (u8 *) entry, sizeof(*entry));
+			if (crc16 != le16_to_cpup((__le16 *)entry->data)) {
+				wiphy_err(dev->wiphy, "eeprom failed checksum "
+					 "test!\n");
+				err = -ENOMSG;
+				goto err;
+			} else {
+				goto good_eeprom;
+			}
 			break;
 		default:
 			break;
 		}
 
-		entry = (void *)entry + (entry_len + 1)*2;
+		crc16 = crc_ccitt(crc16, (u8 *)entry, (entry_len + 1) * 2);
+		entry = (void *)entry + (entry_len + 1) * 2;
 	}
 
+	wiphy_err(dev->wiphy, "unexpected end of eeprom data.\n");
+	err = -ENODATA;
+	goto err;
+
+good_eeprom:
 	if (!synth || !priv->iq_autocal || !priv->output_limit ||
 	    !priv->curve_data) {
-		printk(KERN_ERR "%s: not all required entries found in eeprom!\n",
-			wiphy_name(dev->wiphy));
+		wiphy_err(dev->wiphy,
+			  "not all required entries found in eeprom!\n");
 		err = -EINVAL;
 		goto err;
 	}
@@ -691,15 +711,15 @@ int p54_parse_eeprom(struct ieee80211_hw *dev, void *eeprom, int len)
 	if (!is_valid_ether_addr(dev->wiphy->perm_addr)) {
 		u8 perm_addr[ETH_ALEN];
 
-		printk(KERN_WARNING "%s: Invalid hwaddr! Using randomly generated MAC addr\n",
-			wiphy_name(dev->wiphy));
+		wiphy_warn(dev->wiphy,
+			   "Invalid hwaddr! Using randomly generated MAC addr\n");
 		random_ether_addr(perm_addr);
 		SET_IEEE80211_PERM_ADDR(dev, perm_addr);
 	}
 
-	printk(KERN_INFO "%s: hwaddr %pM, MAC:isl38%02x RF:%s\n",
-		wiphy_name(dev->wiphy),	dev->wiphy->perm_addr, priv->version,
-		p54_rf_chips[priv->rxhw]);
+	wiphy_info(dev->wiphy, "hwaddr %pM, MAC:isl38%02x RF:%s\n",
+		   dev->wiphy->perm_addr, priv->version,
+		   p54_rf_chips[priv->rxhw]);
 
 	return 0;
 
@@ -711,8 +731,7 @@ err:
 	priv->output_limit = NULL;
 	priv->curve_data = NULL;
 
-	printk(KERN_ERR "%s: eeprom parse failed!\n",
-		wiphy_name(dev->wiphy));
+	wiphy_err(dev->wiphy, "eeprom parse failed!\n");
 	return err;
 }
 EXPORT_SYMBOL_GPL(p54_parse_eeprom);

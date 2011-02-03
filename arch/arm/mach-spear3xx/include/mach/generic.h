@@ -19,7 +19,6 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
-#include <plat/device.h>
 #include <plat/padmux.h>
 
 /* spear3xx declarations */
@@ -44,7 +43,6 @@ extern struct platform_device spear3xx_i2c_device;
 extern struct platform_device spear3xx_jpeg_device;
 extern struct platform_device spear3xx_ohci0_device;
 extern struct platform_device spear3xx_ohci1_device;
-extern struct platform_device spear3xx_phy_device;
 extern struct platform_device spear3xx_rtc_device;
 extern struct platform_device spear3xx_smi_device;
 extern struct platform_device spear3xx_udc_device;

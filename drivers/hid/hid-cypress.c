@@ -31,16 +31,16 @@
  * Some USB barcode readers from cypress have usage min and usage max in
  * the wrong order
  */
-static void cp_report_fixup(struct hid_device *hdev, __u8 *rdesc,
-		unsigned int rsize)
+static __u8 *cp_report_fixup(struct hid_device *hdev, __u8 *rdesc,
+		unsigned int *rsize)
 {
 	unsigned long quirks = (unsigned long)hid_get_drvdata(hdev);
 	unsigned int i;
 
 	if (!(quirks & CP_RDESC_SWAPPED_MIN_MAX))
-		return;
+		return rdesc;
 
-	for (i = 0; i < rsize - 4; i++)
+	for (i = 0; i < *rsize - 4; i++)
 		if (rdesc[i] == 0x29 && rdesc[i + 2] == 0x19) {
 			__u8 tmp;
 
@@ -50,6 +50,7 @@ static void cp_report_fixup(struct hid_device *hdev, __u8 *rdesc,
 			rdesc[i + 3] = rdesc[i + 1];
 			rdesc[i + 1] = tmp;
 		}
+	return rdesc;
 }
 
 static int cp_input_mapped(struct hid_device *hdev, struct hid_input *hi,
@@ -125,6 +126,8 @@ static const struct hid_device_id cp_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_BARCODE_1),
 		.driver_data = CP_RDESC_SWAPPED_MIN_MAX },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_BARCODE_2),
+		.driver_data = CP_RDESC_SWAPPED_MIN_MAX },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_BARCODE_3),
 		.driver_data = CP_RDESC_SWAPPED_MIN_MAX },
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CYPRESS, USB_DEVICE_ID_CYPRESS_MOUSE),
 		.driver_data = CP_2WHEEL_MOUSE_HACK },

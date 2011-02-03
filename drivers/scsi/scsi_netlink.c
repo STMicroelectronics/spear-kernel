@@ -22,6 +22,7 @@
 #include <linux/jiffies.h>
 #include <linux/security.h>
 #include <linux/delay.h>
+#include <linux/slab.h>
 #include <net/sock.h>
 #include <net/netlink.h>
 
@@ -476,7 +477,7 @@ EXPORT_SYMBOL_GPL(scsi_nl_remove_driver);
 
 
 /**
- * scsi_netlink_init - Called by SCSI subsystem to intialize
+ * scsi_netlink_init - Called by SCSI subsystem to initialize
  * 	the SCSI transport netlink interface
  *
  **/
@@ -613,7 +614,7 @@ EXPORT_SYMBOL_GPL(scsi_nl_send_transport_msg);
  * @data_buf:		pointer to vendor unique data buffer
  *
  * Returns:
- *   0 on succesful return
+ *   0 on successful return
  *   otherwise, failing error code
  *
  * Notes:

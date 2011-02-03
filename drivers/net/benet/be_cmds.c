@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 - 2009 ServerEngines
+ * Copyright (C) 2005 - 2010 ServerEngines
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -25,6 +25,8 @@ static void be_mcc_notify(struct be_adapter *adapter)
 
 	val |= mccq->id & DB_MCCQ_RING_ID_MASK;
 	val |= 1 << DB_MCCQ_NUM_POSTED_SHIFT;
+
+	wmb();
 	iowrite32(val, adapter->db + DB_MCCQ_OFFSET);
 }
 
@@ -59,20 +61,29 @@ static int be_mcc_compl_process(struct be_adapter *adapter,
 
 	compl_status = (compl->status >> CQE_STATUS_COMPL_SHIFT) &
 				CQE_STATUS_COMPL_MASK;
+
+	if ((compl->tag0 == OPCODE_COMMON_WRITE_FLASHROM) &&
+		(compl->tag1 == CMD_SUBSYSTEM_COMMON)) {
+		adapter->flash_status = compl_status;
+		complete(&adapter->flash_compl);
+	}
+
 	if (compl_status == MCC_STATUS_SUCCESS) {
 		if (compl->tag0 == OPCODE_ETH_GET_STATISTICS) {
 			struct be_cmd_resp_get_stats *resp =
-						adapter->stats.cmd.va;
+						adapter->stats_cmd.va;
 			be_dws_le_to_cpu(&resp->hw_stats,
 						sizeof(resp->hw_stats));
 			netdev_stats_update(adapter);
+			adapter->stats_ioctl_sent = false;
 		}
-	} else if (compl_status != MCC_STATUS_NOT_SUPPORTED) {
+	} else if ((compl_status != MCC_STATUS_NOT_SUPPORTED) &&
+		   (compl->tag0 != OPCODE_COMMON_NTWK_MAC_QUERY)) {
 		extd_status = (compl->status >> CQE_STATUS_EXTD_SHIFT) &
 				CQE_STATUS_EXTD_MASK;
 		dev_warn(&adapter->pdev->dev,
-			"Error in cmd completion: status(compl/extd)=%d/%d\n",
-			compl_status, extd_status);
+		"Error in cmd completion - opcode %d, compl %d, extd %d\n",
+			compl->tag0, compl_status, extd_status);
 	}
 	return compl_status;
 }
@@ -85,11 +96,62 @@ static void be_async_link_state_process(struct be_adapter *adapter,
 		evt->port_link_status == ASYNC_EVENT_LINK_UP);
 }
 
+/* Grp5 CoS Priority evt */
+static void be_async_grp5_cos_priority_process(struct be_adapter *adapter,
+		struct be_async_event_grp5_cos_priority *evt)
+{
+	if (evt->valid) {
+		adapter->vlan_prio_bmap = evt->available_priority_bmap;
+		adapter->recommended_prio =
+			evt->reco_default_priority << VLAN_PRIO_SHIFT;
+	}
+}
+
+/* Grp5 QOS Speed evt */
+static void be_async_grp5_qos_speed_process(struct be_adapter *adapter,
+		struct be_async_event_grp5_qos_link_speed *evt)
+{
+	if (evt->physical_port == adapter->port_num) {
+		/* qos_link_speed is in units of 10 Mbps */
+		adapter->link_speed = evt->qos_link_speed * 10;
+	}
+}
+
+static void be_async_grp5_evt_process(struct be_adapter *adapter,
+		u32 trailer, struct be_mcc_compl *evt)
+{
+	u8 event_type = 0;
+
+	event_type = (trailer >> ASYNC_TRAILER_EVENT_TYPE_SHIFT) &
+		ASYNC_TRAILER_EVENT_TYPE_MASK;
+
+	switch (event_type) {
+	case ASYNC_EVENT_COS_PRIORITY:
+		be_async_grp5_cos_priority_process(adapter,
+		(struct be_async_event_grp5_cos_priority *)evt);
+	break;
+	case ASYNC_EVENT_QOS_SPEED:
+		be_async_grp5_qos_speed_process(adapter,
+		(struct be_async_event_grp5_qos_link_speed *)evt);
+	break;
+	default:
+		dev_warn(&adapter->pdev->dev, "Unknown grp5 event!\n");
+		break;
+	}
+}
+
 static inline bool is_link_state_evt(u32 trailer)
+{
+	return ((trailer >> ASYNC_TRAILER_EVENT_CODE_SHIFT) &
+		ASYNC_TRAILER_EVENT_CODE_MASK) ==
+				ASYNC_EVENT_CODE_LINK_STATE;
+}
+
+static inline bool is_grp5_evt(u32 trailer)
 {
 	return (((trailer >> ASYNC_TRAILER_EVENT_CODE_SHIFT) &
 		ASYNC_TRAILER_EVENT_CODE_MASK) ==
-				ASYNC_EVENT_CODE_LINK_STATE);
+				ASYNC_EVENT_CODE_GRP_5);
 }
 
 static struct be_mcc_compl *be_mcc_compl_get(struct be_adapter *adapter)
@@ -104,46 +166,63 @@ static struct be_mcc_compl *be_mcc_compl_get(struct be_adapter *adapter)
 	return NULL;
 }
 
-int be_process_mcc(struct be_adapter *adapter)
+void be_async_mcc_enable(struct be_adapter *adapter)
+{
+	spin_lock_bh(&adapter->mcc_cq_lock);
+
+	be_cq_notify(adapter, adapter->mcc_obj.cq.id, true, 0);
+	adapter->mcc_obj.rearm_cq = true;
+
+	spin_unlock_bh(&adapter->mcc_cq_lock);
+}
+
+void be_async_mcc_disable(struct be_adapter *adapter)
+{
+	adapter->mcc_obj.rearm_cq = false;
+}
+
+int be_process_mcc(struct be_adapter *adapter, int *status)
 {
 	struct be_mcc_compl *compl;
-	int num = 0, status = 0;
+	int num = 0;
+	struct be_mcc_obj *mcc_obj = &adapter->mcc_obj;
 
 	spin_lock_bh(&adapter->mcc_cq_lock);
 	while ((compl = be_mcc_compl_get(adapter))) {
 		if (compl->flags & CQE_FLAGS_ASYNC_MASK) {
 			/* Interpret flags as an async trailer */
-			BUG_ON(!is_link_state_evt(compl->flags));
-
-			/* Interpret compl as a async link evt */
-			be_async_link_state_process(adapter,
+			if (is_link_state_evt(compl->flags))
+				be_async_link_state_process(adapter,
 				(struct be_async_event_link_state *) compl);
+			else if (is_grp5_evt(compl->flags))
+				be_async_grp5_evt_process(adapter,
+				compl->flags, compl);
 		} else if (compl->flags & CQE_FLAGS_COMPLETED_MASK) {
-				status = be_mcc_compl_process(adapter, compl);
-				atomic_dec(&adapter->mcc_obj.q.used);
+				*status = be_mcc_compl_process(adapter, compl);
+				atomic_dec(&mcc_obj->q.used);
 		}
 		be_mcc_compl_use(compl);
 		num++;
 	}
 
-	if (num)
-		be_cq_notify(adapter, adapter->mcc_obj.cq.id, true, num);
-
 	spin_unlock_bh(&adapter->mcc_cq_lock);
-	return status;
+	return num;
 }
 
 /* Wait till no more pending mcc requests are present */
 static int be_mcc_wait_compl(struct be_adapter *adapter)
 {
 #define mcc_timeout		120000 /* 12s timeout */
-	int i, status;
-	for (i = 0; i < mcc_timeout; i++) {
-		status = be_process_mcc(adapter);
-		if (status)
-			return status;
+	int i, num, status = 0;
+	struct be_mcc_obj *mcc_obj = &adapter->mcc_obj;
 
-		if (atomic_read(&adapter->mcc_obj.q.used) == 0)
+	for (i = 0; i < mcc_timeout; i++) {
+		num = be_process_mcc(adapter, &status);
+		if (num)
+			be_cq_notify(adapter, mcc_obj->cq.id,
+				mcc_obj->rearm_cq, num);
+
+		if (atomic_read(&mcc_obj->q.used) == 0)
 			break;
 		udelay(100);
 	}
@@ -151,7 +230,7 @@ static int be_mcc_wait_compl(struct be_adapter *adapter)
 		dev_err(&adapter->pdev->dev, "mccq poll timed out\n");
 		return -1;
 	}
-	return 0;
+	return status;
 }
 
 /* Notify MCC requests and wait for completion */
@@ -163,23 +242,30 @@ static int be_mcc_notify_wait(struct be_adapter *adapter)
 
 static int be_mbox_db_ready_wait(struct be_adapter *adapter, void __iomem *db)
 {
-	int cnt = 0, wait = 5;
+	int msecs = 0;
 	u32 ready;
 
 	do {
-		ready = ioread32(db) & MPU_MAILBOX_DB_RDY_MASK;
-		if (ready)
-			break;
-
-		if (cnt > 4000000) {
-			dev_err(&adapter->pdev->dev, "mbox poll timed out\n");
+		ready = ioread32(db);
+		if (ready == 0xffffffff) {
+			dev_err(&adapter->pdev->dev,
+				"pci slot disconnected\n");
 			return -1;
 		}
 
-		if (cnt > 50)
-			wait = 200;
-		cnt += wait;
-		udelay(wait);
+		ready &= MPU_MAILBOX_DB_RDY_MASK;
+		if (ready)
+			break;
+
+		if (msecs > 4000) {
+			dev_err(&adapter->pdev->dev, "mbox poll timed out\n");
+			be_detect_dump_ue(adapter);
+			return -1;
+		}
+
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(msecs_to_jiffies(1));
+		msecs++;
 	} while (true);
 
 	return 0;
@@ -197,6 +283,11 @@ static int be_mbox_notify_wait(struct be_adapter *adapter)
 	struct be_dma_mem *mbox_mem = &adapter->mbox_mem;
 	struct be_mcc_mailbox *mbox = mbox_mem->va;
 	struct be_mcc_compl *compl = &mbox->compl;
+
+	/* wait for ready to be set */
+	status = be_mbox_db_ready_wait(adapter, db);
+	if (status != 0)
+		return status;
 
 	val |= MPU_MAILBOX_DB_HI_MASK;
 	/* at bits 2 - 31 place mbox dma addr msb bits 34 - 63 */
@@ -259,7 +350,7 @@ int be_cmd_POST(struct be_adapter *adapter)
 		} else {
 			return 0;
 		}
-	} while (timeout < 20);
+	} while (timeout < 40);
 
 	dev_err(&adapter->pdev->dev, "POST timeout; stage=0x%x\n", stage);
 	return -1;
@@ -277,7 +368,7 @@ static inline struct be_sge *nonembedded_sgl(struct be_mcc_wrb *wrb)
 
 /* Don't touch the hdr after it's prepared */
 static void be_wrb_hdr_prepare(struct be_mcc_wrb *wrb, int payload_len,
-				bool embedded, u8 sge_cnt)
+				bool embedded, u8 sge_cnt, u32 opcode)
 {
 	if (embedded)
 		wrb->embedded |= MCC_WRB_EMBEDDED_MASK;
@@ -285,7 +376,8 @@ static void be_wrb_hdr_prepare(struct be_mcc_wrb *wrb, int payload_len,
 		wrb->embedded |= (sge_cnt & MCC_WRB_SGE_CNT_MASK) <<
 				MCC_WRB_SGE_CNT_SHIFT;
 	wrb->payload_length = payload_len;
-	be_dws_cpu_to_le(wrb, 20);
+	wrb->tag0 = opcode;
+	be_dws_cpu_to_le(wrb, 8);
 }
 
 /* Don't touch the hdr after it's prepared */
@@ -295,6 +387,7 @@ static void be_cmd_hdr_prepare(struct be_cmd_req_hdr *req_hdr,
 	req_hdr->opcode = opcode;
 	req_hdr->subsystem = subsystem;
 	req_hdr->request_length = cpu_to_le32(cmd_len - sizeof(*req_hdr));
+	req_hdr->version = 0;
 }
 
 static void be_cmd_page_addrs_prepare(struct phys_addr *pages, u32 max_pages,
@@ -349,7 +442,11 @@ static struct be_mcc_wrb *wrb_from_mccq(struct be_adapter *adapter)
 	struct be_queue_info *mccq = &adapter->mcc_obj.q;
 	struct be_mcc_wrb *wrb;
 
-	BUG_ON(atomic_read(&mccq->used) >= mccq->len);
+	if (atomic_read(&mccq->used) >= mccq->len) {
+		dev_err(&adapter->pdev->dev, "Out of MCCQ wrbs\n");
+		return NULL;
+	}
+
 	wrb = queue_head_node(mccq);
 	queue_head_inc(mccq);
 	atomic_inc(&mccq->used);
@@ -357,6 +454,62 @@ static struct be_mcc_wrb *wrb_from_mccq(struct be_adapter *adapter)
 	return wrb;
 }
 
+/* Tell fw we're about to start firing cmds by writing a
+ * special pattern across the wrb hdr; uses mbox
+ */
+int be_cmd_fw_init(struct be_adapter *adapter)
+{
+	u8 *wrb;
+	int status;
+
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
+
+	wrb = (u8 *)wrb_from_mbox(adapter);
+	*wrb++ = 0xFF;
+	*wrb++ = 0x12;
+	*wrb++ = 0x34;
+	*wrb++ = 0xFF;
+	*wrb++ = 0xFF;
+	*wrb++ = 0x56;
+	*wrb++ = 0x78;
+	*wrb = 0xFF;
+
+	status = be_mbox_notify_wait(adapter);
+
+	mutex_unlock(&adapter->mbox_lock);
+	return status;
+}
+
+/* Tell fw we're done with firing cmds by writing a
+ * special pattern across the wrb hdr; uses mbox
+ */
+int be_cmd_fw_clean(struct be_adapter *adapter)
+{
+	u8 *wrb;
+	int status;
+
+	if (adapter->eeh_err)
+		return -EIO;
+
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
+
+	wrb = (u8 *)wrb_from_mbox(adapter);
+	*wrb++ = 0xFF;
+	*wrb++ = 0xAA;
+	*wrb++ = 0xBB;
+	*wrb++ = 0xFF;
+	*wrb++ = 0xFF;
+	*wrb++ = 0xCC;
+	*wrb++ = 0xDD;
+	*wrb = 0xFF;
+
+	status = be_mbox_notify_wait(adapter);
+
+	mutex_unlock(&adapter->mbox_lock);
+	return status;
+}
 int be_cmd_eq_create(struct be_adapter *adapter,
 		struct be_queue_info *eq, int eq_delay)
 {
@@ -365,20 +518,19 @@ int be_cmd_eq_create(struct be_adapter *adapter,
 	struct be_dma_mem *q_mem = &eq->dma_mem;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0, OPCODE_COMMON_EQ_CREATE);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_EQ_CREATE, sizeof(*req));
 
 	req->num_pages =  cpu_to_le16(PAGES_4K_SPANNED(q_mem->va, q_mem->size));
 
-	AMAP_SET_BITS(struct amap_eq_context, func, req->context,
-			be_pci_func(adapter));
 	AMAP_SET_BITS(struct amap_eq_context, valid, req->context, 1);
 	/* 4byte eqe*/
 	AMAP_SET_BITS(struct amap_eq_context, size, req->context, 0);
@@ -397,7 +549,7 @@ int be_cmd_eq_create(struct be_adapter *adapter,
 		eq->created = true;
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 	return status;
 }
 
@@ -409,12 +561,14 @@ int be_cmd_mac_addr_query(struct be_adapter *adapter, u8 *mac_addr,
 	struct be_cmd_req_mac_query *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_MAC_QUERY);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_MAC_QUERY, sizeof(*req));
@@ -433,7 +587,7 @@ int be_cmd_mac_addr_query(struct be_adapter *adapter, u8 *mac_addr,
 		memcpy(mac_addr, resp->mac.addr, ETH_ALEN);
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 	return status;
 }
 
@@ -448,9 +602,14 @@ int be_cmd_pmac_add(struct be_adapter *adapter, u8 *mac_addr,
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_PMAC_ADD);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_PMAC_ADD, sizeof(*req));
@@ -464,6 +623,7 @@ int be_cmd_pmac_add(struct be_adapter *adapter, u8 *mac_addr,
 		*pmac_id = le32_to_cpu(resp->pmac_id);
 	}
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
@@ -478,9 +638,14 @@ int be_cmd_pmac_del(struct be_adapter *adapter, u32 if_id, u32 pmac_id)
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_PMAC_DEL);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_PMAC_DEL, sizeof(*req));
@@ -490,8 +655,8 @@ int be_cmd_pmac_del(struct be_adapter *adapter, u32 if_id, u32 pmac_id)
 
 	status = be_mcc_notify_wait(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
-
 	return status;
 }
 
@@ -506,13 +671,15 @@ int be_cmd_cq_create(struct be_adapter *adapter,
 	void *ctxt;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 	ctxt = &req->context;
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_CQ_CREATE);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_CQ_CREATE, sizeof(*req));
@@ -528,7 +695,6 @@ int be_cmd_cq_create(struct be_adapter *adapter,
 	AMAP_SET_BITS(struct amap_cq_context, eventable, ctxt, 1);
 	AMAP_SET_BITS(struct amap_cq_context, eqid, ctxt, eq->id);
 	AMAP_SET_BITS(struct amap_cq_context, armed, ctxt, 1);
-	AMAP_SET_BITS(struct amap_cq_context, func, ctxt, be_pci_func(adapter));
 	be_dws_cpu_to_le(ctxt, sizeof(req->context));
 
 	be_cmd_page_addrs_prepare(req->pages, ARRAY_SIZE(req->pages), q_mem);
@@ -540,7 +706,7 @@ int be_cmd_cq_create(struct be_adapter *adapter,
 		cq->created = true;
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -563,25 +729,27 @@ int be_cmd_mccq_create(struct be_adapter *adapter,
 	void *ctxt;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 	ctxt = &req->context;
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_MCC_CREATE_EXT);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
-			OPCODE_COMMON_MCC_CREATE, sizeof(*req));
+			OPCODE_COMMON_MCC_CREATE_EXT, sizeof(*req));
 
-	req->num_pages = PAGES_4K_SPANNED(q_mem->va, q_mem->size);
+	req->num_pages = cpu_to_le16(PAGES_4K_SPANNED(q_mem->va, q_mem->size));
 
-	AMAP_SET_BITS(struct amap_mcc_context, fid, ctxt, be_pci_func(adapter));
 	AMAP_SET_BITS(struct amap_mcc_context, valid, ctxt, 1);
 	AMAP_SET_BITS(struct amap_mcc_context, ring_size, ctxt,
 		be_encoded_q_len(mccq->len));
 	AMAP_SET_BITS(struct amap_mcc_context, cq_id, ctxt, cq->id);
-
+	/* Subscribe to Link State and Group 5 Events(bits 1 and 5 set) */
+	req->async_event_bitmap[0] |= 0x00000022;
 	be_dws_cpu_to_le(ctxt, sizeof(req->context));
 
 	be_cmd_page_addrs_prepare(req->pages, ARRAY_SIZE(req->pages), q_mem);
@@ -592,7 +760,7 @@ int be_cmd_mccq_create(struct be_adapter *adapter,
 		mccq->id = le16_to_cpu(resp->id);
 		mccq->created = true;
 	}
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -607,13 +775,15 @@ int be_cmd_txq_create(struct be_adapter *adapter,
 	void *ctxt;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 	ctxt = &req->context;
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_ETH_TX_CREATE);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH, OPCODE_ETH_TX_CREATE,
 		sizeof(*req));
@@ -624,8 +794,6 @@ int be_cmd_txq_create(struct be_adapter *adapter,
 
 	AMAP_SET_BITS(struct amap_tx_context, tx_ring_size, ctxt,
 		be_encoded_q_len(txq->len));
-	AMAP_SET_BITS(struct amap_tx_context, pci_func_id, ctxt,
-			be_pci_func(adapter));
 	AMAP_SET_BITS(struct amap_tx_context, ctx_valid, ctxt, 1);
 	AMAP_SET_BITS(struct amap_tx_context, cq_id_send, ctxt, cq->id);
 
@@ -640,7 +808,7 @@ int be_cmd_txq_create(struct be_adapter *adapter,
 		txq->created = true;
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -648,19 +816,21 @@ int be_cmd_txq_create(struct be_adapter *adapter,
 /* Uses mbox */
 int be_cmd_rxq_create(struct be_adapter *adapter,
 		struct be_queue_info *rxq, u16 cq_id, u16 frag_size,
-		u16 max_frame_size, u32 if_id, u32 rss)
+		u16 max_frame_size, u32 if_id, u32 rss, u8 *rss_id)
 {
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_eth_rx_create *req;
 	struct be_dma_mem *q_mem = &rxq->dma_mem;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_ETH_RX_CREATE);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH, OPCODE_ETH_RX_CREATE,
 		sizeof(*req));
@@ -678,9 +848,10 @@ int be_cmd_rxq_create(struct be_adapter *adapter,
 		struct be_cmd_resp_eth_rx_create *resp = embedded_payload(wrb);
 		rxq->id = le16_to_cpu(resp->id);
 		rxq->created = true;
+		*rss_id = resp->rss_id;
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -696,12 +867,14 @@ int be_cmd_q_destroy(struct be_adapter *adapter, struct be_queue_info *q,
 	u8 subsys = 0, opcode = 0;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (adapter->eeh_err)
+		return -EIO;
+
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
-
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
 
 	switch (queue_type) {
 	case QTYPE_EQ:
@@ -727,12 +900,15 @@ int be_cmd_q_destroy(struct be_adapter *adapter, struct be_queue_info *q,
 	default:
 		BUG();
 	}
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0, opcode);
+
 	be_cmd_hdr_prepare(&req->hdr, subsys, opcode, sizeof(*req));
 	req->id = cpu_to_le16(q->id);
 
 	status = be_mbox_notify_wait(adapter);
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -741,22 +917,26 @@ int be_cmd_q_destroy(struct be_adapter *adapter, struct be_queue_info *q,
  * Uses mbox
  */
 int be_cmd_if_create(struct be_adapter *adapter, u32 cap_flags, u32 en_flags,
-		u8 *mac, bool pmac_invalid, u32 *if_handle, u32 *pmac_id)
+		u8 *mac, bool pmac_invalid, u32 *if_handle, u32 *pmac_id,
+		u32 domain)
 {
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_if_create *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_INTERFACE_CREATE);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_INTERFACE_CREATE, sizeof(*req));
 
+	req->hdr.domain = domain;
 	req->capability_flags = cpu_to_le32(cap_flags);
 	req->enable_flags = cpu_to_le32(en_flags);
 	req->pmac_invalid = pmac_invalid;
@@ -771,7 +951,7 @@ int be_cmd_if_create(struct be_adapter *adapter, u32 cap_flags, u32 en_flags,
 			*pmac_id = le32_to_cpu(resp->pmac_id);
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 	return status;
 }
 
@@ -782,12 +962,17 @@ int be_cmd_if_destroy(struct be_adapter *adapter, u32 interface_id)
 	struct be_cmd_req_if_destroy *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (adapter->eeh_err)
+		return -EIO;
+
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_INTERFACE_DESTROY);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_INTERFACE_DESTROY, sizeof(*req));
@@ -796,7 +981,7 @@ int be_cmd_if_destroy(struct be_adapter *adapter, u32 interface_id)
 
 	status = be_mbox_notify_wait(adapter);
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 
 	return status;
 }
@@ -810,15 +995,20 @@ int be_cmd_get_stats(struct be_adapter *adapter, struct be_dma_mem *nonemb_cmd)
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_get_stats *req;
 	struct be_sge *sge;
+	int status = 0;
 
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = nonemb_cmd->va;
 	sge = nonembedded_sgl(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1);
-	wrb->tag0 = OPCODE_ETH_GET_STATISTICS;
+	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1,
+			OPCODE_ETH_GET_STATISTICS);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH,
 		OPCODE_ETH_GET_STATISTICS, sizeof(*req));
@@ -827,14 +1017,16 @@ int be_cmd_get_stats(struct be_adapter *adapter, struct be_dma_mem *nonemb_cmd)
 	sge->len = cpu_to_le32(nonemb_cmd->size);
 
 	be_mcc_notify(adapter);
+	adapter->stats_ioctl_sent = true;
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
-	return 0;
+	return status;
 }
 
 /* Uses synchronous mcc */
 int be_cmd_link_status_query(struct be_adapter *adapter,
-			bool *link_up)
+			bool *link_up, u8 *mac_speed, u16 *link_speed)
 {
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_link_status *req;
@@ -843,11 +1035,16 @@ int be_cmd_link_status_query(struct be_adapter *adapter,
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
 	*link_up = false;
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_LINK_STATUS_QUERY);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_LINK_STATUS_QUERY, sizeof(*req));
@@ -855,10 +1052,14 @@ int be_cmd_link_status_query(struct be_adapter *adapter,
 	status = be_mcc_notify_wait(adapter);
 	if (!status) {
 		struct be_cmd_resp_link_status *resp = embedded_payload(wrb);
-		if (resp->mac_speed != PHY_LINK_SPEED_ZERO)
+		if (resp->mac_speed != PHY_LINK_SPEED_ZERO) {
 			*link_up = true;
+			*link_speed = le16_to_cpu(resp->link_speed);
+			*mac_speed = resp->mac_speed;
+		}
 	}
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
@@ -870,12 +1071,14 @@ int be_cmd_get_fw_ver(struct be_adapter *adapter, char *fw_ver)
 	struct be_cmd_req_get_fw_version *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_GET_FW_VERSION);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_GET_FW_VERSION, sizeof(*req));
@@ -886,7 +1089,7 @@ int be_cmd_get_fw_ver(struct be_adapter *adapter, char *fw_ver)
 		strncpy(fw_ver, resp->firmware_version_string, FW_VER_LEN);
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 	return status;
 }
 
@@ -897,13 +1100,19 @@ int be_cmd_modify_eqd(struct be_adapter *adapter, u32 eq_id, u32 eqd)
 {
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_modify_eq_delay *req;
+	int status = 0;
 
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_MODIFY_EQ_DELAY);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_MODIFY_EQ_DELAY, sizeof(*req));
@@ -915,8 +1124,9 @@ int be_cmd_modify_eqd(struct be_adapter *adapter, u32 eq_id, u32 eqd)
 
 	be_mcc_notify(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
-	return 0;
+	return status;
 }
 
 /* Uses sycnhronous mcc */
@@ -930,9 +1140,14 @@ int be_cmd_vlan_config(struct be_adapter *adapter, u32 if_id, u16 *vtag_array,
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_NTWK_VLAN_CONFIG);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_VLAN_CONFIG, sizeof(*req));
@@ -948,6 +1163,7 @@ int be_cmd_vlan_config(struct be_adapter *adapter, u32 if_id, u16 *vtag_array,
 
 	status = be_mcc_notify_wait(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
@@ -964,13 +1180,21 @@ int be_cmd_promiscuous_config(struct be_adapter *adapter, u8 port_num, bool en)
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0, OPCODE_ETH_PROMISCUOUS);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH,
 		OPCODE_ETH_PROMISCUOUS, sizeof(*req));
 
+	/* In FW versions X.102.149/X.101.487 and later,
+	 * the port setting associated only with the
+	 * issuing pci function will take effect
+	 */
 	if (port_num)
 		req->port1_promiscuous = en;
 	else
@@ -978,6 +1202,7 @@ int be_cmd_promiscuous_config(struct be_adapter *adapter, u8 port_num, bool en)
 
 	status = be_mcc_notify_wait(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
@@ -987,40 +1212,51 @@ int be_cmd_promiscuous_config(struct be_adapter *adapter, u8 port_num, bool en)
  * (mc == NULL) => multicast promiscous
  */
 int be_cmd_multicast_set(struct be_adapter *adapter, u32 if_id,
-		struct dev_mc_list *mc_list, u32 mc_count)
+		struct net_device *netdev, struct be_dma_mem *mem)
 {
-#define BE_MAX_MC		32 /* set mcast promisc if > 32 */
 	struct be_mcc_wrb *wrb;
-	struct be_cmd_req_mcast_mac_config *req;
+	struct be_cmd_req_mcast_mac_config *req = mem->va;
+	struct be_sge *sge;
+	int status;
 
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
-	req = embedded_payload(wrb);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	sge = nonembedded_sgl(wrb);
+	memset(req, 0, sizeof(*req));
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1,
+			OPCODE_COMMON_NTWK_MULTICAST_SET);
+	sge->pa_hi = cpu_to_le32(upper_32_bits(mem->dma));
+	sge->pa_lo = cpu_to_le32(mem->dma & 0xFFFFFFFF);
+	sge->len = cpu_to_le32(mem->size);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_NTWK_MULTICAST_SET, sizeof(*req));
 
 	req->interface_id = if_id;
-	if (mc_list && mc_count <= BE_MAX_MC) {
+	if (netdev) {
 		int i;
-		struct dev_mc_list *mc;
+		struct netdev_hw_addr *ha;
 
-		req->num_mac = cpu_to_le16(mc_count);
+		req->num_mac = cpu_to_le16(netdev_mc_count(netdev));
 
-		for (mc = mc_list, i = 0; mc; mc = mc->next, i++)
-			memcpy(req->mac[i].byte, mc->dmi_addr, ETH_ALEN);
+		i = 0;
+		netdev_for_each_mc_addr(ha, netdev)
+			memcpy(req->mac[i++].byte, ha->addr, ETH_ALEN);
 	} else {
 		req->promiscuous = 1;
 	}
 
-	be_mcc_notify_wait(adapter);
+	status = be_mcc_notify_wait(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
-
-	return 0;
+	return status;
 }
 
 /* Uses synchrounous mcc */
@@ -1033,9 +1269,14 @@ int be_cmd_set_flow_control(struct be_adapter *adapter, u32 tx_fc, u32 rx_fc)
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_SET_FLOW_CONTROL);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_SET_FLOW_CONTROL, sizeof(*req));
@@ -1045,6 +1286,7 @@ int be_cmd_set_flow_control(struct be_adapter *adapter, u32 tx_fc, u32 rx_fc)
 
 	status = be_mcc_notify_wait(adapter);
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
@@ -1059,9 +1301,14 @@ int be_cmd_get_flow_control(struct be_adapter *adapter, u32 *tx_fc, u32 *rx_fc)
 	spin_lock_bh(&adapter->mcc_lock);
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_GET_FLOW_CONTROL);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_GET_FLOW_CONTROL, sizeof(*req));
@@ -1074,23 +1321,27 @@ int be_cmd_get_flow_control(struct be_adapter *adapter, u32 *tx_fc, u32 *rx_fc)
 		*rx_fc = le16_to_cpu(resp->rx_flow_control);
 	}
 
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
 
 /* Uses mbox */
-int be_cmd_query_fw_cfg(struct be_adapter *adapter, u32 *port_num, u32 *cap)
+int be_cmd_query_fw_cfg(struct be_adapter *adapter, u32 *port_num,
+		u32 *mode, u32 *caps)
 {
 	struct be_mcc_wrb *wrb;
 	struct be_cmd_req_query_fw_cfg *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_QUERY_FIRMWARE_CONFIG);
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_QUERY_FIRMWARE_CONFIG, sizeof(*req));
@@ -1099,10 +1350,11 @@ int be_cmd_query_fw_cfg(struct be_adapter *adapter, u32 *port_num, u32 *cap)
 	if (!status) {
 		struct be_cmd_resp_query_fw_cfg *resp = embedded_payload(wrb);
 		*port_num = le32_to_cpu(resp->phys_port);
-		*cap = le32_to_cpu(resp->function_cap);
+		*mode = le32_to_cpu(resp->function_mode);
+		*caps = le32_to_cpu(resp->function_caps);
 	}
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
 	return status;
 }
 
@@ -1113,19 +1365,124 @@ int be_cmd_reset_function(struct be_adapter *adapter)
 	struct be_cmd_req_hdr *req;
 	int status;
 
-	spin_lock(&adapter->mbox_lock);
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
 
 	wrb = wrb_from_mbox(adapter);
 	req = embedded_payload(wrb);
 
-	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0);
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_FUNCTION_RESET);
 
 	be_cmd_hdr_prepare(req, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_FUNCTION_RESET, sizeof(*req));
 
 	status = be_mbox_notify_wait(adapter);
 
-	spin_unlock(&adapter->mbox_lock);
+	mutex_unlock(&adapter->mbox_lock);
+	return status;
+}
+
+int be_cmd_rss_config(struct be_adapter *adapter, u8 *rsstable, u16 table_size)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_rss_config *req;
+	u32 myhash[10];
+	int status;
+
+	if (mutex_lock_interruptible(&adapter->mbox_lock))
+		return -1;
+
+	wrb = wrb_from_mbox(adapter);
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+		OPCODE_ETH_RSS_CONFIG);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH,
+		OPCODE_ETH_RSS_CONFIG, sizeof(*req));
+
+	req->if_id = cpu_to_le32(adapter->if_handle);
+	req->enable_rss = cpu_to_le16(RSS_ENABLE_TCP_IPV4 | RSS_ENABLE_IPV4);
+	req->cpu_table_size_log2 = cpu_to_le16(fls(table_size) - 1);
+	memcpy(req->cpu_table, rsstable, table_size);
+	memcpy(req->hash, myhash, sizeof(myhash));
+	be_dws_cpu_to_le(req->hash, sizeof(req->hash));
+
+	status = be_mbox_notify_wait(adapter);
+
+	mutex_unlock(&adapter->mbox_lock);
+	return status;
+}
+
+/* Uses sync mcc */
+int be_cmd_set_beacon_state(struct be_adapter *adapter, u8 port_num,
+			u8 bcn, u8 sts, u8 state)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_enable_disable_beacon *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_ENABLE_DISABLE_BEACON);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+		OPCODE_COMMON_ENABLE_DISABLE_BEACON, sizeof(*req));
+
+	req->port_num = port_num;
+	req->beacon_state = state;
+	req->beacon_duration = bcn;
+	req->status_duration = sts;
+
+	status = be_mcc_notify_wait(adapter);
+
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+/* Uses sync mcc */
+int be_cmd_get_beacon_state(struct be_adapter *adapter, u8 port_num, u32 *state)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_get_beacon_state *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+			OPCODE_COMMON_GET_BEACON_STATE);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+		OPCODE_COMMON_GET_BEACON_STATE, sizeof(*req));
+
+	req->port_num = port_num;
+
+	status = be_mcc_notify_wait(adapter);
+	if (!status) {
+		struct be_cmd_resp_get_beacon_state *resp =
+						embedded_payload(wrb);
+		*state = resp->beacon_state;
+	}
+
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
 
@@ -1133,16 +1490,24 @@ int be_cmd_write_flashrom(struct be_adapter *adapter, struct be_dma_mem *cmd,
 			u32 flash_type, u32 flash_opcode, u32 buf_size)
 {
 	struct be_mcc_wrb *wrb;
-	struct be_cmd_write_flashrom *req = cmd->va;
+	struct be_cmd_write_flashrom *req;
 	struct be_sge *sge;
 	int status;
 
 	spin_lock_bh(&adapter->mcc_lock);
+	adapter->flash_status = 0;
 
 	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err_unlock;
+	}
+	req = cmd->va;
 	sge = nonembedded_sgl(wrb);
 
-	be_wrb_hdr_prepare(wrb, cmd->size, false, 1);
+	be_wrb_hdr_prepare(wrb, cmd->size, false, 1,
+			OPCODE_COMMON_WRITE_FLASHROM);
+	wrb->tag1 = CMD_SUBSYSTEM_COMMON;
 
 	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
 		OPCODE_COMMON_WRITE_FLASHROM, cmd->size);
@@ -1154,8 +1519,317 @@ int be_cmd_write_flashrom(struct be_adapter *adapter, struct be_dma_mem *cmd,
 	req->params.op_code = cpu_to_le32(flash_opcode);
 	req->params.data_buf_size = cpu_to_le32(buf_size);
 
+	be_mcc_notify(adapter);
+	spin_unlock_bh(&adapter->mcc_lock);
+
+	if (!wait_for_completion_timeout(&adapter->flash_compl,
+			msecs_to_jiffies(12000)))
+		status = -1;
+	else
+		status = adapter->flash_status;
+
+	return status;
+
+err_unlock:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_get_flash_crc(struct be_adapter *adapter, u8 *flashed_crc,
+			 int offset)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_write_flashrom *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req)+4, true, 0,
+			OPCODE_COMMON_READ_FLASHROM);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+		OPCODE_COMMON_READ_FLASHROM, sizeof(*req)+4);
+
+	req->params.op_type = cpu_to_le32(IMG_TYPE_REDBOOT);
+	req->params.op_code = cpu_to_le32(FLASHROM_OPER_REPORT);
+	req->params.offset = cpu_to_le32(offset);
+	req->params.data_buf_size = cpu_to_le32(0x4);
+
+	status = be_mcc_notify_wait(adapter);
+	if (!status)
+		memcpy(flashed_crc, req->params.data_buf, 4);
+
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_enable_magic_wol(struct be_adapter *adapter, u8 *mac,
+				struct be_dma_mem *nonemb_cmd)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_acpi_wol_magic_config *req;
+	struct be_sge *sge;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	req = nonemb_cmd->va;
+	sge = nonembedded_sgl(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1,
+			OPCODE_ETH_ACPI_WOL_MAGIC_CONFIG);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_ETH,
+		OPCODE_ETH_ACPI_WOL_MAGIC_CONFIG, sizeof(*req));
+	memcpy(req->magic_mac, mac, ETH_ALEN);
+
+	sge->pa_hi = cpu_to_le32(upper_32_bits(nonemb_cmd->dma));
+	sge->pa_lo = cpu_to_le32(nonemb_cmd->dma & 0xFFFFFFFF);
+	sge->len = cpu_to_le32(nonemb_cmd->size);
+
 	status = be_mcc_notify_wait(adapter);
 
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_set_loopback(struct be_adapter *adapter, u8 port_num,
+			u8 loopback_type, u8 enable)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_set_lmode *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+				OPCODE_LOWLEVEL_SET_LOOPBACK_MODE);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_LOWLEVEL,
+			OPCODE_LOWLEVEL_SET_LOOPBACK_MODE,
+			sizeof(*req));
+
+	req->src_port = port_num;
+	req->dest_port = port_num;
+	req->loopback_type = loopback_type;
+	req->loopback_state = enable;
+
+	status = be_mcc_notify_wait(adapter);
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_loopback_test(struct be_adapter *adapter, u32 port_num,
+		u32 loopback_type, u32 pkt_size, u32 num_pkts, u64 pattern)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_loopback_test *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+				OPCODE_LOWLEVEL_LOOPBACK_TEST);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_LOWLEVEL,
+			OPCODE_LOWLEVEL_LOOPBACK_TEST, sizeof(*req));
+	req->hdr.timeout = cpu_to_le32(4);
+
+	req->pattern = cpu_to_le64(pattern);
+	req->src_port = cpu_to_le32(port_num);
+	req->dest_port = cpu_to_le32(port_num);
+	req->pkt_size = cpu_to_le32(pkt_size);
+	req->num_pkts = cpu_to_le32(num_pkts);
+	req->loopback_type = cpu_to_le32(loopback_type);
+
+	status = be_mcc_notify_wait(adapter);
+	if (!status) {
+		struct be_cmd_resp_loopback_test *resp = embedded_payload(wrb);
+		status = le32_to_cpu(resp->status);
+	}
+
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_ddr_dma_test(struct be_adapter *adapter, u64 pattern,
+				u32 byte_cnt, struct be_dma_mem *cmd)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_ddrdma_test *req;
+	struct be_sge *sge;
+	int status;
+	int i, j = 0;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+	req = cmd->va;
+	sge = nonembedded_sgl(wrb);
+	be_wrb_hdr_prepare(wrb, cmd->size, false, 1,
+				OPCODE_LOWLEVEL_HOST_DDR_DMA);
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_LOWLEVEL,
+			OPCODE_LOWLEVEL_HOST_DDR_DMA, cmd->size);
+
+	sge->pa_hi = cpu_to_le32(upper_32_bits(cmd->dma));
+	sge->pa_lo = cpu_to_le32(cmd->dma & 0xFFFFFFFF);
+	sge->len = cpu_to_le32(cmd->size);
+
+	req->pattern = cpu_to_le64(pattern);
+	req->byte_count = cpu_to_le32(byte_cnt);
+	for (i = 0; i < byte_cnt; i++) {
+		req->snd_buff[i] = (u8)(pattern >> (j*8));
+		j++;
+		if (j > 7)
+			j = 0;
+	}
+
+	status = be_mcc_notify_wait(adapter);
+
+	if (!status) {
+		struct be_cmd_resp_ddrdma_test *resp;
+		resp = cmd->va;
+		if ((memcmp(resp->rcv_buff, req->snd_buff, byte_cnt) != 0) ||
+				resp->snd_err) {
+			status = -1;
+		}
+	}
+
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_get_seeprom_data(struct be_adapter *adapter,
+				struct be_dma_mem *nonemb_cmd)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_seeprom_read *req;
+	struct be_sge *sge;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	req = nonemb_cmd->va;
+	sge = nonembedded_sgl(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1,
+			OPCODE_COMMON_SEEPROM_READ);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			OPCODE_COMMON_SEEPROM_READ, sizeof(*req));
+
+	sge->pa_hi = cpu_to_le32(upper_32_bits(nonemb_cmd->dma));
+	sge->pa_lo = cpu_to_le32(nonemb_cmd->dma & 0xFFFFFFFF);
+	sge->len = cpu_to_le32(nonemb_cmd->size);
+
+	status = be_mcc_notify_wait(adapter);
+
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_get_phy_info(struct be_adapter *adapter, struct be_dma_mem *cmd)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_get_phy_info *req;
+	struct be_sge *sge;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+
+	req = cmd->va;
+	sge = nonembedded_sgl(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), false, 1,
+				OPCODE_COMMON_GET_PHY_DETAILS);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			OPCODE_COMMON_GET_PHY_DETAILS,
+			sizeof(*req));
+
+	sge->pa_hi = cpu_to_le32(upper_32_bits(cmd->dma));
+	sge->pa_lo = cpu_to_le32(cmd->dma & 0xFFFFFFFF);
+	sge->len = cpu_to_le32(cmd->size);
+
+	status = be_mcc_notify_wait(adapter);
+err:
+	spin_unlock_bh(&adapter->mcc_lock);
+	return status;
+}
+
+int be_cmd_set_qos(struct be_adapter *adapter, u32 bps, u32 domain)
+{
+	struct be_mcc_wrb *wrb;
+	struct be_cmd_req_set_qos *req;
+	int status;
+
+	spin_lock_bh(&adapter->mcc_lock);
+
+	wrb = wrb_from_mccq(adapter);
+	if (!wrb) {
+		status = -EBUSY;
+		goto err;
+	}
+
+	req = embedded_payload(wrb);
+
+	be_wrb_hdr_prepare(wrb, sizeof(*req), true, 0,
+				OPCODE_COMMON_SET_QOS);
+
+	be_cmd_hdr_prepare(&req->hdr, CMD_SUBSYSTEM_COMMON,
+			OPCODE_COMMON_SET_QOS, sizeof(*req));
+
+	req->hdr.domain = domain;
+	req->valid_bits = BE_QOS_BITS_NIC;
+	req->max_bps_nic = bps;
+
+	status = be_mcc_notify_wait(adapter);
+
+err:
 	spin_unlock_bh(&adapter->mcc_lock);
 	return status;
 }
