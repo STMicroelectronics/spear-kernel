@@ -285,8 +285,14 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 	if (offset >= DIV_ROUND_UP(plgpio->chip.ngpio, size))
 		return -EINVAL;
 
+#ifdef CONFIG_ARCH_SPEAR13XX
+	if (trigger != IRQ_TYPE_EDGE_RISING)
+		return -EINVAL;
+#else
 	if (trigger != IRQ_TYPE_LEVEL_HIGH)
 		return -EINVAL;
+#endif
+
 	return 0;
 }
 
