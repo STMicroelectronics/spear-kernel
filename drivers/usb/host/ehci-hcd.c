@@ -543,7 +543,6 @@ static int ehci_init(struct usb_hcd *hcd)
 	 */
 	ehci->periodic_size = DEFAULT_I_TDPS;
 	INIT_LIST_HEAD(&ehci->cached_itd_list);
-	INIT_LIST_HEAD(&ehci->cached_sitd_list);
 	if ((retval = ehci_mem_init(ehci, GFP_KERNEL)) < 0)
 		return retval;
 
@@ -786,10 +785,9 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 
 			/* start 20 msec resume signaling from this port,
 			 * and make khubd collect PORT_STAT_C_SUSPEND to
-			 * stop that signaling.  Use 5 ms extra for safety,
-			 * like usb_port_resume() does.
+			 * stop that signaling.
 			 */
-			ehci->reset_done[i] = jiffies + msecs_to_jiffies(25);
+			ehci->reset_done [i] = jiffies + msecs_to_jiffies (20);
 			ehci_dbg (ehci, "port %d remote wakeup\n", i + 1);
 			mod_timer(&hcd->rh_timer, ehci->reset_done[i]);
 		}
@@ -994,7 +992,7 @@ rescan:
 	/* endpoints can be iso streams.  for now, we don't
 	 * accelerate iso completions ... so spin a while.
 	 */
-	if (qh->hw == NULL) {
+	if (qh->hw->hw_info1 == 0) {
 		ehci_vdbg (ehci, "iso delay\n");
 		goto idle_timeout;
 	}
