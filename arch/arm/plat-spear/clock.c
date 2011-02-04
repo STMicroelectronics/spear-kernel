@@ -491,8 +491,12 @@ round_rate_index(struct clk *clk, unsigned long drate, unsigned long *rate)
 	if (!clk->calc_rate)
 		return -EFAULT;
 
-	if (!drate)
-		return -EINVAL;
+	/* Set default rate if desired rate is 0 */
+	if (!drate) {
+		index = clk->rate_config.default_index;
+		*rate = clk->calc_rate(clk, index);
+		return index;
+	}
 
 	/*
 	 * This loops ends on two conditions:
@@ -532,6 +536,9 @@ long clk_round_rate(struct clk *clk, unsigned long drate)
 {
 	long rate = 0;
 	int index;
+
+	if (!drate)
+		return -EINVAL;
 
 	index = round_rate_index(clk, drate, &rate);
 	if (index >= 0)
