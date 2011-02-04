@@ -12,6 +12,8 @@
 #ifndef __PLAT_UDC_H
 #define __PLAT_UDC_H
 
+#include <linux/platform_device.h>
+
 #define UDC_MAX_ENDPOINT	16
 
 /*
