@@ -884,8 +884,8 @@ struct map_desc spear1310_io_desc[] __initdata = {
 /* This will create static memory mapping for selected devices */
 void __init spear1310_map_io(void)
 {
-	spear13xx_map_io();
 	iotable_init(spear1310_io_desc, ARRAY_SIZE(spear1310_io_desc));
+	spear13xx_map_io();
 }
 
 void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
