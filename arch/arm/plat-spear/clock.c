@@ -165,8 +165,14 @@ static int do_clk_enable(struct clk *clk)
 		 */
 		if (clk->recalc) {
 			ret = clk->recalc(clk, &clk->rate, clk->pclk->rate);
-			if (ret)
+			if (ret) {
+				if (clk->ops && clk->ops->disable)
+					clk->ops->disable(clk);
+				if (clk->pclk)
+					do_clk_disable(clk->pclk);
+
 				goto err;
+			}
 		}
 	}
 	clk->usage_count++;
