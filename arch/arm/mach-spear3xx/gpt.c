@@ -22,7 +22,6 @@
 #include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/gpt.h>
-#include <mach/spear.h>
 
 static struct spear_timer spear3xx_gp_timers[] = {
 	{

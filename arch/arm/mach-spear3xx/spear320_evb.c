@@ -28,9 +28,9 @@
 #include <plat/spi.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
+#include <mach/hardware.h>
 #include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
-#include <mach/spear.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 

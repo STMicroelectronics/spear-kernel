@@ -12,7 +12,6 @@
  */
 
 #include <mach/hardware.h>
-#include <mach/spear.h>
 #include <asm/hardware/vic.h>
 
 		.macro	disable_fiq

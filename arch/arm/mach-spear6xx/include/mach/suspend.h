@@ -14,7 +14,7 @@
 #ifndef __MACH_SUSPEND_H
 #define __MACH_SUSPEND_H
 
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 #ifndef __ASSEMBLER__
 extern void spear_sleep_mode(suspend_state_t state);

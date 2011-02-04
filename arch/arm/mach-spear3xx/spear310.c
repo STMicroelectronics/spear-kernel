@@ -19,7 +19,7 @@
 #include <plat/shirq.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 /* pad multiplexing support */
 

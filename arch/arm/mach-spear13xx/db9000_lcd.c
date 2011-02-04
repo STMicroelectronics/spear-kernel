@@ -17,9 +17,9 @@
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/amba/bus.h>
-#include <mach/spear.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
+#include <mach/hardware.h>
 
 /* This is enough for the size of 800x480 (1.5 MB) */
 #define FRAMESIZE 0x00180000

@@ -22,7 +22,6 @@
 #include <asm/mach/time.h>
 #include <mach/irqs.h>
 #include <mach/hardware.h>
-#include <mach/spear.h>
 #include <mach/generic.h>
 
 /*

@@ -12,7 +12,6 @@
  */
 
 #include <mach/generic.h>
-#include <mach/spear.h>
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;

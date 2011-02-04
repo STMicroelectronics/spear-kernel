@@ -15,7 +15,6 @@
 #define __MACH_SPEAR3XX_H
 
 #include <asm/memory.h>
-#include <mach/hardware.h>
 #include <mach/spear300.h>
 #include <mach/spear310.h>
 #include <mach/spear320.h>

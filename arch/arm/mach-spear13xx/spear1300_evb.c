@@ -31,8 +31,8 @@
 #include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
+#include <mach/hardware.h>
 #include <mach/pcie.h>
-#include <mach/spear.h>
 
 static unsigned long db900fb_buffer_phys;
 

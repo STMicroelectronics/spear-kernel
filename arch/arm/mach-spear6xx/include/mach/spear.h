@@ -15,7 +15,6 @@
 #define __MACH_SPEAR6XX_H
 
 #include <asm/memory.h>
-#include <mach/hardware.h>
 #include <mach/spear600.h>
 
 #define SPEAR6XX_ML_SDRAM_BASE		UL(0x00000000)

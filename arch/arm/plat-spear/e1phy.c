@@ -14,7 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <asm/io.h>
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 int e1phy_init(u32 base, int shift)
 {

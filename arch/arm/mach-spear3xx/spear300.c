@@ -21,7 +21,7 @@
 #include <plat/touchscreen.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 /* modes */
 #define NAND_MODE			(1 << 0)

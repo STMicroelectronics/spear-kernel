@@ -15,9 +15,9 @@
 #include <linux/sysfs.h>
 #include <linux/module.h>
 #include <asm/cacheflush.h>
+#include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/suspend.h>
-#include <mach/hardware.h>
 
 static int spear_pm_sleep(suspend_state_t state)
 {

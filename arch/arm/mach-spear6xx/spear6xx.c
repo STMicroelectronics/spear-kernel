@@ -28,7 +28,7 @@
 #include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 /* The wake sources are routed through vic-2 */
 #define SPEAR6XX_WKUP_SRCS_VIC2		(1 << (IRQ_GMAC_1 - 32) | \

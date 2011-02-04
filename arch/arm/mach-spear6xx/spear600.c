@@ -11,10 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/ptrace.h>
-#include <asm/irq.h>
 #include <mach/generic.h>
-#include <mach/spear.h>
 
 /* Add spear600 specific devices here */
 

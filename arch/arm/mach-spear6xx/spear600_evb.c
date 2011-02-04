@@ -26,7 +26,7 @@
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
-#include <mach/spear.h>
+#include <mach/hardware.h>
 
 /* Ethernet phy device registeration */
 static struct plat_stmmacphy_data phy_private_data = {

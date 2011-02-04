@@ -21,9 +21,9 @@
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
-#include <mach/generic.h>
-#include <mach/spear.h>
 #include <plat/udc.h>
+#include <mach/generic.h>
+#include <mach/hardware.h>
 
 #define SPEAR3XX_WKUP_SRCS	(1 << SPEAR3XX_IRQ_MAC_1 | 1 << \
 		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
