@@ -85,6 +85,20 @@ mmu_off:
 	ldr	r7, MPMC_BASE_P
 	ldr	r8, SYS_CTRL_BASE_P
 
+	ldr	r3, [r7, #0xe4]
+	ldr	r4, =0xffff0000
+
+	/* Latch the current self refresh time */
+	mov	r9, r3
+
+	/* Increase the self refresh exit time */
+	bic	r3, r3, r4
+	ldr	r4, =0xffff
+
+	/* Program the SDRAM self refresh exit time on read command */
+	orr	r3, r3, r4, LSL #16
+	str	r3, [r7, #0xe4]
+
 	/*
 	 * Put SDRAM in self-refresh mode
 	 * Clear START bit(24) of MEMCTL_GP_03 register in MPMC
@@ -202,6 +216,9 @@ wait_till_norm_mode:
 	bic	r1, r1, r4
 	str	r1, [r7, #0x1c]
 
+	/* Restore the SDRAM self refresh exit time on read command */
+	mov	r1, r9
+	str	r1, [r7, #0xe4]
 	/* Begin the command processing in controller */
 	ldr	r4, =0x1000000
 	/* Set START bit(24) of MEMCTL_GP_03 register in MPMC*/
