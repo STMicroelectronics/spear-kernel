@@ -446,6 +446,7 @@ attr_set_enable(struct device *dev, struct device_attribute *attr,
 	return size;
 }
 
+#ifdef L3G4200D_DEBUG
 static ssize_t
 attr_reg_set(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
@@ -508,13 +509,16 @@ attr_addr_set(struct device *dev, struct device_attribute *attr,
 
 	return size;
 }
+#endif
 
 static struct device_attribute attributes[] = {
 	__ATTR(pollrate_ms, 0666, attr_get_polling_rate, attr_set_polling_rate),
 	__ATTR(range, 0666, attr_get_range, attr_set_range),
 	__ATTR(enable, 0666, attr_get_enable, attr_set_enable),
+#ifdef L3G4200D_DEBUG
 	__ATTR(reg_value, 0600, attr_reg_get, attr_reg_set),
 	__ATTR(reg_addr, 0200, NULL, attr_addr_set),
+#endif
 };
 
 static int create_sysfs_interfaces(struct device *dev)
