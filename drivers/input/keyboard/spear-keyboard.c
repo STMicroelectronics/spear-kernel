@@ -57,6 +57,7 @@ struct spear_kbd {
 	void __iomem *io_base;
 	struct clk *clk;
 	unsigned int irq;
+	unsigned int irq_wake;
 	unsigned short last_key;
 	unsigned short keycodes[256];
 };
@@ -282,8 +283,10 @@ static int spear_kbd_suspend(struct device *dev)
 	if (input_dev->users)
 		clk_enable(kbd->clk);
 
-	if (device_may_wakeup(&pdev->dev))
-		enable_irq_wake(kbd->irq);
+	if (device_may_wakeup(&pdev->dev)) {
+		if (!enable_irq_wake(kbd->irq))
+			kbd->irq_wake = 1;
+	}
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -298,8 +301,12 @@ static int spear_kbd_resume(struct device *dev)
 
 	mutex_lock(&input_dev->mutex);
 
-	if (device_may_wakeup(&pdev->dev))
-		disable_irq_wake(kbd->irq);
+	if (device_may_wakeup(&pdev->dev)) {
+		if (kbd->irq_wake) {
+			kbd->irq_wake = 0;
+			disable_irq_wake(kbd->irq);
+		}
+	}
 
 	if (input_dev->users)
 		clk_enable(kbd->clk);
