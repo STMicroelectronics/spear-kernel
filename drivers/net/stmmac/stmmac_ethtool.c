@@ -343,12 +343,17 @@ static int stmmac_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 		return -EINVAL;
 
 	if (wol->wolopts) {
-		pr_info("stmmac: wakeup enable\n");
-		device_set_wakeup_enable(priv->device, 1);
-		enable_irq_wake(dev->irq);
+		if (!device_set_wakeup_enable(priv->device, 1)) {
+			pr_info("stmmac: wakeup enable\n");
+			if (!enable_irq_wake(dev->irq))
+				priv->irq_wake = 1;
+		}
 	} else {
 		device_set_wakeup_enable(priv->device, 0);
-		disable_irq_wake(dev->irq);
+		if (priv->irq_wake) {
+			disable_irq_wake(dev->irq);
+			priv->irq_wake = 0;
+		}
 	}
 
 	spin_lock_irq(&priv->lock);
