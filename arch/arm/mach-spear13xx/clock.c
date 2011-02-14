@@ -492,7 +492,7 @@ static struct clk cfxd_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 4},
 	.private_data = &cfxd_synth_config,
 };
 
@@ -1544,11 +1544,12 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "pcie0",		.clk = &pcie0_clk},
 	{.dev_id = "pcie1",		.clk = &pcie1_clk},
 	{.dev_id = "pcie2",		.clk = &pcie2_clk},
-	{.dev_id = "cfxd",		.clk = &cfxd_clk},
 	{.dev_id = "sdhci",		.clk = &sdhci_clk},
 	{.con_id = "fsmc",		.clk = &fsmc_clk},
 	{.dev_id = "sysram0",		.clk = &sysram0_clk},
 	{.dev_id = "sysram1",		.clk = &sysram1_clk},
+	{.dev_id = "arasan_cf",		.clk = &cfxd_clk},
+	{.dev_id = "arasan_xd",		.clk = &cfxd_clk},
 
 	/* clock derived from apb clk */
 	{.dev_id = "adc",		.clk = &adc_clk},
