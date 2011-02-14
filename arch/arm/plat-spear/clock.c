@@ -543,8 +543,15 @@ long clk_round_rate(struct clk *clk, unsigned long drate)
 	long rate = 0;
 	int index;
 
-	if (!drate)
-		return -EINVAL;
+	/* propage call to parent who supports calc_rate */
+	if (!clk->calc_rate) {
+		u32 mult;
+		if (!clk->pclk)
+			return clk->rate;
+
+		mult = clk->div_factor ? clk->div_factor : 1;
+		return clk_round_rate(clk->pclk, mult * drate) / mult;
+	}
 
 	index = round_rate_index(clk, drate, &rate);
 	if (index >= 0)
