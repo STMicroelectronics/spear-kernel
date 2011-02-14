@@ -29,7 +29,7 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
-	writel(0x01, SYS_SW_RES);
+	writel_relaxed(0x01, SYS_SW_RES);
 }
 
 #endif /* __MACH_SYSTEM_H */
