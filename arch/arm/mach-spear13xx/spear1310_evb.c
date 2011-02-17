@@ -463,7 +463,7 @@ static struct pcie_port_info __initdata pcie_port_info[] = {
  * For a port to be added as device, one must also add device's information
  * in plat_devs array defined in this file.
  */
-static struct pcie_port_info *spear1300_pcie_port_init(int port)
+static struct pcie_port_info *spear1310_pcie_port_init(int port)
 {
 	if (port < 3)
 		return &pcie_port_info[port];
@@ -596,7 +596,7 @@ static void __init spear1310_evb_init(void)
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear1300_pcie_port_init);
+	pcie_init(spear1310_pcie_port_init);
 #endif
 
 	/* Add Platform Devices */
