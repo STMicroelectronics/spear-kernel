@@ -590,7 +590,7 @@ static void __init spear1310_evb_init(void)
 	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
 			0, FSMC_FLASH_WIDTH16);
 	/* Initialize fsmc regiters */
-	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 0,
+	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 3,
 			FSMC_FLASH_WIDTH16);
 
 #ifdef CONFIG_PCIEPORTBUS
