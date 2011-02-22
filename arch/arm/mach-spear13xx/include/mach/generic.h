@@ -230,6 +230,7 @@ extern struct amba_device spear13xx_gpio_device[];
 extern struct amba_device spear13xx_ssp_device;
 extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_adc_device;
+extern struct platform_device spear13xx_cf_device;
 extern struct platform_device spear13xx_db9000_clcd_device;
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;

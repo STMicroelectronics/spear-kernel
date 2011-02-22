@@ -137,6 +137,28 @@ struct platform_device spear13xx_adc_device = {
 	.resource = adc_resources,
 };
 
+/* cf device registeration */
+static struct resource cf_resources[] = {
+	{
+		.start = SPEAR13XX_MCIF_CF_BASE,
+		.end = SPEAR13XX_MCIF_CF_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_CF,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_cf_device = {
+	.name = "arasan_cf",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(cf_resources),
+	.resource = cf_resources,
+};
+
 /* dmac device registeration */
 struct dw_dma_platform_data dmac_plat_data = {8, };
 static struct resource dmac_resources[][2] = {

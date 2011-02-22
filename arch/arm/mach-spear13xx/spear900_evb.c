@@ -18,6 +18,7 @@
 #include <linux/i2c/l3g4200d.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
@@ -124,6 +125,11 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear900 specific devices */
 	&spear900_phy0_device,
+};
+
+static struct arasan_cf_pdata cf_pdata = {
+	.cf_if_clk = CF_IF_CLK_166M,
+	.quirk = CF_BROKEN_UDMA,
 };
 
 /* keyboard specific platform data */
@@ -300,6 +306,9 @@ static void __init spear900_evb_init(void)
 
 	/* set adc platform data */
 	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
+
+	/* set compact flash plat data */
+	set_arasan_cf_pdata(&spear13xx_cf_device, &cf_pdata);
 
 #if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
 	/* db9000_clcd plat data */
