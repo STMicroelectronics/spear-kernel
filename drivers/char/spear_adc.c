@@ -405,7 +405,7 @@ out_slave_sg:
 	g_drv_data->flag_arrived = 0;
 
 out_map_single:
-	dma_unmap_single(chan->device->dev, (dma_addr_t)digital_volt, size,
+	dma_unmap_single(chan->device->dev, dma_addr, size,
 			DMA_FROM_DEVICE);
 	put_sg();
 
