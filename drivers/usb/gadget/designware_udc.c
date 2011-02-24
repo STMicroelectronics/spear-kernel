@@ -2649,7 +2649,7 @@ void dw_udc_remove_proc_files(void)
 }
 #endif /* CONFIG_USB_GADGET_DEBUG_FILES */
 
-static int __init dw_udc_probe(struct platform_device *pdev)
+static int __devinit dw_udc_probe(struct platform_device *pdev)
 {
 	struct udc_platform_data *pdata;
 	struct dw_udc_dev *udev = &the_controller;
@@ -2808,7 +2808,7 @@ err_release_csr_region:
 	return retval;
 }
 
-static int __exit dw_udc_remove(struct platform_device *pdev)
+static int __devexit dw_udc_remove(struct platform_device *pdev)
 {
 	struct udc_platform_data *pdata;
 	struct dw_udc_dev *udev = platform_get_drvdata(pdev);
@@ -2890,7 +2890,7 @@ static const struct dev_pm_ops dw_udc_pm_ops = {
 
 static struct platform_driver dw_udc_driver = {
 	.probe = dw_udc_probe,
-	.remove = __exit_p(dw_udc_remove),
+	.remove = __devexit_p(dw_udc_remove),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = (char *)driver_name,
