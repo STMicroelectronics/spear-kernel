@@ -348,7 +348,7 @@ static inline void c_can_activate_all_lower_rx_msg_obj(struct net_device *dev,
 		priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
 				ctrl_mask & ~(IF_MCONT_MSGLST |
 					IF_MCONT_INTPND | IF_MCONT_NEWDAT));
-		c_can_object_put(dev, iface, i, IF_COMM_CONTROL);
+		c_can_object_put(dev, iface, i + 1, IF_COMM_CONTROL);
 	}
 }
 
@@ -508,13 +508,33 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 	can_put_echo_skb(skb, dev, msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
 
 	/*
-	 * we have to stop the queue in case of a wrap around or
-	 * if the next TX message object is still in use
+	 * SPEAr HW bugfix:
+	 * SPEAr CAN IP expects the 3rd Tx frame's message object to be
+	 * put into the Message RAM only when we have got the Tx OK for the 1st
+	 * Tx frame.
 	 */
 	priv->tx_next++;
-	if (c_can_is_next_tx_obj_busy(priv, get_tx_next_msg_obj(priv)) ||
-			(priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0)
-		netif_stop_queue(dev);
+	if (priv->count % 2 == 0) {
+		if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0) ||
+			(!priv->tx_ok_even) ||
+			c_can_is_next_tx_obj_busy(priv,
+						get_tx_next_msg_obj(priv)))
+			netif_stop_queue(dev);
+
+		/* provide delay to allow proper Tx */
+		mdelay(5);
+		priv->tx_ok_even = 0;
+	} else {
+		if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0) ||
+			(!priv->tx_ok_odd) ||
+			c_can_is_next_tx_obj_busy(priv,
+						get_tx_next_msg_obj(priv)))
+			netif_stop_queue(dev);
+
+		/* provide delay to allow proper Tx */
+		mdelay(5);
+		priv->tx_ok_odd = 0;
+	}
 
 	return NETDEV_TX_OK;
 }
@@ -570,7 +590,7 @@ static void c_can_configure_msg_objects(struct net_device *dev)
 		c_can_inval_msg_object(dev, 0, i);
 
 	/* setup receive message objects */
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i < C_CAN_MSG_OBJ_RX_LAST; i++)
+	for (i = C_CAN_MSG_OBJ_RX_FIRST + 1; i < C_CAN_MSG_OBJ_RX_LAST; i++)
 		c_can_setup_receive_object(dev, 0, i, 0, 0,
 			(IF_MCONT_RXIE | IF_MCONT_UMASK) & ~IF_MCONT_EOB);
 
@@ -643,6 +663,9 @@ static void c_can_start(struct net_device *dev)
 
 	/* reset tx helper pointers */
 	priv->tx_next = priv->tx_echo = 0;
+	priv->tx_ok_odd = 1;
+	priv->tx_ok_even = 1;
+	priv->count = 1;
 }
 
 static void c_can_stop(struct net_device *dev)
@@ -755,12 +778,8 @@ static int c_can_do_rx_poll(struct net_device *dev, int quota)
 			msg_obj <= C_CAN_MSG_OBJ_RX_LAST && quota > 0;
 			val = c_can_read_reg32(priv, &priv->regs->intpnd1),
 			msg_obj++) {
-		/*
-		 * as interrupt pending register's bit n-1 corresponds to
-		 * message object n, we need to handle the same properly.
-		 */
-		if (val & (1 << (msg_obj - 1))) {
-			c_can_object_get(dev, 0, msg_obj, IF_COMM_ALL &
+		if (val & (1 << msg_obj)) {
+			c_can_object_get(dev, 0, msg_obj + 1, IF_COMM_ALL &
 					~IF_COMM_TXRQST);
 			msg_ctrl_save = priv->read_reg(priv,
 					&priv->regs->ifregs[0].msg_cntrl);
@@ -783,11 +802,11 @@ static int c_can_do_rx_poll(struct net_device *dev, int quota)
 
 			if (msg_obj < C_CAN_MSG_RX_LOW_LAST)
 				c_can_mark_rx_msg_obj(dev, 0,
-						msg_ctrl_save, msg_obj);
+						msg_ctrl_save, msg_obj + 1);
 			else if (msg_obj > C_CAN_MSG_RX_LOW_LAST)
 				/* activate this msg obj */
 				c_can_activate_rx_msg_obj(dev, 0,
-						msg_ctrl_save, msg_obj);
+						msg_ctrl_save, msg_obj + 1);
 			else if (msg_obj == C_CAN_MSG_RX_LOW_LAST)
 				/* activate all lower message objects */
 				c_can_activate_all_lower_rx_msg_obj(dev,
@@ -967,9 +986,16 @@ static int c_can_poll(struct napi_struct *napi, int quota)
 					&priv->regs->status);
 
 		/* handle Tx/Rx events */
-		if (priv->current_status & STATUS_TXOK)
+		if (priv->current_status & STATUS_TXOK) {
+			if (priv->count % 2 == 0)
+				priv->tx_ok_even = 1;
+			else
+				priv->tx_ok_odd = 1;
+
+			priv->count++;
 			priv->write_reg(priv, &priv->regs->status,
 					priv->current_status & ~STATUS_TXOK);
+		}
 
 		if (priv->current_status & STATUS_RXOK)
 			priv->write_reg(priv, &priv->regs->status,

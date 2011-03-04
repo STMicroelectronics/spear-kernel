@@ -76,6 +76,9 @@ struct c_can_priv {
 	unsigned int tx_next;
 	unsigned int tx_echo;
 	void *priv;		/* for board-specific data */
+	bool tx_ok_odd;		/* Tx ODD OK flag */
+	bool tx_ok_even;	/* Tx EVEN OK flag */
+	u32 count;
 };
 
 struct net_device *alloc_c_can_dev(void);
