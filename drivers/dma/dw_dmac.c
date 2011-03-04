@@ -280,7 +280,7 @@ static void dwc_scan_descriptors(struct dw_dma *dw, struct dw_dma_chan *dwc)
 	 * miss any, and read LLP before RAW_XFER to ensure it is
 	 * valid if we decide to scan the list.
 	 */
-	dma_writel(dw, CLEAR.BLOCK, dwc->mask);
+	/* dma_writel(dw, CLEAR.BLOCK, dwc->mask); */
 	llp = channel_readl(dwc, LLP);
 	status_xfer = dma_readl(dw, RAW.XFER);
 
@@ -398,7 +398,7 @@ static void dwc_handle_cyclic(struct dw_dma *dw, struct dw_dma_chan *dwc,
 
 		dev_vdbg(chan2dev(&dwc->chan), "new cyclic period llp 0x%08x\n",
 				channel_readl(dwc, LLP));
-		dma_writel(dw, CLEAR.BLOCK, dwc->mask);
+		/* dma_writel(dw, CLEAR.BLOCK, dwc->mask); */
 
 		callback = dwc->cdesc->period_callback;
 		callback_param = dwc->cdesc->period_callback_param;
@@ -437,7 +437,7 @@ static void dwc_handle_cyclic(struct dw_dma *dw, struct dw_dma_chan *dwc,
 		channel_writel(dwc, CTL_LO, 0);
 		channel_writel(dwc, CTL_HI, 0);
 
-		dma_writel(dw, CLEAR.BLOCK, dwc->mask);
+		/* dma_writel(dw, CLEAR.BLOCK, dwc->mask); */
 		dma_writel(dw, CLEAR.ERROR, dwc->mask);
 		dma_writel(dw, CLEAR.XFER, dwc->mask);
 
@@ -452,12 +452,12 @@ static void dw_dma_tasklet(unsigned long data)
 {
 	struct dw_dma *dw = (struct dw_dma *)data;
 	struct dw_dma_chan *dwc;
-	u32 status_block;
+	u32 status_block = 0;
 	u32 status_xfer;
 	u32 status_err;
 	int i;
 
-	status_block = dma_readl(dw, RAW.BLOCK);
+	/* status_block = dma_readl(dw, RAW.BLOCK); */
 	status_xfer = dma_readl(dw, RAW.XFER);
 	status_err = dma_readl(dw, RAW.ERROR);
 
@@ -483,7 +483,7 @@ static void dw_dma_tasklet(unsigned long data)
 	 * will trigger a scan before the whole list is done.
 	 */
 	channel_set_bit(dw, MASK.XFER, dw->all_chan_mask);
-	channel_set_bit(dw, MASK.BLOCK, dw->all_chan_mask);
+	/* channel_set_bit(dw, MASK.BLOCK, dw->all_chan_mask); */
 	channel_set_bit(dw, MASK.ERROR, dw->all_chan_mask);
 }
 
@@ -500,7 +500,7 @@ static irqreturn_t dw_dma_interrupt(int irq, void *dev_id)
 	 * softirq handler.
 	 */
 	channel_clear_bit(dw, MASK.XFER, dw->all_chan_mask);
-	channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask);
+	/* channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask); */
 	channel_clear_bit(dw, MASK.ERROR, dw->all_chan_mask);
 
 	status = dma_readl(dw, STATUS_INT);
@@ -511,7 +511,7 @@ static irqreturn_t dw_dma_interrupt(int irq, void *dev_id)
 
 		/* Try to recover */
 		channel_clear_bit(dw, MASK.XFER, (1 << 8) - 1);
-		channel_clear_bit(dw, MASK.BLOCK, (1 << 8) - 1);
+		/* channel_clear_bit(dw, MASK.BLOCK, (1 << 8) - 1); */
 		channel_clear_bit(dw, MASK.SRC_TRAN, (1 << 8) - 1);
 		channel_clear_bit(dw, MASK.DST_TRAN, (1 << 8) - 1);
 		channel_clear_bit(dw, MASK.ERROR, (1 << 8) - 1);
@@ -927,7 +927,7 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 
 	/* Enable interrupts */
 	channel_set_bit(dw, MASK.XFER, dwc->mask);
-	channel_set_bit(dw, MASK.BLOCK, dwc->mask);
+	/* channel_set_bit(dw, MASK.BLOCK, dwc->mask); */
 	channel_set_bit(dw, MASK.ERROR, dwc->mask);
 
 	spin_unlock_bh(&dwc->lock);
@@ -959,7 +959,7 @@ static void dwc_free_chan_resources(struct dma_chan *chan)
 
 	/* Disable interrupts */
 	channel_clear_bit(dw, MASK.XFER, dwc->mask);
-	channel_clear_bit(dw, MASK.BLOCK, dwc->mask);
+	/* channel_clear_bit(dw, MASK.BLOCK, dwc->mask); */
 	channel_clear_bit(dw, MASK.ERROR, dwc->mask);
 
 	spin_unlock_bh(&dwc->lock);
@@ -1010,7 +1010,7 @@ int dw_dma_cyclic_start(struct dma_chan *chan)
 		return -EBUSY;
 	}
 
-	dma_writel(dw, CLEAR.BLOCK, dwc->mask);
+	/* dma_writel(dw, CLEAR.BLOCK, dwc->mask); */
 	dma_writel(dw, CLEAR.ERROR, dwc->mask);
 	dma_writel(dw, CLEAR.XFER, dwc->mask);
 
@@ -1209,7 +1209,7 @@ void dw_dma_cyclic_free(struct dma_chan *chan)
 	while (dma_readl(dw, CH_EN) & dwc->mask)
 		cpu_relax();
 
-	dma_writel(dw, CLEAR.BLOCK, dwc->mask);
+	/* dma_writel(dw, CLEAR.BLOCK, dwc->mask); */
 	dma_writel(dw, CLEAR.ERROR, dwc->mask);
 	dma_writel(dw, CLEAR.XFER, dwc->mask);
 
@@ -1232,7 +1232,7 @@ static void dw_dma_off(struct dw_dma *dw)
 	dma_writel(dw, CFG, 0);
 
 	channel_clear_bit(dw, MASK.XFER, dw->all_chan_mask);
-	channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask);
+	/* channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask); */
 	channel_clear_bit(dw, MASK.SRC_TRAN, dw->all_chan_mask);
 	channel_clear_bit(dw, MASK.DST_TRAN, dw->all_chan_mask);
 	channel_clear_bit(dw, MASK.ERROR, dw->all_chan_mask);
@@ -1322,13 +1322,13 @@ static int __init dw_probe(struct platform_device *pdev)
 
 	/* Clear/disable all interrupts on all channels. */
 	dma_writel(dw, CLEAR.XFER, dw->all_chan_mask);
-	dma_writel(dw, CLEAR.BLOCK, dw->all_chan_mask);
+	/* dma_writel(dw, CLEAR.BLOCK, dw->all_chan_mask); */
 	dma_writel(dw, CLEAR.SRC_TRAN, dw->all_chan_mask);
 	dma_writel(dw, CLEAR.DST_TRAN, dw->all_chan_mask);
 	dma_writel(dw, CLEAR.ERROR, dw->all_chan_mask);
 
 	channel_clear_bit(dw, MASK.XFER, dw->all_chan_mask);
-	channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask);
+	/* channel_clear_bit(dw, MASK.BLOCK, dw->all_chan_mask); */
 	channel_clear_bit(dw, MASK.SRC_TRAN, dw->all_chan_mask);
 	channel_clear_bit(dw, MASK.DST_TRAN, dw->all_chan_mask);
 	channel_clear_bit(dw, MASK.ERROR, dw->all_chan_mask);
