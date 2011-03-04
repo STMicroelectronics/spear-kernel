@@ -138,6 +138,16 @@ struct platform_device spear13xx_adc_device = {
 };
 
 /* cf device registeration */
+struct dw_dma_slave cf_dma_priv = {
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.cfg_hi = 0,
+	.cfg_lo = 0,
+	.src_master = 0,
+	.dst_master = 0,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+};
+
 static struct resource cf_resources[] = {
 	{
 		.start = SPEAR13XX_MCIF_CF_BASE,

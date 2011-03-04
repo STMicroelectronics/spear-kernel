@@ -127,6 +127,7 @@ static struct platform_device *plat_devs[] __initdata = {
 static struct arasan_cf_pdata cf_pdata = {
 	.cf_if_clk = CF_IF_CLK_166M,
 	.quirk = CF_BROKEN_UDMA,
+	.dma_priv = &cf_dma_priv,
 };
 
 /* keyboard specific platform data */
