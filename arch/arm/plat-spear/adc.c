@@ -45,10 +45,10 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 #ifdef CONFIG_ARCH_SPEAR13XX
 	data.slave.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_ADC);
 	data.slave.cfg_lo = 0;
-	data.slave.sms = DW_DMA_MASTER1;
-	data.slave.dms = DW_DMA_MASTER1;
-	data.slave.smsize = ADC_BURST;
-	data.slave.dmsize = ADC_BURST;
+	data.slave.src_master = 1;
+	data.slave.dst_master = 1;
+	data.slave.src_msize = ADC_BURST;
+	data.slave.dst_msize = ADC_BURST;
 	data.slave.fc = DW_DMA_FC_D_P2M;
 #else
 	data.slave.ctl = DMA_CTL |
