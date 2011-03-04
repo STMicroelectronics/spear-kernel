@@ -90,6 +90,56 @@ static int clcd_setup(struct clcd_fb *fb)
 	return 0;
 }
 
+static int clcd_check(struct clcd_fb *fb, struct fb_var_screeninfo *var)
+{
+	var->xres_virtual = var->xres = (var->xres + 15) & ~15;
+	var->yres_virtual = var->yres = (var->yres + 1) & ~1;
+
+#define CHECK(e, l, h) (var->e < l || var->e > h)
+	if (CHECK(right_margin, (1), 256) ||	/* back porch */
+			CHECK(left_margin, (1), 256) ||	/* front porch */
+			CHECK(hsync_len, (1), 256) ||
+			var->xres > 4096 ||
+			var->lower_margin > 255 ||	/* back porch */
+			var->upper_margin > 255 ||	/* front porch */
+			var->vsync_len > 32 ||
+			var->yres > 1024)
+		return -EINVAL;
+#undef CHECK
+
+	/* single panel mode: PCD = max(PCD, 1) */
+	/* dual panel mode: PCD = max(PCD, 5) */
+
+	/*
+	 * You can't change the grayscale setting, and
+	 * we can only do non-interlaced video.
+	 */
+	if (var->grayscale != fb->fb.var.grayscale ||
+			(var->vmode & FB_VMODE_MASK) != FB_VMODE_NONINTERLACED)
+		return -EINVAL;
+
+#define CHECK(e) (var->e != fb->fb.var.e)
+	if (fb->panel->fixedtimings &&
+			(CHECK(xres)		||
+			 CHECK(yres)		||
+			 CHECK(bits_per_pixel)	||
+			 CHECK(pixclock)	||
+			 CHECK(left_margin)	||
+			 CHECK(right_margin)	||
+			 CHECK(upper_margin)	||
+			 CHECK(lower_margin)	||
+			 CHECK(hsync_len)	||
+			 CHECK(vsync_len)	||
+			 CHECK(sync)))
+		return -EINVAL;
+#undef CHECK
+
+	var->nonstd = 0;
+	var->accel_flags = 0;
+
+	return 0;
+}
+
 static void clcd_remove(struct clcd_fb *fb)
 {
 	dma_free_writecombine(&fb->dev->dev, fb->fb.fix.smem_len,
@@ -106,7 +156,7 @@ static int clcd_mmap(struct clcd_fb *fb, struct vm_area_struct *vma)
 
 struct clcd_board clcd_plat_data = {
 	.name = "spear-clcd",
-	.check = clcdfb_check,
+	.check = clcd_check,
 	.decode = clcdfb_decode,
 	.setup = clcd_setup,
 	.mmap = clcd_mmap,
