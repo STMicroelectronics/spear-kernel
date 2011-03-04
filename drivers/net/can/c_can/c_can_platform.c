@@ -11,7 +11,8 @@
  *
  * Bosch C_CAN controller is compliant to CAN protocol version 2.0 part A and B.
  * Bosch C_CAN user manual can be obtained from:
- * http://www.semiconductors.bosch.de/pdf/Users_Manual_C_CAN.pdf
+ * http://www.semiconductors.bosch.de/media/en/pdf/ipmodules_1/c_can/
+ * users_manual_c_can.pdf
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -57,13 +58,13 @@ static void c_can_plat_write_reg_aligned_to_16bit(struct c_can_priv *priv,
 static u16 c_can_plat_read_reg_aligned_to_32bit(struct c_can_priv *priv,
 						void *reg)
 {
-	return readw(reg + (long)reg - (long)priv->reg_base);
+	return readw(reg + (long)reg - (long)priv->regs);
 }
 
 static void c_can_plat_write_reg_aligned_to_32bit(struct c_can_priv *priv,
 						void *reg, u16 val)
 {
-	writew(val, reg + (long)reg - (long)priv->reg_base);
+	writew(val, reg + (long)reg - (long)priv->regs);
 }
 
 static int __devinit c_can_plat_probe(struct platform_device *pdev)
@@ -73,6 +74,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	struct net_device *dev;
 	struct c_can_priv *priv;
 	struct resource *mem, *irq;
+#ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 
 	/* get the appropriate clk */
@@ -82,6 +84,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto exit;
 	}
+#endif
 
 	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -115,10 +118,11 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	priv = netdev_priv(dev);
 
 	dev->irq = irq->start;
-	priv->irq_flags = irq->flags;
-	priv->reg_base = addr;
+	priv->regs = addr;
+#ifdef CONFIG_HAVE_CLK
 	priv->can.clock.freq = clk_get_rate(clk);
-	priv->clk = clk;
+	priv->priv = clk;
+#endif
 
 	switch (mem->flags & IORESOURCE_MEM_TYPE_MASK) {
 	case IORESOURCE_MEM_32BIT:
@@ -142,8 +146,8 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit_free_device;
 	}
 
-	dev_info(&pdev->dev, "%s device registered (reg_base=%p, irq=%d)\n",
-		 KBUILD_MODNAME, priv->reg_base, dev->irq);
+	dev_info(&pdev->dev, "%s device registered (regs=%p, irq=%d)\n",
+		 KBUILD_MODNAME, priv->regs, dev->irq);
 	return 0;
 
 exit_free_device:
@@ -154,8 +158,10 @@ exit_iounmap:
 exit_release_mem:
 	release_mem_region(mem->start, resource_size(mem));
 exit_free_clk:
+#ifdef CONFIG_HAVE_CLK
 	clk_put(clk);
 exit:
+#endif
 	dev_err(&pdev->dev, "probe failed\n");
 
 	return ret;
@@ -167,19 +173,18 @@ static int __devexit c_can_plat_remove(struct platform_device *pdev)
 	struct c_can_priv *priv = netdev_priv(dev);
 	struct resource *mem;
 
-	/* disable all interrupts */
-	c_can_enable_all_interrupts(priv, DISABLE_ALL_INTERRUPTS);
-
 	unregister_c_can_dev(dev);
 	platform_set_drvdata(pdev, NULL);
 
 	free_c_can_dev(dev);
-	iounmap(priv->reg_base);
+	iounmap(priv->regs);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	release_mem_region(mem->start, resource_size(mem));
 
-	clk_put(priv->clk);
+#ifdef CONFIG_HAVE_CLK
+	clk_put(priv->priv);
+#endif
 
 	return 0;
 }
