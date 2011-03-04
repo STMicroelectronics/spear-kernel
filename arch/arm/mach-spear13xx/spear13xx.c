@@ -160,7 +160,12 @@ struct platform_device spear13xx_cf_device = {
 };
 
 /* dmac device registeration */
-struct dw_dma_platform_data dmac_plat_data = {8, };
+struct dw_dma_platform_data dmac_plat_data = {
+	.nr_channels = 8,
+	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
+	.chan_priority = CHAN_PRIORITY_DESCENDING,
+};
+
 static struct resource dmac_resources[][2] = {
 	[0] = {
 		{
