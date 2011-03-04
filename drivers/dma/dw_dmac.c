@@ -1137,7 +1137,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 					| DWC_CTLL_SRC_WIDTH(reg_width)
 					| DWC_CTLL_DST_FIX
 					| DWC_CTLL_SRC_INC
-					| DWC_CTLL_FC_M2P
+					| DWC_CTLL_FC(dws->fc)
 					| DWC_CTLL_INT_EN);
 			break;
 		case DMA_FROM_DEVICE:
@@ -1148,7 +1148,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 					| DWC_CTLL_DST_WIDTH(reg_width)
 					| DWC_CTLL_DST_INC
 					| DWC_CTLL_SRC_FIX
-					| DWC_CTLL_FC_P2M
+					| DWC_CTLL_FC(dws->fc)
 					| DWC_CTLL_INT_EN);
 			break;
 		default:
