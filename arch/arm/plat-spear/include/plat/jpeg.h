@@ -22,8 +22,8 @@
 #define JPEG_BURST	DW_DMA_MSIZE_8
 #define JPEG_WIDTH	DW_DMA_SLAVE_WIDTH_32BIT
 #define DMA_MAX_COUNT	2048
-#define MEM_MASTER	DW_DMA_MASTER1
-#define JPEG_MASTER	DW_DMA_MASTER1
+#define MEM_MASTER	1
+#define JPEG_MASTER	1
 
 struct jpeg_plat_data {
 	struct dw_dma_slave mem2jpeg_slave;
