@@ -59,19 +59,19 @@ void pcm_init(struct device *dma_dev)
 	data.mem2i2s_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
 	data.mem2i2s_slave.cfg_hi = DWC_CFGH_DST_PER(DMA_REQ_I2S_TX);
 	data.mem2i2s_slave.cfg_lo = 0;
-	data.mem2i2s_slave.sms = DW_DMA_MASTER1;
-	data.mem2i2s_slave.dms = DW_DMA_MASTER1;
-	data.mem2i2s_slave.smsize = DW_DMA_MSIZE_16;
+	data.mem2i2s_slave.src_master = 1;
+	data.mem2i2s_slave.dst_master = 1;
+	data.mem2i2s_slave.src_msize = DW_DMA_MSIZE_16;
 	/* threshold for i2s is 7 */
-	data.mem2i2s_slave.dmsize = DW_DMA_MSIZE_16;
+	data.mem2i2s_slave.dst_msize = DW_DMA_MSIZE_16;
 	data.mem2i2s_slave.fc = DW_DMA_FC_D_M2P;
 
 	data.i2s2mem_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
 	data.i2s2mem_slave.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_I2S_RX);
-	data.i2s2mem_slave.sms = DW_DMA_MASTER1;
-	data.i2s2mem_slave.dms = DW_DMA_MASTER1;
-	data.i2s2mem_slave.smsize = DW_DMA_MSIZE_16;
-	data.i2s2mem_slave.dmsize = DW_DMA_MSIZE_16;
+	data.i2s2mem_slave.src_master = 1;
+	data.i2s2mem_slave.dst_master = 1;
+	data.i2s2mem_slave.src_msize = DW_DMA_MSIZE_16;
+	data.i2s2mem_slave.dst_msize = DW_DMA_MSIZE_16;
 	data.i2s2mem_slave.fc = DW_DMA_FC_D_P2M;
 	data.i2s2mem_slave.cfg_lo = 0;
 
