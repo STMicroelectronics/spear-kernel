@@ -5,37 +5,37 @@
 if ARCH_SPEAR13XX
 
 menu "SPEAr13xx Implementations"
-config BOARD_SPEAR1300_EVB
+config MACH_SPEAR1300_EVB
 	bool "SPEAr1300 Evaluation Board"
-	select MACH_SPEAR1300
+	select CPU_SPEAR1300
 	help
 	  Supports ST SPEAr1300 Evaluation Board
 
-config BOARD_SPEAR1310_EVB
+config MACH_SPEAR1310_EVB
 	bool "SPEAr1310 Evaluation Board"
-	select MACH_SPEAR1310
+	select CPU_SPEAR1310
 	help
 	  Supports ST SPEAr1310 Evaluation Board
 
-config BOARD_SPEAR900_EVB
+config MACH_SPEAR900_EVB
 	bool "SPEAr900 Evaluation Board"
-	select MACH_SPEAR900
+	select CPU_SPEAR900
 	help
 	  Supports ST SPEAr900 Evaluation Board
 
 endmenu
 
-config MACH_SPEAR1300
+config CPU_SPEAR1300
 	bool "SPEAr1300"
 	help
 	  Supports ST SPEAr1300 Machine
 
-config MACH_SPEAR1310
+config CPU_SPEAR1310
 	bool "SPEAr1310"
 	help
 	  Supports ST SPEAr1310 Machine
 
-config MACH_SPEAR900
+config CPU_SPEAR900
 	bool "SPEAr900"
 	help
 	  Supports ST SPEAr900 Machine

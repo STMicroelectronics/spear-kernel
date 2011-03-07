@@ -32,7 +32,7 @@
 #define TDCS_REG		(0x10)
 #define CTRL_REG		(0x14)
 
-#if defined(CONFIG_MACH_SPEAR310)
+#if defined(CONFIG_CPU_SPEAR310)
 #define SPEAR310_TIMEOUT_REG	(0x90)
 #define SPEAR310_ACK_REG	(0x94)
 #define SPEAR310_IRQ_REG	(0x98)
@@ -40,7 +40,7 @@
 #define SPEAR310_EMI_MAX_BANKS	6
 #endif
 
-#if defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR320)
 #define SPEAR320_TIMEOUT_REG	(0x60)
 #define SPEAR320_ACK_REG	(0x64)
 #define SPEAR320_IRQ_REG	(0x68)

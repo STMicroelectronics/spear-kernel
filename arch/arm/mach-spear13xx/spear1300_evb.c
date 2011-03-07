@@ -351,7 +351,7 @@ static void __init spear1300_evb_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
-MACHINE_START(SPEAR1300, "ST-SPEAR1300-EVB")
+MACHINE_START(SPEAR1300_EVB, "ST-SPEAR1300-EVB")
 	.boot_params	=	0x00000100,
 	.fixup		=	spear1300_evb_fixup,
 	.map_io		=	spear13xx_map_io,

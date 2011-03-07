@@ -192,13 +192,9 @@ machine-$(CONFIG_ARCH_VEXPRESS)		:= vexpress
 machine-$(CONFIG_ARCH_W90X900)		:= w90x900
 machine-$(CONFIG_ARCH_NUC93X)		:= nuc93x
 machine-$(CONFIG_FOOTBRIDGE)		:= footbridge
-machine-$(CONFIG_MACH_SPEAR1300)	:= spear13xx
-machine-$(CONFIG_MACH_SPEAR1310)	:= spear13xx
-machine-$(CONFIG_MACH_SPEAR900)		:= spear13xx
-machine-$(CONFIG_MACH_SPEAR300)		:= spear3xx
-machine-$(CONFIG_MACH_SPEAR310)		:= spear3xx
-machine-$(CONFIG_MACH_SPEAR320)		:= spear3xx
-machine-$(CONFIG_MACH_SPEAR600)		:= spear6xx
+machine-$(CONFIG_ARCH_SPEAR13XX)	:= spear13xx
+machine-$(CONFIG_ARCH_SPEAR3XX)		:= spear3xx
+machine-$(CONFIG_ARCH_SPEAR6XX)		:= spear6xx
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.

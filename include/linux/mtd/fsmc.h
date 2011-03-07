@@ -31,7 +31,7 @@
  * Address Latch Enable (ALE) is twised around in the
  * SPEAR310 implementation.
  */
-#if defined(CONFIG_MACH_SPEAR310)
+#if defined(CONFIG_CPU_SPEAR310)
 #define PLAT_NAND_CLE		(1 << 17)
 #define PLAT_NAND_ALE		(1 << 16)
 #else

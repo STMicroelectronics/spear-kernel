@@ -625,7 +625,7 @@ static void __init spear1310_evb_init(void)
 	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
 }
 
-MACHINE_START(SPEAR1310, "ST-SPEAR1310-EVB")
+MACHINE_START(SPEAR1310_EVB, "ST-SPEAR1310-EVB")
 	.boot_params	=	0x00000100,
 	.fixup		=	spear1310_evb_fixup,
 	.map_io		=	spear1310_map_io,

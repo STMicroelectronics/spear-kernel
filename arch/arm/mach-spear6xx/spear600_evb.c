@@ -159,7 +159,7 @@ static void __init spear600_evb_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
-MACHINE_START(SPEAR600, "ST-SPEAR600-EVB")
+MACHINE_START(SPEAR600_EVB, "ST-SPEAR600-EVB")
 	.boot_params	=	0x00000100,
 	.map_io		=	spear6xx_map_io,
 	.init_irq	=	spear6xx_init_irq,

@@ -16,7 +16,7 @@
 
 #include <plat/gpio.h>
 
-#ifdef CONFIG_MACH_SPEAR310
+#ifdef CONFIG_CPU_SPEAR310
 #define SPEAR310_PLGPIO_ENB_OFF		0x0010
 #define SPEAR310_PLGPIO_WDATA_OFF	0x0020
 #define SPEAR310_PLGPIO_DIR_OFF		0x0030
@@ -25,7 +25,7 @@
 #define SPEAR310_PLGPIO_MIS_OFF		0x0060
 #endif
 
-#if defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR320)
 #define SPEAR320_PLGPIO_ENB_OFF		0x0024
 #define SPEAR320_PLGPIO_WDATA_OFF	0x0034
 #define SPEAR320_PLGPIO_DIR_OFF		0x0044
@@ -43,7 +43,7 @@
 #define BASIC_GPIO_6		6
 #define BASIC_GPIO_7		7
 
-#ifdef CONFIG_MACH_SPEAR300
+#ifdef CONFIG_CPU_SPEAR300
 #define RAS_GPIO_0		8
 #define RAS_GPIO_1		9
 #define RAS_GPIO_2		10
@@ -54,7 +54,7 @@
 #define RAS_GPIO_7		15
 #endif
 
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 #define PLGPIO_0		8
 #define PLGPIO_1		9
 #define PLGPIO_2		10
@@ -157,6 +157,6 @@
 #define PLGPIO_99		107
 #define PLGPIO_100		108
 #define PLGPIO_101		109
-#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
+#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 #endif /* __MACH_GPIO_H */

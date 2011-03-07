@@ -302,7 +302,7 @@ static void __init spear310_evb_init(void)
 	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 }
 
-MACHINE_START(SPEAR310, "ST-SPEAR310-EVB")
+MACHINE_START(SPEAR310_EVB, "ST-SPEAR310-EVB")
 	.boot_params	=	0x00000100,
 	.map_io		=	spear3xx_map_io,
 	.init_irq	=	spear3xx_init_irq,

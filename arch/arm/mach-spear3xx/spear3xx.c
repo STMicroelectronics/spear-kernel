@@ -763,7 +763,7 @@ struct pmx_dev spear3xx_pmx_timer_1_2 = {
 	.mode_count = ARRAY_SIZE(pmx_timer_1_2_modes),
 };
 
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* Pad multiplexing for plgpio_0_1 devices */
 static struct pmx_mux_reg pmx_plgpio_0_1_mux[] = {
 	{
@@ -1093,7 +1093,7 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 	.modes = pmx_plgpio_45_46_49_50_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
 };
-#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
+#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 static void __init spear3xx_timer_init(void)
 {

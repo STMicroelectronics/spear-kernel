@@ -35,7 +35,7 @@
 #define PAD_MUX_CONFIG_REG_2	UL(0xE0700658)
 #define PAD_MUX_CONFIG_REG_3	UL(0xE070065C)
 
-#if defined(CONFIG_MACH_SPEAR1310)
+#if defined(CONFIG_CPU_SPEAR1310)
 #define SPEAR1310_FUNC_CNTL_0	UL(0x6C800000)
 
 #define PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
@@ -199,7 +199,7 @@ extern struct pmx_dev pmx_sdhci;
 extern struct pmx_dev pmx_cf;
 extern struct pmx_dev pmx_xd;
 
-#if defined(CONFIG_MACH_SPEAR1310)
+#if defined(CONFIG_CPU_SPEAR1310)
 extern struct pmx_dev pmx_uart1_modem;
 extern struct pmx_dev pmx_uart_1;
 extern struct pmx_dev pmx_uart_2;
@@ -274,15 +274,15 @@ void pcm_init(struct device *dma_dev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */
-#ifdef CONFIG_MACH_SPEAR1300
+#ifdef CONFIG_CPU_SPEAR1300
 /* Add spear1300 machine function declarations here */
 void __init spear1300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 
-#endif /* CONFIG_MACH_SPEAR1300 */
+#endif /* CONFIG_CPU_SPEAR1300 */
 
 /* spear1310 declarations */
-#ifdef CONFIG_MACH_SPEAR1310
+#ifdef CONFIG_CPU_SPEAR1310
 /* Add spear1310 machine device structure declarations here */
 extern struct amba_device spear1310_uart1_device;
 extern struct amba_device spear1310_uart2_device;
@@ -308,14 +308,14 @@ void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1310_map_io(void);
 
-#endif /* CONFIG_MACH_SPEAR1310 */
+#endif /* CONFIG_CPU_SPEAR1310 */
 
 /* spear900 declarations */
-#ifdef CONFIG_MACH_SPEAR900
+#ifdef CONFIG_CPU_SPEAR900
 /* Add spear900 machine function declarations here */
 void __init spear900_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 
-#endif /* CONFIG_MACH_SPEAR900 */
+#endif /* CONFIG_CPU_SPEAR900 */
 
 #endif /* __MACH_GENERIC_H */
