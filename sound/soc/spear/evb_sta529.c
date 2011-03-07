@@ -83,8 +83,8 @@ static struct snd_soc_ops sta529_evb_ops = {
 };
 
 /* spear digital audio interface glue - connects codec <--> CPU */
-static struct snd_soc_dai_link evb_dai = {
-	.name		= "SPEARSTA529",
+static struct snd_soc_dai_link sta529_dai = {
+	.name		= "STA529",
 	.stream_name	= "STA529",
 	.cpu_dai_name	= "spear13xx-i2s.0",
 	.platform_name	= "spear-pcm-audio",
@@ -94,9 +94,9 @@ static struct snd_soc_dai_link evb_dai = {
 };
 
 /* spear audio machine driver */
-static struct snd_soc_card snd_soc_evb = {
-	.name		= "spearevb",
-	.dai_link	= &evb_dai,
+static struct snd_soc_card spear_sta529 = {
+	.name		= "spear_sta529",
+	.dai_link	= &sta529_dai,
 	.num_links	= 1,
 };
 
@@ -113,7 +113,7 @@ static int __init spear_init(void)
 		return -ENOMEM;
 	}
 
-	platform_set_drvdata(evb_snd_device, &snd_soc_evb);
+	platform_set_drvdata(evb_snd_device, &spear_sta529);
 	ret = platform_device_add(evb_snd_device);
 	if (ret) {
 		printk(KERN_ERR "Unable to add platform device\n");
