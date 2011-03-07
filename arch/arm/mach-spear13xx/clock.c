@@ -15,7 +15,6 @@
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
-#include <asm/mach-types.h>
 #include <plat/clock.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
@@ -1285,12 +1284,12 @@ static struct clk ras_tx50_clk = {
 };
 
 /* spear1300 machine specific clock structures */
-#ifdef CONFIG_MACH_SPEAR1300
+#ifdef CONFIG_CPU_SPEAR1300
 
 #endif
 
 /* spear1310 machine specific clock structures */
-#ifdef CONFIG_MACH_SPEAR1310
+#ifdef CONFIG_CPU_SPEAR1310
 /* can0 clock */
 static struct clk can0_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -1578,13 +1577,13 @@ static struct clk_lookup spear_clk_lookups[] = {
 };
 
 /* array of all spear 1300 clock lookups */
-#ifdef CONFIG_MACH_SPEAR1300
+#ifdef CONFIG_CPU_SPEAR1300
 static struct clk_lookup spear1300_clk_lookups[] = {
 };
 #endif
 
 /* array of all spear 1310 clock lookups */
-#ifdef CONFIG_MACH_SPEAR1310
+#ifdef CONFIG_CPU_SPEAR1310
 static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "c_can_platform.0",	.clk = &can0_clk},
 	{.dev_id = "c_can_platform.1",	.clk = &can1_clk},
@@ -1607,7 +1606,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 #endif
 
 /* array of all spear 900 clock lookups */
-#ifdef CONFIG_MACH_SPEAR900
+#ifdef CONFIG_CPU_SPEAR900
 static struct clk_lookup spear900_clk_lookups[] = {
 };
 #endif
@@ -1618,10 +1617,10 @@ void __init spear13xx_clk_init(void)
 	int i, cnt;
 	struct clk_lookup *lookups;
 
-	if (machine_is_spear1300()) {
+	if (cpu_is_spear1300()) {
 		cnt = ARRAY_SIZE(spear1300_clk_lookups);
 		lookups = spear1300_clk_lookups;
-	} else if (machine_is_spear1310()) {
+	} else if (cpu_is_spear1310()) {
 		cnt = ARRAY_SIZE(spear1310_clk_lookups);
 		lookups = spear1310_clk_lookups;
 	} else {

@@ -11,7 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
-#ifdef	CONFIG_MACH_SPEAR300
+#ifdef	CONFIG_CPU_SPEAR300
 
 #ifndef __MACH_SPEAR300_H
 #define __MACH_SPEAR300_H
@@ -50,4 +50,4 @@
 
 #endif /* __MACH_SPEAR300_H */
 
-#endif /* CONFIG_MACH_SPEAR300 */
+#endif /* CONFIG_CPU_SPEAR300 */

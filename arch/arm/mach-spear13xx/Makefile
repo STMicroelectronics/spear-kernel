@@ -12,18 +12,18 @@ obj-$(CONFIG_PM)			+= pm.o sleep.o
 obj-y					+= db9000_lcd.o
 
 # spear1300 specific files
-obj-$(CONFIG_MACH_SPEAR1300)		+= spear1300.o
+obj-$(CONFIG_CPU_SPEAR1300)		+= spear1300.o
 
 # spear1300 boards files
-obj-$(CONFIG_BOARD_SPEAR1300_EVB)	+= spear1300_evb.o
+obj-$(CONFIG_MACH_SPEAR1300_EVB)	+= spear1300_evb.o
 
 # spear1310 specific files
-obj-$(CONFIG_MACH_SPEAR1310)		+= spear1310.o
+obj-$(CONFIG_CPU_SPEAR1310)		+= spear1310.o
 
 # spear1310 boards files
-obj-$(CONFIG_BOARD_SPEAR1310_EVB)	+= spear1310_evb.o
+obj-$(CONFIG_MACH_SPEAR1310_EVB)	+= spear1310_evb.o
 
 # spear900 specific files
-obj-$(CONFIG_MACH_SPEAR900)		+= spear900.o
+obj-$(CONFIG_CPU_SPEAR900)		+= spear900.o
 # spear900 boards files
-obj-$(CONFIG_BOARD_SPEAR900_EVB)	+= spear900_evb.o
+obj-$(CONFIG_MACH_SPEAR900_EVB)	+= spear900_evb.o

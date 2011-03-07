@@ -21,10 +21,10 @@
 *******************************************************************************/
 
 #define DRV_MODULE_VERSION	"Apr_2010"
-#include <asm/mach-types.h>
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
 #include <linux/clk.h>
+#include <mach/hardware.h>
 
 #include "common.h"
 #ifdef CONFIG_STMMAC_TIMER

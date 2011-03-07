@@ -5,15 +5,15 @@
 if ARCH_SPEAR6XX
 
 menu "SPEAr6xx Implementations"
-config BOARD_SPEAR600_EVB
+config MACH_SPEAR600_EVB
 	bool "SPEAr600 Evaluation Board"
-	select MACH_SPEAR600
+	select CPU_SPEAR600
 	help
 	  Supports ST SPEAr600 Evaluation Board
 
 endmenu
 
-config MACH_SPEAR600
+config CPU_SPEAR600
 	bool "SPEAr600"
 	help
 	  Supports ST SPEAr600 Machine
