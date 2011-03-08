@@ -227,6 +227,76 @@ extern struct pmx_dev spear1310_pmx_smii_0_1_2;
 extern struct pmx_dev spear1310_pmx_can;
 #endif
 
+#if defined(CONFIG_CPU_SPEAR1340)
+/* pad mux declarations */
+#define SPEAR1340_PAD_MUX_CONFIG_REG_0	UL(SPEAR13XX_MISC_BASE + 0x6A0)
+#define SPEAR1340_PAD_MUX_CONFIG_REG_1	UL(SPEAR13XX_MISC_BASE + 0x6A4)
+
+/* Write 0 to enable FSMC_16_BIT */
+#define SPEAR1340_PMX_KBD_ROW_COL_MASK		(1 << 0)
+
+/* Write 0 to enable UART0_ENH */
+#define SPEAR1340_PMX_GPT_MASK			(1 << 1) /* Only clk & cpt */
+
+/* Write 0 to enable PWM1 */
+#define SPEAR1340_PMX_KBD_COL5_MASK		(1 << 2)
+
+/* Write 0 to enable PWM2 */
+#define SPEAR1340_PMX_GPT0_TMR0_CPT_MASK	(1 << 3) /* Only clk & cpt */
+
+/* Write 0 to enable PWM3 */
+#define SPEAR1340_PMX_GPT0_TMR1_CLK_MASK	(1 << 4) /* Only clk & cpt */
+
+/* Write 0 to enable PWM0 */
+#define SPEAR1340_PMX_SSP0_CS0_MASK		(1 << 5)
+
+/* Write 0 to enable VIDEO_IN */
+#define SPEAR1340_PMX_CAM3_MASK			(1 << 6)
+
+/* Write 0 to enable VIDEO_IN */
+#define SPEAR1340_PMX_CAM2_MASK			(1 << 7)
+
+/* Write 0 to enable VIDEO_IN */
+#define SPEAR1340_PMX_CAM1_MASK			(1 << 8)
+
+/* Write 0 to enable VIDEO_IN */
+#define SPEAR1340_PMX_CAM0_MASK			(1 << 9)
+
+/* Write 0 to enable TS */
+#define SPEAR1340_PMX_SSP0_CS1_MASK		(1 << 10)
+
+/* Write 0 to enable FSMC PNOR */
+#define SPEAR1340_PMX_MCIF_MASK			(1 << 11)
+
+/* Write 0 to enable CLCD */
+#define SPEAR1340_PMX_ARM_TRACE_MASK		(1 << 12)
+
+/* Write 0 to enable I2S, SSP0_CS2, CEC0, 1, SPDIFF out, CLCD */
+#define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
+
+extern struct pmx_dev spear1340_pmx_fsmc_16bit;
+extern struct pmx_dev spear1340_pmx_keyboard;
+extern struct pmx_dev spear1340_pmx_uart0_enh;
+extern struct pmx_dev spear1340_pmx_gpt_0_1;
+extern struct pmx_dev spear1340_pmx_pwm1;
+extern struct pmx_dev spear1340_pmx_pwm2;
+extern struct pmx_dev spear1340_pmx_pwm3;
+extern struct pmx_dev spear1340_pmx_pwm0;
+extern struct pmx_dev spear1340_pmx_ssp0_cs0;
+extern struct pmx_dev spear1340_pmx_video_in;
+extern struct pmx_dev spear1340_pmx_cam3;
+extern struct pmx_dev spear1340_pmx_cam2;
+extern struct pmx_dev spear1340_pmx_cam1;
+extern struct pmx_dev spear1340_pmx_cam0;
+extern struct pmx_dev spear1340_pmx_ssp0_cs1;
+extern struct pmx_dev spear1340_pmx_fsmc_pnor;
+extern struct pmx_dev spear1340_pmx_mcif;
+extern struct pmx_dev spear1340_pmx_clcd;
+extern struct pmx_dev spear1340_pmx_arm_trace;
+extern struct pmx_dev spear1340_pmx_devs_grp;
+extern struct pmx_dev spear1340_pmx_miphy_dbg;
+#endif
+
 /*
  * Each GPT has 2 timer channels
  * Following GPT channels will be used as clock source and clockevent
@@ -324,6 +394,21 @@ void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 void __init spear1310_map_io(void);
 
 #endif /* CONFIG_CPU_SPEAR1310 */
+
+/* spear1340 declarations */
+#ifdef CONFIG_CPU_SPEAR1340
+/* Add spear1340 machine device structure declarations here */
+extern struct amba_device spear1340_uart1_device;
+extern struct platform_device spear1340_i2c1_device;
+extern struct platform_device spear1340_pwm_device;
+
+/* Add spear1340 machine function declarations here */
+void __init spear1340_clk_init(void);
+void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
+		u8 pmx_dev_count);
+void __init spear1340_map_io(void);
+
+#endif /* CONFIG_CPU_SPEAR1340 */
 
 /* spear900 declarations */
 #ifdef CONFIG_CPU_SPEAR900

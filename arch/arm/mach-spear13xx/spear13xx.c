@@ -306,7 +306,17 @@ struct platform_device spear13xx_fsmc_nor_device = {
 /* nand device registeration */
 void __init nand_mach_init(u32 busw)
 {
-	u32 fsmc_cfg = readl(FSMC_CFG);
+	void __iomem *reg;
+	u32 fsmc_cfg;
+
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		reg = SPEAR1340_FSMC_CFG;
+#endif
+	} else
+		reg = FSMC_CFG;
+
+	fsmc_cfg = readl(reg);
 	fsmc_cfg &= ~(FSMC_MEMSEL_MASK << FSMC_MEMSEL_SHIFT);
 	fsmc_cfg |= (FSMC_MEM_NAND << FSMC_MEMSEL_SHIFT);
 
@@ -315,7 +325,7 @@ void __init nand_mach_init(u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, FSMC_CFG);
+	writel(fsmc_cfg, reg);
 }
 
 static void nand_select_bank(u32 bank, u32 busw)
@@ -933,7 +943,11 @@ void __init spear13xx_init(void)
 #endif
 
 	dmac_setup();
-	set_udc_plat_data(&spear13xx_udc_device);
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
+	if (!cpu_is_spear1340())
+		set_udc_plat_data(&spear13xx_udc_device);
+#endif
 }
 
 /* This will initialize vic */
@@ -1000,7 +1014,12 @@ void __init spear13xx_map_io(void)
 	iotable_init(spear13xx_io_desc, ARRAY_SIZE(spear13xx_io_desc));
 
 	/* This will initialize clock framework */
-	spear13xx_clk_init();
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		spear1340_clk_init();
+#endif
+	} else
+		spear13xx_clk_init();
 }
 
 static void __init spear13xx_timer_init(void)

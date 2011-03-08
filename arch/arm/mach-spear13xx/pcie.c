@@ -50,13 +50,19 @@ struct pcie_port_info *(*pcie_port_init)(int port);
 static struct pcie_port pcie_port[NUM_PCIE_PORTS];
 static void __iomem *pcie_base[NUM_PCIE_PORTS] = {
 	IOMEM(SPEAR13XX_PCIE0_BASE),
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
 	IOMEM(SPEAR13XX_PCIE1_BASE),
 	IOMEM(SPEAR13XX_PCIE2_BASE),
+#endif
 };
 static void __iomem *pcie_app_base[NUM_PCIE_PORTS] = {
 	IOMEM(SPEAR13XX_PCIE0_APP_BASE),
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
 	IOMEM(SPEAR13XX_PCIE1_APP_BASE),
 	IOMEM(SPEAR13XX_PCIE2_APP_BASE),
+#endif
 };
 
 static void enable_dbi_access(struct pcie_app_reg __iomem *app_reg)

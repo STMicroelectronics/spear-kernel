@@ -17,6 +17,7 @@
 #include <asm/memory.h>
 #include <mach/spear1300.h>
 #include <mach/spear1310.h>
+#include <mach/spear1340.h>
 
 #define SPEAR13XX_L2CC_BASE		UL(0xED000000)
 
