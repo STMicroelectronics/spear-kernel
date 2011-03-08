@@ -1398,7 +1398,7 @@ static s32 desigware_jpeg_probe(struct platform_device *pdev)
 	rx_reg = (dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_OUT;
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
-	defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900)
 	set_jpeg_tx_rx_reg(g_drv_data->slaves, tx_reg, rx_reg);
 #endif
 

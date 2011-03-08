@@ -29,7 +29,13 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
-	writel_relaxed(0x01, SYS_SW_RES);
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		writel_relaxed(0x01, SPEAR1340_SYS_SW_RES);
+#endif
+	}
+	else
+		writel_relaxed(0x01, SYS_SW_RES);
 }
 
 #endif /* __MACH_SYSTEM_H */

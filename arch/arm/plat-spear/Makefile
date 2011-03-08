@@ -19,6 +19,7 @@ obj-$(CONFIG_SPEAR_PWM)		+= pwm.o
 
 obj-$(CONFIG_MACH_SPEAR1310_EVB)	+= i2c_eval_board.o
 obj-$(CONFIG_MACH_SPEAR1300_EVB)	+= i2c_eval_board.o
+obj-$(CONFIG_MACH_SPEAR1340_EVB)	+= i2c_eval_board.o
 obj-$(CONFIG_MACH_SPEAR300_EVB)		+= i2c_eval_board.o
 obj-$(CONFIG_MACH_SPEAR310_EVB)		+= i2c_eval_board.o
 obj-$(CONFIG_MACH_SPEAR320_EVB)		+= i2c_eval_board.o
