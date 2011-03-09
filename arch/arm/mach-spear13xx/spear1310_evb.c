@@ -258,26 +258,26 @@ static struct platform_device spear1310_phy4_device = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
-	&pmx_i2c,
-	&pmx_i2s1,
-	&pmx_egpio_grp,
-	&pmx_gmii,
-	&pmx_keyboard_6x6,
-	&pmx_mcif,
-	&pmx_smi_2_chips,
-	&pmx_uart0,
-	&pmx_sdhci,
+	&spear13xx_pmx_i2c,
+	&spear13xx_pmx_i2s1,
+	&spear13xx_pmx_egpio_grp,
+	&spear13xx_pmx_gmii,
+	&spear13xx_pmx_keyboard_6x6,
+	&spear13xx_pmx_mcif,
+	&spear13xx_pmx_smi_2_chips,
+	&spear13xx_pmx_uart0,
+	&spear13xx_pmx_sdhci,
 
 	/* spear1310 specific devices */
-	&pmx_can,
-	&pmx_i2c1,
-	&pmx_smii_0_1_2,
-	&pmx_fsmc16bit_4_chips,
-	&pmx_rs485_hdlc_1_2,
-	&pmx_tdm_hdlc_1_2,
-	&pmx_uart_1,
-	&pmx_uart_2,
-	&pmx_uart_3_4_5,
+	&spear1310_pmx_can,
+	&spear1310_pmx_i2c1,
+	&spear1310_pmx_smii_0_1_2,
+	&spear1310_pmx_fsmc16bit_4_chips,
+	&spear1310_pmx_rs485_hdlc_1_2,
+	&spear1310_pmx_tdm_hdlc_1_2,
+	&spear1310_pmx_uart_1,
+	&spear1310_pmx_uart_2,
+	&spear1310_pmx_uart_3_4_5,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
