@@ -229,8 +229,8 @@ extern struct pmx_dev spear1310_pmx_uart1_modem;
  * Following GPT channels will be used as clock source and clockevent
  */
 #define SPEAR_GPT0_BASE		SPEAR13XX_GPT0_BASE
-#define SPEAR_GPT0_CHAN0_IRQ	IRQ_GPT0_TMR0
-#define SPEAR_GPT0_CHAN1_IRQ	IRQ_GPT0_TMR1
+#define SPEAR_GPT0_CHAN0_IRQ	SPEAR13XX_IRQ_GPT0_TMR0
+#define SPEAR_GPT0_CHAN1_IRQ	SPEAR13XX_IRQ_GPT0_TMR1
 
 /* Add spear13xx family device structure declarations here */
 extern struct amba_device spear13xx_gpio_device[];

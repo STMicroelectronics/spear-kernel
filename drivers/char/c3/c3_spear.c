@@ -49,7 +49,7 @@ static unsigned int *__c3_spear_bus_address;
 
 #if defined(C3_SPEAR13xx)
 
-	#define C3_IRQ	IRQ_C3 /* mach-spear13xx/include/mach/irqs.h */
+	#define C3_IRQ SPEAR13XX_IRQ_C3 /* mach-spear13xx/include/mach/irqs.h */
 
 #else
 
