@@ -969,7 +969,7 @@ static struct irq_chip spear13xx_intx_chip = {
 
 static void spear_pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 {
-	struct pcie_port *pp = &pcie_port[irq - IRQ_PCIE0];
+	struct pcie_port *pp = &pcie_port[irq - SPEAR13XX_IRQ_PCIE0];
 	struct pcie_app_reg __iomem *app_reg = pp->va_app_base;
 	unsigned int status;
 
@@ -1005,7 +1005,8 @@ static void spear13xx_int_init(struct pcie_port *pp)
 	int i, irq;
 	struct pcie_app_reg __iomem *app_reg;
 
-	set_irq_chained_handler(IRQ_PCIE0 + pp->port, spear_pcie_int_handler);
+	set_irq_chained_handler(SPEAR13XX_IRQ_PCIE0 + pp->port,
+			spear_pcie_int_handler);
 
 #ifdef CONFIG_PCI_MSI
 	spear13xx_msi_init(pp);

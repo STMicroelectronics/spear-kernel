@@ -382,7 +382,7 @@ struct amba_device spear1310_uart1_device = {
 		.end = SPEAR1310_UART1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART1, NO_IRQ},
+	.irq = {SPEAR1310_IRQ_UART1, NO_IRQ},
 };
 
 /* uart2 device registeration */
@@ -395,7 +395,7 @@ struct amba_device spear1310_uart2_device = {
 		.end = SPEAR1310_UART2_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART2, NO_IRQ},
+	.irq = {SPEAR1310_IRQ_UART2, NO_IRQ},
 };
 
 /* uart3 device registeration */
@@ -408,7 +408,7 @@ struct amba_device spear1310_uart3_device = {
 		.end = SPEAR1310_UART3_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART3, NO_IRQ},
+	.irq = {SPEAR1310_IRQ_UART3, NO_IRQ},
 };
 
 /* uart4 device registeration */
@@ -421,7 +421,7 @@ struct amba_device spear1310_uart4_device = {
 		.end = SPEAR1310_UART4_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART4, NO_IRQ},
+	.irq = {SPEAR1310_IRQ_UART4, NO_IRQ},
 };
 
 /* uart5 device registeration */
@@ -434,7 +434,7 @@ struct amba_device spear1310_uart5_device = {
 		.end = SPEAR1310_UART5_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART5, NO_IRQ},
+	.irq = {SPEAR1310_IRQ_UART5, NO_IRQ},
 };
 
 /* CAN device registeration */
@@ -444,7 +444,7 @@ static struct resource can0_resources[] = {
 		.end = SPEAR1310_CAN0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_CCAN0,
+		.start = SPEAR1310_IRQ_CCAN0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -462,7 +462,7 @@ static struct resource can1_resources[] = {
 		.end = SPEAR1310_CAN1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_CCAN1,
+		.start = SPEAR1310_IRQ_CCAN1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -493,12 +493,12 @@ static struct resource eth1_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GETH1_SBD,
+		.start = SPEAR1310_IRQ_GETH1_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GETH1_PMT,
+		.start = SPEAR1310_IRQ_GETH1_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -535,12 +535,12 @@ static struct resource eth2_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GETH2_SBD,
+		.start = SPEAR1310_IRQ_GETH2_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GETH2_PMT,
+		.start = SPEAR1310_IRQ_GETH2_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -577,12 +577,12 @@ static struct resource eth3_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GETH3_SBD,
+		.start = SPEAR1310_IRQ_GETH3_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GETH3_PMT,
+		.start = SPEAR1310_IRQ_GETH3_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -619,12 +619,12 @@ static struct resource eth4_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GETH4_SBD,
+		.start = SPEAR1310_IRQ_GETH4_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GETH4_PMT,
+		.start = SPEAR1310_IRQ_GETH4_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -649,7 +649,7 @@ static struct resource i2c1_resources[] = {
 		.end = SPEAR1310_I2C1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_I2C_CNTR,
+		.start = SPEAR1310_IRQ_I2C_CNTR,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -686,7 +686,7 @@ static struct resource plgpio_resources[] = {
 		.end = SPEAR1310_RAS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_PLGPIO,
+		.start = SPEAR1310_IRQ_PLGPIO,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -731,7 +731,7 @@ static struct resource tdm_hdlc_0_resources[] = {
 		.end = SPEAR1310_TDM_E1_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_TDM0,
+		.start = SPEAR1310_IRQ_TDM0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -759,7 +759,7 @@ static struct resource tdm_hdlc_1_resources[] = {
 		.end = SPEAR1310_TDM_E1_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_TDM1,
+		.start = SPEAR1310_IRQ_TDM1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -795,7 +795,7 @@ static struct resource rs485_0_resources[] = {
 		.end = SPEAR1310_RS485_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_RS4850,
+		.start = SPEAR1310_IRQ_RS4850,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -806,7 +806,7 @@ static struct resource rs485_1_resources[] = {
 		.end = SPEAR1310_RS485_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_RS4851,
+		.start = SPEAR1310_IRQ_RS4851,
 		.flags = IORESOURCE_IRQ,
 	},
 };
