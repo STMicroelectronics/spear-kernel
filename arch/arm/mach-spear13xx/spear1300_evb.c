@@ -104,7 +104,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
 	&spear13xx_ehci1_device,
-	&spear13xx_eth0_device,
+	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
 	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,

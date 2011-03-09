@@ -235,7 +235,7 @@ extern struct platform_device spear13xx_db9000_clcd_device;
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
-extern struct platform_device spear13xx_eth0_device;
+extern struct platform_device spear13xx_eth_device;
 extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
 extern struct platform_device spear13xx_i2s0_device;

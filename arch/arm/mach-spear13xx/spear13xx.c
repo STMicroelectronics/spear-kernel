@@ -223,7 +223,7 @@ struct platform_device spear13xx_dmac_device[] = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacenet_data ether0_platform_data = {
+static struct plat_stmmacenet_data ether_platform_data = {
 	.bus_id = 0,
 	.has_gmac = 1,
 	.enh_desc = 1,
@@ -235,32 +235,32 @@ static struct plat_stmmacenet_data ether0_platform_data = {
 	.pmt = 1,
 };
 
-static struct resource eth0_resources[] = {
+static struct resource eth_resources[] = {
 	[0] = {
-		.start = SPEAR13XX_GETH0_BASE,
-		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
+		.start = SPEAR13XX_GETH_BASE,
+		.end = SPEAR13XX_GETH_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GMAC_1,
+		.start = IRQ_GETH_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GMAC_2,
+		.start = IRQ_GETH_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-static u64 eth0_dma_mask = ~(u32) 0;
-struct platform_device spear13xx_eth0_device = {
+static u64 eth_dma_mask = ~(u32) 0;
+struct platform_device spear13xx_eth_device = {
 	.name = "stmmaceth",
 	.id = 0,
-	.num_resources = ARRAY_SIZE(eth0_resources),
-	.resource = eth0_resources,
+	.num_resources = ARRAY_SIZE(eth_resources),
+	.resource = eth_resources,
 	.dev = {
-		.platform_data = &ether0_platform_data,
-		.dma_mask = &eth0_dma_mask,
+		.platform_data = &ether_platform_data,
+		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
 };
@@ -572,8 +572,8 @@ struct platform_device spear13xx_kbd_device = {
 /* clcd db9000 devide registration */
 static struct resource db9000fb_resources[] = {
 	[0] = {
-		.start = SPEAR13XX_DB9000_LCD_BASE,
-		.end = SPEAR13XX_DB9000_LCD_BASE + SZ_4K - 1,
+		.start = SPEAR13XX_CLCD_BASE,
+		.end = SPEAR13XX_CLCD_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
