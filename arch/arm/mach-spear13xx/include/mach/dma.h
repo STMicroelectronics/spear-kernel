@@ -16,7 +16,9 @@
 
 #define MAX_DMA_ADDRESS		0xffffffff
 
-/*request id of all the peripherals.*/
+/* request id of all the peripherals */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 enum dma_master_info {
 	SPEAR13XX_DMA_MASTER_MCIF = 0,
 	SPEAR13XX_DMA_MASTER_FSMC = 1,
@@ -45,5 +47,6 @@ enum request_id {
 	SPEAR13XX_DMA_REQ_I2S_TX = 10,
 	SPEAR13XX_DMA_REQ_I2S_RX = 11,
 };
+#endif
 
 #endif /* __MACH_DMA_H */
