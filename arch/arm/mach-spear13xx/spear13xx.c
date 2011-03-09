@@ -1008,9 +1008,9 @@ struct sys_timer spear13xx_timer = {
 /* Pad multiplexing for i2c device */
 static struct pmx_mux_reg pmx_i2c_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_I2C_MASK,
-		.value = PMX_I2C_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_I2C_MASK,
+		.value = SPEAR13XX_PMX_I2C_MASK,
 	},
 };
 
@@ -1021,7 +1021,7 @@ static struct pmx_dev_mode pmx_i2c_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2c = {
+struct pmx_dev spear13xx_pmx_i2c = {
 	.name = "i2c",
 	.modes = pmx_i2c_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c_modes),
@@ -1030,9 +1030,9 @@ struct pmx_dev pmx_i2c = {
 /* Pad multiplexing for ssp device */
 static struct pmx_mux_reg pmx_ssp_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SSP_MASK,
-		.value = PMX_SSP_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_SSP_MASK,
+		.value = SPEAR13XX_PMX_SSP_MASK,
 	},
 };
 
@@ -1043,7 +1043,7 @@ static struct pmx_dev_mode pmx_ssp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp = {
+struct pmx_dev spear13xx_pmx_ssp = {
 	.name = "ssp",
 	.modes = pmx_ssp_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp_modes),
@@ -1052,9 +1052,9 @@ struct pmx_dev pmx_ssp = {
 /* Pad multiplexing for i2s1 device */
 static struct pmx_mux_reg pmx_i2s1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_I2S1_MASK,
-		.value = PMX_I2S1_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_I2S1_MASK,
+		.value = SPEAR13XX_PMX_I2S1_MASK,
 	},
 };
 
@@ -1065,7 +1065,7 @@ static struct pmx_dev_mode pmx_i2s1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2s1 = {
+struct pmx_dev spear13xx_pmx_i2s1 = {
 	.name = "i2s1",
 	.modes = pmx_i2s1_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s1_modes),
@@ -1074,9 +1074,9 @@ struct pmx_dev pmx_i2s1 = {
 /* Pad multiplexing for i2s2 device */
 static struct pmx_mux_reg pmx_i2s2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_I2S2_MASK,
-		.value = PMX_I2S2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_I2S2_MASK,
+		.value = SPEAR13XX_PMX_I2S2_MASK,
 	},
 };
 
@@ -1087,7 +1087,7 @@ static struct pmx_dev_mode pmx_i2s2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2s2 = {
+struct pmx_dev spear13xx_pmx_i2s2 = {
 	.name = "i2s2",
 	.modes = pmx_i2s2_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s2_modes),
@@ -1096,9 +1096,9 @@ struct pmx_dev pmx_i2s2 = {
 /* Pad multiplexing for clcd device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_CLCD1_MASK,
-		.value = PMX_CLCD1_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_CLCD1_MASK,
+		.value = SPEAR13XX_PMX_CLCD1_MASK,
 	},
 };
 
@@ -1109,7 +1109,7 @@ static struct pmx_dev_mode pmx_clcd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd = {
+struct pmx_dev spear13xx_pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
@@ -1118,13 +1118,13 @@ struct pmx_dev pmx_clcd = {
 /* Pad multiplexing for clcd_hires device */
 static struct pmx_mux_reg pmx_clcd_hires_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_CLCD1_MASK,
-		.value = PMX_CLCD1_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_CLCD1_MASK,
+		.value = SPEAR13XX_PMX_CLCD1_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_CLCD2_MASK,
-		.value = PMX_CLCD2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_CLCD2_MASK,
+		.value = SPEAR13XX_PMX_CLCD2_MASK,
 	},
 };
 
@@ -1135,7 +1135,7 @@ static struct pmx_dev_mode pmx_clcd_hires_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd_hires = {
+struct pmx_dev spear13xx_pmx_clcd_hires = {
 	.name = "clcd_high_res",
 	.modes = pmx_clcd_hires_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_hires_modes),
@@ -1147,13 +1147,13 @@ struct pmx_dev pmx_clcd_hires = {
  */
 static struct pmx_mux_reg pmx_egpio_grp_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_EGPIO_0_GRP_MASK,
-		.value = PMX_EGPIO_0_GRP_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_EGPIO_0_GRP_MASK,
+		.value = SPEAR13XX_PMX_EGPIO_0_GRP_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_EGPIO_1_GRP_MASK,
-		.value = PMX_EGPIO_1_GRP_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_EGPIO_1_GRP_MASK,
+		.value = SPEAR13XX_PMX_EGPIO_1_GRP_MASK,
 	},
 };
 
@@ -1164,7 +1164,7 @@ static struct pmx_dev_mode pmx_egpio_grp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_egpio_grp = {
+struct pmx_dev spear13xx_pmx_egpio_grp = {
 	.name = "egpios",
 	.modes = pmx_egpio_grp_modes,
 	.mode_count = ARRAY_SIZE(pmx_egpio_grp_modes),
@@ -1173,9 +1173,9 @@ struct pmx_dev pmx_egpio_grp = {
 /* Pad multiplexing for smi 2 chips device */
 static struct pmx_mux_reg pmx_smi_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SMI_MASK,
-		.value = PMX_SMI_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_SMI_MASK,
+		.value = SPEAR13XX_PMX_SMI_MASK,
 	},
 };
 
@@ -1186,7 +1186,7 @@ static struct pmx_dev_mode pmx_smi_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smi_2_chips = {
+struct pmx_dev spear13xx_pmx_smi_2_chips = {
 	.name = "smi_2_chips",
 	.modes = pmx_smi_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_smi_2_modes),
@@ -1195,13 +1195,14 @@ struct pmx_dev pmx_smi_2_chips = {
 /* Pad multiplexing for smi 4 chips device */
 static struct pmx_mux_reg pmx_smi_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SMI_MASK,
-		.value = PMX_SMI_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_SMI_MASK,
+		.value = SPEAR13XX_PMX_SMI_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
-		.value = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_SMINCS2_MASK | SPEAR13XX_PMX_SMINCS3_MASK,
+		.value = SPEAR13XX_PMX_SMINCS2_MASK | \
+			 SPEAR13XX_PMX_SMINCS3_MASK,
 	},
 };
 
@@ -1212,7 +1213,7 @@ static struct pmx_dev_mode pmx_smi_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smi_4_chips = {
+struct pmx_dev spear13xx_pmx_smi_4_chips = {
 	.name = "smi_4_chips",
 	.modes = pmx_smi_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_smi_4_modes),
@@ -1221,9 +1222,9 @@ struct pmx_dev pmx_smi_4_chips = {
 /* Pad multiplexing for gmii device */
 static struct pmx_mux_reg pmx_gmii_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_GMII_MASK,
-		.value = PMX_GMII_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_GMII_MASK,
+		.value = SPEAR13XX_PMX_GMII_MASK,
 	},
 };
 
@@ -1234,7 +1235,7 @@ static struct pmx_dev_mode pmx_gmii_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gmii = {
+struct pmx_dev spear13xx_pmx_gmii = {
 	.name = "gmii",
 	.modes = pmx_gmii_modes,
 	.mode_count = ARRAY_SIZE(pmx_gmii_modes),
@@ -1243,13 +1244,15 @@ struct pmx_dev pmx_gmii = {
 /* Pad multiplexing for nand 8bit (4 chips) */
 static struct pmx_mux_reg pmx_nand8_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND8BIT4DEV_0_MASK,
-		.value = PMX_NAND8BIT4DEV_0_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_NAND8BIT4DEV_0_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT4DEV_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND8BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND8BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NAND8BIT4DEV_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT4DEV_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1260,7 +1263,7 @@ static struct pmx_dev_mode pmx_nand8_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_8bit_4_chips = {
+struct pmx_dev spear13xx_pmx_nand_8bit_4_chips = {
 	.name = "nand-8bit_4_chips",
 	.modes = pmx_nand8_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand8_4_modes),
@@ -1269,13 +1272,15 @@ struct pmx_dev pmx_nand_8bit_4_chips = {
 /* Pad multiplexing for nand 8bit device (cs0 only) */
 static struct pmx_mux_reg pmx_nand8_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND8BIT_0_MASK,
-		.value = PMX_NAND8BIT_0_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_NAND8BIT_0_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND8BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND8BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NAND8BIT_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1286,7 +1291,7 @@ static struct pmx_dev_mode pmx_nand8_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_8bit = {
+struct pmx_dev spear13xx_pmx_nand_8bit = {
 	.name = "nand-8bit",
 	.modes = pmx_nand8_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand8_modes),
@@ -1300,13 +1305,15 @@ struct pmx_dev pmx_nand_8bit = {
  */
 static struct pmx_mux_reg pmx_nand16_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND16BIT4DEV_0_MASK,
-		.value = PMX_NAND16BIT4DEV_0_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_NAND16BIT4DEV_0_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT4DEV_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND16BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND16BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NAND16BIT4DEV_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT4DEV_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1317,7 +1324,7 @@ static struct pmx_dev_mode pmx_nand16_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_16bit_4_chips = {
+struct pmx_dev spear13xx_pmx_nand_16bit_4_chips = {
 	.name = "nand-16bit_4_chips",
 	.modes = pmx_nand16_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand16_4_modes),
@@ -1326,13 +1333,15 @@ struct pmx_dev pmx_nand_16bit_4_chips = {
 /* Pad multiplexing for nand 16bit device (cs0 only) */
 static struct pmx_mux_reg pmx_nand16_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND16BIT_0_MASK,
-		.value = PMX_NAND16BIT_0_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_NAND16BIT_0_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND16BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND16BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NAND16BIT_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1343,7 +1352,7 @@ static struct pmx_dev_mode pmx_nand16_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_16bit = {
+struct pmx_dev spear13xx_pmx_nand_16bit = {
 	.name = "nand-16bit",
 	.modes = pmx_nand16_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand16_modes),
@@ -1352,13 +1361,14 @@ struct pmx_dev pmx_nand_16bit = {
 /* Pad multiplexing for keyboard_6x6 device */
 static struct pmx_mux_reg pmx_keyboard_6x6_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_KEYBOARD_6X6_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NFIO815_MASK | PMX_NFCE1_MASK | \
-			PMX_NFCE2_MASK | PMX_NFWPRT1_MASK | PMX_NFWPRT2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NFIO815_MASK | SPEAR13XX_PMX_NFCE1_MASK |\
+			SPEAR13XX_PMX_NFCE2_MASK | SPEAR13XX_PMX_NFWPRT1_MASK |\
+			SPEAR13XX_PMX_NFWPRT2_MASK,
 		.value = 0,
 	},
 };
@@ -1370,7 +1380,7 @@ static struct pmx_dev_mode pmx_keyboard_6x6_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_keyboard_6x6 = {
+struct pmx_dev spear13xx_pmx_keyboard_6x6 = {
 	.name = "keyboard_6x6",
 	.modes = pmx_keyboard_6x6_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_6x6_modes),
@@ -1379,13 +1389,16 @@ struct pmx_dev pmx_keyboard_6x6 = {
 /* Pad multiplexing for keyboard_9x9 device */
 static struct pmx_mux_reg pmx_keyboard_9x9_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_KEYBOARD_6X6_MASK | PMX_KBD_ROWCOL68_MASK,
-		.value = PMX_KEYBOARD_6X6_MASK | PMX_KBD_ROWCOL68_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_KEYBOARD_6X6_MASK | \
+			SPEAR13XX_PMX_KBD_ROWCOL68_MASK,
+		.value = SPEAR13XX_PMX_KEYBOARD_6X6_MASK | \
+			 SPEAR13XX_PMX_KBD_ROWCOL68_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NFIO815_MASK | PMX_NFCE1_MASK | \
-			PMX_NFCE2_MASK | PMX_NFWPRT1_MASK | PMX_NFWPRT2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_NFIO815_MASK | SPEAR13XX_PMX_NFCE1_MASK |\
+			SPEAR13XX_PMX_NFCE2_MASK | SPEAR13XX_PMX_NFWPRT1_MASK |\
+			SPEAR13XX_PMX_NFWPRT2_MASK,
 		.value = 0,
 	},
 };
@@ -1397,7 +1410,7 @@ static struct pmx_dev_mode pmx_keyboard_9x9_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_keyboard_9x9 = {
+struct pmx_dev spear13xx_pmx_keyboard_9x9 = {
 	.name = "keyboard_9x9",
 	.modes = pmx_keyboard_9x9_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_9x9_modes),
@@ -1406,9 +1419,9 @@ struct pmx_dev pmx_keyboard_9x9 = {
 /* Pad multiplexing for uart0 device */
 static struct pmx_mux_reg pmx_uart0_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_UART0_MASK,
-		.value = PMX_UART0_MASK,
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_UART0_MASK,
+		.value = SPEAR13XX_PMX_UART0_MASK,
 	},
 };
 
@@ -1419,7 +1432,7 @@ static struct pmx_dev_mode pmx_uart0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0 = {
+struct pmx_dev spear13xx_pmx_uart0 = {
 	.name = "uart0",
 	.modes = pmx_uart0_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modes),
@@ -1428,9 +1441,9 @@ struct pmx_dev pmx_uart0 = {
 /* Pad multiplexing for uart0_modem device */
 static struct pmx_mux_reg pmx_uart0_modem_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_UART0_MODEM_MASK,
-		.value = PMX_UART0_MODEM_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_UART0_MODEM_MASK,
+		.value = SPEAR13XX_PMX_UART0_MODEM_MASK,
 	},
 };
 
@@ -1441,7 +1454,7 @@ static struct pmx_dev_mode pmx_uart0_modem_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0_modem = {
+struct pmx_dev spear13xx_pmx_uart0_modem = {
 	.name = "uart0_modem",
 	.modes = pmx_uart0_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modem_modes),
@@ -1450,9 +1463,9 @@ struct pmx_dev pmx_uart0_modem = {
 /* Pad multiplexing for gpt_0_1 device */
 static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT0_TMR1_MASK,
-		.value = PMX_GPT0_TMR1_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_GPT0_TMR1_MASK,
+		.value = SPEAR13XX_PMX_GPT0_TMR1_MASK,
 	},
 };
 
@@ -1463,7 +1476,7 @@ static struct pmx_dev_mode pmx_gpt_0_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_0_1 = {
+struct pmx_dev spear13xx_pmx_gpt_0_1 = {
 	.name = "gpt_0_1",
 	.modes = pmx_gpt_0_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_0_1_modes),
@@ -1472,9 +1485,9 @@ struct pmx_dev pmx_gpt_0_1 = {
 /* Pad multiplexing for gpt_0_2 device */
 static struct pmx_mux_reg pmx_gpt_0_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT0_TMR2_MASK,
-		.value = PMX_GPT0_TMR2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_GPT0_TMR2_MASK,
+		.value = SPEAR13XX_PMX_GPT0_TMR2_MASK,
 	},
 };
 
@@ -1485,7 +1498,7 @@ static struct pmx_dev_mode pmx_gpt_0_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_0_2 = {
+struct pmx_dev spear13xx_pmx_gpt_0_2 = {
 	.name = "gpt_0_2",
 	.modes = pmx_gpt_0_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_0_2_modes),
@@ -1494,9 +1507,9 @@ struct pmx_dev pmx_gpt_0_2 = {
 /* Pad multiplexing for gpt_1_1 device */
 static struct pmx_mux_reg pmx_gpt_1_1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT1_TMR1_MASK,
-		.value = PMX_GPT1_TMR1_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_GPT1_TMR1_MASK,
+		.value = SPEAR13XX_PMX_GPT1_TMR1_MASK,
 	},
 };
 
@@ -1507,7 +1520,7 @@ static struct pmx_dev_mode pmx_gpt_1_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_1_1 = {
+struct pmx_dev spear13xx_pmx_gpt_1_1 = {
 	.name = "gpt_1_1",
 	.modes = pmx_gpt_1_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_1_1_modes),
@@ -1516,9 +1529,9 @@ struct pmx_dev pmx_gpt_1_1 = {
 /* Pad multiplexing for gpt_1_2 device */
 static struct pmx_mux_reg pmx_gpt_1_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT1_TMR2_MASK,
-		.value = PMX_GPT1_TMR2_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_GPT1_TMR2_MASK,
+		.value = SPEAR13XX_PMX_GPT1_TMR2_MASK,
 	},
 };
 
@@ -1529,7 +1542,7 @@ static struct pmx_dev_mode pmx_gpt_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_1_2 = {
+struct pmx_dev spear13xx_pmx_gpt_1_2 = {
 	.name = "gpt_1_2",
 	.modes = pmx_gpt_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_1_2_modes),
@@ -1538,13 +1551,13 @@ struct pmx_dev pmx_gpt_1_2 = {
 /* Pad multiplexing for mcif device */
 static struct pmx_mux_reg pmx_mcif_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_MCIFALL_1_MASK,
-		.value = PMX_MCIFALL_1_MASK,
+		.address = SPEAR13XX_PMX_CFG1,
+		.mask = SPEAR13XX_PMX_MCIFALL_1_MASK,
+		.value = SPEAR13XX_PMX_MCIFALL_1_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_2,
-		.mask = PMX_MCIFALL_2_MASK,
-		.value = PMX_MCIFALL_2_MASK,
+		.address = SPEAR13XX_PMX_CFG2,
+		.mask = SPEAR13XX_PMX_MCIFALL_2_MASK,
+		.value = SPEAR13XX_PMX_MCIFALL_2_MASK,
 	},
 };
 
@@ -1555,7 +1568,7 @@ static struct pmx_dev_mode pmx_mcif_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_mcif = {
+struct pmx_dev spear13xx_pmx_mcif = {
 	.name = "mcif",
 	.modes = pmx_mcif_modes,
 	.mode_count = ARRAY_SIZE(pmx_mcif_modes),
@@ -1577,7 +1590,7 @@ static struct pmx_dev_mode pmx_sdhci_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_sdhci = {
+struct pmx_dev spear13xx_pmx_sdhci = {
 	.name = "sdhci",
 	.modes = pmx_sdhci_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
@@ -1599,7 +1612,7 @@ static struct pmx_dev_mode pmx_cf_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_cf = {
+struct pmx_dev spear13xx_pmx_cf = {
 	.name = "cf",
 	.modes = pmx_cf_modes,
 	.mode_count = ARRAY_SIZE(pmx_cf_modes),
@@ -1621,7 +1634,7 @@ static struct pmx_dev_mode pmx_xd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_xd = {
+struct pmx_dev spear13xx_pmx_xd = {
 	.name = "xd",
 	.modes = pmx_xd_modes,
 	.mode_count = ARRAY_SIZE(pmx_xd_modes),

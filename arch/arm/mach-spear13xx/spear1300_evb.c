@@ -72,19 +72,19 @@ static struct platform_device spear1300_phy0_device = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
-	&pmx_i2c,
-	&pmx_i2s1,
-	&pmx_i2s2,
-	&pmx_clcd,
-	&pmx_egpio_grp,
-	&pmx_gmii,
-	&pmx_keyboard_6x6,
-	&pmx_mcif,
-	&pmx_nand_8bit,
-	&pmx_smi_4_chips,
-	&pmx_ssp,
-	&pmx_uart0,
-	&pmx_sdhci,
+	&spear13xx_pmx_i2c,
+	&spear13xx_pmx_i2s1,
+	&spear13xx_pmx_i2s2,
+	&spear13xx_pmx_clcd,
+	&spear13xx_pmx_egpio_grp,
+	&spear13xx_pmx_gmii,
+	&spear13xx_pmx_keyboard_6x6,
+	&spear13xx_pmx_mcif,
+	&spear13xx_pmx_nand_8bit,
+	&spear13xx_pmx_smi_4_chips,
+	&spear13xx_pmx_ssp,
+	&spear13xx_pmx_uart0,
+	&spear13xx_pmx_sdhci,
 
 	/* spear1300 specific devices */
 };
