@@ -23,6 +23,8 @@
 #include <asm/setup.h>
 #include <plat/padmux.h>
 
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
 /*
  * Function enable (Pad multiplexing register) offsets
  */
@@ -33,13 +35,6 @@
 #define SPEAR13XX_PMX_CFG1		UL(0xE0700654)
 #define SPEAR13XX_PMX_CFG2		UL(0xE0700658)
 #define SPEAR13XX_PMX_CFG3		UL(0xE070065C)
-
-#if defined(CONFIG_CPU_SPEAR1310)
-#define SPEAR1310_FUNC_CNTL_0		UL(0x6C800000)
-
-#define SPEAR1310_PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
-#define SPEAR1310_PMX_EGPIO7_MASK	(1 << 2)	/* Pcm cfg reg */
-#endif
 
 /* pad mux declarations */
 #define SPEAR13XX_PMX_I2S1_MASK		(1 << 3)
@@ -208,8 +203,14 @@ extern struct pmx_dev spear13xx_pmx_mcif;
 extern struct pmx_dev spear13xx_pmx_sdhci;
 extern struct pmx_dev spear13xx_pmx_cf;
 extern struct pmx_dev spear13xx_pmx_xd;
+#endif
 
 #if defined(CONFIG_CPU_SPEAR1310)
+#define SPEAR1310_FUNC_CNTL_0		UL(0x6C800000)
+
+#define SPEAR1310_PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
+#define SPEAR1310_PMX_EGPIO7_MASK	(1 << 2)	/* Pcm cfg reg */
+
 extern struct pmx_dev spear1310_pmx_uart1_modem;
 extern struct pmx_dev spear1310_pmx_uart_1;
 extern struct pmx_dev spear1310_pmx_uart_2;
@@ -247,22 +248,27 @@ extern struct platform_device spear13xx_ehci1_device;
 extern struct platform_device spear13xx_eth_device;
 extern struct platform_device spear13xx_fsmc_nor_device;
 extern struct platform_device spear13xx_i2c_device;
-extern struct platform_device spear13xx_i2s0_device;
-extern struct platform_device spear13xx_i2s1_device;
-extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
 extern struct platform_device spear13xx_pcie_gadget0_device;
-extern struct platform_device spear13xx_pcie_gadget1_device;
-extern struct platform_device spear13xx_pcie_gadget2_device;
 extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
-extern struct platform_device spear13xx_udc_device;
 extern struct platform_device spear13xx_wdt_device;
+
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
+extern struct platform_device spear13xx_i2s0_device;
+extern struct platform_device spear13xx_i2s1_device;
+extern struct platform_device spear13xx_jpeg_device;
+extern struct platform_device spear13xx_pcie_gadget1_device;
+extern struct platform_device spear13xx_pcie_gadget2_device;
+extern struct platform_device spear13xx_udc_device;
+#endif
+
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */

@@ -263,67 +263,6 @@ struct platform_device spear13xx_eth_device = {
 	},
 };
 
-/* i2s0 device registeration */
-static struct resource i2s0_resources[] = {
-	{
-		.start	= SPEAR13XX_I2S0_BASE,
-		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-
-		.name	= "play_irq",
-		.start	= SPEAR13XX_IRQ_PLAY_I2S0,
-		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "record_irq",
-		.start	= SPEAR13XX_IRQ_REC_I2S0,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_i2s0_device = {
-	.name = "spear13xx-i2s",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(i2s0_resources),
-	.resource = i2s0_resources,
-};
-
-/* i2s1 device registeration */
-static struct resource i2s1_resources[] = {
-	{
-		.start	= SPEAR13XX_I2S1_BASE,
-		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-
-		.name	= "play_irq",
-		.start	= SPEAR13XX_IRQ_PLAY_I2S1,
-		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "record_irq",
-		.start	= SPEAR13XX_IRQ_REC_I2S1,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_i2s1_device = {
-	.name = "spear13xx-i2s",
-	.id = 1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(i2s1_resources),
-	.resource = i2s1_resources,
-};
-
-struct platform_device spear13xx_pcm_device = {
-	.name		= "spear-pcm-audio",
-	.id		= -1,
-};
-
 /* i2c device registeration */
 static struct resource i2c_resources[] = {
 	{
@@ -526,28 +465,6 @@ struct platform_device spear13xx_ohci1_device = {
 	.resource = ohci1_resources,
 };
 
-/* jpeg device registeration */
-static struct resource jpeg_resources[] = {
-	{
-		.start = SPEAR13XX_JPEG_BASE,
-		.end = SPEAR13XX_JPEG_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_IRQ_JPEG,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_jpeg_device = {
-	.name = "jpeg-designware",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(jpeg_resources),
-	.resource = jpeg_resources,
-};
-
 /* keyboard device registration */
 static struct resource kbd_resources[] = {
 	{
@@ -672,6 +589,149 @@ struct platform_device spear13xx_pcie_gadget0_device = {
 	.resource = pcie_gadget0_resources,
 };
 
+/* sdhci (sdio) device declaration */
+static struct resource sdhci_resources[] = {
+	{
+		.start	= SPEAR13XX_MCIF_SDHCI_BASE,
+		.end	= SPEAR13XX_MCIF_SDHCI_BASE + SZ_256 - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+		.start	= SPEAR13XX_IRQ_SDHCI,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device spear13xx_sdhci_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.name = "sdhci",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(sdhci_resources),
+	.resource = sdhci_resources,
+};
+
+/* smi device registration */
+static struct resource smi_resources[] = {
+	{
+		.start = SPEAR13XX_SMI_CTRL_BASE,
+		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_SMI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_smi_device = {
+	.name = "smi",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(smi_resources),
+	.resource = smi_resources,
+};
+
+/* wdt device registration */
+static struct resource wdt_resources[] = {
+	{
+		.start = SPEAR13XX_WDT_BASE,
+		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear13xx_wdt_device = {
+	.name = "cortexa9-wdt",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(wdt_resources),
+	.resource = wdt_resources,
+};
+
+/* Devices present on CPU_SPEAR1300, CPU_SPEAR1310 or CPU_SPEAR900 */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
+/* i2s0 device registeration */
+static struct resource i2s0_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S0_BASE,
+		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= SPEAR13XX_IRQ_PLAY_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= SPEAR13XX_IRQ_REC_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s0_device = {
+	.name = "spear13xx-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s0_resources),
+	.resource = i2s0_resources,
+};
+
+/* i2s1 device registeration */
+static struct resource i2s1_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S1_BASE,
+		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= SPEAR13XX_IRQ_PLAY_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= SPEAR13XX_IRQ_REC_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s1_device = {
+	.name = "spear13xx-i2s",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2s1_resources),
+	.resource = i2s1_resources,
+};
+
+struct platform_device spear13xx_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
+};
+
+/* jpeg device registeration */
+static struct resource jpeg_resources[] = {
+	{
+		.start = SPEAR13XX_JPEG_BASE,
+		.end = SPEAR13XX_JPEG_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_JPEG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_jpeg_device = {
+	.name = "jpeg-designware",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(jpeg_resources),
+	.resource = jpeg_resources,
+};
+
 static int pcie_gadget1_id;
 static u64 pcie_gadget1_dmamask = ~0;
 static struct resource pcie_gadget1_resources[] = {
@@ -730,47 +790,6 @@ struct platform_device spear13xx_pcie_gadget2_device = {
 	.resource = pcie_gadget2_resources,
 };
 
-/* sdhci (sdio) device declaration */
-static struct resource sdhci_resources[] = {
-	{
-		.start	= SPEAR13XX_MCIF_SDHCI_BASE,
-		.end	= SPEAR13XX_MCIF_SDHCI_BASE + SZ_256 - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-		.start	= SPEAR13XX_IRQ_SDHCI,
-		.flags	= IORESOURCE_IRQ,
-	}
-};
-
-struct platform_device spear13xx_sdhci_device = {
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.name = "sdhci",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(sdhci_resources),
-	.resource = sdhci_resources,
-};
-
-/* smi device registration */
-static struct resource smi_resources[] = {
-	{
-		.start = SPEAR13XX_SMI_CTRL_BASE,
-		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_IRQ_SMI,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_smi_device = {
-	.name = "smi",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(smi_resources),
-	.resource = smi_resources,
-};
-
 /* usb device registeration */
 static struct resource udc_resources[] = {
 	[0] = {
@@ -799,22 +818,7 @@ struct platform_device spear13xx_udc_device = {
 	.num_resources = ARRAY_SIZE(udc_resources),
 	.resource = udc_resources,
 };
-
-/* wdt device registration */
-static struct resource wdt_resources[] = {
-	{
-		.start = SPEAR13XX_WDT_BASE,
-		.end = SPEAR13XX_WDT_BASE + SZ_256 - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
-struct platform_device spear13xx_wdt_device = {
-	.name = "cortexa9-wdt",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(wdt_resources),
-	.resource = wdt_resources,
-};
+#endif
 
 static void dmac_setup(void)
 {
@@ -1035,6 +1039,8 @@ struct sys_timer spear13xx_timer = {
 	.init = spear13xx_timer_init,
 };
 
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+			defined(CONFIG_CPU_SPEAR900)
 /* pad multiplexing support */
 /* devices */
 
@@ -1738,3 +1744,4 @@ struct pmx_dev spear13xx_pmx_ssp0_cs1_2 = {
 	.modes = pmx_ssp0_cs1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_2_modes),
 };
+#endif
