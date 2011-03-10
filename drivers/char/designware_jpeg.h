@@ -235,10 +235,10 @@ static inline void jpeg_reset(struct jpeg_regs *regs)
 	void __iomem *addr;
 
 	/*done bcoz h/w doesn't reset this register.*/
-	regs->CTRL_REG.BYTES_BEF_INT = 0;
+	writel(0, &regs->CTRL_REG.BYTES_BEF_INT);
 
-	regs->REG0 = JPEG_DISABLE;
-	regs->CTRL_REG.STATUS = JPEG_RESET;
+	writel(JPEG_DISABLE, &regs->REG0);
+	writel(JPEG_RESET, &regs->CTRL_REG.STATUS);
 
 	/*
 	 * we need to reset ip from misc due to issue: hardware not resetting

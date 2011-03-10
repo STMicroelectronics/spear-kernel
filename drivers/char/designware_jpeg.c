@@ -291,24 +291,28 @@ static void jpeg_abort(s32 error)
  */
 void jpeg_enable(u32 num_lli, u32 num_burst)
 {
+	u32 val;
+
 	/* configure ctrl register for number of llis */
-	g_drv_data->regs->CTRL_REG.STATUS = NUM_LLI(num_lli);
+	writel(NUM_LLI(num_lli), &g_drv_data->regs->CTRL_REG.STATUS);
 
 	/* configure jpeg for interrupt on burst count transfers */
 	if (num_burst)
-		g_drv_data->regs->CTRL_REG.BYTES_BEF_INT =
-			BURST_COUNT_ENABLE | num_burst;
+		writel(BURST_COUNT_ENABLE | num_burst,
+				&g_drv_data->regs->CTRL_REG.BYTES_BEF_INT);
 
+	val = readl(&g_drv_data->regs->REG1);
 	/* configure jpeg core register */
 	if (g_drv_data->hdr_enable)
-		g_drv_data->regs->REG1 |= HDR_ENABLE;
+		val |= HDR_ENABLE;
 
 	if (g_drv_data->operation == JPEG_DECODE)
-		g_drv_data->regs->REG1 |= DECODER_ENABLE;
+		val |= DECODER_ENABLE;
 	else
-		g_drv_data->regs->REG1 &= ENCODER_ENABLE;
+		val &= ENCODER_ENABLE;
 
-	g_drv_data->regs->REG0 = JPEG_ENABLE;
+	writel(val, &g_drv_data->regs->REG1);
+	writel(JPEG_ENABLE, &g_drv_data->regs->REG0);
 }
 
 /* recalculates number of mcus */
@@ -341,16 +345,16 @@ static void fix_mcu_num(struct jpeg_hdr *hdr_info)
 void jpeg_get_hdr(struct jpeg_hdr *hdr_info)
 {
 	s32 temp;
-	temp = g_drv_data->regs->REG1;
+	temp = readl(&g_drv_data->regs->REG1);
 	hdr_info->num_clr_cmp = NUM_CLR_CMP(temp);
 	hdr_info->clr_spc_type = COL_SPC_TYPE(temp);
 	hdr_info->num_cmp_for_scan_hdr = NUM_CMP_SCAN_HDR(temp);
 	hdr_info->rst_mark_en = IS_RST_ENABLE(temp);
 	hdr_info->ysize = Y_SIZE(temp);
 
-	hdr_info->mcu_num = NUM_MCU(g_drv_data->regs->REG2);
+	hdr_info->mcu_num = NUM_MCU(readl(&g_drv_data->regs->REG2));
 
-	temp = g_drv_data->regs->REG3;
+	temp = readl(&g_drv_data->regs->REG3);
 	hdr_info->xsize = X_SIZE(temp);
 	hdr_info->mcu_num_in_rst = RST_NUM_MCU(temp);
 
@@ -365,10 +369,10 @@ void jpeg_get_hdr(struct jpeg_hdr *hdr_info)
 		hdr_info->mcu_comp[x].v = VERT_SAMP(temp); \
 	} while (0);
 
-	GET_MCU_COMP(0, g_drv_data->regs->REG4);
-	GET_MCU_COMP(1, g_drv_data->regs->REG5);
-	GET_MCU_COMP(2, g_drv_data->regs->REG6);
-	GET_MCU_COMP(3, g_drv_data->regs->REG7);
+	GET_MCU_COMP(0, readl(&g_drv_data->regs->REG4));
+	GET_MCU_COMP(1, readl(&g_drv_data->regs->REG5));
+	GET_MCU_COMP(2, readl(&g_drv_data->regs->REG6));
+	GET_MCU_COMP(3, readl(&g_drv_data->regs->REG7));
 
 	fix_mcu_num(hdr_info);
 }
@@ -385,20 +389,20 @@ void jpeg_set_hdr(struct jpeg_hdr *hdr_info)
 	s32 temp;
 
 	/* Enable JPEG codec by writing 0 on status register */
-	g_drv_data->regs->CTRL_REG.STATUS = 0;
+	writel(0, &g_drv_data->regs->CTRL_REG.STATUS);
 
 	temp = SET_NUM_CLR_CMP(hdr_info->num_clr_cmp);
 	temp |= SET_COL_SPC_TYPE(hdr_info->clr_spc_type);
 	temp |= SET_NUM_CMP_SCAN_HDR(hdr_info->num_cmp_for_scan_hdr);
 	temp |= SET_Y_SIZE(hdr_info->ysize);
 	temp |= RST_ENABLE(hdr_info->rst_mark_en);
-	g_drv_data->regs->REG1 = temp;
+	writel(temp, &g_drv_data->regs->REG1);
 
-	g_drv_data->regs->REG2 = SET_NUM_MCU(hdr_info->mcu_num);
+	writel(SET_NUM_MCU(hdr_info->mcu_num), &g_drv_data->regs->REG2);
 
 	temp = SET_X_SIZE(hdr_info->xsize);
 	temp |= SET_RST_NUM_MCU(hdr_info->mcu_num_in_rst);
-	g_drv_data->regs->REG3 = temp;
+	writel(temp, &g_drv_data->regs->REG3);
 
 #define SET_MCU_COMP(x, reg) \
 	do {\
@@ -408,13 +412,13 @@ void jpeg_set_hdr(struct jpeg_hdr *hdr_info)
 		temp |= SET_NUM_DATA_UNITS(hdr_info->mcu_comp[x].nblock);\
 		temp |= SET_HORZ_SAMP(hdr_info->mcu_comp[x].h);\
 		temp |= SET_VERT_SAMP(hdr_info->mcu_comp[x].v);\
-		reg = temp;\
+		writel(temp, reg);\
 	} while (0);
 
-	SET_MCU_COMP(0, g_drv_data->regs->REG4);
-	SET_MCU_COMP(1, g_drv_data->regs->REG5);
-	SET_MCU_COMP(2, g_drv_data->regs->REG6);
-	SET_MCU_COMP(3, g_drv_data->regs->REG7);
+	SET_MCU_COMP(0, &g_drv_data->regs->REG4);
+	SET_MCU_COMP(1, &g_drv_data->regs->REG5);
+	SET_MCU_COMP(2, &g_drv_data->regs->REG6);
+	SET_MCU_COMP(3, &g_drv_data->regs->REG7);
 }
 
 /**
@@ -1217,25 +1221,30 @@ static const struct file_operations desigware_jpeg_fops[MAX_DEV] = {
 static irqreturn_t desigware_jpeg_irq(s32 irq, void *dev_id)
 {
 	unsigned long flags;
+	u32 status_reg;
 
 	spin_lock_irqsave(&g_drv_data->lock, flags);
 	/* get amount of data transfered to and from jpeg */
 	g_drv_data->data_to_jpeg =
-		g_drv_data->regs->CTRL_REG.BYTES_FIFO_TO_CORE;
+		readl(&g_drv_data->regs->CTRL_REG.BYTES_FIFO_TO_CORE);
 	g_drv_data->data_from_jpeg =
-		g_drv_data->regs->CTRL_REG.BYTES_CORE_TO_FIFO;
+		readl(&g_drv_data->regs->CTRL_REG.BYTES_CORE_TO_FIFO);
 
 	/* check if interrupt came due to end of encoding/decoding */
 	g_drv_data->operation_complete = 0;
-	if (g_drv_data->regs->CTRL_REG.STATUS & END_OF_CONVERSION) {
+	status_reg = readl(&g_drv_data->regs->CTRL_REG.STATUS);
+	if (status_reg & END_OF_CONVERSION) {
 		/* end of encoding/decoding */
 		g_drv_data->operation_complete = 1;
-		g_drv_data->regs->CTRL_REG.STATUS &= INT_CLR;
-		g_drv_data->regs->REG0 = JPEG_DISABLE;
+		writel(status_reg & INT_CLR,
+				&g_drv_data->regs->CTRL_REG.STATUS);
+		writel(JPEG_DISABLE, &g_drv_data->regs->REG0);
 	} else {
 		/* burst interrupt */
-		g_drv_data->regs->CTRL_REG.STATUS &= INT_CLR;
-		g_drv_data->regs->CTRL_REG.STATUS |= BURST_INT_CLR;
+		writel(status_reg & INT_CLR,
+				&g_drv_data->regs->CTRL_REG.STATUS);
+		writel(status_reg | BURST_INT_CLR,
+				&g_drv_data->regs->CTRL_REG.STATUS);
 	}
 
 	/* set flag of occurance of jpeg interupt. both dma and jpeg interrupts
