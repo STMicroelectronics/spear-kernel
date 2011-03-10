@@ -97,14 +97,14 @@ static inline unsigned long
 lcd_readl(struct db9000fb_info *fbi, unsigned int off)
 {
 	unsigned long val;
-	val = __raw_readl(((unsigned int)fbi->mmio_base) + off);
+	val = readl(fbi->mmio_base + off);
 	return val;
 }
 
 static inline void
 lcd_writel(struct db9000fb_info *fbi, unsigned int off, unsigned long val)
 {
-	__raw_writel(val, ((unsigned int)fbi->mmio_base) + off);
+	writel(val, fbi->mmio_base + off);
 }
 
 static inline void db9000fb_schedule_work(
