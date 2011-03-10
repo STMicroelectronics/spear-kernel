@@ -141,12 +141,12 @@ void get_dma_start_addr(struct snd_pcm_substream *substream)
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
 {
-	__raw_writel(val, io_base + reg);
+	writel(val, io_base + reg);
 }
 
 static inline u32 i2s_read_reg(void *io_base, int reg)
 {
-	return __raw_readl(io_base + reg);
+	return readl(io_base + reg);
 }
 
 static int
