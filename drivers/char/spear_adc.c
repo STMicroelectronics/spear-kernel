@@ -126,9 +126,9 @@ struct adc_regs {
 #endif
 
 #define adc_readl(regs, name) \
-	__raw_readl(&((regs)->name))
+	readl(&((regs)->name))
 #define adc_writel(regs, name, val) \
-	__raw_writel((val), &((regs)->name))
+	writel((val), &((regs)->name))
 
 /* timeout for sleep */
 #define ADC_TIMEOUT 100
