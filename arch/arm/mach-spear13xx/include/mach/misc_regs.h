@@ -69,8 +69,8 @@
 #define PLL3_MOD		(MISC_BASE + 0x234)
 #define PLL4_CTR		(MISC_BASE + 0x238)
 	/* PLL_CTR register masks */
-	#define PLL_ENABLE		2
-	#define PLL_MODE_SHIFT		4
+	#define PLL_ENABLE		1
+	#define PLL_MODE_SHIFT		3
 	#define PLL_MODE_MASK		3
 	#define PLL_MODE_NORMAL		0
 	#define PLL_MODE_FRACTION	1
