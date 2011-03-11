@@ -831,49 +831,84 @@ static void dmac_setup(void)
 #ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
-	struct clk *i2s_src_clk, *pll3_clk, *i2s_ref_clk;
+	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk,
+		*i2s_ref_clk, *i2s_sclk_clk;
 
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get clk for i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
 		return;
 	}
 
 	pll3_clk = clk_get_sys(NULL, "pll3_clk");
 	if (IS_ERR(pll3_clk)) {
-		pr_err("%s:couldn't get clk for pll3_clck\n", __func__);
+		pr_err("%s:couldn't get pll3_clck\n", __func__);
 		goto put_src_clk;
+	}
+
+	i2s_prs1_clk = clk_get_sys(NULL, "i2s_prs1_clk");
+	if (IS_ERR(i2s_prs1_clk)) {
+		pr_err("%s:couldn't get i2s_prs1_clk\n", __func__);
+		goto put_pll3_clk;
 	}
 
 	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
 	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get clk for i2s_ref_clk\n", __func__);
-		goto put_pll3_clk;
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		goto put_prs1_clk;
 	}
 
-	if (clk_set_parent(i2s_src_clk, pll3_clk))
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
 		goto put_ref_clk;
+	}
+
+	i2s_ref_pad_clk = clk_get_sys(NULL, "i2s_ref_pad_clk");
+	if (IS_ERR(i2s_ref_pad_clk)) {
+		pr_err("%s:couldn't get i2s_ref_pad_clk\n", __func__);
+		goto put_sclk_clk;
+	}
+
+	if (clk_set_parent(i2s_src_clk, pll3_clk)) {
+		pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
+				__func__);
+		goto put_ref_pad_clk;
+	}
 
 	if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
-		goto put_ref_clk;
+		goto put_ref_pad_clk;
 
-	if (clk_set_rate(i2s_ref_clk, 12288000)) /*12.288 Mhz */
-		goto put_ref_clk;
+	if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
+		goto put_ref_pad_clk;
 
-	if (clk_enable(i2s_ref_clk)) {
-		pr_err("%s:enabling i2s_ref_clk_fail\n", __func__);
-		goto put_ref_clk;
+	if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
+		pr_err("%s:set_parent prs1_clk of ref_clk fail\n", __func__);
+		goto put_ref_pad_clk;
 	}
-	goto put_pll3_clk;
 
+	if (clk_enable(i2s_ref_pad_clk)) {
+		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
+		goto put_ref_pad_clk;
+	}
+
+	if (clk_enable(i2s_sclk_clk)) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_ref_pad_clk;
+	}
+
+put_ref_pad_clk:
+	clk_put(i2s_ref_pad_clk);
+put_sclk_clk:
+	clk_put(i2s_sclk_clk);
 put_ref_clk:
 	clk_put(i2s_ref_clk);
+put_prs1_clk:
+	clk_put(i2s_prs1_clk);
 put_pll3_clk:
 	clk_put(pll3_clk);
 put_src_clk:
 	clk_put(i2s_src_clk);
-
-	return;
 }
 #endif
 
@@ -1577,7 +1612,7 @@ struct pmx_dev spear13xx_pmx_mcif = {
 /* Pad multiplexing for sdhci device */
 static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = VA_PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_SD,
 	},
@@ -1599,7 +1634,7 @@ struct pmx_dev spear13xx_pmx_sdhci = {
 /* Pad multiplexing for cf device */
 static struct pmx_mux_reg pmx_cf_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = VA_PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_CF,
 	},
@@ -1621,7 +1656,7 @@ struct pmx_dev spear13xx_pmx_cf = {
 /* Pad multiplexing for xd device */
 static struct pmx_mux_reg pmx_xd_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = VA_PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_XD,
 	},

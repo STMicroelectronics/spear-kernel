@@ -153,39 +153,7 @@ static int
 spear13xx_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
-	struct clk *sclk_clk, *src_clk;
-	int ret = -EINVAL;
-
-	sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-	if (IS_ERR(sclk_clk)) {
-		dev_err(dev->dev, "couldn't get i2s_sclk\n");
-		return PTR_ERR(sclk_clk);
-	}
-
-	src_clk = clk_get_sys(NULL, "i2s_src_clk");
-	if (IS_ERR(src_clk)) {
-		ret = PTR_ERR(src_clk);
-		dev_err(dev->dev, "couldn't get i2s_src_sclk\n");
-		goto put_sclk_clk;
-	}
-
-	if (clk_set_parent(sclk_clk, src_clk))
-		goto put_src_clk;
-
-	ret = clk_enable(sclk_clk);
-	if (ret < 0) {
-		dev_err(dev->dev, "enable i2s_sclk fail\n");
-		goto put_src_clk;
-	}
 	return 0;
-
-put_src_clk:
-	clk_put(src_clk);
-put_sclk_clk:
-	clk_put(sclk_clk);
-
-	return ret;
 }
 
 void
