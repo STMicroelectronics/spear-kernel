@@ -565,7 +565,7 @@ static struct clk gmii_txclk125_pad = {
 static struct pclk_info gmac_phy_input_pclk_info[] = {
 	{
 		.pclk = &gmii_txclk125_pad,
-		.pclk_val = GMAC_PHY_PAD_VAL,
+		.pclk_val = GMAC_PHY_125M_PAD_VAL,
 	}, {
 		.pclk = &pll2_clk,
 		.pclk_val = GMAC_PHY_PLL2_VAL,
@@ -599,8 +599,8 @@ struct aux_rate_tbl gmac_rtbl[] = {
 };
 
 static struct clk gmac_phy_synth_clk = {
-	.en_reg = GMAC_CLK_CFG,
-	.en_reg_bit = GMAC_PHY_SYNT_ENB,
+	.en_reg = GMAC_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &gmac_phy_input_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
@@ -651,7 +651,7 @@ static struct frac_synth_clk_config clcd_synth_config = {
 static struct pclk_info clcd_synth_pclk_info[] = {
 	{
 		.pclk = &vco1div4_clk,
-		.pclk_val = CLCD_SYNT_PLL1_DIV4_VAL,
+		.pclk_val = CLCD_SYNT_VCO1_DIV4_VAL,
 	}, {
 		.pclk = &pll2_clk,
 		.pclk_val = CLCD_SYNT_PLL2_VAL,
@@ -760,13 +760,13 @@ static struct clk i2s_src_pad_clk = {
 static struct pclk_info i2s_src_pclk_info[] = {
 	{
 		.pclk = &vco1div2_clk,
-		.pclk_val = I2S_SRC_PLLDIV2_VAL,
+		.pclk_val = I2S_SRC_VCODIV2_VAL,
 	}, {
 		.pclk = &pll3_clk,
 		.pclk_val = I2S_SRC_PLL3_VAL,
 	}, {
 		.pclk = &i2s_src_pad_clk,
-		.pclk_val = I2S_SRC_PAD_VAL,
+		.pclk_val = I2S_SRC_PL_CLK1_VAL,
 	},
 };
 
@@ -779,76 +779,91 @@ static struct pclk_sel i2s_src_pclk_sel = {
 
 /* i2s src clock */
 static struct clk i2s_src_clk = {
-	.en_reg = I2S_CLK_CFG,
-	.en_reg_bit = I2S_SRC_CLK_ENB,
+	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &i2s_src_pclk_sel,
 	.pclk_sel_shift = I2S_SRC_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
-/* i2s reference clk synthesizer masks */
-static struct aux_clk_masks i2s_ref_aux_masks = {
+/* i2s prescaler1 masks */
+static struct aux_clk_masks i2s_prs1_aux_masks = {
 	.eq_sel_mask = AUX_EQ_SEL_MASK,
-	.eq_sel_shift = I2S_REF_CLK_SHIFT,
+	.eq_sel_shift = I2S_PRS1_EQ_SEL_SHIFT,
 	.eq1_mask = AUX_EQ1_SEL,
 	.eq2_mask = AUX_EQ2_SEL,
-	.xscale_sel_mask = I2S_REF_CLK_X_MASK,
-	.xscale_sel_shift = I2S_REF_CLK_X_SHIFT,
-	.yscale_sel_mask = I2S_REF_CLK_Y_MASK,
-	.yscale_sel_shift = I2S_REF_CLK_Y_SHIFT,
+	.xscale_sel_mask = I2S_PRS1_CLK_X_MASK,
+	.xscale_sel_shift = I2S_PRS1_CLK_X_SHIFT,
+	.yscale_sel_mask = I2S_PRS1_CLK_Y_MASK,
+	.yscale_sel_shift = I2S_PRS1_CLK_Y_SHIFT,
 };
 
-/* i2s reference clk configurations */
-static struct aux_clk_config i2s_ref_config = {
+/* i2s prs1 clk configurations */
+static struct aux_clk_config i2s_prs1_config = {
 	.synth_reg = I2S_CLK_CFG,
-	.masks = &i2s_ref_aux_masks,
+	.masks = &i2s_prs1_aux_masks,
 };
 
-/* i2s ref out aux rate configuration table, in ascending order of rates */
-struct aux_rate_tbl i2s_ref_aux_rtbl[] = {
-	/* For parent clk = 12.288MHz */
+/* i2s prs1 aux rate configuration table, in ascending order of rates */
+struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
+	/* For parent clk = 49.152 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
 };
-/* i2s ref out clock */
-static struct clk i2s_ref_clk = {
-	.en_reg = PERIP2_CLK_ENB,
-	.en_reg_bit = I2S_REFOUT_CLK_ENB,
+
+/* i2s prs1 clock */
+static struct clk i2s_prs1_clk = {
+	.flags = ALWAYS_ENABLED,
 	.pclk = &i2s_src_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {i2s_ref_aux_rtbl, ARRAY_SIZE(i2s_ref_aux_rtbl), 0},
-	.private_data = &i2s_ref_config,
+	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 0},
+	.private_data = &i2s_prs1_config,
 };
 
-/* i2s sclk configuration */
-static struct pclk_info i2s_sclk_pclk_info[] = {
+/* i2s ref clk configuration */
+static struct pclk_info i2s_ref_pclk_info[] = {
 	{
 		.pclk = &i2s_src_clk,
-		.pclk_val = I2S_SRC_CLK_VAL,
+		.pclk_val = I2S_REF_SRC_VAL,
 	}, {
-		.pclk = &i2s_ref_clk,
-		.pclk_val = I2S_REF_CLK_VAL,
+		.pclk = &i2s_prs1_clk,
+		.pclk_val = I2S_REF_PRS1_VAL,
 	},
 };
 
-/* i2s parent select structure */
-static struct pclk_sel i2s_sclk_pclk_sel = {
-	.pclk_info = i2s_sclk_pclk_info,
-	.pclk_count = ARRAY_SIZE(i2s_sclk_pclk_info),
+/* i2s ref clock parent select structure */
+static struct pclk_sel i2s_ref_pclk_sel = {
+	.pclk_info = i2s_ref_pclk_info,
+	.pclk_count = ARRAY_SIZE(i2s_ref_pclk_info),
 	.pclk_sel_reg = I2S_CLK_CFG,
-	.pclk_sel_mask = I2S_SCLK_SEL_MASK,
+	.pclk_sel_mask = I2S_REF_SEL_MASK,
+};
+
+/* i2s ref clock */
+static struct clk i2s_ref_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &i2s_ref_pclk_sel,
+	.pclk_sel_shift = I2S_REF_SHIFT,
+	.recalc = &follow_parent,
+};
+
+/* i2s ref pad clock: for codec */
+static struct clk i2s_ref_pad_clk = {
+	.en_reg = PERIP2_CLK_ENB,
+	.en_reg_bit = I2S_REF_PAD_CLK_ENB,
+	.pclk = &i2s_ref_clk,
+	.recalc = &follow_parent,
 };
 
 /* i2s sclk aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
-	/* For i2s_ref_out_clk = 12.288MHz */
+	/* For i2s_ref_clk = 12.288MHz */
 	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
 static struct aux_clk_masks i2s_sclk_aux_masks = {
-	.eq_sel_mask = I2S_SCLK_EQ_SEL_MASK,
+	.eq_sel_mask = AUX_EQ_SEL_MASK,
 	.eq_sel_shift = I2S_SCLK_EQ_SEL_SHIFT,
 	.eq1_mask = AUX_EQ1_SEL,
 	.eq2_mask = AUX_EQ2_SEL,
@@ -868,8 +883,7 @@ static struct aux_clk_config i2s_sclk_synth_config = {
 static struct clk i2s_sclk_clk = {
 	.en_reg = I2S_CLK_CFG,
 	.en_reg_bit = I2S_SCLK_SYNTH_ENB,
-	.pclk_sel = &i2s_sclk_pclk_sel,
-	.pclk_sel_shift = I2S_SCLK_SHIFT,
+	.pclk = &i2s_ref_clk,
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
@@ -1218,7 +1232,7 @@ static struct clk ras_pll3_clk = {
 static struct clk ras_tx125_clk = {
 	.pclk = &gmii_txclk125_pad,
 	.en_reg = RAS_CLK_ENB,
-	.en_reg_bit = C125_CLK_ENB,
+	.en_reg_bit = C125M_PAD_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
@@ -1226,14 +1240,14 @@ static struct clk ras_tx125_clk = {
 static struct clk ras_30Mhz_clk = {
 	.rate = 30000000,
 	.en_reg = RAS_CLK_ENB,
-	.en_reg_bit = C30_CLK_ENB,
+	.en_reg_bit = C30M_CLK_ENB,
 };
 
 /* 48 MHz clock generated by USB PHy Pll */
 static struct clk ras_48Mhz_clk = {
 	.pclk = &pll5_clk,
 	.en_reg = RAS_CLK_ENB,
-	.en_reg_bit = C48_CLK_ENB,
+	.en_reg_bit = C48M_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
@@ -1530,7 +1544,9 @@ static struct clk_lookup spear_clk_lookups[] = {
 	/* i2s refout and sclk clks */
 	{.con_id = "i2s_src_pad_clk",		.clk = &i2s_src_pad_clk},
 	{.con_id = "i2s_src_clk",		.clk = &i2s_src_clk},
+	{.con_id = "i2s_prs1_clk",		.clk = &i2s_prs1_clk},
 	{.con_id = "i2s_ref_clk",		.clk = &i2s_ref_clk},
+	{.con_id = "i2s_ref_pad_clk",		.clk = &i2s_ref_pad_clk},
 	{.con_id = "i2s_sclk_clk",		.clk = &i2s_sclk_clk},
 
 	/* clocks having multiple parent source from above clocks */
