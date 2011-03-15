@@ -88,7 +88,7 @@ static struct vco_clk_config vco1_config = {
 };
 
 /* vco rate configuration table, in ascending order of rates */
-struct vco_rate_tbl vco_rtbl[] = {
+static struct vco_rate_tbl vco_rtbl[] = {
 	/* PCLK 24MHz */
 	{.mode = 0, .m = 0x83, .n = 0x04, .p = 0x5}, /* vco 1572, pll 49.125 MHz */
 	{.mode = 0, .m = 0x64, .n = 0x06, .p = 0x1}, /* vco 800, pll 400 MHz */
@@ -218,7 +218,7 @@ static struct vco_clk_config vco4_config = {
 };
 
 /* vco4 rate configuration table, in ascending order of rates */
-struct vco_rate_tbl vco4_rtbl[] = {
+static struct vco_rate_tbl vco4_rtbl[] = {
 	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x2}, /* vco 1000, pll 250 MHz */
 	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x2}, /* vco 1328, pll 332 MHz */
 	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x2}, /* vco 1600, pll 400 MHz */
@@ -262,7 +262,7 @@ static struct clk pll6_clk = {
 
 /* clocks derived from pll1 clk */
 /* ddr clock */
-struct ddr_rate_tbl ddr_rate_tbl = {
+static struct ddr_rate_tbl ddr_rate_tbl = {
 	.minrate = 332000000,
 	.maxrate = 500000000,
 };
@@ -401,7 +401,7 @@ static struct aux_clk_config uart_synth_config = {
 };
 
 /* aux rate configuration table, in ascending order of rates */
-struct aux_rate_tbl aux_rtbl[] = {
+static struct aux_rate_tbl aux_rtbl[] = {
 	/* For VCO1div2 = 500 MHz */
 	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
 	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
@@ -590,7 +590,7 @@ static struct clk gmac_phy_input_clk = {
 };
 
 /* gmac rate configuration table, in ascending order of rates */
-struct aux_rate_tbl gmac_rtbl[] = {
+static struct aux_rate_tbl gmac_rtbl[] = {
 	/* For gmac phy input clk */
 	{.xscale = 1, .yscale = 6, .eq = 1}, /* divided by 6 */
 	{.xscale = 1, .yscale = 4, .eq = 1}, /* divided by 4 */
@@ -667,7 +667,7 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 };
 
 /* clcd rate configuration table, in ascending order of rates */
-struct frac_synth_rate_tbl clcd_rtbl[] = {
+static struct frac_synth_rate_tbl clcd_rtbl[] = {
 	/* All below entries generate 58 MHz for different values of vco1div4 */
 	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
 	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
@@ -804,7 +804,7 @@ static struct aux_clk_config i2s_prs1_config = {
 };
 
 /* i2s prs1 aux rate configuration table, in ascending order of rates */
-struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
+static struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
 	/* For parent clk = 49.152 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
 };
@@ -856,7 +856,7 @@ static struct clk i2s_ref_pad_clk = {
 };
 
 /* i2s sclk aux rate configuration table, in ascending order of rates */
-struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
+static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
 	/* For i2s_ref_clk = 12.288MHz */
 	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
 };
@@ -1152,7 +1152,7 @@ static struct pclk_sel ras_synth2_3_pclk_sel = {
 };
 
 /* RAS rate configuration table, in ascending order of rates */
-struct frac_synth_rate_tbl ras_rtbl[] = {
+static struct frac_synth_rate_tbl ras_rtbl[] = {
 	/* For vco1div4 = 250 MHz */
 	{.div = 0x14000}, /* 25 MHz */
 	{.div = 0x0A000}, /* 50 MHz */
@@ -1377,7 +1377,7 @@ static struct pclk_sel phy_rmii_pclk_sel = {
 };
 
 /* Phy 1 Clock */
-struct clk gmac_phy1_clk = {
+static struct clk gmac_phy1_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_smii_rgmii_pclk_sel,
 	.pclk_sel_shift = SPEAR1310_PHY_CLK_SHIFT,
