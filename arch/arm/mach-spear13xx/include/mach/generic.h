@@ -27,7 +27,6 @@
  * Function enable (Pad multiplexing register) offsets
  */
 /* Pad multiplexing base */
-#define SPEAR13XX_FUNC_ENB_BASE		UL(0xE0700650)
 #define SPEAR13XX_PCM_CFG_BASE		UL(0xE0700100)
 
 #define SPEAR13XX_PMX_CFG0		UL(0xE0700650)
