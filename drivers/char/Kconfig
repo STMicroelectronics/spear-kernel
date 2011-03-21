@@ -1153,7 +1153,7 @@ config DEVPORT
 	default y
 
 source "drivers/s390/char/Kconfig"
-
+source "drivers/char/c3/Kconfig"
 config RAMOOPS
 	tristate "Log panic/oops to a RAM buffer"
 	depends on HAS_IOMEM

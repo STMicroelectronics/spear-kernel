@@ -1,0 +1,62 @@
+----------------------------------------------------------------------
+Usage of the module:
+----------------------------------------------------------------------
+1. Loading the module:
+a. Use the included "load_c3" script.
+b. "modprobe c3_cryptoapi".
+----------------------------------------------------------------------
+Testing
+----------------------------------------------------------------------
+Kernel Crypto
+
+1. The Autotest loads up automatically when the c3_driver.ko module is loaded.
+2. When the c3_cryptoapi.ko module is loaded,the algorithms
+[SHA 1, AES (CBC,CTR and RFC3686 CTR)] are tested automatically, if self-tests
+are enabled in the kernel config.
+----------------------------------------------------------------------
+Development:
+----------------------------------------------------------------------
+ - See "C3 Linux Driver Developer's manual"
+https://codex.cro.st.com/docman/display_doc.php?docid=4305&group_id=123
+
+ - See "C3 Linux Driver User's manual"
+https://codex.cro.st.com/docman/display_doc.php?docid=4301&group_id=123
+----------------------------------------------------------------------
+Linux CryptoAPI support
+----------------------------------------------------------------------
+
+Note 1 :The Linux CryptoAPI support included in this version only works with
+Linux Kernel 2.6.37. For older versions of the kernel, see previous releases.
+
+Note 2: This release has been tested on the Spear300 RevBA and Spear1310 with
+Linux kernel 2.6.37(LSP 3.0rc7).
+
+1. To test C3 with the Linux CryptoAPI, load the C3 driver(c3_driver.ko)
+[using the above scripts] and the Cryptoapi module (c3_cryptoapi.ko).
+
+2. "cat /proc/crypto" shows the registered algorithms, drivers and their
+priorities.
+
+3. The Linux CryptoAPI testing module (tcrypt.ko) can be used to test the
+C3 hardware support.
+   - mode = 2, SHA 1
+   - mode = 10, AES (CBC,CTR and RFC3686 CTR)
+   - mode = 101, HMAC(SHA 1)
+
+4. IPSec Support
+a. Setkey can be used to set up IPSec (ESP) [AES-CBC / AES-RFC3686-CTR with
+HMAC-SHA1 only for the moment].
+
+   For Example:
+   add 192.168.0.106 192.168.0.111 esp 1001 -E rijndael-cbc "1234567890123456"
+   	 -A hmac-sha1 "11111111112222222222";
+
+b. Or you can use ip xfrm. For example:
+
+ip xfrm state add src $IP_NODE_A dst $IP_NODE_B proto esp spi \
+	0x354cb04b mode transport auth 'hmac(sha1)' \
+	0xecf02a5cf6568556e1bdcd961c7ec3f92afd01cc enc 'cbc(aes)' \
+	0x5c0cfa9672ce67ba545b593076dfb278 sel src 0.0.0.0/0 dst 0.0.0.0/0
+
+Nuttcp or Iperf can be used to test the performance.
+----------------------------------------------------------------------
