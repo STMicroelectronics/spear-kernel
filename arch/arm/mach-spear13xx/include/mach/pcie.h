@@ -137,7 +137,6 @@ struct pcie_app_reg {
 #define VEN_MSI_FUN_NUM_MASK	((u32)0x7 << VEN_MSI_FUN_NUM_ID)
 #define VEN_MSI_TC_MASK	((u32)0x7 << VEN_MSI_TC_ID)
 #define VEN_MSI_VECTOR_MASK	((u32)0x1F << VEN_MSI_VECTOR_ID)
-#endif
 
 /*CE21-22 ID*/
 /*ID definitio of ARMISC*/
@@ -177,3 +176,4 @@ static inline void pcie_init(struct pcie_port_info * (*fptr)(int port))
 {
 	pcie_port_init = fptr;
 }
+#endif
