@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-spear13xx/spear1310_evb.c
+ * arch/arm/mach-spear13xx/spear1310_reva_evb.c
  *
  * SPEAr1310 evaluation board source file
  *
@@ -61,7 +61,7 @@ static int phy_clk_cfg(void *data)
 {
 	struct platform_device *pdev = data;
 	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
-	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1));
+	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1));
 	struct clk *clk = NULL;
 	u32 tmp;
 	int ret;
@@ -151,7 +151,7 @@ static struct resource phy0_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1310_phy0_device = {
+static struct platform_device spear1310_reva_phy0_device = {
 	.name		= "stmmacphy",
 	.id		= 0,
 	.num_resources	= 1,
@@ -175,7 +175,7 @@ static struct resource phy1_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1310_phy1_device = {
+static struct platform_device spear1310_reva_phy1_device = {
 	.name = "stmmacphy",
 	.id = 1,
 	.num_resources = 1,
@@ -199,7 +199,7 @@ static struct resource phy2_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1310_phy2_device = {
+static struct platform_device spear1310_reva_phy2_device = {
 	.name = "stmmacphy",
 	.id = 2,
 	.num_resources = 1,
@@ -223,7 +223,7 @@ static struct resource phy3_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1310_phy3_device = {
+static struct platform_device spear1310_reva_phy3_device = {
 	.name = "stmmacphy",
 	.id = 3,
 	.num_resources = 1,
@@ -247,7 +247,7 @@ static struct resource phy4_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1310_phy4_device = {
+static struct platform_device spear1310_reva_phy4_device = {
 	.name = "stmmacphy",
 	.id = 4,
 	.num_resources = 1,
@@ -268,16 +268,16 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear13xx_pmx_uart0,
 	&spear13xx_pmx_sdhci,
 
-	/* spear1310 specific devices */
-	&spear1310_pmx_can,
-	&spear1310_pmx_i2c1,
-	&spear1310_pmx_smii_0_1_2,
-	&spear1310_pmx_fsmc16bit_4_chips,
-	&spear1310_pmx_rs485_hdlc_1_2,
-	&spear1310_pmx_tdm_hdlc_1_2,
-	&spear1310_pmx_uart_1,
-	&spear1310_pmx_uart_2,
-	&spear1310_pmx_uart_3_4_5,
+	/* spear1310_reva specific devices */
+	&spear1310_reva_pmx_can,
+	&spear1310_reva_pmx_i2c1,
+	&spear1310_reva_pmx_smii_0_1_2,
+	&spear1310_reva_pmx_fsmc16bit_4_chips,
+	&spear1310_reva_pmx_rs485_hdlc_1_2,
+	&spear1310_reva_pmx_tdm_hdlc_1_2,
+	&spear1310_reva_pmx_uart_1,
+	&spear1310_reva_pmx_uart_2,
+	&spear1310_reva_pmx_uart_3_4_5,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -287,12 +287,12 @@ static struct amba_device *amba_devs[] __initdata = {
 	&spear13xx_ssp_device,
 	&spear13xx_uart_device,
 
-	/* spear1310 specific devices */
-	&spear1310_uart1_device,
-	&spear1310_uart2_device,
-	&spear1310_uart3_device,
-	&spear1310_uart4_device,
-	&spear1310_uart5_device,
+	/* spear1310_reva specific devices */
+	&spear1310_reva_uart1_device,
+	&spear1310_reva_uart2_device,
+	&spear1310_reva_uart3_device,
+	&spear1310_reva_uart4_device,
+	&spear1310_reva_uart5_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
@@ -318,25 +318,25 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_udc_device,
 	&spear13xx_wdt_device,
 
-	/* spear1310 specific devices */
-	&spear1310_can0_device,
-	&spear1310_can1_device,
-	&spear1310_eth1_device,
-	&spear1310_eth2_device,
-	&spear1310_eth3_device,
-	&spear1310_eth4_device,
-	&spear1310_i2c1_device,
-	&spear1310_plgpio_device,
-	&spear1310_phy0_device,
-	&spear1310_phy1_device,
-	&spear1310_phy2_device,
-	&spear1310_phy3_device,
-	&spear1310_phy4_device,
-	&spear1310_ras_fsmc_nor_device,
-	&spear1310_rs485_0_device,
-	&spear1310_rs485_1_device,
-	&spear1310_tdm_hdlc_0_device,
-	&spear1310_tdm_hdlc_1_device,
+	/* spear1310_reva specific devices */
+	&spear1310_reva_can0_device,
+	&spear1310_reva_can1_device,
+	&spear1310_reva_eth1_device,
+	&spear1310_reva_eth2_device,
+	&spear1310_reva_eth3_device,
+	&spear1310_reva_eth4_device,
+	&spear1310_reva_i2c1_device,
+	&spear1310_reva_plgpio_device,
+	&spear1310_reva_phy0_device,
+	&spear1310_reva_phy1_device,
+	&spear1310_reva_phy2_device,
+	&spear1310_reva_phy3_device,
+	&spear1310_reva_phy4_device,
+	&spear1310_reva_ras_fsmc_nor_device,
+	&spear1310_reva_rs485_0_device,
+	&spear1310_reva_rs485_1_device,
+	&spear1310_reva_tdm_hdlc_0_device,
+	&spear1310_reva_tdm_hdlc_1_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {
@@ -470,7 +470,7 @@ static struct pcie_port_info __initdata pcie_port_info[] = {
  * For a port to be added as device, one must also add device's information
  * in plat_devs array defined in this file.
  */
-static struct pcie_port_info *__init spear1310_pcie_port_init(int port)
+static struct pcie_port_info *__init spear1310_reva_pcie_port_init(int port)
 {
 	if (port < 3)
 		return &pcie_port_info[port];
@@ -479,12 +479,12 @@ static struct pcie_port_info *__init spear1310_pcie_port_init(int port)
 }
 #endif
 
-/* spear1310 ras misc configurations */
+/* spear1310_reva ras misc configurations */
 static void __init ras_fsmc_config(u32 mode, u32 width)
 {
 	u32 val, *address;
 
-	address = ioremap(SPEAR1310_RAS_CTRL_REG0, SZ_16);
+	address = ioremap(SPEAR1310_REVA_RAS_CTRL_REG0, SZ_16);
 
 	val = readl(address);
 	val &= ~(RAS_FSMC_MODE_MASK | RAS_FSMC_WIDTH_MASK);
@@ -511,15 +511,15 @@ static void __init select_e1_interface(struct platform_device *pdev)
 	 * before config, initialize FSMC controller here
 	 */
 	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_8);
-	fsmc_nor_init(NULL, SPEAR1310_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
+	fsmc_nor_init(NULL, SPEAR1310_REVA_FSMC1_BASE, 2, FSMC_FLASH_WIDTH8);
 
-	e1phy_init(SPEAR1310_FSMC1_CS2_BASE + (pdev->id * 0x100), 0);
+	e1phy_init(SPEAR1310_REVA_FSMC1_CS2_BASE + (pdev->id * 0x100), 0);
 	tdm_hdlc_set_plat_data(pdev, 32);
 }
 #endif
 
-static void spear1310_evb_fixup(struct machine_desc *desc, struct tag *tags,
-		char **cmdline, struct meminfo *mi)
+static void spear1310_reva_evb_fixup(struct machine_desc *desc,
+		struct tag *tags, char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	unsigned long size;
@@ -531,7 +531,7 @@ static void spear1310_evb_fixup(struct machine_desc *desc, struct tag *tags,
 #endif
 }
 
-static void __init spear1310_evb_init(void)
+static void __init spear1310_reva_evb_init(void)
 {
 	unsigned int i;
 
@@ -574,8 +574,8 @@ static void __init spear1310_evb_init(void)
 	pcm_init(&spear13xx_dmac_device[0].dev);
 #endif
 
-	/* call spear1310 machine init function */
-	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+	/* call spear1310_reva machine init function */
+	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
@@ -597,16 +597,16 @@ static void __init spear1310_evb_init(void)
 	/* ras part fsmc nor device */
 	/* initialize fsmc related data in fsmc plat data */
 	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);
-	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
+	fsmc_init_board_info(&spear1310_reva_ras_fsmc_nor_device, NULL,
 			0, FSMC_FLASH_WIDTH16);
 	/* Initialize fsmc regiters */
-	fsmc_nor_init(&spear1310_ras_fsmc_nor_device, SPEAR1310_FSMC1_BASE, 3,
-			FSMC_FLASH_WIDTH16);
+	fsmc_nor_init(&spear1310_reva_ras_fsmc_nor_device,
+			SPEAR1310_REVA_FSMC1_BASE, 3, FSMC_FLASH_WIDTH16);
 
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear1310_pcie_port_init);
+	pcie_init(spear1310_reva_pcie_port_init);
 #endif
 
 	/* Add Platform Devices */
@@ -621,15 +621,15 @@ static void __init spear1310_evb_init(void)
 	/*
 	 * Note: Remove the comment to enable E1 interface for one HDLC port
 	 */
-	/* select_e1_interface(&spear1310_tdm_hdlc_0_device); */
-	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
+	/* select_e1_interface(&spear1310_reva_tdm_hdlc_0_device); */
+	/* select_e1_interface(&spear1310_reva_tdm_hdlc_1_device); */
 }
 
-MACHINE_START(SPEAR1310_EVB, "ST-SPEAR1310-EVB")
+MACHINE_START(SPEAR1310_REVA_EVB, "ST-SPEAR1310-REVA-EVB")
 	.boot_params	=	0x00000100,
-	.fixup		=	spear1310_evb_fixup,
-	.map_io		=	spear1310_map_io,
+	.fixup		=	spear1310_reva_evb_fixup,
+	.map_io		=	spear1310_reva_map_io,
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,
-	.init_machine	=	spear1310_evb_init,
+	.init_machine	=	spear1310_reva_evb_init,
 MACHINE_END

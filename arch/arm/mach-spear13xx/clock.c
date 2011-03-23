@@ -1302,8 +1302,8 @@ static struct clk ras_tx50_clk = {
 
 #endif
 
-/* spear1310 machine specific clock structures */
-#ifdef CONFIG_CPU_SPEAR1310
+/* spear1310_reva machine specific clock structures */
+#ifdef CONFIG_CPU_SPEAR1310_REVA
 /* can0 clock */
 static struct clk can0_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -1347,26 +1347,26 @@ static struct clk gmac_ras4_clk = {
 static struct pclk_info rmii_phy_pclk_info[] = {
 	{
 		.pclk = &ras_tx50_clk,
-		.pclk_val = SPEAR1310_RAS_TX50M_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_TX50M_VAL,
 	}, {
 		.pclk = &ras_pll2_clk,
-		.pclk_val = SPEAR1310_RAS_PLL2_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_PLL2_VAL,
 	}, {
 		.pclk = &ras_synth0_clk,
-		.pclk_val = SPEAR1310_RAS_SYNTH0_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_SYNTH0_VAL,
 	},
 };
 
 static struct pclk_info smii_rgmii_phy_pclk_info[] = {
 	{
 		.pclk = &ras_tx125_clk,
-		.pclk_val = SPEAR1310_RAS_TX125M_PAD_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_TX125M_PAD_VAL,
 	}, {
 		.pclk = &ras_pll2_clk,
-		.pclk_val = SPEAR1310_RAS_PLL2_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_PLL2_VAL,
 	}, {
 		.pclk = &ras_synth0_clk,
-		.pclk_val = SPEAR1310_RAS_SYNTH0_VAL,
+		.pclk_val = SPEAR1310_REVA_RAS_SYNTH0_VAL,
 	},
 };
 
@@ -1374,23 +1374,23 @@ static struct pclk_info smii_rgmii_phy_pclk_info[] = {
 static struct pclk_sel phy_rmii_pclk_sel = {
 	.pclk_info = rmii_phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(rmii_phy_pclk_info),
-	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
-	.pclk_sel_mask = SPEAR1310_PHY_CLK_MASK,
+	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1)),
+	.pclk_sel_mask = SPEAR1310_REVA_PHY_CLK_MASK,
 };
 
 /* SMII and RGMII are both driven by 125 MHz clock source */
 static struct pclk_sel phy_smii_rgmii_pclk_sel = {
 	.pclk_info = smii_rgmii_phy_pclk_info,
 	.pclk_count = ARRAY_SIZE(smii_rgmii_phy_pclk_info),
-	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG1)),
-	.pclk_sel_mask = SPEAR1310_PHY_CLK_MASK,
+	.pclk_sel_reg = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1)),
+	.pclk_sel_mask = SPEAR1310_REVA_PHY_CLK_MASK,
 };
 
 /* Phy 1 Clock */
 static struct clk gmac_phy1_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_smii_rgmii_pclk_sel,
-	.pclk_sel_shift = SPEAR1310_SMII_RGMII_PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_REVA_SMII_RGMII_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1398,7 +1398,7 @@ static struct clk gmac_phy1_clk = {
 static struct clk gmac_phy2_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_smii_rgmii_pclk_sel,
-	.pclk_sel_shift = SPEAR1310_SMII_RGMII_PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_REVA_SMII_RGMII_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1406,7 +1406,7 @@ static struct clk gmac_phy2_clk = {
 static struct clk gmac_phy3_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_rmii_pclk_sel,
-	.pclk_sel_shift = SPEAR1310_RMII_PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_REVA_RMII_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1414,7 +1414,7 @@ static struct clk gmac_phy3_clk = {
 static struct clk gmac_phy4_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &phy_smii_rgmii_pclk_sel,
-	.pclk_sel_shift = SPEAR1310_SMII_RGMII_PHY_CLK_SHIFT,
+	.pclk_sel_shift = SPEAR1310_REVA_SMII_RGMII_PHY_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1474,7 +1474,8 @@ static struct pclk_info tdm_pclk_info[] = {
 static struct pclk_sel tdm_pclk_sel = {
 	.pclk_info = tdm_pclk_info,
 	.pclk_count = ARRAY_SIZE(tdm_pclk_info),
-	.pclk_sel_reg = (unsigned int *)(IO_ADDRESS(SPEAR1310_RAS_CTRL_REG0)),
+	.pclk_sel_reg =
+		(unsigned int *)(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG0)),
 	.pclk_sel_mask = TDM_CLK_MASK,
 };
 
@@ -1609,8 +1610,8 @@ static struct clk_lookup spear1300_clk_lookups[] = {
 };
 
 /* array of all spear 1310 clock lookups */
-static struct clk_lookup spear1310_clk_lookups[] = {
-#ifdef CONFIG_CPU_SPEAR1310
+static struct clk_lookup spear1310_reva_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR1310_REVA
 	{.dev_id = "c_can_platform.0",	.clk = &can0_clk},
 	{.dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{.dev_id = "stmmaceth.1",	.clk = &gmac_ras1_clk},
@@ -1646,9 +1647,9 @@ void __init spear13xx_clk_init(void)
 	if (cpu_is_spear1300()) {
 		cnt = ARRAY_SIZE(spear1300_clk_lookups);
 		lookups = spear1300_clk_lookups;
-	} else if (cpu_is_spear1310()) {
-		cnt = ARRAY_SIZE(spear1310_clk_lookups);
-		lookups = spear1310_clk_lookups;
+	} else if (cpu_is_spear1310_reva()) {
+		cnt = ARRAY_SIZE(spear1310_reva_clk_lookups);
+		lookups = spear1310_reva_clk_lookups;
 	} else {
 		cnt = ARRAY_SIZE(spear900_clk_lookups);
 		lookups = spear900_clk_lookups;

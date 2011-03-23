@@ -1690,7 +1690,7 @@ static int stmmac_associate_phy(struct device *dev, void *data)
  * Description: the driver is initialized through platform_device.
  */
 #ifdef CONFIG_ARCH_SPEAR13XX
-struct	clk *spear1310_sys_clk;
+struct	clk *spear1310_reva_sys_clk;
 #endif
 
 static int stmmac_dvr_probe(struct platform_device *pdev)
@@ -1772,14 +1772,14 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 #ifdef CONFIG_ARCH_SPEAR13XX
 	/*
 	 * Following hack has been provided as a sepcial case for
-	 * spear1310 ethernet interfaces where mdio lines of eth0 is
+	 * spear1310_reva ethernet interfaces where mdio lines of eth0 is
 	 * shared by the rest of ethernet interfaces, hence we have to
 	 * do following in order to ensure that clock is enabled for the
 	 * shared mdio lines
 	 */
-	if (cpu_is_spear1310() && (spear1310_sys_clk == NULL)) {
-		spear1310_sys_clk = priv->stmmac_clk;
-		clk_enable(spear1310_sys_clk);
+	if (cpu_is_spear1310_reva() && (spear1310_reva_sys_clk == NULL)) {
+		spear1310_reva_sys_clk = priv->stmmac_clk;
+		clk_enable(spear1310_reva_sys_clk);
 	}
 #endif
 

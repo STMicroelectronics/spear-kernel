@@ -656,8 +656,8 @@ struct platform_device spear13xx_wdt_device = {
 	.resource = wdt_resources,
 };
 
-/* Devices present on CPU_SPEAR1300, CPU_SPEAR1310 or CPU_SPEAR900 */
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+/* Devices present on CPU_SPEAR1300, CPU_SPEAR1310_REVA or CPU_SPEAR900 */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 /* i2s0 device registeration */
 static struct resource i2s0_resources[] = {
@@ -943,7 +943,7 @@ void __init spear13xx_init(void)
 #endif
 
 	dmac_setup();
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 	if (!cpu_is_spear1340())
 		set_udc_plat_data(&spear13xx_udc_device);
@@ -1058,7 +1058,7 @@ struct sys_timer spear13xx_timer = {
 	.init = spear13xx_timer_init,
 };
 
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 /* pad multiplexing support */
 /* devices */

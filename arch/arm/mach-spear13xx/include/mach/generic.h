@@ -23,7 +23,7 @@
 #include <asm/setup.h>
 #include <plat/padmux.h>
 
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 /*
  * Function enable (Pad multiplexing register) offsets
@@ -205,26 +205,26 @@ extern struct pmx_dev spear13xx_pmx_cf;
 extern struct pmx_dev spear13xx_pmx_xd;
 #endif
 
-#if defined(CONFIG_CPU_SPEAR1310)
-#define SPEAR1310_FUNC_CNTL_0		UL(0x6C800000)
+#if defined(CONFIG_CPU_SPEAR1310_REVA)
+#define SPEAR1310_REVA_FUNC_CNTL_0	UL(0x6C800000)
 
-#define SPEAR1310_PMX_SMII_MASK		(1 << 24)	/* Func cntl reg0 */
-#define SPEAR1310_PMX_EGPIO7_MASK	(1 << 2)	/* Pcm cfg reg */
+#define SPEAR1310_REVA_PMX_SMII_MASK	(1 << 24)	/* Func cntl reg0 */
+#define SPEAR1310_REVA_PMX_EGPIO7_MASK	(1 << 2)	/* Pcm cfg reg */
 
-extern struct pmx_dev spear1310_pmx_uart1_modem;
-extern struct pmx_dev spear1310_pmx_uart_1;
-extern struct pmx_dev spear1310_pmx_uart_2;
-extern struct pmx_dev spear1310_pmx_uart_3_4_5;
-extern struct pmx_dev spear1310_pmx_rs485_hdlc_1_2;
-extern struct pmx_dev spear1310_pmx_tdm_hdlc_1_2;
-extern struct pmx_dev spear1310_pmx_nand32bit;
-extern struct pmx_dev spear1310_pmx_fsmc16bit_4_chips;
-extern struct pmx_dev spear1310_pmx_fsmc32bit_4_chips;
-extern struct pmx_dev spear1310_pmx_gmii1;
-extern struct pmx_dev spear1310_pmx_rgmii;
-extern struct pmx_dev spear1310_pmx_i2c1;
-extern struct pmx_dev spear1310_pmx_smii_0_1_2;
-extern struct pmx_dev spear1310_pmx_can;
+extern struct pmx_dev spear1310_reva_pmx_uart1_modem;
+extern struct pmx_dev spear1310_reva_pmx_uart_1;
+extern struct pmx_dev spear1310_reva_pmx_uart_2;
+extern struct pmx_dev spear1310_reva_pmx_uart_3_4_5;
+extern struct pmx_dev spear1310_reva_pmx_rs485_hdlc_1_2;
+extern struct pmx_dev spear1310_reva_pmx_tdm_hdlc_1_2;
+extern struct pmx_dev spear1310_reva_pmx_nand32bit;
+extern struct pmx_dev spear1310_reva_pmx_fsmc16bit_4_chips;
+extern struct pmx_dev spear1310_reva_pmx_fsmc32bit_4_chips;
+extern struct pmx_dev spear1310_reva_pmx_gmii1;
+extern struct pmx_dev spear1310_reva_pmx_rgmii;
+extern struct pmx_dev spear1310_reva_pmx_i2c1;
+extern struct pmx_dev spear1310_reva_pmx_smii_0_1_2;
+extern struct pmx_dev spear1310_reva_pmx_can;
 #endif
 
 #if defined(CONFIG_CPU_SPEAR1340)
@@ -329,7 +329,7 @@ extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
 extern struct platform_device spear13xx_wdt_device;
 
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 extern struct platform_device spear13xx_i2s0_device;
 extern struct platform_device spear13xx_i2s1_device;
@@ -366,34 +366,34 @@ void __init spear1300_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 
 #endif /* CONFIG_CPU_SPEAR1300 */
 
-/* spear1310 declarations */
-#ifdef CONFIG_CPU_SPEAR1310
-/* Add spear1310 machine device structure declarations here */
-extern struct amba_device spear1310_uart1_device;
-extern struct amba_device spear1310_uart2_device;
-extern struct amba_device spear1310_uart3_device;
-extern struct amba_device spear1310_uart4_device;
-extern struct amba_device spear1310_uart5_device;
-extern struct platform_device spear1310_can0_device;
-extern struct platform_device spear1310_can1_device;
-extern struct platform_device spear1310_eth1_device;
-extern struct platform_device spear1310_eth2_device;
-extern struct platform_device spear1310_eth3_device;
-extern struct platform_device spear1310_eth4_device;
-extern struct platform_device spear1310_i2c1_device;
-extern struct platform_device spear1310_ras_fsmc_nor_device;
-extern struct platform_device spear1310_plgpio_device;
-extern struct platform_device spear1310_rs485_0_device;
-extern struct platform_device spear1310_rs485_1_device;
-extern struct platform_device spear1310_tdm_hdlc_0_device;
-extern struct platform_device spear1310_tdm_hdlc_1_device;
+/* spear1310_reva declarations */
+#ifdef CONFIG_CPU_SPEAR1310_REVA
+/* Add spear1310_reva machine device structure declarations here */
+extern struct amba_device spear1310_reva_uart1_device;
+extern struct amba_device spear1310_reva_uart2_device;
+extern struct amba_device spear1310_reva_uart3_device;
+extern struct amba_device spear1310_reva_uart4_device;
+extern struct amba_device spear1310_reva_uart5_device;
+extern struct platform_device spear1310_reva_can0_device;
+extern struct platform_device spear1310_reva_can1_device;
+extern struct platform_device spear1310_reva_eth1_device;
+extern struct platform_device spear1310_reva_eth2_device;
+extern struct platform_device spear1310_reva_eth3_device;
+extern struct platform_device spear1310_reva_eth4_device;
+extern struct platform_device spear1310_reva_i2c1_device;
+extern struct platform_device spear1310_reva_ras_fsmc_nor_device;
+extern struct platform_device spear1310_reva_plgpio_device;
+extern struct platform_device spear1310_reva_rs485_0_device;
+extern struct platform_device spear1310_reva_rs485_1_device;
+extern struct platform_device spear1310_reva_tdm_hdlc_0_device;
+extern struct platform_device spear1310_reva_tdm_hdlc_1_device;
 
-/* Add spear1310 machine function declarations here */
-void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
-		u8 pmx_dev_count);
-void __init spear1310_map_io(void);
+/* Add spear1310_reva machine function declarations here */
+void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
+		struct pmx_dev **pmx_devs, u8 pmx_dev_count);
+void __init spear1310_reva_map_io(void);
 
-#endif /* CONFIG_CPU_SPEAR1310 */
+#endif /* CONFIG_CPU_SPEAR1310_REVA */
 
 /* spear1340 declarations */
 #ifdef CONFIG_CPU_SPEAR1340

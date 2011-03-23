@@ -56,7 +56,7 @@
 #define GPIO1_6			14
 #define GPIO1_7			15
 
-#if defined(CONFIG_CPU_SPEAR1310) || defined(CONFIG_CPU_SPEAR1340)
+#if defined(CONFIG_CPU_SPEAR1310_REVA) || defined(CONFIG_CPU_SPEAR1340)
 #define PLGPIO_0		16
 #define PLGPIO_1		17
 #define PLGPIO_2		18
@@ -307,6 +307,6 @@
 #define PLGPIO_247		263
 #define PLGPIO_248		264
 #define PLGPIO_249		265
-#endif /* CPU_SPEAR1310, CPU_SPEAR1340 */
+#endif /* CPU_SPEAR1310_REVA, CPU_SPEAR1340 */
 
 #endif /* __MACH_GPIO_H */
