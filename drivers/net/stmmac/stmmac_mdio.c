@@ -102,7 +102,7 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	priv = netdev_priv(ndev);
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (cpu_is_spear1310() && mac1_bus)
+	if (cpu_is_spear1310_reva() && mac1_bus)
 		ndev = (struct net_device *)mac1_bus;
 #endif
 
@@ -154,7 +154,7 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	priv = netdev_priv(ndev);
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (cpu_is_spear1310() && mac1_bus)
+	if (cpu_is_spear1310_reva() && mac1_bus)
 		ndev = (struct net_device *)mac1_bus;
 #endif
 
@@ -252,7 +252,7 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->parent = priv->device;
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (cpu_is_spear1310() && (priv->bus_id == 0))
+	if (cpu_is_spear1310_reva() && (priv->bus_id == 0))
 		mac1_bus = (u32 *)ndev;
 #endif
 

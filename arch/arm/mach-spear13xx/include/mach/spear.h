@@ -16,7 +16,7 @@
 
 #include <asm/memory.h>
 #include <mach/spear1300.h>
-#include <mach/spear1310.h>
+#include <mach/spear1310_reva.h>
 #include <mach/spear1340.h>
 
 #define SPEAR13XX_L2CC_BASE		UL(0xED000000)
@@ -81,7 +81,7 @@
 #define SPEAR13XX_MCIF_SDHCI_BASE	UL(0xB3000000)
 
 /* Devices not present in SPEAr1340 & are present in all other variants */
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
 #define SPEAR13XX_I2S0_BASE		UL(0xE0180000)
 #define SPEAR13XX_I2S1_BASE		UL(0xE0200000)

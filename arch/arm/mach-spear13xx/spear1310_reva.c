@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-spear13xx/spear1310.c
+ * arch/arm/mach-spear13xx/spear1310_reva.c
  *
  * SPEAr1310 machine source file
  *
@@ -43,7 +43,7 @@ static struct pmx_dev_mode pmx_uart1_modem_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_uart1_modem = {
+struct pmx_dev spear1310_reva_pmx_uart1_modem = {
 	.name = "uart1_modem",
 	.modes = pmx_uart1_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes),
@@ -65,7 +65,7 @@ static struct pmx_dev_mode pmx_uart1_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_uart_1 = {
+struct pmx_dev spear1310_reva_pmx_uart_1 = {
 	.name = "uart1",
 	.modes = pmx_uart1_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
@@ -87,7 +87,7 @@ static struct pmx_dev_mode pmx_uart2_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_uart_2 = {
+struct pmx_dev spear1310_reva_pmx_uart_2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
@@ -109,7 +109,7 @@ static struct pmx_dev_mode pmx_uart_3_4_5_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_uart_3_4_5 = {
+struct pmx_dev spear1310_reva_pmx_uart_3_4_5 = {
 	.name = "uart_3_4_5",
 	.modes = pmx_uart_3_4_5_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart_3_4_5_modes),
@@ -131,7 +131,7 @@ static struct pmx_dev_mode pmx_rs485_hdlc_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_rs485_hdlc_1_2 = {
+struct pmx_dev spear1310_reva_pmx_rs485_hdlc_1_2 = {
 	.name = "rs485_hdlc_1_2",
 	.modes = pmx_rs485_hdlc_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_rs485_hdlc_1_2_modes),
@@ -153,7 +153,7 @@ static struct pmx_dev_mode pmx_tdm_hdlc_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_tdm_hdlc_1_2 = {
+struct pmx_dev spear1310_reva_pmx_tdm_hdlc_1_2 = {
 	.name = "tdm_hdlc_1_2",
 	.modes = pmx_tdm_hdlc_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_tdm_hdlc_1_2_modes),
@@ -174,7 +174,7 @@ static struct pmx_mux_reg pmx_fsmc32bit_mux[] = {
 		.value = 0,
 	}, {
 		.address = SPEAR13XX_PCM_CFG_BASE,
-		.mask = SPEAR1310_PMX_EGPIO7_MASK,
+		.mask = SPEAR1310_REVA_PMX_EGPIO7_MASK,
 		.value = 0,
 	},
 };
@@ -186,7 +186,7 @@ static struct pmx_dev_mode pmx_fsmc32bit_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_fsmc32bit_4_chips = {
+struct pmx_dev spear1310_reva_pmx_fsmc32bit_4_chips = {
 	.name = "fsmc32bit",
 	.modes = pmx_fsmc32bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc32bit_modes),
@@ -213,7 +213,7 @@ static struct pmx_dev_mode pmx_fsmc16bit_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_fsmc16bit_4_chips = {
+struct pmx_dev spear1310_reva_pmx_fsmc16bit_4_chips = {
 	.name = "fsmc16bit",
 	.modes = pmx_fsmc16bit_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc16bit_modes),
@@ -235,7 +235,7 @@ static struct pmx_dev_mode pmx_gmii1_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_gmii1 = {
+struct pmx_dev spear1310_reva_pmx_gmii1 = {
 	.name = "gmii1",
 	.modes = pmx_gmii1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gmii1_modes),
@@ -257,7 +257,7 @@ static struct pmx_dev_mode pmx_rgmii_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_rgmii = {
+struct pmx_dev spear1310_reva_pmx_rgmii = {
 	.name = "rgmii",
 	.modes = pmx_rgmii_modes,
 	.mode_count = ARRAY_SIZE(pmx_rgmii_modes),
@@ -279,7 +279,7 @@ static struct pmx_dev_mode pmx_i2c1_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_i2c1 = {
+struct pmx_dev spear1310_reva_pmx_i2c1 = {
 	.name = "i2c1",
 	.modes = pmx_i2c1_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
@@ -298,9 +298,9 @@ static struct pmx_mux_reg pmx_smii_0_1_2_mux[] = {
 			SPEAR13XX_PMX_GPT1_TMR2_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR1310_FUNC_CNTL_0,
-		.mask = SPEAR1310_PMX_SMII_MASK,
-		.value = SPEAR1310_PMX_SMII_MASK,
+		.address = SPEAR1310_REVA_FUNC_CNTL_0,
+		.mask = SPEAR1310_REVA_PMX_SMII_MASK,
+		.value = SPEAR1310_REVA_PMX_SMII_MASK,
 	},
 };
 
@@ -311,7 +311,7 @@ static struct pmx_dev_mode pmx_smii_0_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_smii_0_1_2 = {
+struct pmx_dev spear1310_reva_pmx_smii_0_1_2 = {
 	.name = "smii_0_1_2",
 	.modes = pmx_smii_0_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_smii_0_1_2_modes),
@@ -330,8 +330,8 @@ static struct pmx_mux_reg pmx_pci1_mux[] = {
 			SPEAR13XX_PMX_GPT1_TMR2_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR1310_FUNC_CNTL_0,
-		.mask = SPEAR1310_PMX_SMII_MASK,
+		.address = SPEAR1310_REVA_FUNC_CNTL_0,
+		.mask = SPEAR1310_REVA_PMX_SMII_MASK,
 		.value = 0,
 	},
 };
@@ -343,7 +343,7 @@ static struct pmx_dev_mode pmx_pci1_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_pci1 = {
+struct pmx_dev spear1310_reva_pmx_pci1 = {
 	.name = "pci1",
 	.modes = pmx_pci1_modes,
 	.mode_count = ARRAY_SIZE(pmx_pci1_modes),
@@ -365,91 +365,91 @@ static struct pmx_dev_mode pmx_can_modes[] = {
 	},
 };
 
-struct pmx_dev spear1310_pmx_can = {
+struct pmx_dev spear1310_reva_pmx_can = {
 	.name = "can",
 	.modes = pmx_can_modes,
 	.mode_count = ARRAY_SIZE(pmx_can_modes),
 };
 
-/* Add spear1310 specific devices here */
+/* Add spear1310_reva specific devices here */
 /* uart1 device registeration */
-struct amba_device spear1310_uart1_device = {
+struct amba_device spear1310_reva_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
 	},
 	.res = {
-		.start = SPEAR1310_UART1_BASE,
-		.end = SPEAR1310_UART1_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_UART1_BASE,
+		.end = SPEAR1310_REVA_UART1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {SPEAR1310_IRQ_UART1, NO_IRQ},
+	.irq = {SPEAR1310_REVA_IRQ_UART1, NO_IRQ},
 };
 
 /* uart2 device registeration */
-struct amba_device spear1310_uart2_device = {
+struct amba_device spear1310_reva_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
 	},
 	.res = {
-		.start = SPEAR1310_UART2_BASE,
-		.end = SPEAR1310_UART2_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_UART2_BASE,
+		.end = SPEAR1310_REVA_UART2_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {SPEAR1310_IRQ_UART2, NO_IRQ},
+	.irq = {SPEAR1310_REVA_IRQ_UART2, NO_IRQ},
 };
 
 /* uart3 device registeration */
-struct amba_device spear1310_uart3_device = {
+struct amba_device spear1310_reva_uart3_device = {
 	.dev = {
 		.init_name = "uart3",
 	},
 	.res = {
-		.start = SPEAR1310_UART3_BASE,
-		.end = SPEAR1310_UART3_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_UART3_BASE,
+		.end = SPEAR1310_REVA_UART3_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {SPEAR1310_IRQ_UART3, NO_IRQ},
+	.irq = {SPEAR1310_REVA_IRQ_UART3, NO_IRQ},
 };
 
 /* uart4 device registeration */
-struct amba_device spear1310_uart4_device = {
+struct amba_device spear1310_reva_uart4_device = {
 	.dev = {
 		.init_name = "uart4",
 	},
 	.res = {
-		.start = SPEAR1310_UART4_BASE,
-		.end = SPEAR1310_UART4_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_UART4_BASE,
+		.end = SPEAR1310_REVA_UART4_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {SPEAR1310_IRQ_UART4, NO_IRQ},
+	.irq = {SPEAR1310_REVA_IRQ_UART4, NO_IRQ},
 };
 
 /* uart5 device registeration */
-struct amba_device spear1310_uart5_device = {
+struct amba_device spear1310_reva_uart5_device = {
 	.dev = {
 		.init_name = "uart5",
 	},
 	.res = {
-		.start = SPEAR1310_UART5_BASE,
-		.end = SPEAR1310_UART5_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_UART5_BASE,
+		.end = SPEAR1310_REVA_UART5_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {SPEAR1310_IRQ_UART5, NO_IRQ},
+	.irq = {SPEAR1310_REVA_IRQ_UART5, NO_IRQ},
 };
 
 /* CAN device registeration */
 static struct resource can0_resources[] = {
 	{
-		.start = SPEAR1310_CAN0_BASE,
-		.end = SPEAR1310_CAN0_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_CAN0_BASE,
+		.end = SPEAR1310_REVA_CAN0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_CCAN0,
+		.start = SPEAR1310_REVA_IRQ_CCAN0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_can0_device = {
+struct platform_device spear1310_reva_can0_device = {
 	.name = "c_can_platform",
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
@@ -458,16 +458,16 @@ struct platform_device spear1310_can0_device = {
 
 static struct resource can1_resources[] = {
 	{
-		.start = SPEAR1310_CAN1_BASE,
-		.end = SPEAR1310_CAN1_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_CAN1_BASE,
+		.end = SPEAR1310_REVA_CAN1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_CCAN1,
+		.start = SPEAR1310_REVA_IRQ_CCAN1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_can1_device = {
+struct platform_device spear1310_reva_can1_device = {
 	.name = "c_can_platform",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
@@ -488,23 +488,23 @@ static struct plat_stmmacenet_data ether1_platform_data = {
 
 static struct resource eth1_resources[] = {
 	[0] = {
-		.start = SPEAR1310_GETH1_BASE,
-		.end = SPEAR1310_GETH1_BASE + SZ_32K - 1,
+		.start = SPEAR1310_REVA_GETH1_BASE,
+		.end = SPEAR1310_REVA_GETH1_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = SPEAR1310_IRQ_GETH1_SBD,
+		.start = SPEAR1310_REVA_IRQ_GETH1_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = SPEAR1310_IRQ_GETH1_PMT,
+		.start = SPEAR1310_REVA_IRQ_GETH1_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 eth1_dma_mask = ~(u32) 0;
-struct platform_device spear1310_eth1_device = {
+struct platform_device spear1310_reva_eth1_device = {
 	.name = "stmmaceth",
 	.id = 1,
 	.num_resources = ARRAY_SIZE(eth1_resources),
@@ -530,23 +530,23 @@ static struct plat_stmmacenet_data ether2_platform_data = {
 
 static struct resource eth2_resources[] = {
 	[0] = {
-		.start = SPEAR1310_GETH2_BASE,
-		.end = SPEAR1310_GETH2_BASE + SZ_32K - 1,
+		.start = SPEAR1310_REVA_GETH2_BASE,
+		.end = SPEAR1310_REVA_GETH2_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = SPEAR1310_IRQ_GETH2_SBD,
+		.start = SPEAR1310_REVA_IRQ_GETH2_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = SPEAR1310_IRQ_GETH2_PMT,
+		.start = SPEAR1310_REVA_IRQ_GETH2_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 eth2_dma_mask = ~(u32) 0;
-struct platform_device spear1310_eth2_device = {
+struct platform_device spear1310_reva_eth2_device = {
 	.name = "stmmaceth",
 	.id = 2,
 	.num_resources = ARRAY_SIZE(eth2_resources),
@@ -572,23 +572,23 @@ static struct plat_stmmacenet_data ether3_platform_data = {
 
 static struct resource eth3_resources[] = {
 	[0] = {
-		.start = SPEAR1310_GETH3_BASE,
-		.end = SPEAR1310_GETH3_BASE + SZ_32K - 1,
+		.start = SPEAR1310_REVA_GETH3_BASE,
+		.end = SPEAR1310_REVA_GETH3_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = SPEAR1310_IRQ_GETH3_SBD,
+		.start = SPEAR1310_REVA_IRQ_GETH3_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = SPEAR1310_IRQ_GETH3_PMT,
+		.start = SPEAR1310_REVA_IRQ_GETH3_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 eth3_dma_mask = ~(u32) 0;
-struct platform_device spear1310_eth3_device = {
+struct platform_device spear1310_reva_eth3_device = {
 	.name = "stmmaceth",
 	.id = 3,
 	.num_resources = ARRAY_SIZE(eth3_resources),
@@ -614,23 +614,23 @@ static struct plat_stmmacenet_data ether4_platform_data = {
 
 static struct resource eth4_resources[] = {
 	[0] = {
-		.start = SPEAR1310_GETH4_BASE,
-		.end = SPEAR1310_GETH4_BASE + SZ_32K - 1,
+		.start = SPEAR1310_REVA_GETH4_BASE,
+		.end = SPEAR1310_REVA_GETH4_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = SPEAR1310_IRQ_GETH4_SBD,
+		.start = SPEAR1310_REVA_IRQ_GETH4_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = SPEAR1310_IRQ_GETH4_PMT,
+		.start = SPEAR1310_REVA_IRQ_GETH4_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static u64 eth4_dma_mask = ~(u32) 0;
-struct platform_device spear1310_eth4_device = {
+struct platform_device spear1310_reva_eth4_device = {
 	.name = "stmmaceth",
 	.id = 4,
 	.num_resources = ARRAY_SIZE(eth4_resources),
@@ -645,16 +645,16 @@ struct platform_device spear1310_eth4_device = {
 /* i2c1 device registeration */
 static struct resource i2c1_resources[] = {
 	{
-		.start = SPEAR1310_I2C1_BASE,
-		.end = SPEAR1310_I2C1_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_I2C1_BASE,
+		.end = SPEAR1310_REVA_I2C1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_I2C_CNTR,
+		.start = SPEAR1310_REVA_IRQ_I2C_CNTR,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_i2c1_device = {
+struct platform_device spear1310_reva_i2c1_device = {
 	.name = "i2c_designware",
 	.id = 1,
 	.dev = {
@@ -682,16 +682,16 @@ static struct plgpio_platform_data plgpio_plat_data = {
 
 static struct resource plgpio_resources[] = {
 	{
-		.start = SPEAR1310_RAS_BASE,
-		.end = SPEAR1310_RAS_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_RAS_BASE,
+		.end = SPEAR1310_REVA_RAS_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_PLGPIO,
+		.start = SPEAR1310_REVA_IRQ_PLGPIO,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_plgpio_device = {
+struct platform_device spear1310_reva_plgpio_device = {
 	.name = "plgpio",
 	.id = -1,
 	.dev = {
@@ -705,13 +705,13 @@ struct platform_device spear1310_plgpio_device = {
 static struct physmap_flash_data ras_fsmc_norflash_data;
 static struct resource ras_fsmc_nor_resources[] = {
 	{
-		.start	= SPEAR1310_FSMC1_CS3_BASE,
-		.end	= SPEAR1310_FSMC1_CS3_BASE + SZ_64M - 1,
+		.start	= SPEAR1310_REVA_FSMC1_CS3_BASE,
+		.end	= SPEAR1310_REVA_FSMC1_CS3_BASE + SZ_64M - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 };
 
-struct platform_device spear1310_ras_fsmc_nor_device = {
+struct platform_device spear1310_reva_ras_fsmc_nor_device = {
 	.name	= "physmap-flash",
 	.id	= -1,
 	.resource = ras_fsmc_nor_resources,
@@ -720,23 +720,23 @@ struct platform_device spear1310_ras_fsmc_nor_device = {
 };
 
 static struct tdm_hdlc_platform_data tdm_hdlc_0_plat_data = {
-	.ip_type = SPEAR1310_TDM_HDLC,
+	.ip_type = SPEAR1310_REVA_TDM_HDLC,
 	.nr_channel = 2,
 	.nr_timeslot = 128,
 };
 
 static struct resource tdm_hdlc_0_resources[] = {
 	{
-		.start = SPEAR1310_TDM_E1_0_BASE,
-		.end = SPEAR1310_TDM_E1_0_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_TDM_E1_0_BASE,
+		.end = SPEAR1310_REVA_TDM_E1_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_TDM0,
+		.start = SPEAR1310_REVA_IRQ_TDM0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_tdm_hdlc_0_device = {
+struct platform_device spear1310_reva_tdm_hdlc_0_device = {
 	.name = "tdm_hdlc",
 	.id = 0,
 	.dev = {
@@ -748,23 +748,23 @@ struct platform_device spear1310_tdm_hdlc_0_device = {
 };
 
 static struct tdm_hdlc_platform_data tdm_hdlc_1_plat_data = {
-	.ip_type = SPEAR1310_TDM_HDLC,
+	.ip_type = SPEAR1310_REVA_TDM_HDLC,
 	.nr_channel = 2,
 	.nr_timeslot = 128,
 };
 
 static struct resource tdm_hdlc_1_resources[] = {
 	{
-		.start = SPEAR1310_TDM_E1_1_BASE,
-		.end = SPEAR1310_TDM_E1_1_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_TDM_E1_1_BASE,
+		.end = SPEAR1310_REVA_TDM_E1_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_TDM1,
+		.start = SPEAR1310_REVA_IRQ_TDM1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_tdm_hdlc_1_device = {
+struct platform_device spear1310_reva_tdm_hdlc_1_device = {
 	.name = "tdm_hdlc",
 	.id = 1,
 	.dev = {
@@ -791,27 +791,27 @@ static struct rs485_hdlc_platform_data rs485_1_plat_data = {
 
 static struct resource rs485_0_resources[] = {
 	{
-		.start = SPEAR1310_RS485_0_BASE,
-		.end = SPEAR1310_RS485_0_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_RS485_0_BASE,
+		.end = SPEAR1310_REVA_RS485_0_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_RS4850,
+		.start = SPEAR1310_REVA_IRQ_RS4850,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
 static struct resource rs485_1_resources[] = {
 	{
-		.start = SPEAR1310_RS485_1_BASE,
-		.end = SPEAR1310_RS485_1_BASE + SZ_4K - 1,
+		.start = SPEAR1310_REVA_RS485_1_BASE,
+		.end = SPEAR1310_REVA_RS485_1_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR1310_IRQ_RS4851,
+		.start = SPEAR1310_REVA_IRQ_RS4851,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear1310_rs485_0_device = {
+struct platform_device spear1310_reva_rs485_0_device = {
 	.name = "rs485_hdlc",
 	.id = 0,
 	.dev = {
@@ -822,7 +822,7 @@ struct platform_device spear1310_rs485_0_device = {
 	.resource = rs485_0_resources,
 };
 
-struct platform_device spear1310_rs485_1_device = {
+struct platform_device spear1310_reva_rs485_1_device = {
 	.name = "rs485_hdlc",
 	.id = 1,
 	.dev = {
@@ -868,7 +868,8 @@ static void tdm_hdlc_setup(void)
 	}
 	ret = clk_set_parent(tdm_clk, synth_clk);
 	if (ret < 0) {
-		pr_err("Failed to set parent %s to tdm clock\n", synth_clk_name);
+		pr_err("Failed to set parent %s to tdm clock\n",
+				synth_clk_name);
 		goto free_tdm_clk;
 	}
 
@@ -881,24 +882,25 @@ free_vco_clk:
 }
 
 /* Following will create 1310 specific static virtual/physical mappings */
-struct map_desc spear1310_io_desc[] __initdata = {
+struct map_desc spear1310_reva_io_desc[] __initdata = {
 	{
-		.virtual	= IO_ADDRESS(SPEAR1310_RAS_BASE),
-		.pfn		= __phys_to_pfn(SPEAR1310_RAS_BASE),
+		.virtual	= IO_ADDRESS(SPEAR1310_REVA_RAS_BASE),
+		.pfn		= __phys_to_pfn(SPEAR1310_REVA_RAS_BASE),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	},
 };
 
 /* This will create static memory mapping for selected devices */
-void __init spear1310_map_io(void)
+void __init spear1310_reva_map_io(void)
 {
-	iotable_init(spear1310_io_desc, ARRAY_SIZE(spear1310_io_desc));
+	iotable_init(spear1310_reva_io_desc,
+			ARRAY_SIZE(spear1310_reva_io_desc));
 	spear13xx_map_io();
 }
 
-void __init spear1310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
-		u8 pmx_dev_count)
+void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
+		struct pmx_dev **pmx_devs, u8 pmx_dev_count)
 {
 	int ret;
 

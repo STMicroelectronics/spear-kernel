@@ -1155,7 +1155,7 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 	port->hrcr		= tdm_hdlc_hrcr;
 
 	switch (plat_data->ip_type) {
-	case SPEAR1310_TDM_HDLC:
+	case SPEAR1310_REVA_TDM_HDLC:
 		port->max_timeslot	= 512;
 		port->hdlc_int_type_bit = SPEAR1310_HDLC_INT_TYPE_BIT;
 		port->hdlc_int_chan_shift = SPEAR1310_HDLC_INT_CHAN_SHIFT;

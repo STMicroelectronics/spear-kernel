@@ -11,11 +11,11 @@ config MACH_SPEAR1300_EVB
 	help
 	  Supports ST SPEAr1300 Evaluation Board
 
-config MACH_SPEAR1310_EVB
-	bool "SPEAr1310 Evaluation Board"
-	select CPU_SPEAR1310
+config MACH_SPEAR1310_REVA_EVB
+	bool "SPEAr1310 RevA Evaluation Board"
+	select CPU_SPEAR1310_REVA
 	help
-	  Supports ST SPEAr1310 Evaluation Board
+	  Supports ST SPEAr1310 RevA Evaluation Board
 
 config MACH_SPEAR1340_EVB
 	bool "SPEAr1340 Evaluation Board"
@@ -36,10 +36,10 @@ config CPU_SPEAR1300
 	help
 	  Supports ST SPEAr1300 Machine
 
-config CPU_SPEAR1310
-	bool "SPEAr1310"
+config CPU_SPEAR1310_REVA
+	bool "SPEAr1310 RevA"
 	help
-	  Supports ST SPEAr1310 Machine
+	  Supports ST SPEAr1310 RevA Machine
 
 config CPU_SPEAR1340
 	bool "SPEAr1340"

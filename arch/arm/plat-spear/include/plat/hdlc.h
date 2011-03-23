@@ -16,7 +16,7 @@
 
 #include <linux/platform_device.h>
 
-#define SPEAR1310_TDM_HDLC	0
+#define SPEAR1310_REVA_TDM_HDLC	0
 #define SPEAR310_TDM_HDLC	1
 
 struct tdm_hdlc_platform_data {
