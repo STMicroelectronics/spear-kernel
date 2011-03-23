@@ -246,6 +246,10 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->irq = irqlist;
 	new_bus->phy_mask = priv->phy_mask;
 	new_bus->parent = priv->device;
+
+	if (machine_is_spear1310() && (priv->bus_id == 0))
+		mac1_bus = (u32 *)ndev;
+
 	err = mdiobus_register(new_bus);
 	if (err != 0) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
