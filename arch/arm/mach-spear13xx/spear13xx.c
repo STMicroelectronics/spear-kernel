@@ -825,7 +825,7 @@ static void dmac_setup(void)
 	 * operations.
 	 */
 	/* setting Peripheral flow controller for jpeg */
-	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
 }
 
 #ifdef CONFIG_SND_SOC_STA529
