@@ -689,8 +689,8 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 	if (!(fbi->reg_pctr & DB9000_PCTR_PCI)) {
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
-			fbi->reg_pctr = pcd | ~DB9000_PCTR_PCI |
-				~DB9000_PCTR_PCB;
+			fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
+			fbi->reg_pctr |= pcd;
 			set_hsync_time(fbi, pcd);
 		}
 	} else
