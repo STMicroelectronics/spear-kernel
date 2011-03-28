@@ -596,7 +596,7 @@ static void __init spear1310_evb_init(void)
 
 	/* ras part fsmc nor device */
 	/* initialize fsmc related data in fsmc plat data */
-	ras_fsmc_config(RAS_FSMC_MODE_NOR, FSMC_FLASH_WIDTH16);
+	ras_fsmc_config(RAS_FSMC_MODE_NOR, RAS_FSMC_WIDTH_16);
 	fsmc_init_board_info(&spear1310_ras_fsmc_nor_device, NULL,
 			0, FSMC_FLASH_WIDTH16);
 	/* Initialize fsmc regiters */
