@@ -34,7 +34,7 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 	if (!fsmc_nor_base)
 		return -ENOMEM;
 
-	clk = clk_get(NULL, "fsmc");
+	clk = clk_get_sys("fsmc-nor", NULL);
 	if (IS_ERR(clk)) {
 		iounmap(fsmc_nor_base);
 		return PTR_ERR(clk);

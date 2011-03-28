@@ -927,6 +927,20 @@ static struct clk fsmc_clk = {
 	.recalc = &follow_parent,
 };
 
+/* fsmc-nand clock */
+static struct clk fsmc_nand_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &fsmc_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc-nor clock */
+static struct clk fsmc_nor_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &fsmc_clk,
+	.recalc = &follow_parent,
+};
+
 /* smi clock */
 static struct clk smi_clk = {
 	.pclk = &ahb_clk,
@@ -1545,6 +1559,8 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "pcie2",		.clk = &pcie2_clk},
 	{.dev_id = "sdhci",		.clk = &sdhci_clk},
 	{.con_id = "fsmc",		.clk = &fsmc_clk},
+	{.dev_id = "fsmc-nand",		.clk = &fsmc_nand_clk},
+	{.dev_id = "fsmc-nor",		.clk = &fsmc_nor_clk},
 	{.dev_id = "sysram0",		.clk = &sysram0_clk},
 	{.dev_id = "sysram1",		.clk = &sysram1_clk},
 	{.dev_id = "arasan_cf",		.clk = &cfxd_clk},
