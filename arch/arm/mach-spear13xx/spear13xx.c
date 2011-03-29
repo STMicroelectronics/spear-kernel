@@ -232,6 +232,7 @@ static struct plat_stmmacenet_data ether0_platform_data = {
 	.csum_off_engine = STMAC_TYPE_2,
 	.bugged_jumbo = 1,
 	.features = NETIF_F_HW_CSUM,
+	.pmt = 1,
 };
 
 static struct resource eth0_resources[] = {

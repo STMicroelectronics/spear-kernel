@@ -280,6 +280,7 @@ static struct plat_stmmacenet_data eth_platform_data = {
 	.csum_off_engine = STMAC_TYPE_1,
 	.bugged_jumbo = 0,
 	.features = NETIF_F_HW_CSUM,
+	.pmt = 1,
 };
 
 static struct resource eth_resources[] = {
