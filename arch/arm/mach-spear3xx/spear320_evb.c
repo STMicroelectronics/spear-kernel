@@ -196,12 +196,9 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #endif
 };
 
-#define SPEAR320_CONFIG_REG	0x10
-#define SPEAR_CFG_MII		0x20
 #define ENABLE_MEM_CLK		0x1
 static void macb_init_board_info(struct platform_device *pdev)
 {
-	void __iomem *io_base;
 	u32 tmp;
 
 	macb_set_plat_data(pdev, &spear320_macb_data);
@@ -218,10 +215,8 @@ static void macb_init_board_info(struct platform_device *pdev)
 	 * interfaces are not functional, hence has been kept static for
 	 * the MII interface only.
 	 */
-	io_base = ioremap(SPEAR320_SOC_CONFIG_BASE, 0x80);
-	tmp = readl(io_base + SPEAR320_CONFIG_REG) | SPEAR_CFG_MII;
-	writel(tmp, io_base + SPEAR320_CONFIG_REG);
-	iounmap(io_base);
+	tmp = readl(IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG))) | (1 << MII_ENB);
+	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
 
 	/* Enable memory Port-1 clock */
 	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
