@@ -1055,6 +1055,24 @@ static struct spear_shirq shirq_intrcomm_ras = {
 	},
 };
 
+/* Following will create 320 specific static virtual/physical mappings */
+struct map_desc spear320_io_desc[] __initdata = {
+	{
+		.virtual	= VA_SPEAR320_SOC_CONFIG_BASE,
+		.pfn		= __phys_to_pfn(SPEAR320_SOC_CONFIG_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+};
+
+/* This will create static memory mapping for selected devices */
+void __init spear320_map_io(void)
+{
+	iotable_init(spear320_io_desc,
+			ARRAY_SIZE(spear320_io_desc));
+	spear3xx_map_io();
+}
+
 /* spear320 routines */
 void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
