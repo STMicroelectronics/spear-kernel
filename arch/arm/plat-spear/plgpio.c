@@ -287,7 +287,7 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 		return -EINVAL;
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (cpu_is_spear1340()) {
+	if (cpu_is_spear1310() || cpu_is_spear1340()) {
 		void __iomem *reg_off = REG_OFFSET(plgpio->base,
 				plgpio->regs.eit, offset);
 		u32 val = readl(reg_off);

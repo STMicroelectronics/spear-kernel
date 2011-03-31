@@ -33,8 +33,11 @@ static inline void arch_reset(char mode, const char *cmd)
 #ifdef CONFIG_CPU_SPEAR1340
 		writel_relaxed(0x01, SPEAR1340_SYS_SW_RES);
 #endif
-	}
-	else
+	} else if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		writel_relaxed(0x01, SPEAR1310_SYS_SW_RES);
+#endif
+	} else
 		writel_relaxed(0x01, SYS_SW_RES);
 }
 

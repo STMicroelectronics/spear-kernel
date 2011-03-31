@@ -17,6 +17,7 @@
 #include <asm/memory.h>
 #include <mach/spear1300.h>
 #include <mach/spear1310_reva.h>
+#include <mach/spear1310.h>
 #include <mach/spear1340.h>
 
 #define SPEAR13XX_L2CC_BASE		UL(0xED000000)
@@ -82,16 +83,22 @@
 
 /* Devices not present in SPEAr1340 & are present in all other variants */
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 #define SPEAR13XX_I2S0_BASE		UL(0xE0180000)
 #define SPEAR13XX_I2S1_BASE		UL(0xE0200000)
-#define SPEAR13XX_UPD_BASE		UL(0xE2800000)
-#define SPEAR13XX_UDC_BASE		UL(0xE3800000)
 #define SPEAR13XX_PCIE1_APP_BASE	UL(0xB1800000)
 #define SPEAR13XX_PCIE1_BASE		UL(0x90000000)
 #define SPEAR13XX_PCIE2_APP_BASE	UL(0xB4000000)
 #define SPEAR13XX_PCIE2_BASE		UL(0xC0000000)
 #define SPEAR13XX_JPEG_BASE		UL(0xB2000000)
+#endif
+
+/* Devices not present in SPEAr1340 & are present in all other variants */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900)
+#define SPEAR13XX_UPD_BASE		UL(0xE2800000)
+#define SPEAR13XX_UDC_BASE		UL(0xE3800000)
 #endif
 
 /* Debug uart for linux, will be used for debug and uncompress messages */

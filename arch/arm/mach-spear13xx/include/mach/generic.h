@@ -24,7 +24,8 @@
 #include <plat/padmux.h>
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 /*
  * Function enable (Pad multiplexing register) offsets
  */
@@ -227,6 +228,62 @@ extern struct pmx_dev spear1310_reva_pmx_smii_0_1_2;
 extern struct pmx_dev spear1310_reva_pmx_can;
 #endif
 
+#ifdef CONFIG_CPU_SPEAR1310
+
+/* PCI Macros */
+#define SPEAR1310_PMX_PCI_REG0_MASK (SPEAR13XX_PMX_MCI_DATA8_15_MASK)
+#define SPEAR1310_PMX_PCI_REG1_MASK (SPEAR13XX_PMX_SMINCS2_MASK | \
+		SPEAR13XX_PMX_SMINCS3_MASK | SPEAR13XX_PMX_CLCD2_MASK | \
+		SPEAR13XX_PMX_KBD_ROWCOL68_MASK | \
+		SPEAR13XX_PMX_EGPIO_1_GRP_MASK | SPEAR13XX_PMX_GPT0_TMR1_MASK |\
+		SPEAR13XX_PMX_GPT0_TMR2_MASK | SPEAR13XX_PMX_GPT1_TMR1_MASK | \
+		SPEAR13XX_PMX_GPT1_TMR2_MASK | SPEAR13XX_PMX_I2S2_MASK | \
+		SPEAR13XX_PMX_NFCE2_MASK)
+#define SPEAR1310_PMX_PCI_REG2_MASK (SPEAR13XX_PMX_TOUCH_XY_MASK | \
+		SPEAR13XX_PMX_SSP0_CS0_MASK | SPEAR13XX_PMX_SSP0_CS1_2_MASK)
+
+/* SMII Macros */
+#define SPEAR1310_PMX_SMII_0_1_2_MASK (SPEAR13XX_PMX_CLCD2_MASK | \
+		SPEAR13XX_PMX_KBD_ROWCOL68_MASK)
+
+/* RGMII Macros */
+#define SPEAR1310_PMX_RGMII_REG0_MASK (SPEAR13XX_PMX_MCI_DATA8_15_MASK | \
+		SPEAR13XX_PMX_GMIICOL_CRS_XFERER_MIITXCLK_MASK | \
+		SPEAR13XX_PMX_GMIID47_MASK)
+#define SPEAR1310_PMX_RGMII_REG1_MASK (SPEAR13XX_PMX_KBD_ROWCOL68_MASK | \
+		SPEAR13XX_PMX_EGPIO_1_GRP_MASK | SPEAR13XX_PMX_KBD_ROW1_MASK | \
+		SPEAR13XX_PMX_KBD_ROW0_MASK | SPEAR13XX_PMX_NFCE2_MASK)
+#define SPEAR1310_PMX_RGMII_REG2_MASK (SPEAR13XX_PMX_TOUCH_XY_MASK | \
+		SPEAR13XX_PMX_SSP0_CS0_MASK | SPEAR13XX_PMX_SSP0_CS1_2_MASK)
+
+extern struct pmx_dev spear1310_pmx_uart_1_dis_i2c;
+extern struct pmx_dev spear1310_pmx_uart_1_dis_sd;
+extern struct pmx_dev spear1310_pmx_uart_2_3;
+extern struct pmx_dev spear1310_pmx_uart_4;
+extern struct pmx_dev spear1310_pmx_uart_5;
+extern struct pmx_dev spear1310_pmx_rs485_0_1_tdm_0_1;
+extern struct pmx_dev spear1310_pmx_i2c_1_2;
+extern struct pmx_dev spear1310_pmx_i2c3_dis_smi_clcd;
+extern struct pmx_dev spear1310_pmx_i2c3_dis_sd_i2s1;
+extern struct pmx_dev spear1310_pmx_i2c_4_5_dis_smi;
+extern struct pmx_dev spear1310_pmx_i2c4_dis_sd;
+extern struct pmx_dev spear1310_pmx_i2c5_dis_sd;
+extern struct pmx_dev spear1310_pmx_i2c_6_7_dis_kbd;
+extern struct pmx_dev spear1310_pmx_i2c6_dis_sd;
+extern struct pmx_dev spear1310_pmx_i2c7_dis_sd;
+extern struct pmx_dev spear1310_pmx_rgmii;
+extern struct pmx_dev spear1310_pmx_can0_dis_nor;
+extern struct pmx_dev spear1310_pmx_can0_dis_sd;
+extern struct pmx_dev spear1310_pmx_can1_dis_sd;
+extern struct pmx_dev spear1310_pmx_can1_dis_kbd;
+extern struct pmx_dev spear1310_pmx_pci;
+extern struct pmx_dev spear1310_pmx_smii_0_1_2;
+extern struct pmx_dev spear1310_pmx_ssp1_dis_kbd;
+extern struct pmx_dev spear1310_pmx_ssp1_dis_sd;
+extern struct pmx_dev spear1310_pmx_gpt64;
+extern struct pmx_dev spear1310_pmx_ras_mii_txclk;
+#endif
+
 #if defined(CONFIG_CPU_SPEAR1340)
 /* pad mux declarations */
 #define SPEAR1340_PAD_MUX_CONFIG_REG_0	UL(SPEAR13XX_MISC_BASE + 0x6A0)
@@ -330,12 +387,17 @@ extern struct platform_device spear13xx_smi_device;
 extern struct platform_device spear13xx_wdt_device;
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 extern struct platform_device spear13xx_i2s0_device;
 extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_pcie_gadget1_device;
 extern struct platform_device spear13xx_pcie_gadget2_device;
+#endif
+
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900)
 extern struct platform_device spear13xx_udc_device;
 #endif
 
@@ -394,6 +456,38 @@ void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
 void __init spear1310_reva_map_io(void);
 
 #endif /* CONFIG_CPU_SPEAR1310_REVA */
+
+/* spear1310 declarations */
+#ifdef CONFIG_CPU_SPEAR1310
+/* Add spear1310 machine device structure declarations here */
+extern struct amba_device spear1310_uart1_device;
+extern struct amba_device spear1310_uart2_device;
+extern struct amba_device spear1310_uart3_device;
+extern struct amba_device spear1310_uart4_device;
+extern struct amba_device spear1310_uart5_device;
+extern struct amba_device spear1310_ssp1_device;
+extern struct platform_device spear1310_can0_device;
+extern struct platform_device spear1310_can1_device;
+extern struct platform_device spear1310_i2c1_device;
+extern struct platform_device spear1310_i2c2_device;
+extern struct platform_device spear1310_i2c3_device;
+extern struct platform_device spear1310_i2c4_device;
+extern struct platform_device spear1310_i2c5_device;
+extern struct platform_device spear1310_i2c6_device;
+extern struct platform_device spear1310_i2c7_device;
+extern struct platform_device spear1310_plgpio_device;
+extern struct platform_device spear1310_tdm_hdlc_0_device;
+extern struct platform_device spear1310_tdm_hdlc_1_device;
+extern struct platform_device spear1310_rs485_0_device;
+extern struct platform_device spear1310_rs485_1_device;
+
+/* Add spear1310 machine function declarations here */
+void __init spear1310_clk_init(void);
+void __init spear1310_init(struct pmx_mode *pmx_mode,
+		struct pmx_dev **pmx_devs, u8 pmx_dev_count);
+void __init spear1310_map_io(void);
+
+#endif /* CONFIG_CPU_SPEAR1310 */
 
 /* spear1340 declarations */
 #ifdef CONFIG_CPU_SPEAR1340

@@ -313,6 +313,10 @@ void __init nand_mach_init(u32 busw)
 #ifdef CONFIG_CPU_SPEAR1340
 		reg = SPEAR1340_FSMC_CFG;
 #endif
+	} else if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		reg = SPEAR1310_FSMC_CFG;
+#endif
 	} else
 		reg = FSMC_CFG;
 
@@ -656,9 +660,13 @@ struct platform_device spear13xx_wdt_device = {
 	.resource = wdt_resources,
 };
 
-/* Devices present on CPU_SPEAR1300, CPU_SPEAR1310_REVA or CPU_SPEAR900 */
+/*
+ * Devices present on CPU_SPEAR1300, CPU_SPEAR1310, CPU_SPEAR1310_REVA or
+ * CPU_SPEAR900
+ */
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 /* i2s0 device registeration */
 static struct resource i2s0_resources[] = {
 	{
@@ -799,7 +807,11 @@ struct platform_device spear13xx_pcie_gadget2_device = {
 	.num_resources = ARRAY_SIZE(pcie_gadget2_resources),
 	.resource = pcie_gadget2_resources,
 };
+#endif
 
+/*Devices present on CPU_SPEAR1300, CPU_SPEAR1310_REVA or CPU_SPEAR900 */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900)
 /* usb device registeration */
 static struct resource udc_resources[] = {
 	[0] = {
@@ -945,7 +957,7 @@ void __init spear13xx_init(void)
 	dmac_setup();
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900)
-	if (!cpu_is_spear1340())
+	if (!cpu_is_spear1340() && !cpu_is_spear1310())
 		set_udc_plat_data(&spear13xx_udc_device);
 #endif
 }
@@ -1018,6 +1030,10 @@ void __init spear13xx_map_io(void)
 #ifdef CONFIG_CPU_SPEAR1340
 		spear1340_clk_init();
 #endif
+	} else if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		spear1310_clk_init();
+#endif
 	} else
 		spear13xx_clk_init();
 }
@@ -1059,7 +1075,8 @@ struct sys_timer spear13xx_timer = {
 };
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900)
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 /* pad multiplexing support */
 /* devices */
 
@@ -1609,6 +1626,10 @@ struct pmx_dev spear13xx_pmx_gpt_1_2 = {
 /* Pad multiplexing for mcif device */
 static struct pmx_mux_reg pmx_mcif_mux[] = {
 	{
+		.address = SPEAR13XX_PMX_CFG0,
+		.mask = SPEAR13XX_PMX_MCI_DATA8_15_MASK,
+		.value = SPEAR13XX_PMX_MCI_DATA8_15_MASK,
+	}, {
 		.address = SPEAR13XX_PMX_CFG1,
 		.mask = SPEAR13XX_PMX_MCIFALL_1_MASK,
 		.value = SPEAR13XX_PMX_MCIFALL_1_MASK,

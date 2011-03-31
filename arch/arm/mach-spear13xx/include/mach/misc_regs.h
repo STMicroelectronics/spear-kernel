@@ -21,6 +21,11 @@
 #undef MISC_BASE
 #endif
 
+#ifdef CONFIG_CPU_SPEAR1310
+#include <mach/spear1310_misc_regs.h>
+#undef MISC_BASE
+#endif
+
 #define MISC_BASE		IOMEM(VA_SPEAR13XX_MISC_BASE)
 
 /* General Configuration */
