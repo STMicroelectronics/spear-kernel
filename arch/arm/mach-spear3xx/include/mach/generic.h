@@ -252,10 +252,6 @@ extern struct pmx_dev spear320_pmx_smii0;
 extern struct pmx_dev spear320_pmx_smii1;
 extern struct pmx_dev spear320_pmx_i2c1;
 
-/* pad multiplexing support */
-#define SPEAR320_PAD_MUX_CONFIG_REG	0xB300000C
-#define SPEAR320_MODE_CONFIG_REG	0xB3000010
-
 /* Add spear320 machine function declarations here */
 void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
