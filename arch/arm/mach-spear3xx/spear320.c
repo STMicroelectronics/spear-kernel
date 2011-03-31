@@ -589,7 +589,7 @@ struct pmx_dev spear320_pmx_i2c1 = {
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver = {
-	.mode_reg = {.address = SPEAR320_MODE_CONFIG_REG, .mask = 0x00000007},
+	.mode_reg = {.address = SPEAR320_CONTROL_REG, .mask = 0x00000007},
 };
 
 /* Add spear320 specific devices here */
