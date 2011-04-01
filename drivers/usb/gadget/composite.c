@@ -424,7 +424,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	/* Initialize all interfaces by setting them to altsetting zero. */
 	for (tmp = 0; tmp < MAX_CONFIG_INTERFACES; tmp++) {
 		struct usb_function	*f = c->interface[tmp];
-		struct usb_descriptor_header **descriptors;
+		struct usb_descriptor_header **descriptors, **desc;
 
 		if (!f)
 			break;
@@ -436,9 +436,9 @@ static int set_config(struct usb_composite_dev *cdev,
 		 * configuration's setup callback.
 		 */
 		if (gadget->speed == USB_SPEED_HIGH)
-			descriptors = f->hs_descriptors;
+			desc = descriptors = f->hs_descriptors;
 		else
-			descriptors = f->descriptors;
+			desc = descriptors = f->descriptors;
 
 		for (; *descriptors; ++descriptors) {
 			struct usb_endpoint_descriptor *ep;
@@ -462,7 +462,7 @@ static int set_config(struct usb_composite_dev *cdev,
 			goto done;
 		}
 		usb_gadget_ioctl(gadget, UDC_SET_CONFIG,
-				(unsigned long)(descriptors));
+				(unsigned long)(desc));
 
 	}
 
