@@ -1674,3 +1674,69 @@ struct pmx_dev spear13xx_pmx_xd = {
 	.modes = pmx_xd_modes,
 	.mode_count = ARRAY_SIZE(pmx_xd_modes),
 };
+
+/* Pad multiplexing for touch_xy device */
+static struct pmx_mux_reg pmx_touch_xy_mux[] = {
+	{
+		.address = SPEAR13XX_PMX_CFG2,
+		.mask = SPEAR13XX_PMX_TOUCH_XY_MASK,
+		.value = SPEAR13XX_PMX_TOUCH_XY_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_touch_xy_modes[] = {
+	{
+		.mux_regs = pmx_touch_xy_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_touch_xy_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_touch_xy = {
+	.name = "touch_xy",
+	.modes = pmx_touch_xy_modes,
+	.mode_count = ARRAY_SIZE(pmx_touch_xy_modes),
+};
+
+/* Pad multiplexing for ssp0_cs0 device */
+static struct pmx_mux_reg pmx_ssp0_cs0_mux[] = {
+	{
+		.address = SPEAR13XX_PMX_CFG2,
+		.mask = SPEAR13XX_PMX_SSP0_CS0_MASK,
+		.value = SPEAR13XX_PMX_SSP0_CS0_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_cs0_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_cs0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs0_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_ssp0_cs0 = {
+	.name = "ssp0_cs0",
+	.modes = pmx_ssp0_cs0_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs0_modes),
+};
+
+/* Pad multiplexing for ssp0_cs1_2 device */
+static struct pmx_mux_reg pmx_ssp0_cs1_2_mux[] = {
+	{
+		.address = SPEAR13XX_PMX_CFG2,
+		.mask = SPEAR13XX_PMX_SSP0_CS1_2_MASK,
+		.value = SPEAR13XX_PMX_SSP0_CS1_2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_cs1_2_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_cs1_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs1_2_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_ssp0_cs1_2 = {
+	.name = "ssp0_cs1_2",
+	.modes = pmx_ssp0_cs1_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_2_modes),
+};
