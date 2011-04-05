@@ -161,6 +161,9 @@ struct pcie_app_reg {
 #define AXI_OP_TYPE_DBI_ELBI_ENABLE	1
 
 /* synopsis specific PCIE configuration registers*/
+#define PCIE_PORT_LOGIC		0x80C	/* 32 bits */
+#define PORT_LOGIC_SPD_CHANGE_ID	17
+
 #define PCIE_MSI_ADDR_LO	0x820	/* 32 bits */
 #define PCIE_MSI_ADDR_HI	0x824	/* 32 bits */
 #define PCIE_MSI_INTR0_ENABLE	0x828	/* 32 bits */

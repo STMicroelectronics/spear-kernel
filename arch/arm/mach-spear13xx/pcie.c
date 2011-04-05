@@ -301,6 +301,10 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 			spear_dbi_write_reg(pp, cap + PCI_EXP_LNKCTL2, 4,
 					val);
 		}
+	} else {
+		spear_dbi_read_reg(pp, PCIE_PORT_LOGIC, 4, &val);
+		val |= (1 << PORT_LOGIC_SPD_CHANGE_ID);
+		spear_dbi_write_reg(pp, PCIE_PORT_LOGIC, 4, val);
 	}
 
 	writel(DEVICE_TYPE_RC | (1 << MISCTRL_EN_ID)
