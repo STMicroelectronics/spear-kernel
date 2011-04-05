@@ -1040,11 +1040,11 @@ static int dw_ep_disable(struct usb_ep *_ep)
 		 * the chain, otherwise DMA would be in in-consistent state.
 		 */
 
-		while (readl(&(epregs->control)) & ENDP_CNTL_POLL) {
+		while ((tmp = readl(&(epregs->control))) & ENDP_CNTL_POLL) {
 			/* flush TX FIFO */
-			tmp = readl(&ep->in_regs->control);
+			tmp &= ~ENDP_CNTL_POLL;
 			tmp |= ENDP_CNTL_FLUSH;
-			writel(tmp, &ep->in_regs->control);
+			writel(tmp, &epregs->control);
 		}
 		/*
 		 * Verify, will this raise an interrupt
