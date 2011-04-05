@@ -808,21 +808,12 @@ static int stmmac_open(struct net_device *dev)
 		goto stmmac_init_fail;
 	}
 
-	/* Request the IRQ lines */
-	ret = request_irq(dev->irq, stmmac_interrupt,
-			 IRQF_SHARED, dev->name, dev);
-	if (unlikely(ret < 0)) {
-		pr_err("%s: ERROR: allocating the IRQ %d (error: %d)\n",
-		       __func__, dev->irq, ret);
-		goto stmmac_init_fail;
-	}
-
 #ifdef CONFIG_STMMAC_TIMER
 	priv->tm = kzalloc(sizeof(struct stmmac_timer *), GFP_KERNEL);
 	if (unlikely(priv->tm == NULL)) {
 		pr_err("%s: ERROR: timer memory alloc failed\n", __func__);
 		ret = -ENOMEM;
-		goto stmmac_alloc_fail;
+		goto stmmac_init_fail;
 	}
 	priv->tm->freq = tmrate;
 
@@ -876,6 +867,16 @@ static int stmmac_open(struct net_device *dev)
 	writel(0xffffffff, priv->ioaddr + MMC_HIGH_INTR_MASK);
 	writel(0xffffffff, priv->ioaddr + MMC_LOW_INTR_MASK);
 
+
+	/* Request the IRQ lines */
+	ret = request_irq(dev->irq, stmmac_interrupt,
+			 IRQF_SHARED, dev->name, dev);
+	if (unlikely(ret < 0)) {
+		pr_err("%s: ERROR: allocating the IRQ %d (error: %d)\n",
+		       __func__, dev->irq, ret);
+		goto stmmac_dma_init_fail;
+	}
+
 	/* Enable the MAC Rx/Tx */
 	stmmac_enable_mac(priv->ioaddr);
 
@@ -907,14 +908,13 @@ static int stmmac_open(struct net_device *dev)
 	skb_queue_head_init(&priv->rx_recycle);
 	netif_start_queue(dev);
 	return 0;
+
 stmmac_dma_init_fail:
 #ifdef CONFIG_STMMAC_TIMER
 	stmmac_close_ext_timer();
 	if (priv->tm != NULL)
 		kfree(priv->tm);
-stmmac_alloc_fail:
 #endif
-	free_irq(dev->irq, dev);
 stmmac_init_fail:
 	if (priv->stmmac_clk)
 		clk_disable(priv->stmmac_clk);
