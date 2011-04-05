@@ -163,6 +163,7 @@ static inline void desc_init(struct dw_udc_bulkd *desc, dma_addr_t dma)
 	desc->status = cpu_to_le32(DMAUSB_HOSTRDY);
 	desc->bufp = 0x0;
 	desc->reserved = cpu_to_le32(0xf0cacc1a);
+	wmb();
 	INIT_LIST_HEAD(&desc->desc_list);
 }
 
@@ -222,6 +223,7 @@ static void *udc_get_descrs(struct dw_udc_dev *udev, unsigned short num)
 			goto cleanup;
 		}
 		desc_prev->nextd = cpu_to_le32(desc->dma_addr);
+		wmb();
 		list_add_tail(&desc->desc_list, &head->desc_list);
 	}
 
@@ -787,6 +789,7 @@ kick_dma(struct dw_udc_ep *ep, struct dw_udc_request *req,
 		ep->desc_out_ptr = head_descr;
 	}
 
+	wmb();
 	return 0;
 }
 
@@ -912,6 +915,7 @@ static void udc_rescan_isoc_desc(struct dw_udc_ep *ep)
 
 	list_for_each_entry(desc, &head_desc->desc_list, desc_list)
 		desc->status |= cpu_to_le32((sof << 19) | (frame << 16));
+	wmb();
 }
 
 static void udc_handle_epn_in_int(struct dw_udc_ep *ep)
