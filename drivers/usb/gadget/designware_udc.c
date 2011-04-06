@@ -2857,7 +2857,8 @@ static int dw_udc_suspend(struct device *dev)
 		stop_activity(udev, udev->driver);
 		udc_disconnect(udev);
 	} else {
-		enable_irq_wake(udev->irq);
+		if (!enable_irq_wake(udev->irq))
+			udev->irq_wake = 1;
 		udev->active_suspend = 1;
 	}
 
@@ -2871,7 +2872,10 @@ static int dw_udc_resume(struct device *dev)
 
 	if (udev->active_suspend) {
 		/* bus resumed */
-		disable_irq_wake(udev->irq);
+		if (udev->irq_wake) {
+			disable_irq_wake(udev->irq);
+			udev->irq_wake = 0;
+		}
 		udev->active_suspend = 0;
 	} else
 		udc_connect(udev);

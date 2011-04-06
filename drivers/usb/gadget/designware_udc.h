@@ -275,6 +275,7 @@ struct dw_udc_dev {
 	int irq;
 	u8 int_cmd;
 	u8 active_suspend;
+	u8 irq_wake;
 
 	void __iomem *csr_base;
 	struct dw_udc_epin_regs __iomem *epin_base;
