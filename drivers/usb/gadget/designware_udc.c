@@ -2211,7 +2211,8 @@ static int dw_udc_wakeup(struct usb_gadget *_gadget)
 	spin_lock_irqsave(&udev->lock, flags);
 
 	tmp = readl(&glob->dev_control);
-	tmp |= DEV_CNTL_RESUME;
+	writel(tmp | DEV_CNTL_RESUME, &glob->dev_control);
+	msleep(1);
 	writel(tmp, &glob->dev_control);
 
 	spin_unlock_irqrestore(&udev->lock, flags);
