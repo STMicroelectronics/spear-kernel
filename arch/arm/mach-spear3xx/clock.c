@@ -789,19 +789,19 @@ static struct clk_lookup spear_clk_lookups[] = {
 };
 
 /* array of all spear 300 clock lookups */
-#ifdef CONFIG_CPU_SPEAR300
 static struct clk_lookup spear300_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR300
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
 	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
-};
 #endif
+};
 
 /* array of all spear 310 clock lookups */
-#ifdef CONFIG_CPU_SPEAR310
 static struct clk_lookup spear310_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR310
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "uart1",		.clk = &spear310_uart1_clk},
@@ -809,12 +809,12 @@ static struct clk_lookup spear310_clk_lookups[] = {
 	{ .dev_id = "uart3",		.clk = &spear310_uart3_clk},
 	{ .dev_id = "uart4",		.clk = &spear310_uart4_clk},
 	{ .dev_id = "uart5",		.clk = &spear310_uart5_clk},
-};
 #endif
+};
 
 /* array of all spear 320 clock lookups */
-#ifdef CONFIG_CPU_SPEAR320
 static struct clk_lookup spear320_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR320
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	{ .con_id = "fsmc",		.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
@@ -827,8 +827,8 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
 	{ .dev_id = "uart1",		.clk = &spear320_uart1_clk},
 	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
-};
 #endif
+};
 
 /* machine clk init */
 void __init spear3xx_clk_init(void)
