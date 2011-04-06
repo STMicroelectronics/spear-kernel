@@ -1603,14 +1603,14 @@ static struct clk_lookup spear_clk_lookups[] = {
 };
 
 /* array of all spear 1300 clock lookups */
-#ifdef CONFIG_CPU_SPEAR1300
 static struct clk_lookup spear1300_clk_lookups[] = {
-};
+#ifdef CONFIG_CPU_SPEAR1300
 #endif
+};
 
 /* array of all spear 1310 clock lookups */
-#ifdef CONFIG_CPU_SPEAR1310
 static struct clk_lookup spear1310_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR1310
 	{.dev_id = "c_can_platform.0",	.clk = &can0_clk},
 	{.dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{.dev_id = "stmmaceth.1",	.clk = &gmac_ras1_clk},
@@ -1628,14 +1628,14 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "uart5",		.clk = &uart5_clk},
 	{.dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{.con_id = "tdm_hdlc",		.clk = &tdm_clk},
-};
 #endif
+};
 
 /* array of all spear 900 clock lookups */
-#ifdef CONFIG_CPU_SPEAR900
 static struct clk_lookup spear900_clk_lookups[] = {
-};
+#ifdef CONFIG_CPU_SPEAR900
 #endif
+};
 
 /* machine clk init */
 void __init spear13xx_clk_init(void)
