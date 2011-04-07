@@ -18,6 +18,7 @@
 #include <linux/amba/pl022.h>
 #include <linux/gpio.h>
 
+/* Chip select control using external GPIO pins */
 /* spi board information */
 static inline int spi_cs_gpio_request(u32 gpio_pin)
 {
@@ -38,9 +39,9 @@ static inline int spi_cs_gpio_request(u32 gpio_pin)
 	return 0;
 }
 
-/* This will define cs_control function for a specific spi slave */
-#define DECLARE_SPI_CS_CONTROL(id, type, gpio)		\
-static void spi##id##_##type##_cs_control(u32 control)	\
+/* This will define cs_control function for a specific spi slave using gpios */
+#define DECLARE_SPI_CS_GPIO_CONTROL(id, type, gpio)	\
+static void spi##id##_##type##_cs_gpio_control(u32 control)	\
 {							\
 	static int count, ret;				\
 							\

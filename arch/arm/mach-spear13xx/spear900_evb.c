@@ -176,14 +176,14 @@ static const struct flash_platform_data spix_flash_data = {
 };
 
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_gpio_control);
 
 /* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, dev, /* mention gpio number here */);
 /* spi0 spidev Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_gpio_control);
 #endif
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
@@ -208,7 +208,7 @@ static struct stmpe610_pdata stmpe610_spi_pdata = {
 	.i_drive = IDRIVE_50_80MA,
 };
 
-DECLARE_SPI_CS_CONTROL(0, ts, GPIO1_7);
+DECLARE_SPI_CS_GPIO_CONTROL(0, ts, GPIO1_7);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
@@ -220,7 +220,7 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.ctrl_len = SSP_BITS_8,
 	.wait_state = SSP_MWIRE_WAIT_ZERO,
 	.duplex = SSP_MICROWIRE_CHANNEL_FULL_DUPLEX,
-	.cs_control = spi0_ts_cs_control,
+	.cs_control = spi0_ts_cs_gpio_control,
 };
 
 static struct spi_board_info __initdata spi_board_info[] = {
