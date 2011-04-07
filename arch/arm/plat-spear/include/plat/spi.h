@@ -17,6 +17,54 @@
 
 #include <linux/amba/pl022.h>
 #include <linux/gpio.h>
+#include <linux/types.h>
+
+/* Chip select control using SSP peripherals inbuilt chip select lines */
+/*
+ * DECLARE_SPI_CS_CFG: chip select configuration routine for spi master
+ * @id: ssp id
+ * @reg: virtual address of register for configuring
+ * @cs_sel_mask: chip select lines selection bit mask
+ * @cs_sel_shift: chip select lines selection bit shift
+ * @cs_ctl_mask: chip selection ctl mask (h/w or s/w)
+ * @cs_ctl_shift: chip selection ctl shift (h/w or s/w)
+ * @cs_val_mask: chip selection value bit mask
+ * @cs_val_shift: chip selection value bit shift
+ */
+#define DECLARE_SPI_CS_CFG(id, reg, cs_sel_mask, cs_sel_shift, cs_ctl_mask, \
+		cs_ctl_shift, cs_ctl_val, cs_val_mask, cs_val_shift)	\
+/* cs_sel: cs line to select, val: value to write on cs line */		\
+static void spi##id##_cs_cfg(u32 cs_sel, u32 val)			\
+{									\
+	static int count;						\
+	u32 tmp = readl(reg);						\
+									\
+	if (unlikely(!count)) {						\
+		count++;						\
+		tmp &= ~(cs_ctl_mask << cs_ctl_shift);			\
+		tmp |= cs_ctl_val << cs_ctl_shift;			\
+		writel(tmp, reg);					\
+	}								\
+									\
+	tmp &= ~(cs_sel_mask << cs_sel_shift);				\
+	tmp |= cs_sel << cs_sel_shift;					\
+	writel(tmp, reg);						\
+	tmp &= ~(cs_val_mask << cs_val_shift);				\
+	tmp |= val << cs_val_shift;					\
+	writel(tmp, reg);						\
+}
+
+/*
+ * cs_control function for a specific spi slave using spi's cs signals
+ * @id: spi master id
+ * @type: slave type, will used in routines name
+ * @cs_sel: chip select number
+ */
+#define DECLARE_SPI_CS_CONTROL(id, type, cs_sel)	\
+static void spi##id##_##type##_cs_control(u32 control)	\
+{							\
+	spi##id##_cs_cfg(cs_sel, control);		\
+}
 
 /* Chip select control using external GPIO pins */
 /* spi board information */
