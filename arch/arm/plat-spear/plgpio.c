@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <asm/mach-types.h>
+#include <mach/hardware.h>
 
 #define MAX_GPIO_PER_REG		32
 #define PIN_OFFSET(pin)			(pin % MAX_GPIO_PER_REG)
@@ -286,7 +287,21 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 		return -EINVAL;
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (trigger != IRQ_TYPE_EDGE_RISING)
+	if (cpu_is_spear1340()) {
+		void __iomem *reg_off = REG_OFFSET(plgpio->base,
+				plgpio->regs.eit, offset);
+		u32 val = readl(reg_off);
+
+		offset = PIN_OFFSET(offset);
+		if (trigger == IRQ_TYPE_EDGE_RISING)
+			writel(val | (1 << offset), reg_off);
+		else if (trigger == IRQ_TYPE_EDGE_FALLING)
+			writel(val & ~(1 << offset), reg_off);
+		else
+			return -EINVAL;
+
+		return 0;
+	} else if (trigger != IRQ_TYPE_EDGE_RISING)
 		return -EINVAL;
 #else
 	if (trigger != IRQ_TYPE_LEVEL_HIGH)
