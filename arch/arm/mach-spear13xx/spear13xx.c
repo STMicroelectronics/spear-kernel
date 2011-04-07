@@ -77,15 +77,13 @@ static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
 	.enable_dma = 0,
 	/*
-	 * This is number of spi devices that can be connected to spi. There are
-	 * two type of chipselects on which slave devices can work. One is chip
-	 * select provided by spi masters other is controlled through external
-	 * gpio's. We can't use chipselect provided from spi master (because as
-	 * soon as FIFO becomes empty, CS is disabled and transfer ends). So
-	 * this number now depends on number of gpios available for spi. each
-	 * slave on each master requires a separate gpio pin.
+	 * Following is the number of chip selects from spi controller
+	 * to which spi devices can be connected.
+	 * There are two type of chipselects on which slave devices can
+	 * work. One is chip select provided by spi masters other is
+	 * controlled through external gpio's.
 	 */
-	.num_chipselect = 2,
+	.num_chipselect = 3,
 };
 
 struct amba_device spear13xx_ssp_device = {
