@@ -164,14 +164,14 @@ static const struct flash_platform_data spix_flash_data = {
 };
 
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_gpio_control);
 
 /* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, dev, /* mention gpio number here */);
 /* spi0 spidev Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_gpio_control);
 #endif
 
 static struct spi_board_info __initdata spi_board_info[] = {
