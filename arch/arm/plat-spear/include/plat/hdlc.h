@@ -18,6 +18,7 @@
 
 #define SPEAR1310_REVA_TDM_HDLC	0
 #define SPEAR310_TDM_HDLC	1
+#define SPEAR1310_TDM_HDLC	2
 
 struct tdm_hdlc_platform_data {
 	int			ip_type;
