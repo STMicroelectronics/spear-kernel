@@ -14,6 +14,7 @@
 #ifndef __MACH_GENERIC_H
 #define __MACH_GENERIC_H
 
+#include <linux/dmaengine.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
@@ -413,6 +414,7 @@ extern struct db9000fb_mach_info chimei_b101aw02_info;
 extern struct dw_dma_slave cf_dma_priv;
 
 /* Add spear13xx family function declarations here */
+bool dw_dma_filter(struct dma_chan *chan, void *slave);
 void __init spear13xx_clk_init(void);
 void __init i2c_register_default_devices(void);
 void __init spear_setup_timer(void);
