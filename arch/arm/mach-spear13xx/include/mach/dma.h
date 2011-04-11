@@ -17,6 +17,20 @@
 #define MAX_DMA_ADDRESS		0xffffffff
 
 /*request id of all the peripherals.*/
+enum dma_master_info {
+	SPEAR13XX_DMA_MASTER_MCIF = 0,
+	SPEAR13XX_DMA_MASTER_FSMC = 1,
+	SPEAR13XX_DMA_MASTER_JPEG = 1,
+
+	/* Accessible from both 0 & 1 */
+	SPEAR13XX_DMA_MASTER_MEMORY = 0,
+	SPEAR13XX_DMA_MASTER_ADC = 0,
+	SPEAR13XX_DMA_MASTER_I2S = 0,
+	SPEAR13XX_DMA_MASTER_UART0 = 0,
+	SPEAR13XX_DMA_MASTER_SPI0 = 0,
+	SPEAR13XX_DMA_MASTER_I2C = 0,
+};
+
 enum request_id {
 	/* Scheme 00 */
 	SPEAR13XX_DMA_REQ_ADC = 0,
