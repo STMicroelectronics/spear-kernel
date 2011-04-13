@@ -22,11 +22,13 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <mach/hardware.h>
 
 /* PWM registers and bits definitions */
 #define PWMCR			0x00
 #define PWMDCR			0x04
 #define PWMPCR			0x08
+#define SPEAR13XX_PWMMCR	0x3C
 
 #define PWM_EN_MASK		0x1
 #define MIN_PRESCALE		0x00
@@ -36,6 +38,7 @@
 #define MAX_DUTY		0xFFFF
 #define MAX_PERIOD		0xFFFF
 #define MIN_PERIOD		0x0001
+#define SPEAR13XX_MIN_PERIOD	0x0000
 
 #define PWM_DEVICE_PER_IP	4
 #define PWM_DEVICE_OFFSET	0x10
@@ -76,6 +79,7 @@ struct pwm_device {
  * mmio_base: base address of pwm
  * clk: pointer to clk structure of pwm ip
  * clk_enabled: clock enable status
+ * pwmd_enabled: pwm devices enabled
  * pdev: pointer to pdev structure of pwm
  * lock: lock specific to current pwm ip
  * devices: list of devices/childrens of pwm ip
@@ -86,6 +90,7 @@ struct pwm {
 	void __iomem *mmio_base;
 	struct clk *clk;
 	int clk_enabled;
+	int pwmd_enabled;
 	struct platform_device *pdev;
 	spinlock_t lock;
 	struct list_head devices;
@@ -93,27 +98,31 @@ struct pwm {
 };
 
 /*
+ * For SPEAr3xx:
  * period_ns = 10^9 * (PRESCALE + 1) * PV / PWM_CLK_RATE
- * duty_ns = 10^9 * (PRESCALE + 1) * DC / PWM_CLK_RATE
- *
  * PV = (PWM_CLK_RATE * period_ns)/ (10^9 * (PRESCALE + 1))
+ * For SPEAr13xx:
+ * period_ns = 10^9 * (PRESCALE + 1) * (PV + 1) / PWM_CLK_RATE
+ * PV = ((PWM_CLK_RATE * period_ns)/ (10^9 * (PRESCALE + 1))) - 1
+ *
+ * duty_ns = 10^9 * (PRESCALE + 1) * DC / PWM_CLK_RATE
  * DC = (PWM_CLK_RATE * duty_ns)/ (10^9 * (PRESCALE + 1))
  */
 int pwm_config(struct pwm_device *pwmd, int duty_ns, int period_ns)
 {
 	u64 val, div, clk_rate;
-	unsigned long prescale = MIN_PRESCALE, pv, dc;
-	int ret = 0;
+	unsigned long prescale = MIN_PRESCALE, pv, dc, min_period;
+	int ret = -EINVAL;
 
 	if (!pwmd) {
 		pr_err("pwm: config - NULL pwm device pointer\n");
 		return -EFAULT;
 	}
 
-	if (period_ns == 0 || duty_ns > period_ns) {
-		ret = -EINVAL;
+	if (period_ns == 0 || duty_ns > period_ns)
 		goto err;
-	}
+
+	min_period = cpu_is_spear1340() ? SPEAR13XX_MIN_PERIOD : MIN_PERIOD;
 
 	/* TODO: Need to optimize this loop */
 	while (1) {
@@ -122,24 +131,22 @@ int pwm_config(struct pwm_device *pwmd, int duty_ns, int period_ns)
 		clk_rate = clk_get_rate(pwmd->pwm->clk);
 		val = clk_rate * period_ns;
 		pv = div64_u64(val, div);
+		if (!pv)
+			goto err;
+
+		if (cpu_is_spear1340())
+			pv -= 1;
+
 		val = clk_rate * duty_ns;
 		dc = div64_u64(val, div);
-
-		if ((pv == 0) || (dc == 0)) {
-			ret = -EINVAL;
+		if (!dc || dc < MIN_DUTY || pv < min_period)
 			goto err;
-		}
+
 		if ((pv > MAX_PERIOD) || (dc > MAX_DUTY)) {
 			prescale++;
-			if (prescale > MAX_PRESCALE) {
-				ret = -EINVAL;
+			if (prescale > MAX_PRESCALE)
 				goto err;
-			}
 			continue;
-		}
-		if ((pv < MIN_PERIOD) || (dc < MIN_DUTY)) {
-			ret = -EINVAL;
-			goto err;
 		}
 		break;
 	}
@@ -190,6 +197,12 @@ int pwm_enable(struct pwm_device *pwmd)
 		goto err;
 	}
 
+	if (cpu_is_spear1340()) {
+		if (!pwmd->pwm->pwmd_enabled)
+			writel(1, pwmd->pwm->mmio_base + SPEAR13XX_PWMMCR);
+		pwmd->pwm->pwmd_enabled++;
+	}
+
 	spin_lock(&pwmd->lock);
 	val = readl(pwmd->pwm->mmio_base + pwmd->offset + PWMCR);
 	writel(val | PWM_EN_MASK, pwmd->pwm->mmio_base + pwmd->offset + PWMCR);
@@ -212,11 +225,18 @@ void pwm_disable(struct pwm_device *pwmd)
 	spin_lock(&pwmd->pwm->lock);
 	spin_lock(&pwmd->lock);
 	writel(0, pwmd->pwm->mmio_base + pwmd->offset + PWMCR);
+	spin_unlock(&pwmd->lock);
+
+	if (cpu_is_spear1340()) {
+		pwmd->pwm->pwmd_enabled--;
+		if (!pwmd->pwm->pwmd_enabled)
+			writel(0, pwmd->pwm->mmio_base + SPEAR13XX_PWMMCR);
+	}
+
 	if (pwmd->pwm->clk_enabled) {
 		clk_disable(pwmd->pwm->clk);
 		pwmd->pwm->clk_enabled--;
 	}
-	spin_unlock(&pwmd->lock);
 	spin_unlock(&pwmd->pwm->lock);
 }
 EXPORT_SYMBOL(pwm_disable);
