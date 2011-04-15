@@ -1042,10 +1042,13 @@ static int dw_ep_disable(struct usb_ep *_ep)
 
 		while ((tmp = readl(&(epregs->control))) & ENDP_CNTL_POLL) {
 			/* flush TX FIFO */
-			tmp &= ~ENDP_CNTL_POLL;
 			tmp |= ENDP_CNTL_FLUSH;
 			writel(tmp, &epregs->control);
+			wmb();
 		}
+		tmp |= ENDP_CNTL_FLUSH;
+		writel(tmp, &epregs->control);
+		wmb();
 		/*
 		 * Verify, will this raise an interrupt
 		 * so that we should call intr handler
