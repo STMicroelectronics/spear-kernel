@@ -577,6 +577,25 @@ struct platform_device spear1340_pwm_device = {
 	.resource = pwm_resources,
 };
 
+/* SATA device registration */
+static struct resource sata_resources[] = {
+	{
+		.start = SPEAR1340_SATA_BASE,
+		.end = SPEAR1340_SATA_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_SATA,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_sata0_device = {
+	.name = "ahci",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(sata_resources),
+	.resource = sata_resources,
+};
+
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
 {
