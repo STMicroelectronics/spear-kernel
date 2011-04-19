@@ -1076,6 +1076,63 @@ struct amba_device spear1310_ssp1_device = {
 	.irq = {SPEAR1310_IRQ_SSP1, NO_IRQ},
 };
 
+/* SATA0 device registration */
+static struct resource sata0_resources[] = {
+	{
+		.start = SPEAR1310_SATA0_BASE,
+		.end = SPEAR1310_SATA0_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1310_IRQ_SATA0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_sata0_device = {
+	.name = "ahci",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(sata0_resources),
+	.resource = sata0_resources,
+};
+
+/* SATA1 device registration */
+static struct resource sata1_resources[] = {
+	{
+		.start = SPEAR1310_SATA1_BASE,
+		.end = SPEAR1310_SATA1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1310_IRQ_SATA1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_sata1_device = {
+	.name = "ahci",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(sata1_resources),
+	.resource = sata1_resources,
+};
+
+/* SATA2 device registration */
+static struct resource sata2_resources[] = {
+	{
+		.start = SPEAR1310_SATA2_BASE,
+		.end = SPEAR1310_SATA2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1310_IRQ_SATA2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_sata2_device = {
+	.name = "ahci",
+	.id = 2,
+	.num_resources = ARRAY_SIZE(sata2_resources),
+	.resource = sata2_resources,
+};
+
 static void tdm_hdlc_setup(void)
 {
 	struct clk *synth_clk, *vco_clk, *tdm0_clk, *tdm1_clk;
