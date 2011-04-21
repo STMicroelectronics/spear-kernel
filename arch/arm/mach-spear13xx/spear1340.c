@@ -12,6 +12,9 @@
  */
 
 #include <asm/irq.h>
+#include <linux/amba/serial.h>
+#include <linux/dw_dmac.h>
+#include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
@@ -575,6 +578,41 @@ struct pmx_dev spear1340_pmx_miphy_dbg = {
 };
 
 /* Add spear1340 specific devices here */
+/* uart device registeration */
+struct dw_dma_slave uart1_dma_param[] = {
+	{
+		/* Tx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_UART1_TX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR1340_DMA_MASTER_UART1,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Rx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_UART1_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_UART1,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+struct amba_pl011_data uart1_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_tx_param = &uart1_dma_param[0],
+	.dma_rx_param = &uart1_dma_param[1],
+};
+
 /* uart1 device registeration */
 struct amba_device spear1340_uart1_device = {
 	.dev = {
