@@ -81,9 +81,41 @@ struct amba_device spear13xx_gpio_device[] = {
 };
 
 /* ssp device registeration */
+#define SSP_DR(base)		(base + 0x008)
+struct dw_dma_slave ssp_dma_param[] = {
+	{
+		/* Tx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_SSP0_TX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR13XX_DMA_MASTER_SSP0,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Rx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_SSP0_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_SSP0,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
-	.enable_dma = 0,
+	.enable_dma = 1,
+	.dma_filter = dw_dma_filter,
+	.dma_rx_param = &ssp_dma_param[0],
+	.dma_tx_param = &ssp_dma_param[1],
 	/*
 	 * Following is the number of chip selects from spi controller
 	 * to which spi devices can be connected.
