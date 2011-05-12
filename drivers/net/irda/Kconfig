@@ -62,6 +62,22 @@ config SIR_BFIN_PIO
 	bool "PIO mode"
 endchoice
 
+config DICE_IR
+	tristate "DICE IrDA driver"
+	depends on IRDA
+	help
+	  Say Y here if your want to enable DICE IrDA device.It operates in
+	  SIR mode. You can use any higher layer protocol such as IrCOMM,
+	  IrLAN, IrNET etc with this device.
+
+	  You need to have irattach utility in order to use the device. Once
+	  you have it in your filesystem, using the device is a two step
+	  approch:
+	  1. ifconfig irda0 up
+	  2. irattach irda0 -s
+
+	  This can be built in as module also.
+
 comment "Dongle support"
 
 config SH_SIR
@@ -269,12 +285,12 @@ config SIGMATEL_FIR
 	select CRC32
 	---help---
 	  Say Y here if you want to build support for the SigmaTel STIr4200
-	  USB IrDA FIR bridge device driver.  
+	  USB IrDA FIR bridge device driver.
 
 	  USB bridge based on the SigmaTel STIr4200 don't conform to the
 	  IrDA-USB device class specification, and therefore need their
 	  own specific driver. Those dongles support SIR and FIR (4Mbps)
-	  speeds. 
+	  speeds.
 
 	  To compile it as a module, choose M here: the module will be called
 	  stir4200.
@@ -403,5 +419,16 @@ config SH_IRDA
 	help
 	  Say Y here if your want to enable SuperH IrDA devices.
 
-endmenu
+comment "Debug IRDA device drivers"
 
+config IRDA_DEBUG_DEVICES
+	bool "IRDA devices debugging messages"
+	depends on IRDA
+	default N
+	---help---
+	  Say Y here if you want the IRDA device drivers to produce a bunch of
+	  debug messages to the system log.  Select this if you are having
+	  a problem with IRDA support and want to see more of what is going
+	  on.
+
+endmenu
