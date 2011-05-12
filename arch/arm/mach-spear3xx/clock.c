@@ -765,7 +765,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "gpt1_synth_clk",	.clk = &gpt1_synth_clk},
 	{ .con_id = "gpt2_synth_clk",	.clk = &gpt2_synth_clk},
 	{ .dev_id = "uart",		.clk = &uart_clk},
-	{ .dev_id = "firda",		.clk = &firda_clk},
+	{ .dev_id = "dice_ir",		.clk = &firda_clk},
 	{ .dev_id = "gpt0",		.clk = &gpt0_clk},
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
 	{ .dev_id = "gpt2",		.clk = &gpt2_clk},
