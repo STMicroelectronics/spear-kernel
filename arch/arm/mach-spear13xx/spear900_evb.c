@@ -166,15 +166,6 @@ static struct i2c_board_info __initdata i2c_board_info[] = {
 
 /* Currently no gpios are free on eval board so it is kept commented */
 #if 0
-/*
- * External spi memory chips that we use for testing doesn't have a jedec id,
- * and return 0 if we try to read their id. So we must send the correct chip
- * type here.
- */
-static const struct flash_platform_data spix_flash_data = {
-	.type = "m25p40-nonjedec",
-};
-
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
 DECLARE_SPI_CS_GPIO_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
@@ -246,7 +237,6 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.platform_data = &spix_flash_data,
 		.max_speed_hz = 25000000,
 		.bus_num = 0,
 		.chip_select = 1,
