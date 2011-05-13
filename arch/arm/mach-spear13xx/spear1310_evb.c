@@ -244,7 +244,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.max_speed_hz = 12000000,
 		.bus_num = 0,
 		.chip_select = SPEAR1310_SSP0_CS_SEL_CS1,
-		.mode = SPI_MODE_1,
+		.mode = SPI_MODE_3,
 	}, {
 		.modalias = "spidev",
 		.controller_data = &spi0_dev_chip_info,
