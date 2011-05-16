@@ -189,6 +189,25 @@ struct platform_device spear3xx_eth_device = {
 	},
 };
 
+/* Fast Irda Controller registration */
+static struct resource irda_resources[] = {
+	{
+		.start = SPEAR3XX_ICM1_IRDA_BASE,
+		.end = SPEAR3XX_ICM1_IRDA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_IRDA,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_irda_device = {
+	.name = "dice_ir",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(irda_resources),
+	.resource = irda_resources,
+};
+
 /* i2c device registeration */
 static struct resource i2c_resources[] = {
 	{

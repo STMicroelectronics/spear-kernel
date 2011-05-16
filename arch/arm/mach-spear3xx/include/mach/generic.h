@@ -40,6 +40,7 @@ extern struct platform_device spear3xx_dmac_device;
 extern struct platform_device spear3xx_ehci_device;
 extern struct platform_device spear3xx_eth_device;
 extern struct platform_device spear3xx_i2c_device;
+extern struct platform_device spear3xx_irda_device;
 extern struct platform_device spear3xx_jpeg_device;
 extern struct platform_device spear3xx_ohci0_device;
 extern struct platform_device spear3xx_ohci1_device;
