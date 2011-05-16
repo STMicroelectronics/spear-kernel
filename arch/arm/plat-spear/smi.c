@@ -21,7 +21,7 @@
  */
 
 #if defined(CONFIG_ARCH_SPEAR13XX)
-#define FLASH_MEM_BASE	SPEAR13XX_SMI_MEM_BASE
+#define FLASH_MEM_BASE	SPEAR13XX_SMI_MEM0_BASE
 
 #elif defined(CONFIG_ARCH_SPEAR3XX)
 #define FLASH_MEM_BASE	SPEAR3XX_ICM3_SMEM_BASE
@@ -32,7 +32,7 @@
 #endif
 
 /* serial nor flash specific board data */
-static struct mtd_partition nor_partition_info[] = {
+static struct mtd_partition m25p64_partition_info[] = {
 	DEFINE_PARTS("Xloader", 0x00, 0x10000),
 	DEFINE_PARTS("UBoot", 0x10000, 0x40000),
 	DEFINE_PARTS("Kernel", 0x50000, 0x2C0000),
@@ -45,10 +45,34 @@ static struct spear_smi_flash_info nor_flash_info[] = {
 		.fast_mode = 1,
 		.mem_base = FLASH_MEM_BASE,
 		.size = 8 * 1024 * 1024,
-		.num_parts = ARRAY_SIZE(nor_partition_info),
-		.parts = nor_partition_info,
+		.num_parts = ARRAY_SIZE(m25p64_partition_info),
+		.parts = m25p64_partition_info,
 	},
 };
+
+#ifdef CONFIG_CPU_SPEAR1340
+static struct mtd_partition m25p40_partition_info[] = {
+	DEFINE_PARTS("Root File System", 0x0000, 0x80000),
+};
+
+static struct spear_smi_flash_info spear1340_nor_flash_info[] = {
+	{
+		.name = "m25p64",
+		.fast_mode = 1,
+		.mem_base = FLASH_MEM_BASE,
+		.size = 8 * 1024 * 1024,
+		.num_parts = ARRAY_SIZE(m25p64_partition_info),
+		.parts = m25p64_partition_info,
+	}, {
+		.name = "m25p40",
+		.fast_mode = 0,
+		.mem_base = SPEAR13XX_SMI_MEM1_BASE,
+		.size = 512 * 1024,
+		.num_parts = ARRAY_SIZE(m25p40_partition_info),
+		.parts = m25p40_partition_info,
+	},
+};
+#endif
 
 /* smi specific board data */
 static struct spear_smi_plat_data smi_plat_data = {
@@ -59,5 +83,12 @@ static struct spear_smi_plat_data smi_plat_data = {
 
 void smi_init_board_info(struct platform_device *pdev)
 {
+#ifdef CONFIG_CPU_SPEAR1340
+	if (cpu_is_spear1340()) {
+		smi_plat_data.board_flash_info = spear1340_nor_flash_info;
+		smi_plat_data.num_flashes =
+			ARRAY_SIZE(spear1340_nor_flash_info);
+	}
+#endif
 	smi_set_plat_data(pdev, &smi_plat_data);
 }
