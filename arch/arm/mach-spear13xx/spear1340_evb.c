@@ -42,15 +42,15 @@ static struct mtd_partition partition_info[] = {
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
-	&spear1340_pmx_fsmc_16bit,
+	&spear1340_pmx_keyboard_row_col,
+	&spear1340_pmx_keyboard_col5,
 	&spear1340_pmx_uart0_enh,
-	&spear1340_pmx_pwm0,
-	&spear1340_pmx_pwm1,
+	&spear1340_pmx_ssp0_cs0,
 	&spear1340_pmx_pwm2,
 	&spear1340_pmx_pwm3,
-	&spear1340_pmx_cam3,
-	&spear1340_pmx_cam2,
-	&spear1340_pmx_cam1,
+	&spear1340_pmx_video_in_mux_cam1,
+	&spear1340_pmx_video_in_mux_cam2,
+	&spear1340_pmx_video_in_mux_cam3,
 	&spear1340_pmx_cam0,
 	&spear1340_pmx_ssp0_cs1,
 	&spear1340_pmx_mcif,
