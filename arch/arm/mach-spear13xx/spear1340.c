@@ -41,28 +41,48 @@ struct pmx_dev spear1340_pmx_fsmc_16bit = {
 	.mode_count = ARRAY_SIZE(pmx_fsmc_16bit_modes),
 };
 
-/* pad multiplexing for keyboard device */
-static struct pmx_mux_reg pmx_keyboard_mux[] = {
+/* pad multiplexing for keyboard rows-cols device */
+static struct pmx_mux_reg pmx_keyboard_row_col_mux[] = {
 	{
 		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
-		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK |
-			SPEAR1340_PMX_KBD_COL5_MASK,
-		.value = SPEAR1340_PMX_KBD_ROW_COL_MASK |
-			SPEAR1340_PMX_KBD_COL5_MASK,
+		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK,
+		.value = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_keyboard_modes[] = {
+static struct pmx_dev_mode pmx_keyboard_row_col_modes[] = {
 	{
-		.mux_regs = pmx_keyboard_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_keyboard_mux),
+		.mux_regs = pmx_keyboard_row_col_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_keyboard_row_col_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_keyboard = {
-	.name = "keyboard",
-	.modes = pmx_keyboard_modes,
-	.mode_count = ARRAY_SIZE(pmx_keyboard_modes),
+struct pmx_dev spear1340_pmx_keyboard_row_col= {
+	.name = "keyboard_row_col",
+	.modes = pmx_keyboard_row_col_modes,
+	.mode_count = ARRAY_SIZE(pmx_keyboard_row_col_modes),
+};
+
+/* pad multiplexing for keyboard col5 device */
+static struct pmx_mux_reg pmx_keyboard_col5_mux[] = {
+	{
+		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.mask = SPEAR1340_PMX_KBD_COL5_MASK,
+		.value = SPEAR1340_PMX_KBD_COL5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_keyboard_col5_modes[] = {
+	{
+		.mux_regs = pmx_keyboard_col5_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_keyboard_col5_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_keyboard_col5 = {
+	.name = "keyboard_col5",
+	.modes = pmx_keyboard_col5_modes,
+	.mode_count = ARRAY_SIZE(pmx_keyboard_col5_modes),
 };
 
 /* pad multiplexing for uart0_enh device */

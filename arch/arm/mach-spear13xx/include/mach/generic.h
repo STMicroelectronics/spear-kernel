@@ -332,7 +332,8 @@ extern struct pmx_dev spear1310_pmx_ras_mii_txclk;
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
-extern struct pmx_dev spear1340_pmx_keyboard;
+extern struct pmx_dev spear1340_pmx_keyboard_row_col;
+extern struct pmx_dev spear1340_pmx_keyboard_col5;
 extern struct pmx_dev spear1340_pmx_uart0_enh;
 extern struct pmx_dev spear1340_pmx_gpt_0_1;
 extern struct pmx_dev spear1340_pmx_pwm0;
