@@ -223,27 +223,92 @@ struct pmx_dev spear1340_pmx_ssp0_cs0 = {
 	.mode_count = ARRAY_SIZE(pmx_ssp0_cs0_modes),
 };
 
-/* pad multiplexing for video_in device */
-static struct pmx_mux_reg pmx_video_in_mux[] = {
+/* pad multiplexing for video_in_mux_cam0 (disables cam0) device */
+static struct pmx_mux_reg pmx_video_in_mux_cam0_mux[] = {
 	{
 		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
-		.mask = SPEAR1340_PMX_CAM3_MASK | SPEAR1340_PMX_CAM2_MASK |
-			SPEAR1340_PMX_CAM1_MASK | SPEAR1340_PMX_CAM0_MASK,
+		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_dev_mode pmx_video_in_modes[] = {
+static struct pmx_dev_mode pmx_video_in_mux_cam0_modes[] = {
 	{
-		.mux_regs = pmx_video_in_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux),
+		.mux_regs = pmx_video_in_mux_cam0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam0_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_video_in = {
-	.name = "video_in",
-	.modes = pmx_video_in_modes,
-	.mode_count = ARRAY_SIZE(pmx_video_in_modes),
+struct pmx_dev spear1340_pmx_video_in_mux_cam0 = {
+	.name = "video_in_mux_cam0",
+	.modes = pmx_video_in_mux_cam0_modes,
+	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam0_modes),
+};
+
+/* pad multiplexing for video_in_mux_cam1 (disables cam1) device */
+static struct pmx_mux_reg pmx_video_in_mux_cam1_mux[] = {
+	{
+		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.mask = SPEAR1340_PMX_CAM1_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_video_in_mux_cam1_modes[] = {
+	{
+		.mux_regs = pmx_video_in_mux_cam1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam1_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_video_in_mux_cam1 = {
+	.name = "video_in_mux_cam1",
+	.modes = pmx_video_in_mux_cam1_modes,
+	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam1_modes),
+};
+
+/* pad multiplexing for video_in_mux_cam2 (disables cam2) device */
+static struct pmx_mux_reg pmx_video_in_mux_cam2_mux[] = {
+	{
+		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.mask = SPEAR1340_PMX_CAM2_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_video_in_mux_cam2_modes[] = {
+	{
+		.mux_regs = pmx_video_in_mux_cam2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam2_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_video_in_mux_cam2 = {
+	.name = "video_in_mux_cam2",
+	.modes = pmx_video_in_mux_cam2_modes,
+	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam2_modes),
+};
+
+/* pad multiplexing for video_in_mux_cam3 (disables cam3) device */
+static struct pmx_mux_reg pmx_video_in_mux_cam3_mux[] = {
+	{
+		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.mask = SPEAR1340_PMX_CAM3_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_dev_mode pmx_video_in_mux_cam3_modes[] = {
+	{
+		.mux_regs = pmx_video_in_mux_cam3_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam3_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_video_in_mux_cam3 = {
+	.name = "video_in_mux_cam3",
+	.modes = pmx_video_in_mux_cam3_modes,
+	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam3_modes),
 };
 
 /* pad multiplexing for cam3 device */
