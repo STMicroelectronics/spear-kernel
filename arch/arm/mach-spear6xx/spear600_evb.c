@@ -72,6 +72,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&eth_device,
 	&phy_device,
 	&i2c_device,
+	&irda_device,
 	&jpeg_device,
 	&ohci0_device,
 	&ohci1_device,

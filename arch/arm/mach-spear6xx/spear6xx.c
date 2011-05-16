@@ -335,6 +335,25 @@ struct platform_device i2c_device = {
 	.resource = i2c_resources,
 };
 
+/* Fast Irda Controller registration */
+static struct resource irda_resources[] = {
+	{
+		.start = SPEAR6XX_ICM1_IRDA_BASE,
+		.end = SPEAR6XX_ICM1_IRDA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = IRQ_IRDA,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device irda_device = {
+	.name = "dice_ir",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(irda_resources),
+	.resource = irda_resources,
+};
+
 /* nand device registeration */
 static struct fsmc_nand_platform_data nand_platform_data;
 
