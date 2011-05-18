@@ -31,6 +31,7 @@
 #include <mach/spear1340_misc_regs.h>
 #include <mach/pcie.h>
 
+#if 0
 /* fsmc nor partition info */
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
 static struct mtd_partition partition_info[] = {
@@ -39,6 +40,7 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Kernel", 0x80000, 24 * 0x20000),
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
+#endif
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -79,6 +81,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
+	&spear13xx_nand_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcie_gadget0_device,
@@ -254,18 +257,16 @@ static void __init spear1340_evb_init(void)
 
 	/*
 	 * SPEAr1340 FSMC cannot used as NOR and NAND at the same time
-	 * For the moment, disable NAND and use NOR only
-	 * If NAND is needed, enable the following code and disable all code for
-	 * NOR. Also enable nand in padmux configuration to use it.
+	 * For the moment, disable NOR and use NAND only
+	 * If NOR is needed, enable NOR's code and disable all code for NOR.
 	 */
 	/* set nand device's plat data */
-#if 0
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
-#endif
 
+#if 0
 	/* fixed part fsmc nor device */
 	/* initialize fsmc related data in fsmc plat data */
 	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
@@ -273,6 +274,7 @@ static void __init spear1340_evb_init(void)
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
+#endif
 
 #ifdef CONFIG_PCIEPORTBUS
 	/* Enable PCIE0 clk */
