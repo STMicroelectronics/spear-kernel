@@ -488,6 +488,72 @@ struct pmx_dev spear1340_pmx_mcif = {
 	.mode_count = ARRAY_SIZE(pmx_mcif_modes),
 };
 
+/* Pad multiplexing for sdhci device */
+static struct pmx_mux_reg pmx_sdhci_mux[] = {
+	{
+		.address = VA_SPEAR1340_PERIP_CFG,
+		.mask = SPEAR1340_MCIF_SEL_MASK,
+		.value = SPEAR1340_MCIF_SEL_SD,
+	},
+};
+
+static struct pmx_dev_mode pmx_sdhci_modes[] = {
+	{
+		.mux_regs = pmx_sdhci_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_sdhci = {
+	.name = "sdhci",
+	.modes = pmx_sdhci_modes,
+	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
+};
+
+/* Pad multiplexing for cf device */
+static struct pmx_mux_reg pmx_cf_mux[] = {
+	{
+		.address = VA_SPEAR1340_PERIP_CFG,
+		.mask = SPEAR1340_MCIF_SEL_MASK,
+		.value = SPEAR1340_MCIF_SEL_CF,
+	},
+};
+
+static struct pmx_dev_mode pmx_cf_modes[] = {
+	{
+		.mux_regs = pmx_cf_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_cf_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_cf = {
+	.name = "cf",
+	.modes = pmx_cf_modes,
+	.mode_count = ARRAY_SIZE(pmx_cf_modes),
+};
+
+/* Pad multiplexing for xd device */
+static struct pmx_mux_reg pmx_xd_mux[] = {
+	{
+		.address = VA_SPEAR1340_PERIP_CFG,
+		.mask = SPEAR1340_MCIF_SEL_MASK,
+		.value = SPEAR1340_MCIF_SEL_XD,
+	},
+};
+
+static struct pmx_dev_mode pmx_xd_modes[] = {
+	{
+		.mux_regs = pmx_xd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_xd_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_xd = {
+	.name = "xd",
+	.modes = pmx_xd_modes,
+	.mode_count = ARRAY_SIZE(pmx_xd_modes),
+};
+
 /* pad multiplexing for clcd device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{

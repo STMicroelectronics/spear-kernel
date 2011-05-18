@@ -56,6 +56,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_cam0,
 	&spear1340_pmx_ssp0_cs1,
 	&spear1340_pmx_mcif,
+	&spear1340_pmx_sdhci,
 	&spear1340_pmx_clcd,
 	&spear1340_pmx_devs_grp,
 };
