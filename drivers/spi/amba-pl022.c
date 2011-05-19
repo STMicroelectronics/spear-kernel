@@ -1426,6 +1426,7 @@ static void do_polling_transfer(struct pl022 *pl022)
 				message->state = STATE_ERROR;
 				goto out;
 			}
+			cpu_relax();
 		}
 
 		/* Update total byte transferred */
