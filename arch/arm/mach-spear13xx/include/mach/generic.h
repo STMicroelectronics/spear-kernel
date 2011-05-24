@@ -360,6 +360,10 @@ extern struct pmx_dev spear1340_pmx_clcd;
 extern struct pmx_dev spear1340_pmx_arm_trace;
 extern struct pmx_dev spear1340_pmx_devs_grp;
 extern struct pmx_dev spear1340_pmx_miphy_dbg;
+extern struct pmx_dev spear1340_pmx_gmii;
+extern struct pmx_dev spear1340_pmx_rgmii;
+extern struct pmx_dev spear1340_pmx_rmii;
+extern struct pmx_dev spear1340_pmx_sgmii;
 #endif
 
 /*
