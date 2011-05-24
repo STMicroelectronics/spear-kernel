@@ -11,13 +11,16 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/pata_arasan_cf_data.h>
+#include <linux/phy.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <linux/stmpe610.h>
 #include <plat/adc.h>
 #include <plat/fsmc.h>
@@ -42,6 +45,30 @@ static struct mtd_partition partition_info[] = {
 };
 #endif
 
+/* Ethernet phy-0 device registeration */
+static struct plat_stmmacphy_data phy0_private_data = {
+	.bus_id = 0,
+	.phy_addr = 5,
+	.phy_mask = 0,
+	.interface = PHY_INTERFACE_MODE_RGMII,
+	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
+};
+
+static struct resource phy0_resources = {
+	.name = "phyirq",
+	.start = -1,
+	.end = -1,
+	.flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device spear1340_phy0_device = {
+	.name		= "stmmacphy",
+	.id		= 0,
+	.num_resources	= 1,
+	.resource	= &phy0_resources,
+	.dev.platform_data = &phy0_private_data,
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_keyboard_row_col,
@@ -59,6 +86,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_sdhci,
 	&spear1340_pmx_clcd,
 	&spear1340_pmx_devs_grp,
+	&spear1340_pmx_rgmii,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -94,6 +122,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1340 specific devices */
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
+	&spear1340_phy0_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {

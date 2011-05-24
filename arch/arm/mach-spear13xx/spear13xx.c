@@ -18,6 +18,7 @@
 #include <linux/dw_dmac.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
+#include <linux/phy.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/netdevice.h>
@@ -928,6 +929,89 @@ static void dmac_setup(void)
 	 */
 	/* setting Peripheral flow controller for jpeg */
 	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+}
+
+/*
+ * Generic function to configure ethernet phy clock as per the selected
+ * interface
+ */
+int spear13xx_eth_phy_clk_cfg(void *data)
+{
+	int ret;
+	struct platform_device *pdev = data;
+	struct clk *input_clk, *input_pclk, *phy_pclk;
+	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
+	const char *phy_clk_src[] = {
+		"gmac_phy_input_clk",
+		"gmac_phy_synth_clk",
+	};
+	const char *input_clk_src[] = {
+		"pll2_clk",
+		"gmii_125m_pad",
+		"osc3_25m_clk",
+	};
+
+	if (pdata == NULL)
+		return -EFAULT;
+
+	/* Get the Pll-2 Clock as parent for PHY Input Clock Source */
+	input_pclk = clk_get(NULL, input_clk_src[0]);
+	if (IS_ERR(input_pclk)) {
+		ret = PTR_ERR(input_pclk);
+		goto fail_get_input_pclk;
+	}
+
+	/*
+	 * Get the Phy Input clock source as parent for Phy clock. Default
+	 * selection is gmac_phy_input_clk. This selection would be driving both
+	 * the synthesizer and phy clock.
+	 */
+	input_clk = clk_get(NULL, phy_clk_src[0]);
+	if (IS_ERR(input_clk)) {
+		ret = PTR_ERR(input_clk);
+		goto fail_get_input_clk;
+	}
+
+	/* Fetch the phy clock */
+	pdata->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(pdata->clk)) {
+		ret = PTR_ERR(pdata->clk);
+		goto fail_get_phy_clk;
+	}
+
+	/* Set the pll-2 to 125 MHz */
+	clk_set_rate(input_pclk, 125000000);
+
+	/* Set the Pll-2 as parent for gmac_phy_input_clk */
+	clk_set_parent(input_clk, input_pclk);
+
+	if (pdata->interface == PHY_INTERFACE_MODE_RGMII) {
+		/*
+		 * For the rmii interface select gmac_phy_synth_clk
+		 * as the parent and set the clock to 50 Mhz
+		 */
+		phy_pclk = clk_get(NULL, phy_clk_src[1]);
+		clk_set_rate(phy_pclk, 50000000);
+	} else {
+		/*
+		 * Set the gmac_phy_input_clk as the parent,
+		 * and pll-2 is already running as parent of
+		 * gmac_phy_input_clk at 125 Mhz
+		 */
+		phy_pclk = input_clk;
+	}
+
+	/* Select the parent for phy clock */
+	clk_set_parent(pdata->clk, phy_pclk);
+	ret = clk_enable(pdata->clk);
+
+	return ret;
+fail_get_phy_clk:
+	clk_put(input_clk);
+fail_get_input_clk:
+	clk_put(input_pclk);
+fail_get_input_pclk:
+	return ret;
 }
 
 #ifdef CONFIG_SND_SOC_STA529
