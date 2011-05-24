@@ -52,6 +52,7 @@ static struct plat_stmmacphy_data phy0_private_data = {
 	.phy_addr = 5,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_GMII,
+	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
 };
 
 static struct resource phy0_resources = {

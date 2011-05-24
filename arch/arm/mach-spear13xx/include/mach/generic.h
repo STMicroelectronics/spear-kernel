@@ -429,6 +429,7 @@ void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
+int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
 void pcm_init(struct device *dma_dev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
@@ -467,6 +468,7 @@ extern struct platform_device spear1310_reva_tdm_hdlc_1_device;
 void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
 		struct pmx_dev **pmx_devs, u8 pmx_dev_count);
 void __init spear1310_reva_map_io(void);
+int spear1310_reva_eth_phy_clk_cfg(void *);
 
 #endif /* CONFIG_CPU_SPEAR1310_REVA */
 

@@ -15,6 +15,7 @@
 #include <linux/mtd/physmap.h>
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
+#include <linux/phy.h>
 #include <linux/stmmac.h>
 #include <asm/irq.h>
 #include <asm/delay.h>
@@ -879,6 +880,88 @@ free_synth_clk:
 	clk_put(synth_clk);
 free_vco_clk:
 	clk_put(vco_clk);
+}
+
+int spear1310_reva_eth_phy_clk_cfg(void *data)
+{
+	struct platform_device *pdev = data;
+	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
+	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1));
+	struct clk *clk = NULL;
+	u32 tmp;
+	int ret;
+	char *pclk_name[] = {
+		"ras_pll2_clk",
+		"ras_tx125_clk",
+		"ras_tx50_clk",
+		"ras_synth0_clk",
+	};
+
+	pdata->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(pdata->clk)) {
+		ret = PTR_ERR(pdata->clk);
+		goto fail_get_phy_clk;
+	}
+
+	/*
+	 * Select 125 MHz clock for SMII mode, else the clock
+	 * for RMII mode is 50 Mhz.
+	 * The default clock for the GMAC is driven by pll-2
+	 * set to 125Mhz. In case the clock source is required to
+	 * be from tx pad, the gmac0 interface should select that
+	 * to pad clock.
+	 */
+	tmp = (pdata->interface == PHY_INTERFACE_MODE_RMII) ? 3 : 0;
+	clk = clk_get(NULL, pclk_name[tmp]);
+	if (IS_ERR(clk)) {
+		pr_err("%s:couldn't get %s as parent for MAC\n",
+				__func__, pclk_name[tmp]);
+		ret = PTR_ERR(clk);
+		goto fail_get_pclk;
+	}
+
+	tmp = readl(addr);
+	switch (pdata->bus_id) {
+	case 1:
+		tmp &= (~SPEAR1310_REVA_GETH1_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_REVA_PHY_SMII_VAL << 4) :
+			(SPEAR1310_REVA_PHY_RMII_VAL << 4);
+		break;
+	case 2:
+		tmp &= (~SPEAR1310_REVA_GETH2_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_REVA_PHY_SMII_VAL << 7) :
+			(SPEAR1310_REVA_PHY_RMII_VAL << 7);
+		break;
+	case 3:
+		tmp &= (~SPEAR1310_REVA_GETH3_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_REVA_PHY_SMII_VAL << 10) :
+			(SPEAR1310_REVA_PHY_RMII_VAL << 10);
+		break;
+	case 4:
+		tmp &= (~SPEAR1310_REVA_GETH4_PHY_INTF_MASK);
+		tmp |= SPEAR1310_REVA_PHY_RGMII_VAL << 13;
+		break;
+	default:
+		clk_put(clk);
+		return -EINVAL;
+		break;
+	}
+
+	writel(tmp, addr);
+	clk_set_parent(pdata->clk, clk);
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII)
+		ret = clk_set_rate(clk, 50000000);
+
+	ret = clk_enable(pdata->clk);
+
+	return ret;
+fail_get_pclk:
+	clk_put(pdata->clk);
+fail_get_phy_clk:
+	return ret;
 }
 
 /* Following will create 1310 specific static virtual/physical mappings */

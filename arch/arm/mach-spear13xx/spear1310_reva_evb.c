@@ -48,100 +48,13 @@ static struct mtd_partition partition_info[] = {
 };
 #endif
 
-/* Ethernet specific macros */
-#define GETH1_PHY_INTF_MASK	(0x7 << 4)
-#define GETH2_PHY_INTF_MASK	(0x7 << 7)
-#define GETH3_PHY_INTF_MASK	(0x7 << 10)
-#define GETH4_PHY_INTF_MASK	(0x7 << 13)
-#define PHY_INTF_MODE_RGMII	0x1
-#define PHY_INTF_MODE_RMII	0x4
-#define PHY_INTF_MODE_SMII	0x6
-
-static int phy_clk_cfg(void *data)
-{
-	struct platform_device *pdev = data;
-	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
-	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1));
-	struct clk *clk = NULL;
-	u32 tmp;
-	int ret;
-	char *pclk_name[] = {
-		"ras_pll2_clk",
-		"ras_tx125_clk",
-		"ras_tx50_clk",
-		"ras_synth0_clk",
-	};
-
-	pdata->clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(pdata->clk)) {
-		ret = PTR_ERR(pdata->clk);
-		goto fail_get_phy_clk;
-	}
-
-	/*
-	 * Select 125 MHz clock for SMII mode, else the clock
-	 * for RMII mode is 50 Mhz.
-	 * The default clock for the GMAC is driven by pll-2
-	 * set to 125Mhz. In case the clock source is required to
-	 * be from tx pad, the gmac0 interface should select that
-	 * to pad clock.
-	 */
-	tmp = (pdata->interface == PHY_INTERFACE_MODE_RMII) ? 3 : 0;
-	clk = clk_get(NULL, pclk_name[tmp]);
-	if (IS_ERR(clk)) {
-		pr_err("%s:couldn't get %s as parent for MAC\n",
-				__func__, pclk_name[tmp]);
-		ret = PTR_ERR(clk);
-		goto fail_get_pclk;
-	}
-
-	tmp = readl(addr);
-	switch (pdata->bus_id) {
-	case 1:
-		tmp &= (~GETH1_PHY_INTF_MASK);
-		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
-			(PHY_INTF_MODE_SMII << 4) : (PHY_INTF_MODE_RMII << 4);
-		break;
-	case 2:
-		tmp &= (~GETH2_PHY_INTF_MASK);
-		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
-			(PHY_INTF_MODE_SMII << 7) : (PHY_INTF_MODE_RMII << 7);
-		break;
-	case 3:
-		tmp &= (~GETH3_PHY_INTF_MASK);
-		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
-			(PHY_INTF_MODE_SMII << 10) : (PHY_INTF_MODE_RMII << 10);
-		break;
-	case 4:
-		tmp &= (~GETH4_PHY_INTF_MASK);
-		tmp |= PHY_INTF_MODE_RGMII << 13;
-		break;
-	default:
-		clk_put(clk);
-		return -EINVAL;
-		break;
-	}
-
-	writel(tmp, addr);
-	clk_set_parent(pdata->clk, clk);
-	if (pdata->interface == PHY_INTERFACE_MODE_RMII)
-		ret = clk_set_rate(clk, 50000000);
-
-	ret = clk_enable(pdata->clk);
-
-	return ret;
-fail_get_pclk:
-	clk_put(pdata->clk);
-fail_get_phy_clk:
-	return ret;
-}
-
 /* Ethernet phy-0 device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,
 	.phy_addr = 5,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_GMII,
+	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
 };
 
 static struct resource phy0_resources = {
@@ -165,7 +78,7 @@ static struct plat_stmmacphy_data phy1_private_data = {
 	.phy_addr = 1,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_MII,
-	.phy_clk_cfg = phy_clk_cfg,
+	.phy_clk_cfg = spear1310_reva_eth_phy_clk_cfg,
 };
 
 static struct resource phy1_resources = {
@@ -189,7 +102,7 @@ static struct plat_stmmacphy_data phy2_private_data = {
 	.phy_addr = 2,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_MII,
-	.phy_clk_cfg = phy_clk_cfg,
+	.phy_clk_cfg = spear1310_reva_eth_phy_clk_cfg,
 };
 
 static struct resource phy2_resources = {
@@ -213,7 +126,7 @@ static struct plat_stmmacphy_data phy3_private_data = {
 	.phy_addr = 3,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_RMII,
-	.phy_clk_cfg = phy_clk_cfg,
+	.phy_clk_cfg = spear1310_reva_eth_phy_clk_cfg,
 };
 
 static struct resource phy3_resources = {
@@ -237,7 +150,7 @@ static struct plat_stmmacphy_data phy4_private_data = {
 	.phy_addr = 4,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_RGMII,
-	.phy_clk_cfg = phy_clk_cfg,
+	.phy_clk_cfg = spear1310_reva_eth_phy_clk_cfg,
 };
 
 static struct resource phy4_resources = {
