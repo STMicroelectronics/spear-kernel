@@ -643,6 +643,94 @@ struct pmx_dev spear1340_pmx_miphy_dbg = {
 	.mode_count = ARRAY_SIZE(pmx_miphy_dbg_modes),
 };
 
+/* pad multiplexing for gmii device */
+static struct pmx_mux_reg pmx_gmii_mux[] = {
+	{
+		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
+		.value = SPEAR1340_GMAC_PHY_IF_GMII_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_gmii_modes[] = {
+	{
+		.mux_regs = pmx_gmii_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gmii_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_gmii = {
+	.name = "gmii",
+	.modes = pmx_gmii_modes,
+	.mode_count = ARRAY_SIZE(pmx_gmii_modes),
+};
+
+/* pad multiplexing for rgmii device */
+static struct pmx_mux_reg pmx_rgmii_mux[] = {
+	{
+		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
+		.value = SPEAR1340_GMAC_PHY_IF_RGMII_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_rgmii_modes[] = {
+	{
+		.mux_regs = pmx_rgmii_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_rgmii_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_rgmii = {
+	.name = "rgmii",
+	.modes = pmx_rgmii_modes,
+	.mode_count = ARRAY_SIZE(pmx_rgmii_modes),
+};
+
+/* pad multiplexing for rmii device */
+static struct pmx_mux_reg pmx_rmii_mux[] = {
+	{
+		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
+		.value = SPEAR1340_GMAC_PHY_IF_RMII_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_rmii_modes[] = {
+	{
+		.mux_regs = pmx_rmii_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_rmii_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_rmii = {
+	.name = "rmii",
+	.modes = pmx_rmii_modes,
+	.mode_count = ARRAY_SIZE(pmx_rmii_modes),
+};
+
+/* pad multiplexing for sgmii device */
+static struct pmx_mux_reg pmx_sgmii_mux[] = {
+	{
+		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
+		.value = SPEAR1340_GMAC_PHY_IF_SGMII_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_sgmii_modes[] = {
+	{
+		.mux_regs = pmx_sgmii_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sgmii_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_sgmii = {
+	.name = "sgmii",
+	.modes = pmx_sgmii_modes,
+	.mode_count = ARRAY_SIZE(pmx_sgmii_modes),
+};
+
 /* Add spear1340 specific devices here */
 /* uart device registeration */
 struct dw_dma_slave uart1_dma_param[] = {
