@@ -141,6 +141,7 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
+	.mode = KEYPAD_9x9,
 };
 
 /* Currently no gpios are free on eval board so it is kept commented */
