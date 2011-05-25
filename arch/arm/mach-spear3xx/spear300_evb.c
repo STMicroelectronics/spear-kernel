@@ -113,7 +113,7 @@ static struct sdhci_plat_data sdhci_plat_data = {
 };
 
 /* keyboard specific platform data */
-static DECLARE_KEYMAP(keymap);
+static DECLARE_9x9_KEYMAP(keymap);
 static struct matrix_keymap_data keymap_data = {
 	.keymap = keymap,
 	.keymap_size = ARRAY_SIZE(keymap),

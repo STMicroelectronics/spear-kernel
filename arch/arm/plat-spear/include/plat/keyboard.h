@@ -15,7 +15,7 @@
 #include <linux/input/matrix_keypad.h>
 #include <linux/types.h>
 
-#define DECLARE_KEYMAP(_name) \
+#define DECLARE_9x9_KEYMAP(_name) \
 int _name[] = { \
 	KEY(0, 0, KEY_ESC), \
 	KEY(0, 1, KEY_1), \
