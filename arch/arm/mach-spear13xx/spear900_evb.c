@@ -144,6 +144,7 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
+	.mode = KEYPAD_9x9,
 };
 
 /* Initializing platform data for SPEAr900 specific Input devices on I2C Bus */
