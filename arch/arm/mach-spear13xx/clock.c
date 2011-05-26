@@ -669,10 +669,10 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 /* clcd rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl clcd_rtbl[] = {
 	/* All below entries generate 58 MHz for different values of vco1div4 */
-	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
-	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
-	{.div = 0x0B740}, /* for vco1div4 = 332 MHz */
 	{.div = 0x0D8C0}, /* for vco1div4 = 393 MHz */
+	{.div = 0x0B740}, /* for vco1div4 = 332 MHz */
+	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
+	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
 };
 /* clcd fractional synthesizer clock */
 static struct clk clcd_synth_clk = {
@@ -682,7 +682,7 @@ static struct clk clcd_synth_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 1},
+	.rate_config = {clcd_rtbl, ARRAY_SIZE(clcd_rtbl), 2},
 	.private_data = &clcd_synth_config,
 };
 
