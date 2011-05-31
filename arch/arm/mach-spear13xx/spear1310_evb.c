@@ -98,6 +98,9 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1310_pmx_ssp1_dis_sd,
 	&spear1310_pmx_gpt64,
 	&spear1310_pmx_ras_mii_txclk,
+	&spear1310_pmx_pcie0,
+	&spear1310_pmx_pcie1,
+	&spear1310_pmx_pcie2,
 };
 
 static struct amba_device *amba_devs[] __initdata = {

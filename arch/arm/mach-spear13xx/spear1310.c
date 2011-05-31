@@ -643,6 +643,138 @@ struct pmx_dev spear1310_pmx_ras_mii_txclk = {
 	.mode_count = ARRAY_SIZE(pmx_ras_mii_txclk_modes),
 };
 
+/* pad multiplexing for pcie0 device */
+static struct pmx_mux_reg pmx_pcie0_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_PCIE_CFG_VAL(0),
+		.value = SPEAR1310_PCIE_CFG_VAL(0),
+	},
+};
+
+static struct pmx_dev_mode pmx_pcie0_modes[] = {
+	{
+		.mux_regs = pmx_pcie0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pcie0_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_pcie0 = {
+	.name = "pcie0",
+	.modes = pmx_pcie0_modes,
+	.mode_count = ARRAY_SIZE(pmx_pcie0_modes),
+};
+
+/* pad multiplexing for pcie1 device */
+static struct pmx_mux_reg pmx_pcie1_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_PCIE_CFG_VAL(1),
+		.value = SPEAR1310_PCIE_CFG_VAL(1),
+	},
+};
+
+static struct pmx_dev_mode pmx_pcie1_modes[] = {
+	{
+		.mux_regs = pmx_pcie1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pcie1_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_pcie1 = {
+	.name = "pcie1",
+	.modes = pmx_pcie1_modes,
+	.mode_count = ARRAY_SIZE(pmx_pcie1_modes),
+};
+
+/* pad multiplexing for pcie2 device */
+static struct pmx_mux_reg pmx_pcie2_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_PCIE_CFG_VAL(2),
+		.value = SPEAR1310_PCIE_CFG_VAL(2),
+	},
+};
+
+static struct pmx_dev_mode pmx_pcie2_modes[] = {
+	{
+		.mux_regs = pmx_pcie2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pcie2_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_pcie2 = {
+	.name = "pcie2",
+	.modes = pmx_pcie2_modes,
+	.mode_count = ARRAY_SIZE(pmx_pcie2_modes),
+};
+
+/* pad multiplexing for sata0 device */
+static struct pmx_mux_reg pmx_sata0_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_SATA_CFG_VAL(0),
+		.value = SPEAR1310_SATA_CFG_VAL(0),
+	},
+};
+
+static struct pmx_dev_mode pmx_sata0_modes[] = {
+	{
+		.mux_regs = pmx_sata0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sata0_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_sata0 = {
+	.name = "sata0",
+	.modes = pmx_sata0_modes,
+	.mode_count = ARRAY_SIZE(pmx_sata0_modes),
+};
+
+/* pad multiplexing for sata1 device */
+static struct pmx_mux_reg pmx_sata1_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_SATA_CFG_VAL(1),
+		.value = SPEAR1310_SATA_CFG_VAL(1),
+	},
+};
+
+static struct pmx_dev_mode pmx_sata1_modes[] = {
+	{
+		.mux_regs = pmx_sata1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sata1_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_sata1 = {
+	.name = "sata1",
+	.modes = pmx_sata1_modes,
+	.mode_count = ARRAY_SIZE(pmx_sata1_modes),
+};
+
+/* pad multiplexing for sata2 device */
+static struct pmx_mux_reg pmx_sata2_mux[] = {
+	{
+		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.mask = SPEAR1310_SATA_CFG_VAL(2),
+		.value = SPEAR1310_SATA_CFG_VAL(2),
+	},
+};
+
+static struct pmx_dev_mode pmx_sata2_modes[] = {
+	{
+		.mux_regs = pmx_sata2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sata2_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_sata2 = {
+	.name = "sata2",
+	.modes = pmx_sata2_modes,
+	.mode_count = ARRAY_SIZE(pmx_sata2_modes),
+};
+
 /* Add spear1310 specific devices here */
 /* uart1 device registeration */
 struct amba_device spear1310_uart1_device = {
