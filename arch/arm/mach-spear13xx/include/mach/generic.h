@@ -510,6 +510,8 @@ void __init spear1310_map_io(void);
 extern struct amba_device spear1340_uart1_device;
 extern struct platform_device spear1340_i2c1_device;
 extern struct platform_device spear1340_pwm_device;
+extern struct platform_device spear1340_i2s_play_device;
+extern struct platform_device spear1340_i2s_record_device;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);

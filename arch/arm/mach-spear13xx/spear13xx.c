@@ -16,6 +16,7 @@
 #include <linux/amba/pl061.h>
 #include <linux/amba/serial.h>
 #include <linux/dw_dmac.h>
+#include <linux/designware_i2s.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/phy.h>
@@ -739,6 +740,11 @@ struct platform_device spear13xx_wdt_device = {
 	.resource = wdt_resources,
 };
 
+struct platform_device spear13xx_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
+};
+
 /*
  * Devices present on CPU_SPEAR1300, CPU_SPEAR1310, CPU_SPEAR1310_REVA or
  * CPU_SPEAR900
@@ -746,6 +752,11 @@ struct platform_device spear13xx_wdt_device = {
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
+
+static struct i2s_platform_data i2s_data = {
+	.cap = PLAY | RECORD,
+	.channel = 2,
+};
 /* i2s0 device registeration */
 static struct resource i2s0_resources[] = {
 	{
@@ -765,10 +776,11 @@ static struct resource i2s0_resources[] = {
 };
 
 struct platform_device spear13xx_i2s0_device = {
-	.name = "spear13xx-i2s",
+	.name = "designware-i2s",
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s0_resources),
 	.resource = i2s0_resources,
@@ -793,18 +805,14 @@ static struct resource i2s1_resources[] = {
 };
 
 struct platform_device spear13xx_i2s1_device = {
-	.name = "spear13xx-i2s",
+	.name = "designware-i2s",
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s1_resources),
 	.resource = i2s1_resources,
-};
-
-struct platform_device spear13xx_pcm_device = {
-	.name		= "spear-pcm-audio",
-	.id		= -1,
 };
 
 /* jpeg device registeration */

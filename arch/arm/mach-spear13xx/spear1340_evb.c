@@ -111,6 +111,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
 	&spear13xx_nand_device,
+	&spear1340_i2s_play_device,
+	&spear1340_i2s_record_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcie_gadget0_device,
@@ -277,6 +279,11 @@ static void __init spear1340_evb_init(void)
 	/* db9000_clcd plat data */
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device,
 			&chimei_b101aw02_info);
+#endif
+
+#ifdef CONFIG_SND_SOC_STA529
+	/* configure i2s configuration for dma xfer */
+	pcm_init(&spear13xx_dmac_device[0].dev);
 #endif
 
 	/* set keyboard plat data */
