@@ -953,25 +953,63 @@ static struct clk uoc_clk = {
 	.recalc = &follow_parent,
 };
 
-/* pci clocks */
-static struct clk pcie0_clk = {
+/* pcie-sata parent clocks */
+static struct clk pcie_sata_0_pclk = {
 	.en_reg = SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_PCIE0_CLK_ENB,
+	.en_reg_bit = SPEAR1310_PCIE_SATA_0_CLK_ENB,
 	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+static struct clk pcie_sata_1_pclk = {
+	.en_reg = SPEAR1310_PERIP1_CLK_ENB,
+	.en_reg_bit = SPEAR1310_PCIE_SATA_1_CLK_ENB,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+static struct clk pcie_sata_2_pclk = {
+	.en_reg = SPEAR1310_PERIP1_CLK_ENB,
+	.en_reg_bit = SPEAR1310_PCIE_SATA_2_CLK_ENB,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* pcie clocks */
+static struct clk pcie0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_0_pclk,
 	.recalc = &follow_parent,
 };
 
 static struct clk pcie1_clk = {
-	.en_reg = SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_PCIE1_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_1_pclk,
 	.recalc = &follow_parent,
 };
 
 static struct clk pcie2_clk = {
-	.en_reg = SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_PCIE2_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_2_pclk,
+	.recalc = &follow_parent,
+};
+
+/* sata clocks */
+static struct clk sata0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_0_pclk,
+	.recalc = &follow_parent,
+};
+
+static struct clk sata1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_1_pclk,
+	.recalc = &follow_parent,
+};
+
+static struct clk sata2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_2_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1718,9 +1756,15 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "jpeg-designware",		.clk = &jpeg_clk},
 	{.dev_id = "stmmaceth.0",		.clk = &gmac0_clk},
 	{.dev_id = "c3",			.clk = &c3_clk},
-	{.dev_id = "pcie0",			.clk = &pcie0_clk},
-	{.dev_id = "pcie1",			.clk = &pcie1_clk},
-	{.dev_id = "pcie2",			.clk = &pcie2_clk},
+	{.con_id = "pcie_sata_0_pclk",		.clk = &pcie_sata_0_pclk},
+	{.con_id = "pcie_sata_1_pclk",		.clk = &pcie_sata_1_pclk},
+	{.con_id = "pcie_sata_2_pclk",		.clk = &pcie_sata_2_pclk},
+	{.dev_id = "dw_pcie.0",			.clk = &pcie0_clk},
+	{.dev_id = "dw_pcie.1",			.clk = &pcie1_clk},
+	{.dev_id = "dw_pcie.2",			.clk = &pcie2_clk},
+	{.dev_id = "sata-dwc.0",		.clk = &sata0_clk},
+	{.dev_id = "sata-dwc.1",		.clk = &sata1_clk},
+	{.dev_id = "sata-dwc.2",		.clk = &sata2_clk},
 	{.dev_id = "sdhci",			.clk = &sdhci_clk},
 	{.con_id = "fsmc",			.clk = &fsmc_clk},
 	{.dev_id = "sysram0",			.clk = &sysram0_clk},
