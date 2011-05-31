@@ -1006,11 +1006,25 @@ static struct clk uoc_clk = {
 	.recalc = &follow_parent,
 };
 
-/* pci clock */
-static struct clk pcie_clk = {
+/* pcie-sata parent clock */
+static struct clk pcie_sata_pclk = {
 	.en_reg = SPEAR1340_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1340_PCIE_CLK_ENB,
+	.en_reg_bit = SPEAR1340_PCIE_SATA_CLK_ENB,
 	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* pcie clock */
+static struct clk pcie_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_pclk,
+	.recalc = &follow_parent,
+};
+
+/* sata clock */
+static struct clk sata_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pcie_sata_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1532,7 +1546,9 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "dw_dmac.1",			.clk = &dma1_clk},
 	{.dev_id = "stmmaceth.0",		.clk = &gmac_clk},
 	{.dev_id = "c3",			.clk = &c3_clk},
-	{.dev_id = "pcie",			.clk = &pcie_clk},
+	{.con_id = "pcie_sata_pclk",		.clk = &pcie_sata_pclk},
+	{.dev_id = "dw_pcie.0",			.clk = &pcie_clk},
+	{.dev_id = "sata-dwc",			.clk = &sata_clk},
 	{.con_id = "fsmc",			.clk = &fsmc_clk},
 	{.dev_id = "sysram0",			.clk = &sysram0_clk},
 	{.dev_id = "sysram1",			.clk = &sysram1_clk},
