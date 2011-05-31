@@ -1730,8 +1730,8 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 
 	/* clock derived from apb clk */
 	{.dev_id = "adc",			.clk = &adc_clk},
-	{.dev_id = "spear13xx-i2s.0",		.clk = &i2s0_clk},
-	{.dev_id = "spear13xx-i2s.1",		.clk = &i2s1_clk},
+	{.dev_id = "designware-i2s.0",		.clk = &i2s0_clk},
+	{.dev_id = "designware-i2s.1",		.clk = &i2s1_clk},
 	{.dev_id = "ssp-pl022.0",		.clk = &ssp_clk},
 	{.dev_id = "gpio0",			.clk = &gpio0_clk},
 	{.dev_id = "gpio1",			.clk = &gpio1_clk},
