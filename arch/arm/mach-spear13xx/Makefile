@@ -30,6 +30,7 @@ obj-$(CONFIG_CPU_SPEAR1310)		+= spear1310_clock.o spear1310.o
 
 # spear1310 boards files
 obj-$(CONFIG_MACH_SPEAR1310_EVB)	+= spear1310_evb.o
+obj-$(CONFIG_MACH_R1801E)		+= r1801e.o
 
 # spear1340 specific files
 obj-$(CONFIG_CPU_SPEAR1340)		+= spear1340_clock.o spear1340.o

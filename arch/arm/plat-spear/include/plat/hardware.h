@@ -56,7 +56,7 @@ static inline bool cpu_is_spear1310(void)
 
 static inline bool cpu_is_spear1310_reva(void)
 {
-	return machine_is_spear1310_reva_evb();
+	return machine_is_spear1310_reva_evb() || machine_is_r1801e();
 }
 
 static inline bool cpu_is_spear1340(void)
