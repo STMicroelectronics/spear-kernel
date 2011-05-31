@@ -1,7 +1,7 @@
 /*
  * ASoC machine driver for spear platform
  *
- * sound/soc/spear/evb_sta529.c
+ * sound/soc/spear/spear13xx_evb.c
  *
  * Copyright (C) 2010 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
@@ -19,7 +19,9 @@
 #include <linux/timer.h>
 
 #include <mach/generic.h>
+#include <mach/hardware.h>
 #include <mach/misc_regs.h>
+#include "mach/spear1340_misc_regs.h"
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -28,8 +30,10 @@
 #include <sound/soc-dapm.h>
 
 #include "../codecs/sta529.h"
-#include "spear13xx-i2s.h"
-#include "spear13xx-pcm.h"
+#include "spear13xx_pcm.h"
+
+#define CHANNEL_MASK_M	0x00000030
+#define CHANNEL_MASK_S	0x000000C0
 
 static int
 sta529_evb_hw_params(struct snd_pcm_substream *substream,
@@ -37,7 +41,6 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret = 0;
 	u32 freq, format, rate, channel;
 	u32 ref_clock, val;
@@ -60,20 +63,26 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
-	/* set the I2S system clock as input */
-	ret = snd_soc_dai_set_sysclk(cpu_dai, 0, freq, SND_SOC_CLOCK_IN);
-	if (ret < 0)
-		return ret;
+	if (cpu_is_spear1340()) {
+		val = readl(SPEAR1340_PERIP_CFG);
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+			val = (val & ~CHANNEL_MASK_M) | (channel << 4);
+			writel(val, SPEAR1340_PERIP_CFG);
+		} else {
+			val = (val & ~CHANNEL_MASK_S) | (channel << 6);
+			writel(val, SPEAR1340_PERIP_CFG);
+		}
 
-	/*setting ref clock in 278 offset*/
-	val = readl(PERIP2_CLK_ENB);
-	val |= 0x80;
-	writel(val, PERIP2_CLK_ENB);
+	}
 
-	/*setting mode 0 in conf regiter: 32c offset*/
-	val = readl(PERIP_CFG);
-	val |= 0x0;
-	writel(val, PERIP_CFG);
+	else if (cpu_is_spear1300() || cpu_is_spear1310_reva() ||
+			cpu_is_spear900() || cpu_is_spear1310()) {
+		/*setting mode 0 in conf regiter: 32c offset*/
+		val = readl(PERIP_CFG);
+		val &= ~0x7;
+		writel(val, PERIP_CFG);
+
+	}
 
 	return 0;
 }
@@ -82,27 +91,27 @@ static struct snd_soc_ops sta529_evb_ops = {
 	.hw_params	= sta529_evb_hw_params,
 };
 
-/* spear digital audio interface glue - connects codec <--> CPU */
-static struct snd_soc_dai_link sta529_dai = {
+/* synopsys digital audio interface glue - connects codec <--> CPU */
+static struct snd_soc_dai_link evb_dai = {
 	.name		= "STA529",
 	.stream_name	= "STA529",
-	.cpu_dai_name	= "spear13xx-i2s.0",
-	.platform_name	= "spear-pcm-audio",
+	.cpu_dai_name	= "designware-i2s.0",
+	.platform_name	= "designware-pcm-audio",
 	.codec_dai_name	= "sta529-audio",
 	.codec_name	= "sta529-codec.0-001a",
 	.ops		= &sta529_evb_ops,
 };
 
-/* spear audio machine driver */
+/* synopsys audio machine driver */
 static struct snd_soc_card spear_sta529 = {
 	.name		= "spear_sta529",
-	.dai_link	= &sta529_dai,
+	.dai_link	= &evb_dai,
 	.num_links	= 1,
 };
 
 static struct platform_device *evb_snd_device;
 
-static int __init spear_init(void)
+static int __init dw_init(void)
 {
 	int ret;
 
@@ -122,14 +131,14 @@ static int __init spear_init(void)
 
 	return ret;
 }
-module_init(spear_init);
+module_init(dw_init);
 
-static void __exit spear_exit(void)
+static void __exit dw_exit(void)
 {
 	platform_device_unregister(evb_snd_device);
 }
-module_exit(spear_exit);
+module_exit(dw_exit);
 
 MODULE_AUTHOR("Rajeev Kumar");
-MODULE_DESCRIPTION("ST SPEAR EVB ASoC driver");
+MODULE_DESCRIPTION("ST SYNOPSYS EVB ASoC driver");
 MODULE_LICENSE("GPL");

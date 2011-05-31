@@ -1,9 +1,9 @@
 /*
  * ALSA PCM interface for ST spear Processor
  *
- * sound/soc/spear/spear13xx-pcm.h
+ * sound/soc/spear/spear13xx_pcm.h
  *
- * Copyright (C) 2010 ST Microelectronics
+ * Copyright (C) 2011 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -11,8 +11,8 @@
  * warranty of any kind, whether express or implied.
  */
 
-#ifndef SPEAR_PCM_H
-#define SPEAR_PCM_H
+#ifndef SPEAR13XX_PCM_H
+#define SPEAR13XX_PCM_H
 
 #include <linux/dw_dmac.h>
 

@@ -1,7 +1,7 @@
 /*
- * ALSA SoC I2S Audio Layer for ST spear13xx processor
+ * ALSA SoC I2S Audio Layer for ST SPEAr13xx processor
  *
- * sound/soc/spear/spear13xx-i2s.c
+ * sound/soc/spear/designware_i2s.c
  *
  * Copyright (C) 2010 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/io.h>
@@ -25,8 +26,7 @@
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <sound/soc.h>
-#include "spear13xx-pcm.h"
-#include "spear13xx-i2s.h"
+#include "spear13xx_pcm.h"
 
 /* common register for all channel */
 #define IER		0x000
@@ -113,25 +113,32 @@
 #define I2S_COMP_VERSION	0x01F8
 #define I2S_COMP_TYPE		0x01FC
 
-#define SPEAR13XX_I2S_RATES	SNDRV_PCM_RATE_48000
-#define SPEAR13XX_I2S_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
+#define DESIGNWARE_I2S_RATES	SNDRV_PCM_RATE_48000
+#define DESIGNWARE_I2S_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
+#define MAX_CHANNEL_NUM		8
+#define MIN_CHANNEL_NUM		2
+#define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
+#define FOUR_CHANNEL_SUPPORT	4	/* up to 3.1 */
+#define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
+#define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
 
-struct spear13xx_i2s_dev {
+struct dw_i2s_dev {
 	void __iomem *i2s_base;
 	struct resource *res;
 	struct clk *clk;
+	int active;
 	int play_irq;
-	int mode;
+	int max_channel;
 	int capture_irq;
 	struct device *dev;
-	struct spear13xx_pcm_dma_params *dma_params[2];
+	struct dw_pcm_dma_params *dma_params[2];
 };
 
 void get_dma_start_addr(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
 
 	prtd->txdma = dev->res->start + TXDMA;
 	prtd->rxdma = dev->res->start + RXDMA;
@@ -149,113 +156,123 @@ static inline u32 i2s_read_reg(void *io_base, int reg)
 	return readl(io_base + reg);
 }
 
-static int
-spear13xx_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai, int clk_id,
-		unsigned int freq, int dir)
+void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-	return 0;
-}
 
-void
-i2s_start_play(struct spear13xx_i2s_dev *dev,
-		struct snd_pcm_substream *substream)
-{
-	u32 val; /*dma mode slection*/
-
-	val = readl(PERIP_CFG);
-	val &= ~0xFFFFFFFC;
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_write_reg(dev->i2s_base, TER0, 0);
 	i2s_write_reg(dev->i2s_base, TER1, 0);
+	i2s_write_reg(dev->i2s_base, TER2, 0);
+	i2s_write_reg(dev->i2s_base, TER3, 0);
 
-	/* for 2.0 audio*/
-	if (dev->mode <= 2) {
-		i2s_write_reg(dev->i2s_base, CCR, 0x00);
-		if (!val) {
-			i2s_write_reg(dev->i2s_base, TCR0, 0x2);
-			i2s_write_reg(dev->i2s_base, TFCR0, 0x07);
-			i2s_write_reg(dev->i2s_base, IMR0, 0x00);
-			i2s_write_reg(dev->i2s_base, TER0, 1);
-		} else {
-			i2s_write_reg(dev->i2s_base, TCR1, 0x2);
-			i2s_write_reg(dev->i2s_base, TFCR1, 0x07);
-			i2s_write_reg(dev->i2s_base, IMR1, 0x00);
-			i2s_write_reg(dev->i2s_base, TER1, 1);
-		}
-	} else { /*audio 2.0 onwards */
-		i2s_write_reg(dev->i2s_base, CCR, 0x10);
-		i2s_write_reg(dev->i2s_base, TCR0, 0x5);
+	switch (dev->max_channel) {
+	case EIGHT_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, TCR3, 0x5);
+		i2s_write_reg(dev->i2s_base, TFCR3, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR3, 0x00);
+		i2s_write_reg(dev->i2s_base, TER3, 1);
+
+	case SIX_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, TCR2, 0x5);
+		i2s_write_reg(dev->i2s_base, TFCR2, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR2, 0x00);
+		i2s_write_reg(dev->i2s_base, TER2, 1);
+
+	case FOUR_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, TCR1, 0x5);
-
-		i2s_write_reg(dev->i2s_base, TFCR0, 0x07);
 		i2s_write_reg(dev->i2s_base, TFCR1, 0x07);
-		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, IMR1, 0x00);
-		i2s_write_reg(dev->i2s_base, TER0, 1);
 		i2s_write_reg(dev->i2s_base, TER1, 1);
+
+	case TWO_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, CCR, 0x00);
+		i2s_write_reg(dev->i2s_base, TCR0, 0x2);
+		i2s_write_reg(dev->i2s_base, TFCR0, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
+		i2s_write_reg(dev->i2s_base, TER0, 1);
+
+		break;
+
+	default:
+		dev_err(dev->dev, "channel not supported\n");
+
 	}
 
 	i2s_write_reg(dev->i2s_base, ITER, 1);
 	i2s_write_reg(dev->i2s_base, CER, 1);
 }
 
-void
-i2s_start_rec(struct spear13xx_i2s_dev *dev,
-		struct snd_pcm_substream *substream)
+void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-	u32 val; /*dma mode slection*/
 
-	val = readl(PERIP_CFG);
-	val &= ~0xFFFFFFFC;
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_write_reg(dev->i2s_base, RER0, 0);
 	i2s_write_reg(dev->i2s_base, RER1, 0);
 
-	/* for 2.0 audio*/
-	if (dev->mode <= 2) {
-		i2s_write_reg(dev->i2s_base, CCR, 0x00);
-		if (!val) {
-			i2s_write_reg(dev->i2s_base, RCR0, 0x2);
-			i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
-			i2s_write_reg(dev->i2s_base, IMR0, 0x00);
-			i2s_write_reg(dev->i2s_base, RER0, 1);
-		} else {
-			i2s_write_reg(dev->i2s_base, RCR1, 0x2);
-			i2s_write_reg(dev->i2s_base, RFCR1, 0x07);
-			i2s_write_reg(dev->i2s_base, IMR1, 0x00);
-			i2s_write_reg(dev->i2s_base, TER1, 1);
-		}
-	} else { /*audio 2.0 onwards */
-		i2s_write_reg(dev->i2s_base, CCR, 0x10);
-		i2s_write_reg(dev->i2s_base, RCR0, 0x5);
+	switch (dev->max_channel) {
+	case EIGHT_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, RCR3, 0x5);
+		i2s_write_reg(dev->i2s_base, RFCR3, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR3, 0x00);
+		i2s_write_reg(dev->i2s_base, RER3, 1);
+
+	case SIX_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, RCR2, 0x5);
+		i2s_write_reg(dev->i2s_base, RFCR2, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR2, 0x00);
+		i2s_write_reg(dev->i2s_base, RER2, 1);
+
+	case FOUR_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, RCR1, 0x5);
-
-		i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
 		i2s_write_reg(dev->i2s_base, RFCR1, 0x07);
-		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, IMR1, 0x00);
-		i2s_write_reg(dev->i2s_base, RER0, 1);
 		i2s_write_reg(dev->i2s_base, RER1, 1);
-	}
 
+	case TWO_CHANNEL_SUPPORT:
+		i2s_write_reg(dev->i2s_base, CCR, 0x0);
+		i2s_write_reg(dev->i2s_base, RCR0, 0x2);
+		i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
+		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
+		i2s_write_reg(dev->i2s_base, RER0, 1);
+
+		break;
+
+	default:
+		dev_err(dev->dev, "channel not supported\n");
+
+	}
 	i2s_write_reg(dev->i2s_base, IRER, 1);
 	i2s_write_reg(dev->i2s_base, CER, 1);
 }
 
-void
-i2s_stop(struct spear13xx_i2s_dev *dev, struct snd_pcm_substream *substream)
+static void
+i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-	i2s_write_reg(dev->i2s_base, IER, 0);
-	i2s_write_reg(dev->i2s_base, IMR0, 0x33);
-	i2s_write_reg(dev->i2s_base, IMR1, 0x33);
-	i2s_write_reg(dev->i2s_base, ITER, 0);
-	i2s_write_reg(dev->i2s_base, IRER, 0);
-	i2s_write_reg(dev->i2s_base, CER, 0);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		i2s_write_reg(dev->i2s_base, ITER, 0);
+		i2s_write_reg(dev->i2s_base, ITER, 1);
+		i2s_write_reg(dev->i2s_base, IMR0, 0x30);
+		i2s_write_reg(dev->i2s_base, IMR1, 0x30);
+		i2s_write_reg(dev->i2s_base, IMR2, 0x30);
+		i2s_write_reg(dev->i2s_base, IMR3, 0x30);
+	} else {
+		i2s_write_reg(dev->i2s_base, IRER, 0);
+		i2s_write_reg(dev->i2s_base, IRER, 1);
+		i2s_write_reg(dev->i2s_base, IMR0, 0x03);
+		i2s_write_reg(dev->i2s_base, IMR1, 0x03);
+		i2s_write_reg(dev->i2s_base, IMR2, 0x03);
+		i2s_write_reg(dev->i2s_base, IMR3, 0x03);
+	}
+	if (!dev->active--) {
+		i2s_write_reg(dev->i2s_base, CER, 0);
+		i2s_write_reg(dev->i2s_base, IER, 0);
+	}
+
 }
 
-static irqreturn_t i2s_play_irq(int irq, void *_dev)
+static irqreturn_t dw_i2s_play(int irq, void *_dev)
 {
-	struct spear13xx_i2s_dev *dev = (struct spear13xx_i2s_dev *)_dev;
+	struct dw_i2s_dev *dev = (struct dw_i2s_dev *)_dev;
 	u32 ch0, ch1;
 
 	/* check for the tx data overrun condition */
@@ -277,14 +294,20 @@ static irqreturn_t i2s_play_irq(int irq, void *_dev)
 
 		/* clear tx data overrun interrupt: channel 1 */
 		i2s_read_reg(dev->i2s_base, TOR1);
+
+		/* clear tx data overrun interrupt: channel 2 */
+		i2s_read_reg(dev->i2s_base, TOR2);
+
+		/* clear tx data overrun interrupt: channel 3 */
+		i2s_read_reg(dev->i2s_base, TOR3);
 	}
 
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t i2s_capture_irq(int irq, void *_dev)
+static irqreturn_t dw_i2s_capture(int irq, void *_dev)
 {
-	struct spear13xx_i2s_dev *dev = (struct spear13xx_i2s_dev *)_dev;
+	struct dw_i2s_dev *dev = (struct dw_i2s_dev *)_dev;
 	u32 ch0, ch1;
 
 	/* check for the rx data overrun condition */
@@ -306,24 +329,29 @@ static irqreturn_t i2s_capture_irq(int irq, void *_dev)
 
 		/* clear rx data overrun interrupt: channel 1 */
 		i2s_read_reg(dev->i2s_base, ROR1);
+
+		/* clear rx data overrun interrupt: channel 2 */
+		i2s_read_reg(dev->i2s_base, ROR2);
+
+		/* clear rx data overrun interrupt: channel 3 */
+		i2s_read_reg(dev->i2s_base, ROR3);
 	}
 
 	return IRQ_HANDLED;
 }
 
 static int
-spear13xx_i2s_startup(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *cpu_dai)
+dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 	u32 ret = 0;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		ret = request_irq(dev->play_irq, i2s_play_irq, 0,
-				"spear13xx-i2s", dev);
+		ret = request_irq(dev->play_irq, dw_i2s_play, 0,
+				"dw-i2s", dev);
 	} else {
-		ret = request_irq(dev->capture_irq, i2s_capture_irq,
-				0, "spear13xx-i2s", dev);
+		ret = request_irq(dev->capture_irq, dw_i2s_capture,
+				0, "dw-i2s", dev);
 	}
 	if (ret) {
 		dev_err(dev->dev, "irq registration failure\n");
@@ -339,30 +367,34 @@ spear13xx_i2s_startup(struct snd_pcm_substream *substream,
 
 	/* unmask i2s interrupt for channel 1 */
 	i2s_write_reg(dev->i2s_base, IMR1, 0x00);
+
+	/* unmask i2s interrupt for channel 2 */
+	i2s_write_reg(dev->i2s_base, IMR2, 0x00);
+
+	/* unmask i2s interrupt for channel 3 */
+	i2s_write_reg(dev->i2s_base, IMR3, 0x00);
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dev->dma_params);
 
 	return 0;
 }
 
-static int spear13xx_i2s_hw_params(struct snd_pcm_substream *substream,
-		struct snd_pcm_hw_params *params,
-		struct snd_soc_dai *dai)
+static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	u32 channel;
 
 	channel = params_channels(params);
 
-	dev->mode = channel;
+	dev->max_channel = channel;
 
 	return 0;
 }
 
 static void
-spear13xx_i2s_shutdown(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *dai)
+dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (dev->play_irq)
@@ -378,19 +410,26 @@ spear13xx_i2s_shutdown(struct snd_pcm_substream *substream,
 	/* mask i2s interrupt for channel 1 */
 	i2s_write_reg(dev->i2s_base, IMR1, 0x33);
 
+	/* mask i2s interrupt for channel 2 */
+	i2s_write_reg(dev->i2s_base, IMR2, 0x33);
+
+	/* mask i2s interrupt for channel 3 */
+	i2s_write_reg(dev->i2s_base, IMR3, 0x33);
+
 	i2s_stop(dev, substream);
 
 }
 
 static int
-spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
+dw_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 		struct snd_soc_dai *dai)
 {
-	struct spear13xx_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
+		dev->active++;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			i2s_start_play(dev, substream);
 		else
@@ -411,42 +450,44 @@ spear13xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	return ret;
 }
 
-static struct snd_soc_dai_ops spear13xx_i2s_dai_ops = {
-	.startup	= spear13xx_i2s_startup,
-	.shutdown	= spear13xx_i2s_shutdown,
-	.hw_params	= spear13xx_i2s_hw_params,
-	.trigger	= spear13xx_i2s_trigger,
-	.set_sysclk	= spear13xx_i2s_set_dai_sysclk,
+static struct snd_soc_dai_ops dw_i2s_dai_ops = {
+	.startup	= dw_i2s_startup,
+	.shutdown	= dw_i2s_shutdown,
+	.hw_params	= dw_i2s_hw_params,
+	.trigger	= dw_i2s_trigger,
 };
 
-struct snd_soc_dai_driver spear13xx_i2s_dai = {
+struct snd_soc_dai_driver dw_i2s_dai = {
 	.playback = {
-		.channels_min = MAX_CHANNEL_NUM,
-		.channels_max = MIN_CHANNEL_NUM,
-		.rates = SPEAR13XX_I2S_RATES,
-		.formats = SPEAR13XX_I2S_FORMAT,
+		.channels_min = MIN_CHANNEL_NUM,
+		.channels_max = MAX_CHANNEL_NUM,
+		.rates = DESIGNWARE_I2S_RATES,
+		.formats = DESIGNWARE_I2S_FORMAT,
 	},
 	.capture = {
-		.channels_min = MAX_CHANNEL_NUM,
-		.channels_max = MIN_CHANNEL_NUM,
-		.rates = SPEAR13XX_I2S_RATES,
-		.formats = SPEAR13XX_I2S_FORMAT,
+		.channels_min = MIN_CHANNEL_NUM,
+		.channels_max = MAX_CHANNEL_NUM,
+		.rates = DESIGNWARE_I2S_RATES,
+		.formats = DESIGNWARE_I2S_FORMAT,
 	},
-	.ops = &spear13xx_i2s_dai_ops,
+	.ops = &dw_i2s_dai_ops,
 };
 
 static int
-spear13xx_i2s_probe(struct platform_device *pdev)
+dw_i2s_probe(struct platform_device *pdev)
 {
-	struct spear13xx_i2s_dev *dev;
+	const struct i2s_platform_data *pdata = pdev->dev.platform_data;
+	struct dw_i2s_dev *dev;
 	struct resource *res;
 	int ret;
+	unsigned int cap;
 
-	if (!pdev) {
-		dev_err(&pdev->dev, "Invalid platform device\n");
+	if (!pdata) {
+		dev_err(&pdev->dev, "Invalid platform data\n");
 		return -EINVAL;
 	}
 
+	cap = pdata->cap;
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "no i2s resource defined\n");
@@ -464,6 +505,7 @@ spear13xx_i2s_probe(struct platform_device *pdev)
 	}
 
 	dev->res = res;
+	dev->max_channel = pdata->channel;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {
@@ -482,35 +524,45 @@ spear13xx_i2s_probe(struct platform_device *pdev)
 		goto err_clk_disable;
 	}
 
-	dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
-	if (!dev->play_irq) {
-		dev_err(&pdev->dev, "play irq not defined\n");
-		ret = -EBUSY;
-		goto err_iounmap_i2s;
+	if (cap & PLAY) {
+		dev_dbg(&pdev->dev, " SPEAr13xx: play supported\n");
+		dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
+		if (!dev->play_irq)
+			dev_warn(&pdev->dev, "play irq not defined\n");
+		else {
+
+			memset((void *)&dw_i2s_dai.capture, 0 ,
+					sizeof(dw_i2s_dai.capture));
+			dw_i2s_dai.playback.channels_max = dev->max_channel;
+		}
 	}
 
-	dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
-	if (!dev->capture_irq) {
-		dev_err(&pdev->dev, "record irq not defined\n");
-		ret = -EBUSY;
-		goto err_free_play_irq;
+	if (cap & RECORD) {
+		dev_dbg(&pdev->dev, "SPEAr13xx: record supported\n");
+		dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
+		if (!dev->capture_irq)
+			dev_warn(&pdev->dev, "record irq not defined\n");
+		else {
+			memset((void *)&dw_i2s_dai.playback, 0 ,
+					sizeof(dw_i2s_dai.playback));
+			dw_i2s_dai.capture.channels_max = dev->max_channel;
+		}
 	}
 
 	dev->dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, dev);
-
-	ret = snd_soc_register_dai(&pdev->dev, &spear13xx_i2s_dai);
-	if (ret != 0)
-		goto err_free_capture_irq;
+	ret = snd_soc_register_dai(&pdev->dev, &dw_i2s_dai);
+	if (ret != 0) {
+		dev_err(&pdev->dev, "not able to register dai\n");
+		goto err_set_drvdata;
+	}
 
 	return 0;
 
-err_free_capture_irq:
+err_set_drvdata:
 	dev_set_drvdata(&pdev->dev, NULL);
 	free_irq(dev->capture_irq, pdev);
-err_free_play_irq:
 	free_irq(dev->play_irq, pdev);
-err_iounmap_i2s:
 	iounmap(dev->i2s_base);
 err_clk_disable:
 	clk_disable(dev->clk);
@@ -524,9 +576,9 @@ err_release_mem_region:
 }
 
 static int
-spear13xx_i2s_remove(struct platform_device *pdev)
+dw_i2s_remove(struct platform_device *pdev)
 {
-	struct spear13xx_i2s_dev *dev = dev_get_drvdata(&pdev->dev);
+	struct dw_i2s_dev *dev = dev_get_drvdata(&pdev->dev);
 
 	snd_soc_unregister_dai(&pdev->dev);
 	free_irq(dev->capture_irq, pdev);
@@ -540,27 +592,27 @@ spear13xx_i2s_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver spear13xx_i2s_driver = {
-	.probe		= spear13xx_i2s_probe,
-	.remove		= spear13xx_i2s_remove,
+static struct platform_driver dw_i2s_driver = {
+	.probe		= dw_i2s_probe,
+	.remove		= dw_i2s_remove,
 	.driver		= {
-		.name	= "spear13xx-i2s",
+		.name	= "designware-i2s",
 		.owner	= THIS_MODULE,
 	},
 };
 
-static int __init spear13xx_i2s_init(void)
+static int __init dw_i2s_init(void)
 {
-	return platform_driver_register(&spear13xx_i2s_driver);
+	return platform_driver_register(&dw_i2s_driver);
 }
-module_init(spear13xx_i2s_init);
+module_init(dw_i2s_init);
 
-static void __exit spear13xx_i2s_exit(void)
+static void __exit dw_i2s_exit(void)
 {
-	platform_driver_unregister(&spear13xx_i2s_driver);
+	platform_driver_unregister(&dw_i2s_driver);
 }
-module_exit(spear13xx_i2s_exit);
+module_exit(dw_i2s_exit);
 
-MODULE_AUTHOR("Rajeev Kumar");
-MODULE_DESCRIPTION("SPEAr I2S SoC Interface");
+MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
+MODULE_DESCRIPTION("DESIGNWARE I2S SoC Interface");
 MODULE_LICENSE("GPL");

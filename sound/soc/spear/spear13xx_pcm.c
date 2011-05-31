@@ -1,9 +1,9 @@
 /*
  * ALSA PCM interface for ST spear Processor
  *
- * sound/soc/spear/spear13xx-pcm.c
+ * sound/soc/spear/spear13xx_pcm.c
  *
- * Copyright (C) 2010 ST Microelectronics
+ * Copyright (C) 2011 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/designware_i2s.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -21,8 +22,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <mach/dma.h>
-#include "spear13xx-i2s.h"
-#include "spear13xx-pcm.h"
+#include "spear13xx_pcm.h"
 
 static u64 spear13xx_pcm_dmamask = 0xffffffff;
 struct pcm_dma_data data;
@@ -38,10 +38,10 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 			SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
 			SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
 			SNDRV_PCM_RATE_KNOT),
-	.rate_min = 48000,
-	.rate_max = 48000,
+	.rate_min = 8000,
+	.rate_max = 96000,
 	.channels_min = 2,
-	.channels_max = 2,
+	.channels_max = 8,
 	.buffer_bytes_max = 16 * 1024, /* max buffer size */
 	.period_bytes_min = 2 * 1024, /* 1 msec data minimum period size */
 	.period_bytes_max = 2 * 1024, /* maximum period size */
@@ -472,7 +472,7 @@ static int __devexit spear13xx_soc_platform_remove(struct platform_device *pdev)
 
 static struct platform_driver spear13xx_pcm_driver = {
 	.driver = {
-			.name = "spear-pcm-audio",
+			.name = "spear13xx-pcm-audio",
 			.owner = THIS_MODULE,
 	},
 
