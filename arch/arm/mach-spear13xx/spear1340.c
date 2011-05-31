@@ -13,6 +13,7 @@
 
 #include <asm/irq.h>
 #include <linux/amba/serial.h>
+#include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
@@ -800,6 +801,74 @@ struct platform_device spear1340_i2c1_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
+};
+
+/* i2s:play device registration */
+static struct i2s_platform_data i2s_data[] = {
+	{
+		.cap = PLAY,
+		.channel = 8,
+	}, {
+		.cap = RECORD,
+		.channel = 8,
+	},
+};
+
+static struct resource i2s_play_resources[] = {
+	{
+		.start	= SPEAR1340_I2S_PLAY_BASE,
+		.end	= SPEAR1340_I2S_PLAY_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_empty_irq",
+		.start	= SPEAR1340_IRQ_I2S_PLAY_EMP_M,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "play_overrun_irq",
+		.start	= SPEAR1340_IRQ_I2S_PLAY_OR_M,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_i2s_play_device = {
+	.name = "designware-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data[0],
+	},
+	.num_resources = ARRAY_SIZE(i2s_play_resources),
+	.resource = i2s_play_resources,
+};
+
+/* i2s:record device registeration */
+static struct resource i2s_record_resources[] = {
+	{
+		.start	= SPEAR1340_I2S_REC_BASE,
+		.end	= SPEAR1340_I2S_REC_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "rec_data_avail_irq",
+		.start	= SPEAR1340_IRQ_I2S_REC_DA_S,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "rec_overrun_irq",
+		.start	= SPEAR1340_IRQ_I2S_REC_OR_S,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_i2s_record_device = {
+	.name = "designware-i2s",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data[1],
+	},
+	.num_resources = ARRAY_SIZE(i2s_record_resources),
+	.resource = i2s_record_resources,
 };
 
 /* plgpio */
