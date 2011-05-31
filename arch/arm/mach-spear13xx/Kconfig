@@ -17,6 +17,13 @@ config MACH_SPEAR1310_REVA_EVB
 	help
 	  Supports ST SPEAr1310 RevA Evaluation Board
 
+config MACH_R1801E
+	bool "ZT R1801E SOM board, based upon SPEAr1310 RevA Device"
+	select CPU_SPEAR1310_REVA
+	help
+	  Supports ZT's R1801E SOM board based upon ST SPEAr1310 RevA
+	  device
+
 config MACH_SPEAR1310_EVB
 	bool "SPEAr1310 Evaluation Board"
 	select CPU_SPEAR1310
@@ -79,5 +86,12 @@ config SPEAR_PCIE_REV370
 	bool "SPEAr PCIe REV 3.70"
 	help
 	  Supports ST SPEAr PCIe Rev 3.70
+
+config USE_PLGPIO
+	bool "Use PLGPIOs for power control on ZT R1801E SOM board"
+	depends on MACH_R1801E
+	help
+	  Enable this to use pl-gpios on ZT's R1801E SOM board for
+	  power control device
 
 endif #ARCH_SPEAR13XX
