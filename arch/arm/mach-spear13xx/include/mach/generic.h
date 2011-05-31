@@ -283,6 +283,12 @@ extern struct pmx_dev spear1310_pmx_ssp1_dis_kbd;
 extern struct pmx_dev spear1310_pmx_ssp1_dis_sd;
 extern struct pmx_dev spear1310_pmx_gpt64;
 extern struct pmx_dev spear1310_pmx_ras_mii_txclk;
+extern struct pmx_dev spear1310_pmx_pcie0;
+extern struct pmx_dev spear1310_pmx_pcie1;
+extern struct pmx_dev spear1310_pmx_pcie2;
+extern struct pmx_dev spear1310_pmx_sata0;
+extern struct pmx_dev spear1310_pmx_sata1;
+extern struct pmx_dev spear1310_pmx_sata2;
 #endif
 
 #if defined(CONFIG_CPU_SPEAR1340)
@@ -364,6 +370,8 @@ extern struct pmx_dev spear1340_pmx_gmii;
 extern struct pmx_dev spear1340_pmx_rgmii;
 extern struct pmx_dev spear1340_pmx_rmii;
 extern struct pmx_dev spear1340_pmx_sgmii;
+extern struct pmx_dev spear1340_pmx_pcie;
+extern struct pmx_dev spear1340_pmx_sata;
 #endif
 
 /*
