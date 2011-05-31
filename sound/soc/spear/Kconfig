@@ -2,18 +2,22 @@ config SND_SPEAR_SOC
 	tristate "SoC Audio for the ST chip"
 	help
 	 Say Y or M if you want to add support for codecs attached to
-	 the I2S interface. You will also need
-	 to select the audio interfaces to support below.
+	 the I2S interface. You will also need to select the audio
+	 interfaces to support below.
 
-config SND_SPEAR_SOC_I2S
-	tristate
+config SND_DESIGNWARE_I2S
+	tristate "Synopsys I2S Device Driver"
+	help
+	 Say Y or M if you want to add support for I2S driver for
+	 Synopsys desigwnware I2S device. The device supports upto
+	 maximum of 8 channels each for play, record or both.
 
 config SND_SPEAR_SOC_EVM
-	tristate "SoC Audio support for Spear EVM"
+	tristate "SoC Audio support for SPEAr EVM"
 	depends on SND_SPEAR_SOC
-	select SND_SPEAR_SOC_I2S
+	select SND_DESIGNWARE_I2S
 	select SND_SOC_STA529
 	help
-	 Say Y if you want to add support for SoC audio on ST SPEAR
+	 Say Y if you want to add support for SoC audio on SPEAr
 	 platform
 
