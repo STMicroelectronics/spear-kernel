@@ -106,6 +106,29 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x3e0000, 8161 * 0x20000),
 };
 
+static struct plat_stmmacphy_data phy0_private_data;
+
+static int phy_reset(void *mii)
+{
+	u16 phyid1, phyid2;
+	struct mii_bus *bus;
+
+	bus = (struct mii_bus *)mii;
+	phyid1 = bus->read(bus, phy0_private_data.phy_addr, 0x2);
+	phyid2 = bus->read(bus, phy0_private_data.phy_addr, 0x3);
+
+	if (phyid1 == 0x0022 && (phyid2 & 0xfff0) == 0x1610) {
+		/*
+		 * Note: Adjust timing within Micrel
+		 * PHY, otherwise link doesn't work
+		 */
+		bus->write(bus, phy0_private_data.phy_addr, 0xb, 0x8104);
+		bus->write(bus, phy0_private_data.phy_addr, 0xc, 0x7700);
+	}
+
+	return 0;
+}
+
 /* Ethernet phy-0 device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,
@@ -113,6 +136,7 @@ static struct plat_stmmacphy_data phy0_private_data = {
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_GMII,
 	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
+	.phy_reset = phy_reset,
 };
 
 static struct resource phy0_resources = {
