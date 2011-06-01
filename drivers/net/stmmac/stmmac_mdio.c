@@ -202,7 +202,7 @@ static int stmmac_mdio_reset(struct mii_bus *bus)
 
 	if (priv->phy_reset) {
 		pr_debug("stmmac_mdio_reset: calling phy_reset\n");
-		priv->phy_reset(priv->bsp_priv);
+		priv->phy_reset(bus);
 	}
 
 	/* This is a workaround for problems with the STE101P PHY.
