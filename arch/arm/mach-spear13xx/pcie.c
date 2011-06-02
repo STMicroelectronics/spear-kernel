@@ -36,7 +36,7 @@
  * start address and IN0 end address has been kept same
 */
 #define IN1_MEM_SIZE	(0 * 1024 * 1024 - 1)
-#define IN_IO_SIZE	(20 * 1024 * 1024 - 1)
+#define IN_IO_SIZE	(64 * 1024 - 1)
 #define IN_CFG0_SIZE	(1 * 1024 * 1024 - 1)
 #define IN_CFG1_SIZE	(1 * 1024 * 1024 - 1)
 #define IN_MSG_SIZE	(1 * 1024 * 1024 - 1)
@@ -478,28 +478,36 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 
 	/*setup registers for outbound translation */
 
-	writel(pp->base, &app_reg->in0_mem_addr_start);
-	writel(app_reg->in0_mem_addr_start + IN0_MEM_SIZE,
-			&app_reg->in0_mem_addr_limit);
-	writel(app_reg->in0_mem_addr_limit + 1, &app_reg->in1_mem_addr_start);
-	writel(app_reg->in1_mem_addr_start + IN1_MEM_SIZE,
-			&app_reg->in1_mem_addr_limit);
-	writel(app_reg->in1_mem_addr_limit + 1, &app_reg->in_io_addr_start);
-	writel(app_reg->in_io_addr_start + IN_IO_SIZE,
+	writel(pp->base, &app_reg->in_io_addr_start);
+	writel(readl(&app_reg->in_io_addr_start) + IN_IO_SIZE,
 			&app_reg->in_io_addr_limit);
-	writel(app_reg->in_io_addr_limit + 1, &app_reg->in_cfg0_addr_start);
-	writel(app_reg->in_cfg0_addr_start + IN_CFG0_SIZE,
+	writel(readl(&app_reg->in_io_addr_limit) + 1,
+			&app_reg->in0_mem_addr_start);
+	writel(readl(&app_reg->in0_mem_addr_start) + IN0_MEM_SIZE,
+			&app_reg->in0_mem_addr_limit);
+	writel(readl(&app_reg->in0_mem_addr_limit) + 1,
+			&app_reg->in1_mem_addr_start);
+	writel(readl(&app_reg->in1_mem_addr_start) + IN1_MEM_SIZE,
+			&app_reg->in1_mem_addr_limit);
+	writel(readl(&app_reg->in1_mem_addr_limit + 1),
+			&app_reg->in_cfg0_addr_start);
+	writel(readl(&app_reg->in_cfg0_addr_start) + IN_CFG0_SIZE,
 			&app_reg->in_cfg0_addr_limit);
-	writel(app_reg->in_cfg0_addr_limit + 1, &app_reg->in_cfg1_addr_start);
-	writel(app_reg->in_cfg1_addr_start + IN_CFG1_SIZE,
+	writel(readl(&app_reg->in_cfg0_addr_limit) + 1,
+			&app_reg->in_cfg1_addr_start);
+	writel(readl(&app_reg->in_cfg1_addr_start) + IN_CFG1_SIZE,
 			&app_reg->in_cfg1_addr_limit);
-	writel(app_reg->in_cfg1_addr_limit + 1, &app_reg->in_msg_addr_start);
-	writel(app_reg->in_msg_addr_start + IN_MSG_SIZE,
+	writel(readl(&app_reg->in_cfg1_addr_limit) + 1,
+			&app_reg->in_msg_addr_start);
+	writel(readl(&app_reg->in_msg_addr_start) + IN_MSG_SIZE,
 			&app_reg->in_msg_addr_limit);
 
-	writel(app_reg->in0_mem_addr_start, &app_reg->pom0_mem_addr_start);
-	writel(app_reg->in1_mem_addr_start, &app_reg->pom1_mem_addr_start);
-	writel(app_reg->in_io_addr_start, &app_reg->pom_io_addr_start);
+	writel(readl(&app_reg->in0_mem_addr_start),
+			&app_reg->pom0_mem_addr_start);
+	writel(readl(&app_reg->in1_mem_addr_start),
+			&app_reg->pom1_mem_addr_start);
+	writel(readl(&app_reg->in_io_addr_start),
+			&app_reg->pom_io_addr_start);
 
 	/*setup registers for inbound translation */
 
@@ -583,8 +591,9 @@ static void __init spear13xx_pcie_preinit(void)
 			"PCIe %d I/O", pp->port);
 		pp->io_space_name[sizeof(pp->io_space_name) - 1] = 0;
 		pp->res[1].name = pp->io_space_name;
-		pp->res[1].start = readl(&app_reg->in_io_addr_start);
-		pp->res[1].end = readl(&app_reg->in_io_addr_limit);
+		pp->res[1].start =
+			__phys_to_pfn(readl(&app_reg->in_io_addr_start));
+		pp->res[1].end = pp->res[1].start + IN_IO_SIZE;
 		pp->res[1].flags = IORESOURCE_IO;
 
 		if (request_resource(&iomem_resource, &pp->res[0]))
