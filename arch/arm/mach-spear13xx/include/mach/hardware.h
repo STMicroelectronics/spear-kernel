@@ -17,13 +17,23 @@
 #include <plat/hardware.h>
 #include <mach/spear.h>
 
-/* Vitual to physical translation of statically mapped space */
-/*
- * if phy_addr is 0x8...,.... and above then map it to  0xF...,....
- * else map it to 0xE...,....
+/* Vitual to physical translation of statically mapped space
+ * Physical			Virtual
+ * 6c800000-6c801000		edc00000-edc01000
+ * e0000000-e0001000		fd000000-fd001000
+ * ec800000-ec802000		fdc00000-fdc02000
+ * ed000000-ed001000		fed00000-fed01000
+ * e0700000-e0702000		fd700000-fd702000
+ * b3800000-b3808000		fab00000-fab08000
+ * e0800000-e0900000		fd800000-fd900000
+ * 80000000-80010000		f7000000-f7010000
+ * 90000000-90010000		f8000000-f8010000
+ * c0000000-c0010000		fb000000-fb010000
+ *
  */
 
-#define IO_ADDRESS(x)		((x) | ((((x) >> 31) << 28) | 0xE0000000))
+#define IO_ADDRESS(x)		((((x) | ((((x) >> 31) << 28) | 0xE0000000)) \
+				| (((x) & 0xff000000) >> 4)) - 0x01000000)
 
 /* typesafe io address */
 #define __io_address(n)		__io(IO_ADDRESS(n))

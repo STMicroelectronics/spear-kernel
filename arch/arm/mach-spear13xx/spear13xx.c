@@ -1187,7 +1187,22 @@ struct map_desc spear13xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR13XX_SYSRAM1_BASE),
 		.length		= SZ_1M,
 		.type		= MT_MEMORY_NONCACHED
-	},
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE0_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE0_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE1_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE1_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE2_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE2_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}
 };
 
 /* This will create static memory mapping for selected devices */
