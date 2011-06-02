@@ -8,6 +8,7 @@ obj-$(CONFIG_SMP)			+= platsmp.o headsmp.o
 obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
 obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_PCIEPORTBUS)		+= pcie.o
+obj-$(CONFIG_DW_PCIE)			+= dw_pcie.o
 obj-$(CONFIG_PM)			+= pm.o sleep.o
 obj-y					+= db9000_lcd.o
 

@@ -62,4 +62,11 @@ config CPU_SPEAR900
 	help
 	  Supports ST SPEAr900 Machine
 
+config DW_PCIE
+	bool "Synopsys Designware PCIe Host Controller"
+	depends on PCIEPORTBUS
+	default n
+	help
+	  Supports Synopsys Designware PCIe Dual mode controller as a Host
+
 endif #ARCH_SPEAR13XX
