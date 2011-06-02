@@ -65,8 +65,19 @@ config CPU_SPEAR900
 config DW_PCIE
 	bool "Synopsys Designware PCIe Host Controller"
 	depends on PCIEPORTBUS
-	default n
 	help
 	  Supports Synopsys Designware PCIe Dual mode controller as a Host
+
+config SPEAR_PCIE_REV341
+	depends on DW_PCIE
+	bool "SPEAr PCIe REV 3.41"
+	help
+	  Supports ST SPEAr PCIe Rev 3.41
+
+config SPEAR_PCIE_REV370
+	depends on DW_PCIE
+	bool "SPEAr PCIe REV 3.70"
+	help
+	  Supports ST SPEAr PCIe Rev 3.70
 
 endif #ARCH_SPEAR13XX

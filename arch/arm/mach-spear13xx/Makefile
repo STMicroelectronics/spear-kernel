@@ -9,6 +9,8 @@ obj-$(CONFIG_HOTPLUG_CPU)		+= hotplug.o
 obj-$(CONFIG_LOCAL_TIMERS)		+= localtimer.o
 obj-$(CONFIG_PCIEPORTBUS)		+= pcie.o
 obj-$(CONFIG_DW_PCIE)			+= dw_pcie.o
+obj-$(CONFIG_SPEAR_PCIE_REV341)		+= spear_pcie_rev_341.o
+obj-$(CONFIG_SPEAR_PCIE_REV370)		+= spear_pcie_rev_370.o
 obj-$(CONFIG_PM)			+= pm.o sleep.o
 obj-y					+= db9000_lcd.o
 
