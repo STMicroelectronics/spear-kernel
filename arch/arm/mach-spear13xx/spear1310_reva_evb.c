@@ -35,7 +35,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
-#include <mach/pcie.h>
+#include <mach/spear_pcie.h>
 
 /* fsmc nor partition info */
 #if 0
@@ -224,6 +224,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcie_gadget0_device,
+	&spear13xx_pcie_host1_device,
+	&spear13xx_pcie_host2_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
@@ -351,35 +353,17 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #endif
 };
 
-#ifdef CONFIG_PCIEPORTBUS
-static struct pcie_port_info __initdata pcie_port_info[] = {
-	/*pcie0 port info*/
-	{
-		.is_host = 0,
-	}, {
-	/*pcie1 port info*/
-		.is_host = 1,
-	}, {
-	/*pcie2 port info*/
-		.is_host = 1,
-	}
-};
-
-/*
- * This function is needed for PCIE host and device driver. Same
- * controller can not be programmed as host as well as device. So host
- * driver must call this function and if this function returns a
- * configuration structure which tells that this port should be a host, then
- * only host controller driver should add that particular port as RC.
- * For a port to be added as device, one must also add device's information
- * in plat_devs array defined in this file.
- */
-static struct pcie_port_info *__init spear1310_reva_pcie_port_init(int port)
+#ifdef CONFIG_SPEAR_PCIE_REV341
+ /* This function is needed for board specific PCIe initilization */
+static void __init spear1310_reva_pcie_board_init(void)
 {
-	if (port < 3)
-		return &pcie_port_info[port];
-	else
-		return NULL;
+	void *plat_data;
+
+	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
+
+	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
 }
 #endif
 
@@ -507,10 +491,10 @@ static void __init spear1310_reva_evb_init(void)
 	fsmc_nor_init(&spear1310_reva_ras_fsmc_nor_device,
 			SPEAR1310_REVA_FSMC1_BASE, 3, FSMC_FLASH_WIDTH16);
 
-#ifdef CONFIG_PCIEPORTBUS
+#ifdef CONFIG_SPEAR_PCIE_REV341
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear1310_reva_pcie_port_init);
+	spear1310_reva_pcie_board_init();
 #endif
 
 	/* Add Platform Devices */

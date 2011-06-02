@@ -400,6 +400,7 @@ extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
 extern struct platform_device spear13xx_pcie_gadget0_device;
+extern struct platform_device spear13xx_pcie_host0_device;
 extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
@@ -414,6 +415,8 @@ extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
 extern struct platform_device spear13xx_pcie_gadget1_device;
 extern struct platform_device spear13xx_pcie_gadget2_device;
+extern struct platform_device spear13xx_pcie_host1_device;
+extern struct platform_device spear13xx_pcie_host2_device;
 #endif
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \

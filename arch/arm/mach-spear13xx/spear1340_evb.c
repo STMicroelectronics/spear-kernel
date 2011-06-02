@@ -32,7 +32,7 @@
 #include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
-#include <mach/pcie.h>
+#include <mach/spear_pcie.h>
 
 #if 0
 /* fsmc nor partition info */
@@ -116,7 +116,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_i2s_record_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
-	&spear13xx_pcie_gadget0_device,
+	&spear13xx_pcie_host0_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
@@ -227,31 +227,17 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}
 };
 
-#ifdef CONFIG_PCIEPORTBUS
-static struct pcie_port_info __initdata pcie_port_info[] = {
-	/*pcie port info*/
-	{
-		.is_host = 1,
-	},
-};
-
-/*
- * This function is needed for PCIE host and device driver. Same
- * controller can not be programmed as host as well as device. So host
- * driver must call this function and if this function returns a
- * configuration structure which tells that this port should be a host, then
- * only host controller driver should add that particular port as RC.
- * For a port to be added as device, one must also add device's information
- * in plat_devs array defined in this file.
- */
-static struct pcie_port_info *__init spear1340_pcie_port_init(int port)
+#ifdef CONFIG_SPEAR_PCIE_REV370
+/* This function is needed for board specific PCIe initilization */
+static void __init spear1340_pcie_board_init(void)
 {
-	if (port < 1)
-		return &pcie_port_info[port];
-	else
-		return NULL;
+	void *plat_data;
+
+	plat_data = dev_get_platdata(&spear13xx_pcie_host0_device.dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
 }
 #endif
+
 
 static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
@@ -315,11 +301,19 @@ static void __init spear1340_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 #endif
 
-#ifdef CONFIG_PCIEPORTBUS
+#ifdef CONFIG_SPEAR_PCIE_REV370
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear1340_pcie_port_init);
+	spear1340_pcie_board_init();
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
 #endif
+
+	/* Miphy configuration for SATA */
+	/*
+	 * writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA,
+	 * VA_SPEAR1340_PCIE_MIPHY_CFG);
+	 */
 
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
