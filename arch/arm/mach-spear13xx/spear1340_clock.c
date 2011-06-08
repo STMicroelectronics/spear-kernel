@@ -1548,7 +1548,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "c3",			.clk = &c3_clk},
 	{.con_id = "pcie_sata_pclk",		.clk = &pcie_sata_pclk},
 	{.dev_id = "dw_pcie.0",			.clk = &pcie_clk},
-	{.dev_id = "sata-dwc",			.clk = &sata_clk},
+	{.dev_id = "ahci",			.clk = &sata_clk},
 	{.con_id = "fsmc",			.clk = &fsmc_clk},
 	{.dev_id = "sysram0",			.clk = &sysram0_clk},
 	{.dev_id = "sysram1",			.clk = &sysram1_clk},
