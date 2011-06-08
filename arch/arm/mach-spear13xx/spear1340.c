@@ -981,7 +981,7 @@ static struct resource sata_resources[] = {
 
 struct platform_device spear1340_sata0_device = {
 	.name = "ahci",
-	.id = 0,
+	.id = -1,
 	.num_resources = ARRAY_SIZE(sata_resources),
 	.resource = sata_resources,
 };
