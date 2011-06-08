@@ -1,3 +1,5 @@
+ccflags-$(CONFIG_ATA_DEBUG)  := -DDEBUG
+ccflags-$(CONFIG_ATA_VDEBUG) += -DVERBOSE_DEBUG
 
 obj-$(CONFIG_ATA)		+= libata.o
 
