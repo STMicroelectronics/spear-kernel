@@ -118,19 +118,16 @@ static int __init ahci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-#ifdef CONFIG_HAVE_CLK
 	hpriv->clk = clk_get(dev, NULL);
 	if (IS_ERR(hpriv->clk)) {
-		dev_err(dev, "Clock not found\n");
-		return PTR_ERR(hpriv->clk);
+		dev_err(dev, "can't get clock\n");
+	} else {
+		rc = clk_prepare_enable(hpriv->clk);
+		if (rc) {
+			dev_err(dev, "clock prepare enable failed");
+			goto free_clk;
+		}
 	}
-
-	rc = clk_enable(hpriv->clk);
-	if (rc) {
-		dev_err(dev, "clock enable failed");
-		goto free_clk;
-	}
-#endif
 
 	/*
 	 * Some platforms might need to prepare for mmio region access,
@@ -141,7 +138,7 @@ static int __init ahci_probe(struct platform_device *pdev)
 	if (pdata && pdata->init) {
 		rc = pdata->init(dev, hpriv->mmio);
 		if (rc)
-			goto disable_clk;
+			goto disable_unprepare_clk;
 	}
 
 	ahci_save_initial_config(dev, hpriv,
@@ -211,12 +208,12 @@ static int __init ahci_probe(struct platform_device *pdev)
 pdata_exit:
 	if (pdata && pdata->exit)
 		pdata->exit(dev);
-disable_clk:
-#ifdef CONFIG_HAVE_CLK
-	clk_disable(hpriv->clk);
+disable_unprepare_clk:
+	if (!IS_ERR(hpriv->clk))
+		clk_disable_unprepare(hpriv->clk);
 free_clk:
-	clk_put(hpriv->clk);
-#endif
+	if (!IS_ERR(hpriv->clk))
+		clk_put(hpriv->clk);
 	return rc;
 }
 
@@ -232,10 +229,11 @@ static int __devexit ahci_remove(struct platform_device *pdev)
 	if (pdata && pdata->exit)
 		pdata->exit(dev);
 
-#ifdef CONFIG_HAVE_CLK
-	clk_disable(hpriv->clk);
-	clk_put(hpriv->clk);
-#endif
+	if (!IS_ERR(hpriv->clk)) {
+		clk_disable_unprepare(hpriv->clk);
+		clk_put(hpriv->clk);
+	}
+
 	return 0;
 }
 
@@ -270,6 +268,10 @@ static int ahci_suspend(struct device *dev)
 
 	if (pdata && pdata->suspend)
 		return pdata->suspend(dev);
+
+	if (!IS_ERR(hpriv->clk))
+		clk_disable_unprepare(hpriv->clk);
+
 	return 0;
 }
 
@@ -277,18 +279,27 @@ static int ahci_resume(struct device *dev)
 {
 	struct ahci_platform_data *pdata = dev_get_platdata(dev);
 	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
 	int rc;
+
+	if (!IS_ERR(hpriv->clk)) {
+		rc = clk_prepare_enable(hpriv->clk);
+		if (rc) {
+			dev_err(dev, "clock prepare enable failed");
+			return rc;
+		}
+	}
 
 	if (pdata && pdata->resume) {
 		rc = pdata->resume(dev);
 		if (rc)
-			return rc;
+			goto disable_unprepare_clk;
 	}
 
 	if (dev->power.power_state.event == PM_EVENT_SUSPEND) {
 		rc = ahci_reset_controller(host);
 		if (rc)
-			return rc;
+			goto disable_unprepare_clk;
 
 		ahci_init_controller(host);
 	}
@@ -296,6 +307,12 @@ static int ahci_resume(struct device *dev)
 	ata_host_resume(host);
 
 	return 0;
+
+disable_unprepare_clk:
+	if (!IS_ERR(hpriv->clk))
+		clk_disable_unprepare(hpriv->clk);
+
+	return rc;
 }
 
 static const struct dev_pm_ops ahci_pm_ops = {
