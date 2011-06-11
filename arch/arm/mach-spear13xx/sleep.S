@@ -19,6 +19,38 @@
 
 /* #define DDR_PLL_SREFRESH */
 /* #define TEST_PWRDOMAINS */
+
+.macro  io_v2p, pa, va, tmp
+        ldr     \tmp, =0xfff
+        bic     \pa, \va, \tmp
+
+	/*
+	 * Following code uses VA to PA Translation Registers to
+	 * translate the virtual address provided by a general-purpose
+	 * register and store the corresponding physical address in the
+	 * PA Register.
+	 */
+        mcr     p15, 0, \pa, c7, c8, 1
+        mrc     p15, 0, \pa, c7, c4, 0
+        bic     \pa, \pa, \tmp
+        and     \tmp, \va, \tmp
+        orr     \pa, \pa, \tmp
+.endm
+
+.macro	io_p2v, pa, va, tmp
+
+	ldr	\tmp, =0xfff00000
+	and	\va, \pa, \tmp
+	lsr	\va, \va, #4
+
+	ldr	\tmp, =0xffff
+	and	\tmp, \pa, \tmp
+	orr	\va, \va, \tmp
+
+	ldr	\tmp, =0xf0000000
+	orr	\va, \va, \tmp
+.endm
+
 .text
 ENTRY(spear_wakeup)
 
@@ -38,7 +70,7 @@ ENTRY(spear_sleep_mode)
 	/* Store Stack address in r8 */
 	ldr	r8, SRAM_STACK_VA
 
-	/* Store sp and spsr to SDRAM */
+	/* Store sp and spsr to SRAM */
 	mov	r4, sp
 	mrs	r5, spsr
 	mov	r6, lr
@@ -106,11 +138,7 @@ ENTRY(spear_sleep_mode)
 	isb
 	/* Extract the physical address to jump to */
 	adr	r0, mmu_off
-	mov	r1, #0xcfffffff
-	and	r0, r0, r1
-	ldr	r1, =0x20000000
-	orr	r0, r0, r1
-	mov	r2, r0
+	io_v2p	r2, r0, r1
 
 	/* Disable MMU */
 	mrc	p15, 0, r0, c1, c0, 0
@@ -374,11 +402,8 @@ wait_till_normal_mode:
 	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 	adr	r5, mmu_on
-	mov	r1, #0xcfffffff
-	and	r5, r5, r1
-	ldr	r1, =0x30000000
-	orr	r5, r5, r1
-	mov	r4, r5
+	io_p2v  r5, r4, r1
+
 
 	/* Move the DDR out of self refresh mode */
 	ldr	r6, MISC_BASE_P
@@ -410,6 +435,9 @@ wait_for_refresh_exit:
 mmu_on:
 	ldmfd	sp!, {r0-r12, pc}		@ restore regs and return
 	nop
+
+	.ltorg
+	.align
 
 MPMC_BASE_P :
 	.word MPMC_BASE_PA
