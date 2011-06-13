@@ -20,6 +20,13 @@
 /* #define DDR_PLL_SREFRESH */
 /* #define TEST_PWRDOMAINS */
 
+#define PLL_VAL2	0x060e
+#define PLL_VAL1	0x060a
+#define PLL_VAL3	0x0606
+#define MISC_PLL_OFFS	0x214
+#define DISABLE_I_C_M_V	0x1805
+
+
 .macro  io_v2p, pa, va, tmp
         ldr     \tmp, =0xfff
         bic     \pa, \va, \tmp
@@ -68,7 +75,7 @@ ENTRY(spear_wakeup_sz)
 ENTRY(spear_sleep_mode)
 	stmfd	sp!, {r0-r12, lr}		@ save registers on stack
 	/* Store Stack address in r8 */
-	ldr	r8, SRAM_STACK_VA
+	ldr	r8, =IO_ADDRESS(SPEAR_SRAM_STACK_PA)
 
 	/* Store sp and spsr to SRAM */
 	mov	r4, sp
@@ -142,7 +149,7 @@ ENTRY(spear_sleep_mode)
 
 	/* Disable MMU */
 	mrc	p15, 0, r0, c1, c0, 0
-	ldr	r1, DISABLE_I_C_M_V
+	ldr	r1, =DISABLE_I_C_M_V
 	bic	r0, r0, r1
 	mcr	p15, 0, r0, c1, c0, 0
 	/* Move the Physical address into PC */
@@ -150,7 +157,7 @@ ENTRY(spear_sleep_mode)
 	nop
 mmu_off:
 	/* Put the DDR in self refresh mode */
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x334]
 	/* Set srefresh_enter bit(2) */
@@ -184,7 +191,7 @@ wait_till_slow_mode:
 	 * registers in the misc space.
 	 * DDR pll-4 requires different processing.
 	 */
-	ldr	r1, MISC_PLL_OFFS
+	ldr	r1, =MISC_PLL_OFFS
 	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
 swoff_pll:
 	ldr	r0, [r6, r1]
@@ -207,7 +214,7 @@ swoff_pll:
 #ifdef TEST_PWRDOMAINS
 	/* Switch off the undesired PLL's */
 	nop
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
 	ldr	r0, [r6, #0x200]
 	bic	r0, r0, #0x7
 	orr	r0, r0, #0x2
@@ -217,7 +224,7 @@ wait_ack0:
 	and	r0, r0, #0xF0000
 	cmp	r0, #0xA0000
 	bne	wait_ack0
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
 	ldr	r0, [r6, #0x100]
 
 	/*
@@ -267,8 +274,8 @@ spear_sleep_restore:
 	 * The strobing is done for pll-4 only.
 	 */
 
-	ldr	r6, MISC_BASE_P
-	ldr	r1, MISC_PLL_OFFS
+	ldr	r6, =MISC_BASE_PA
+	ldr	r1, =MISC_PLL_OFFS
 	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
 swon_pll_1_3:
 	/* Switch on Pll-1/2/3 */
@@ -292,13 +299,13 @@ pll_lock_1_3:
 #ifdef DDR_PLL_SREFRESH
 	/* Switch on PLL-4, strobe the pll also */
 	ldr	r0, [r6, r1]
-	ldr	r0, PLL_VAL1
+	ldr	r0, =PLL_VAL1
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL2
+	ldr	r0, =PLL_VAL2
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL3
+	ldr	r0, =PLL_VAL3
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL2
+	ldr	r0, =PLL_VAL2
 	str	r0, [r6, r1]
 pll_lock_4:
 	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
@@ -330,7 +337,7 @@ wait_till_normal_mode:
 	mov	r1, #0
 	mcr	p15, 0, r1, c7, c5, 0
 
-	ldr	r3, SRAM_STACK_PA
+	ldr	r3, =SPEAR_SRAM_STACK_PA
 	ldmia	r3!, {r4-r6}
 	mov	sp, r4
 	msr	spsr_cxsf, r5
@@ -406,8 +413,8 @@ wait_till_normal_mode:
 
 
 	/* Move the DDR out of self refresh mode */
-	ldr	r6, MISC_BASE_P
-	ldr	r7, MPMC_BASE_P
+	ldr	r6, =MISC_BASE_PA
+	ldr	r7, =MPMC_BASE_PA
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x334]
 	/* Clear srefresh_enter bit(2) */
@@ -439,25 +446,5 @@ mmu_on:
 	.ltorg
 	.align
 
-MPMC_BASE_P :
-	.word MPMC_BASE_PA
-MISC_BASE_P :
-	.word MISC_BASE_PA
-SRAM_STACK_VA :
-	.word IO_ADDRESS(SPEAR_SRAM_STACK_PA)
-SRAM_STACK_PA :
-	.word SPEAR_SRAM_STACK_PA
-DISABLE_I_C_M_V:
-	.word 0x1805
-MISC_PLL_OFFS:
-	.word 0x214
-#ifdef DDR_PLL_SREFRESH
-PLL_VAL1:
-	.word 0x060a
-PLL_VAL2:
-	.word 0x060e
-PLL_VAL3:
-	.word 0x0606
-#endif
 ENTRY(spear_sleep_mode_sz)
 	.word	. - spear_sleep_mode
