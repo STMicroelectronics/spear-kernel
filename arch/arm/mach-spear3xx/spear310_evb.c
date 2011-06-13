@@ -112,6 +112,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear3xx_pmx_gpio_pin3,
 	&spear3xx_pmx_gpio_pin4,
 	&spear3xx_pmx_gpio_pin5,
+	&spear3xx_pmx_mii,
 	&spear3xx_pmx_uart0,
 
 	/* spear310 specific devices */
@@ -121,8 +122,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear310_pmx_uart2,
 	&spear310_pmx_uart3_4_5,
 	&spear310_pmx_fsmc,
-	&spear310_pmx_rs485_0_1,
-	&spear310_pmx_tdm0,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -164,9 +163,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_nand_device,
 	&spear310_phy_device,
 	&spear310_plgpio_device,
-	&spear310_tdm_hdlc_device,
-	&spear310_rs485_0_device,
-	&spear310_rs485_1_device,
 };
 
 /*
