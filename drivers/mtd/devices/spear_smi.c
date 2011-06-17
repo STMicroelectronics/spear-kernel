@@ -1090,6 +1090,8 @@ int spear_smi_resume(struct platform_device *pdev)
 	if (dev && dev->clk)
 		ret = clk_enable(dev->clk);
 
+	if (!ret)
+		spear_smi_hw_init(dev);
 	return ret;
 }
 
