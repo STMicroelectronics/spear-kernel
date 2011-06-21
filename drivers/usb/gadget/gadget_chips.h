@@ -148,6 +148,19 @@
 #define gadget_is_s3c_hsotg(g)    0
 #endif
 
+#if defined(CONFIG_DWC_OTG_MODE) || defined(CONFIG_DWC_DEVICE_ONLY)
+#define gadget_is_dwc_otg_pcd(g)	(!strcmp("dwc_otg_pcd", (g)->name))
+#else
+#define gadget_is_dwc_otg_pcd(g)	0
+#endif
+
+#ifdef CONFIG_USB_GADGET_CI13XXX_MSM
+#define gadget_is_ci13xxx_msm(g)	(!strcmp("ci13xxx_msm", (g)->name))
+#else
+#define gadget_is_ci13xxx_msm(g)	0
+#endif
+
+
 
 /**
  * usb_gadget_controller_number - support bcdDevice id convention
@@ -208,9 +221,12 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x26;
 	else if (gadget_is_designware(gadget))
 		return 0x27;
+	else if (gadget_is_ci13xxx_msm(gadget))
+		return 0x28;
+	else if (gadget_is_dwc_otg_pcd(gadget))
+		return 0x29;
 	return -ENOENT;
 }
-
 
 /**
  * gadget_supports_altsettings - return true if altsettings work
