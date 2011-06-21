@@ -42,6 +42,12 @@ config MACH_SPEAR900_EVB
 	help
 	  Supports ST SPEAr900 Evaluation Board
 
+config MACH_SPEAR900_LCAD
+	bool "SPEAr900 Low Cost Access Device Board"
+	select CPU_SPEAR900
+	help
+	  Supports SPEAr900 Low Cost Access Device Board
+
 endmenu
 
 config CPU_SPEAR1300
