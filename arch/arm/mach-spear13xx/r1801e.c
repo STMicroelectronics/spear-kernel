@@ -298,7 +298,7 @@ static void __init r1801e_init(void)
 
 MACHINE_START(R1801E, "ST-SPEAR1310-REVA-R1801e")
 	.boot_params	=	0x00000100,
-	.map_io		=	spear13xx_map_io,
+	.map_io		=	spear1310_reva_map_io,
 	.init_irq	=	spear13xx_init_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	r1801e_init,
