@@ -164,7 +164,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear13xx_pmx_uart0,
 	&spear13xx_pmx_nand_16bit,
 
-	/* spear1310 specific devices */
+	/* spear1310 reva specific devices */
 	&spear1310_reva_pmx_i2c1,
 	&spear1310_reva_pmx_uart_1,
 	&spear1310_reva_pmx_uart_2,
@@ -183,12 +183,12 @@ static struct amba_device *amba_devs[] __initdata = {
 	&spear13xx_ssp_device,
 	&spear13xx_uart_device,
 
-	/* spear1310 specific devices */
-	&spear1310_uart1_device,
-	&spear1310_uart2_device,
-	&spear1310_uart3_device,
-	&spear1310_uart4_device,
-	&spear1310_uart5_device,
+	/* spear1310 reva specific devices */
+	&spear1310_reva_uart1_device,
+	&spear1310_reva_uart2_device,
+	&spear1310_reva_uart3_device,
+	&spear1310_reva_uart4_device,
+	&spear1310_reva_uart5_device,
 };
 
 static struct platform_device *plat_devs[] __initdata = {
@@ -211,7 +211,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 	&spear13xx_nand_device,
 
-	/* spear1310 specific devices */
+	/* spear1310 reva specific devices */
 	&spear1310_reva_i2c1_device,
 	&spear1310_reva_plgpio_device,
 	&r1801e_phy0_device,
@@ -238,7 +238,7 @@ static void __init ras_fsmc_config(u32 mode, u32 width)
 {
 	u32 val, *address;
 
-	address = ioremap(SPEAR1310_RAS_CTRL_REG0, SZ_16);
+	address = ioremap(SPEAR1310_REVA_RAS_CTRL_REG0, SZ_16);
 
 	val = readl(address);
 	val &= ~(RAS_FSMC_MODE_MASK | RAS_FSMC_WIDTH_MASK);
@@ -263,7 +263,7 @@ static void __init r1801e_init(void)
 			&spear13xx_dmac_device[0].dev);
 
 	/*
-	 * SPEAr1310 FSMC cannot used as NOR and NAND at the same time
+	 * SPEAr1310 reva FSMC cannot used as NOR and NAND at the same time
 	 * For the moment, disable NAND and use NOR only
 	 * If NAND is needed, enable the following code and disable all
 	 * code for NOR. Also enable nand in padmux configuration to
@@ -275,8 +275,8 @@ static void __init r1801e_init(void)
 			FSMC_NAND_BW16);
 	nand_mach_init(FSMC_NAND_BW16);
 
-	/* call spear1310 machine init function */
-	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+	/* call spear1310 reva machine init function */
+	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 #ifdef CONFIG_SPEAR_PCIE_REV341
 	/* Enable PCIE0 clk */
