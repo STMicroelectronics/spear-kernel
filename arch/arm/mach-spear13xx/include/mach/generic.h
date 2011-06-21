@@ -588,6 +588,7 @@ extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;
+extern struct platform_device spear1340_otg_device;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
