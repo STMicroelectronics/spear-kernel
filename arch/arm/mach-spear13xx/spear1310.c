@@ -1265,6 +1265,25 @@ struct platform_device spear1310_sata2_device = {
 	.resource = sata2_resources,
 };
 
+/* OTG device registration */
+static struct resource otg_resources[] = {
+	{
+		.start = SPEAR1310_UOC_BASE,
+		.end = SPEAR1310_UOC_BASE + SZ_256K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1310_IRQ_UOC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1310_otg_device = {
+	.name = "dwc_otg",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(otg_resources),
+	.resource = otg_resources,
+};
+
 static void tdm_hdlc_setup(void)
 {
 	struct clk *synth_clk, *vco_clk, *tdm0_clk, *tdm1_clk;
