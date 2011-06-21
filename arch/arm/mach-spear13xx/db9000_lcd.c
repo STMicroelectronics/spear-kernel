@@ -51,6 +51,36 @@ struct db9000fb_mach_info sharp_lcd_info = {
 	.cmap_inverse   = 0,
 };
 
+static struct db9000fb_mode_info hannstar_hsd07_mode = {
+	.mode = {
+		.name = "Hannstar HSD07",
+		.refresh = 0,
+		.xres = 800,
+		.yres = 480,
+		.pixclock = 33333,
+		.left_margin = 40,
+		.right_margin = 40,
+		.upper_margin = 29,
+		.lower_margin = 13,
+		.hsync_len = 48,
+		.vsync_len = 3,
+		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+	},
+	.bpp = 32,
+	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pctr = 0,
+	.dear = 0,
+};
+struct db9000fb_mach_info hannstar_hsd07_info = {
+	.modes		= &hannstar_hsd07_mode,
+	.num_modes	= 1,
+	.lcd_conn	= LCD_PCLK_EDGE_FALL,
+	.video_mem_size = 0,
+	.cmap_static    = 0,
+	.cmap_inverse   = 0,
+};
+
 /* 10.4 inch lcd pannel information */
 static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.mode = {
@@ -140,8 +170,8 @@ free_pclk:
 free_vco_clk:
 		clk_put(vco_clk);
 
-	} else if (!strcmp("Sharp LQ043T3DA0A", inf->mode.name)) {
-
+	} else if (!strcmp("Sharp LQ043T3DA0A", inf->mode.name) ||
+			!strcmp("Hannstar HSD07", inf->mode.name)) {
 		ah_clk = clk_get(NULL, "ahb_clk");
 		if (IS_ERR(ah_clk)) {
 			status = PTR_ERR(ah_clk);
