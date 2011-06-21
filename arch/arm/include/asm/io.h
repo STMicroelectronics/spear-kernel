@@ -297,6 +297,14 @@ extern int valid_mmap_phys_addr_range(unsigned long pfn, size_t size);
 extern int devmem_is_allowed(unsigned long pfn);
 #endif
 
+/* Big Endian */
+#define out_be32(a, v) __raw_writel(__cpu_to_be32(v), a)
+#define in_be32(a) __be32_to_cpu(__raw_readl(a))
+
+/* Little endian */
+#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), a)
+#define in_le32(a) __le32_to_cpu(__raw_readl(a))
+
 /*
  * Convert a physical pointer to a virtual kernel pointer for /dev/mem
  * access
