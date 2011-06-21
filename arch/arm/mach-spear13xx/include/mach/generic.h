@@ -570,6 +570,7 @@ extern struct platform_device spear1310_tdm_hdlc_0_device;
 extern struct platform_device spear1310_tdm_hdlc_1_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
+extern struct platform_device spear1310_otg_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_clk_init(void);
