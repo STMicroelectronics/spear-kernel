@@ -392,14 +392,14 @@ void __init nand_mach_init(u32 busw)
 
 	if (cpu_is_spear1340()) {
 #ifdef CONFIG_CPU_SPEAR1340
-		reg = SPEAR1340_FSMC_CFG;
+		reg = VA_SPEAR1340_FSMC_CFG;
 #endif
 	} else if (cpu_is_spear1310()) {
 #ifdef CONFIG_CPU_SPEAR1310
-		reg = SPEAR1310_FSMC_CFG;
+		reg = VA_SPEAR1310_FSMC_CFG;
 #endif
 	} else
-		reg = FSMC_CFG;
+		reg = VA_FSMC_CFG;
 
 	fsmc_cfg = readl(reg);
 	fsmc_cfg &= ~(FSMC_MEMSEL_MASK << FSMC_MEMSEL_SHIFT);
@@ -415,7 +415,7 @@ void __init nand_mach_init(u32 busw)
 
 static void nand_select_bank(u32 bank, u32 busw)
 {
-	u32 fsmc_cfg = readl(FSMC_CFG);
+	u32 fsmc_cfg = readl(VA_FSMC_CFG);
 
 	fsmc_cfg &= ~(NAND_BANK_MASK << NAND_BANK_SHIFT);
 	fsmc_cfg |= (bank << NAND_BANK_SHIFT);
@@ -425,7 +425,7 @@ static void nand_select_bank(u32 bank, u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, FSMC_CFG);
+	writel(fsmc_cfg, VA_FSMC_CFG);
 }
 
 static struct fsmc_nand_platform_data nand_platform_data = {
@@ -968,7 +968,7 @@ int enable_pcie0_clk(void)
 	 * should have been enabled. But Controler does not work
 	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
 	 */
-	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, PCIE_CFG);
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
 	clk = clk_get_sys("dw_pcie.0", NULL);
 	if (IS_ERR(clk)) {
 		pr_err("%s:couldn't get clk for pcie0\n", __func__);
@@ -990,7 +990,7 @@ static void dmac_setup(void)
 	 * operations.
 	 */
 	/* setting Peripheral flow controller for jpeg */
-	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
 }
 
 /*
@@ -1895,7 +1895,7 @@ struct pmx_dev spear13xx_pmx_mcif = {
 /* Pad multiplexing for sdhci device */
 static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	{
-		.address = VA_PERIP_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_SD,
 	},
@@ -1917,7 +1917,7 @@ struct pmx_dev spear13xx_pmx_sdhci = {
 /* Pad multiplexing for cf device */
 static struct pmx_mux_reg pmx_cf_mux[] = {
 	{
-		.address = VA_PERIP_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_CF,
 	},
@@ -1939,7 +1939,7 @@ struct pmx_dev spear13xx_pmx_cf = {
 /* Pad multiplexing for xd device */
 static struct pmx_mux_reg pmx_xd_mux[] = {
 	{
-		.address = VA_PERIP_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_XD,
 	},

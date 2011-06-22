@@ -602,15 +602,15 @@ static void udc_enable(struct dw_udc_dev *udev)
 
 #ifdef CONFIG_ARCH_SPEAR13XX
 	/* UDC RESET */
-	val = readl(PERIP1_SW_RST);
+	val = readl(VA_PERIP1_SW_RST);
 	val |= (1 << 11);
-	writel(val, PERIP1_SW_RST);
+	writel(val, VA_PERIP1_SW_RST);
 
 	udelay(10);
 
-	val = readl(PERIP1_SW_RST);
+	val = readl(VA_PERIP1_SW_RST);
 	val &= ~(1 << 11);
-	writel(val, PERIP1_SW_RST);
+	writel(val, VA_PERIP1_SW_RST);
 #endif
 	tmp = DEV_CONF_HS_SPEED | DEV_CONF_REMWAKEUP |
 		DEV_CONF_PHYINT_16 | DEV_CONF_CSR_PRG;
