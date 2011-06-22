@@ -209,8 +209,8 @@ static void macb_init_board_info(struct platform_device *pdev)
 	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
 
 	/* Enable memory Port-1 clock */
-	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, AMEM_CLK_CFG);
+	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, VA_AMEM_CLK_CFG);
 }
 
 static void __init spear320_evb_init(void)
