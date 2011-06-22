@@ -221,16 +221,16 @@ static void macb_enable_mem_clk(void)
 	u32 tmp;
 
 	/* Enable memory Port-1 clock */
-	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, AMEM_CLK_CFG);
+	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, VA_AMEM_CLK_CFG);
 
 	/*
 	 * Program the pad strengths of PLGPIO to drive the IO's
 	 * The Magic number being used have direct correlations
 	 * with the driving capabilities of the IO pads.
 	 */
-	writel(0x2f7bc210, PLGPIO3_PAD_PRG);
-	writel(0x017bdef6, PLGPIO4_PAD_PRG);
+	writel(0x2f7bc210, VA_PLGPIO3_PAD_PRG);
+	writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
 
 }
 
