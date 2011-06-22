@@ -26,7 +26,7 @@ static struct pmx_driver pmx_driver;
 /* Pad multiplexing for fsmc_16bit device */
 static struct pmx_mux_reg pmx_fsmc_16bit_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 		.value = 0,
 	},
@@ -48,7 +48,7 @@ struct pmx_dev spear1340_pmx_fsmc_16bit = {
 /* pad multiplexing for keyboard rows-cols device */
 static struct pmx_mux_reg pmx_keyboard_row_col_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 		.value = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 	},
@@ -70,7 +70,7 @@ struct pmx_dev spear1340_pmx_keyboard_row_col= {
 /* pad multiplexing for keyboard col5 device */
 static struct pmx_mux_reg pmx_keyboard_col5_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_COL5_MASK,
 		.value = SPEAR1340_PMX_KBD_COL5_MASK,
 	},
@@ -92,7 +92,7 @@ struct pmx_dev spear1340_pmx_keyboard_col5 = {
 /* pad multiplexing for uart0_enh device */
 static struct pmx_mux_reg pmx_uart0_enh_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT_MASK,
 		.value = 0,
 	},
@@ -114,7 +114,7 @@ struct pmx_dev spear1340_pmx_uart0_enh = {
 /* pad multiplexing for gpt_0_1 device */
 static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT_MASK |
 			SPEAR1340_PMX_GPT0_TMR0_CPT_MASK |
 			SPEAR1340_PMX_GPT0_TMR1_CLK_MASK,
@@ -140,7 +140,7 @@ struct pmx_dev spear1340_pmx_gpt_0_1 = {
 /* pad multiplexing for pwm1 device */
 static struct pmx_mux_reg pmx_pwm1_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_COL5_MASK,
 		.value = 0,
 	},
@@ -162,7 +162,7 @@ struct pmx_dev spear1340_pmx_pwm1 = {
 /* pad multiplexing for pwm2 device */
 static struct pmx_mux_reg pmx_pwm2_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT0_TMR0_CPT_MASK,
 		.value = 0,
 	},
@@ -184,7 +184,7 @@ struct pmx_dev spear1340_pmx_pwm2 = {
 /* pad multiplexing for pwm3 device */
 static struct pmx_mux_reg pmx_pwm3_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT0_TMR1_CLK_MASK,
 		.value = 0,
 	},
@@ -206,7 +206,7 @@ struct pmx_dev spear1340_pmx_pwm3 = {
 /* pad multiplexing for pwm0 device */
 static struct pmx_mux_reg pmx_pwm0_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS0_MASK,
 		.value = 0,
 	},
@@ -228,7 +228,7 @@ struct pmx_dev spear1340_pmx_pwm0 = {
 /* pad multiplexing for ssp0_cs0 device */
 static struct pmx_mux_reg pmx_ssp0_cs0_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS0_MASK,
 		.value = SPEAR1340_PMX_SSP0_CS0_MASK,
 	},
@@ -250,7 +250,7 @@ struct pmx_dev spear1340_pmx_ssp0_cs0 = {
 /* pad multiplexing for video_in_mux_cam0 (disables cam0) device */
 static struct pmx_mux_reg pmx_video_in_mux_cam0_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = 0,
 	},
@@ -272,7 +272,7 @@ struct pmx_dev spear1340_pmx_video_in_mux_cam0 = {
 /* pad multiplexing for video_in_mux_cam1 (disables cam1) device */
 static struct pmx_mux_reg pmx_video_in_mux_cam1_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM1_MASK,
 		.value = 0,
 	},
@@ -294,7 +294,7 @@ struct pmx_dev spear1340_pmx_video_in_mux_cam1 = {
 /* pad multiplexing for video_in_mux_cam2 (disables cam2) device */
 static struct pmx_mux_reg pmx_video_in_mux_cam2_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM2_MASK,
 		.value = 0,
 	},
@@ -316,7 +316,7 @@ struct pmx_dev spear1340_pmx_video_in_mux_cam2 = {
 /* pad multiplexing for video_in_mux_cam3 (disables cam3) device */
 static struct pmx_mux_reg pmx_video_in_mux_cam3_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM3_MASK,
 		.value = 0,
 	},
@@ -338,7 +338,7 @@ struct pmx_dev spear1340_pmx_video_in_mux_cam3 = {
 /* pad multiplexing for cam3 device */
 static struct pmx_mux_reg pmx_cam3_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM3_MASK,
 		.value = SPEAR1340_PMX_CAM3_MASK,
 	},
@@ -360,7 +360,7 @@ struct pmx_dev spear1340_pmx_cam3 = {
 /* pad multiplexing for cam2 device */
 static struct pmx_mux_reg pmx_cam2_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM2_MASK,
 		.value = SPEAR1340_PMX_CAM2_MASK,
 	},
@@ -382,7 +382,7 @@ struct pmx_dev spear1340_pmx_cam2 = {
 /* pad multiplexing for cam1 device */
 static struct pmx_mux_reg pmx_cam1_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM1_MASK,
 		.value = SPEAR1340_PMX_CAM1_MASK,
 	},
@@ -404,7 +404,7 @@ struct pmx_dev spear1340_pmx_cam1 = {
 /* pad multiplexing for cam0 device */
 static struct pmx_mux_reg pmx_cam0_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = SPEAR1340_PMX_CAM0_MASK,
 	},
@@ -426,7 +426,7 @@ struct pmx_dev spear1340_pmx_cam0 = {
 /* pad multiplexing for ssp0_cs1 device */
 static struct pmx_mux_reg pmx_ssp0_cs1_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
 		.value = SPEAR1340_PMX_SSP0_CS1_MASK,
 	},
@@ -448,7 +448,7 @@ struct pmx_dev spear1340_pmx_ssp0_cs1 = {
 /* pad multiplexing for fsmc_pnor device */
 static struct pmx_mux_reg pmx_fsmc_pnor_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MCIF_MASK,
 		.value = 0,
 	},
@@ -470,7 +470,7 @@ struct pmx_dev spear1340_pmx_fsmc_pnor = {
 /* pad multiplexing for mcif device */
 static struct pmx_mux_reg pmx_mcif_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MCIF_MASK,
 		.value = SPEAR1340_PMX_MCIF_MASK,
 	},
@@ -558,7 +558,7 @@ struct pmx_dev spear1340_pmx_xd = {
 /* pad multiplexing for clcd device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_ARM_TRACE_MASK |
 			SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = 0,
@@ -581,7 +581,7 @@ struct pmx_dev spear1340_pmx_clcd = {
 /* pad multiplexing for arm_trace device */
 static struct pmx_mux_reg pmx_arm_trace_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_ARM_TRACE_MASK,
 		.value = SPEAR1340_PMX_ARM_TRACE_MASK,
 	},
@@ -603,7 +603,7 @@ struct pmx_dev spear1340_pmx_arm_trace = {
 /* pad multiplexing for device group: I2S, SSP0_CS2, CEC0-1, SPDIFF out, CLCD */
 static struct pmx_mux_reg pmx_devs_grp_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = 0,
 	},
@@ -625,7 +625,7 @@ struct pmx_dev spear1340_pmx_devs_grp = {
 /* pad multiplexing for miphy_dbg device */
 static struct pmx_mux_reg pmx_miphy_dbg_mux[] = {
 	{
-		.address = SPEAR1340_PAD_MUX_CONFIG_REG_0,
+		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = SPEAR1340_PMX_MIPHY_DBG_MASK,
 	},

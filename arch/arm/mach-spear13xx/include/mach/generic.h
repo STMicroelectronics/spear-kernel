@@ -30,14 +30,6 @@
 /*
  * Function enable (Pad multiplexing register) offsets
  */
-/* Pad multiplexing base */
-#define SPEAR13XX_PCM_CFG_BASE		UL(0xE0700100)
-
-#define SPEAR13XX_PMX_CFG0		UL(0xE0700650)
-#define SPEAR13XX_PMX_CFG1		UL(0xE0700654)
-#define SPEAR13XX_PMX_CFG2		UL(0xE0700658)
-#define SPEAR13XX_PMX_CFG3		UL(0xE070065C)
-
 /* pad mux declarations */
 #define SPEAR13XX_PMX_I2S1_MASK		(1 << 3)
 #define SPEAR13XX_PMX_I2S2_MASK		(1 << 16)	/* Offset 4 */
@@ -293,9 +285,6 @@ extern struct pmx_dev spear1310_pmx_sata2;
 
 #if defined(CONFIG_CPU_SPEAR1340)
 /* pad mux declarations */
-#define SPEAR1340_PAD_MUX_CONFIG_REG_0	UL(SPEAR13XX_MISC_BASE + 0x6A0)
-#define SPEAR1340_PAD_MUX_CONFIG_REG_1	UL(SPEAR13XX_MISC_BASE + 0x6A4)
-
 /* Write 0 to enable FSMC_16_BIT */
 #define SPEAR1340_PMX_KBD_ROW_COL_MASK		(1 << 0)
 

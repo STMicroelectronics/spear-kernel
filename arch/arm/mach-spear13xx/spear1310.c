@@ -26,7 +26,7 @@ static struct pmx_driver pmx_driver;
 /* Muxed with I2C */
 static struct pmx_mux_reg pmx_uart1_dis_i2c_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_I2C_MASK,
 		.value = 0,
 	},
@@ -48,7 +48,7 @@ struct pmx_dev spear1310_pmx_uart_1_dis_i2c = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_uart1_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_MCIDATA1_MASK |
 			SPEAR13XX_PMX_MCIDATA2_MASK,
 		.value = 0,
@@ -71,7 +71,7 @@ struct pmx_dev spear1310_pmx_uart_1_dis_sd = {
 /* Pad multiplexing for uart2_3 device */
 static struct pmx_mux_reg pmx_uart2_3_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_I2S1_MASK,
 		.value = 0,
 	},
@@ -93,7 +93,7 @@ struct pmx_dev spear1310_pmx_uart_2_3 = {
 /* Pad multiplexing for uart4 device */
 static struct pmx_mux_reg pmx_uart4_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_I2S1_MASK | SPEAR13XX_PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -115,7 +115,7 @@ struct pmx_dev spear1310_pmx_uart_4 = {
 /* Pad multiplexing for uart5 device */
 static struct pmx_mux_reg pmx_uart5_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -137,7 +137,7 @@ struct pmx_dev spear1310_pmx_uart_5 = {
 /* Pad multiplexing for rs485_0_1_tdm_0_1 device */
 static struct pmx_mux_reg pmx_rs485_0_1_tdm_0_1_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -159,7 +159,7 @@ struct pmx_dev spear1310_pmx_rs485_0_1_tdm_0_1 = {
 /* Pad multiplexing for i2c_1_2 device */
 static struct pmx_mux_reg pmx_i2c_1_2_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_CLCD1_MASK,
 		.value = 0,
 	},
@@ -182,7 +182,7 @@ struct pmx_dev spear1310_pmx_i2c_1_2 = {
 /* Muxed with SMI & CLCD */
 static struct pmx_mux_reg pmx_i2c3_dis_smi_clcd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_CLCD1_MASK | SPEAR13XX_PMX_SMI_MASK,
 		.value = 0,
 	},
@@ -205,7 +205,7 @@ struct pmx_dev spear1310_pmx_i2c3_dis_smi_clcd = {
 /* Muxed with SD/MMC & I2S1 */
 static struct pmx_mux_reg pmx_i2c3_dis_sd_i2s1_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_I2S2_MASK | SPEAR13XX_PMX_MCIDATA3_MASK,
 		.value = 0,
 	},
@@ -228,7 +228,7 @@ struct pmx_dev spear1310_pmx_i2c3_dis_sd_i2s1 = {
 /* Muxed with SMI */
 static struct pmx_mux_reg pmx_i2c_4_5_dis_smi_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_SMI_MASK,
 		.value = 0,
 	},
@@ -251,11 +251,11 @@ struct pmx_dev spear1310_pmx_i2c_4_5_dis_smi = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_i2c4_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_MCIDATA4_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCIDATA5_MASK,
 		.value = 0,
 	},
@@ -278,7 +278,7 @@ struct pmx_dev spear1310_pmx_i2c4_dis_sd = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_i2c5_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCIDATA6_MASK |
 			SPEAR13XX_PMX_MCIDATA7_MASK,
 		.value = 0,
@@ -302,7 +302,7 @@ struct pmx_dev spear1310_pmx_i2c5_dis_sd = {
 /* Muxed with KBD */
 static struct pmx_mux_reg pmx_i2c_6_7_dis_kbd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_KBD_ROWCOL25_MASK,
 		.value = 0,
 	},
@@ -325,7 +325,7 @@ struct pmx_dev spear1310_pmx_i2c_6_7_dis_kbd = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_i2c6_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCIIORDRE_MASK |
 			SPEAR13XX_PMX_MCIIOWRWE_MASK,
 		.value = 0,
@@ -348,7 +348,7 @@ struct pmx_dev spear1310_pmx_i2c6_dis_sd = {
 /* Pad multiplexing for i2c7_dis_sd device */
 static struct pmx_mux_reg pmx_i2c7_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCIRESETCF_MASK |
 			SPEAR13XX_PMX_MCICS0CE_MASK,
 		.value = 0,
@@ -371,15 +371,15 @@ struct pmx_dev spear1310_pmx_i2c7_dis_sd = {
 /* Pad multiplexing for rgmii device */
 static struct pmx_mux_reg pmx_rgmii_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR1310_PMX_RGMII_REG0_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR1310_PMX_RGMII_REG1_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR1310_PMX_RGMII_REG2_MASK,
 		.value = 0,
 	},
@@ -402,11 +402,11 @@ struct pmx_dev spear1310_pmx_rgmii = {
 /* Muxed with NOR */
 static struct pmx_mux_reg pmx_can0_dis_nor_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR13XX_PMX_NFRSTPWDWN2_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_NFRSTPWDWN3_MASK,
 		.value = 0,
 	},
@@ -429,7 +429,7 @@ struct pmx_dev spear1310_pmx_can0_dis_nor = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_can0_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCICFINTR_MASK |
 			SPEAR13XX_PMX_MCIIORDY_MASK,
 		.value = 0,
@@ -453,7 +453,7 @@ struct pmx_dev spear1310_pmx_can0_dis_sd = {
 /* Muxed with SD/MMC */
 static struct pmx_mux_reg pmx_can1_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCICS1_MASK |
 			SPEAR13XX_PMX_MCIDMAACK_MASK,
 		.value = 0,
@@ -477,7 +477,7 @@ struct pmx_dev spear1310_pmx_can1_dis_sd = {
 /* Muxed with KBD */
 static struct pmx_mux_reg pmx_can1_dis_kbd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_KBD_ROWCOL25_MASK,
 		.value = 0,
 	},
@@ -499,15 +499,15 @@ struct pmx_dev spear1310_pmx_can1_dis_kbd = {
 /* Pad multiplexing for pci device */
 static struct pmx_mux_reg pmx_pci_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG0,
+		.address = SPEAR1310_PAD_FUNCTION_EN_1,
 		.mask = SPEAR1310_PMX_PCI_REG0_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR1310_PMX_PCI_REG1_MASK,
 		.value = 0,
 	}, {
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR1310_PMX_PCI_REG2_MASK,
 		.value = 0,
 	},
@@ -529,7 +529,7 @@ struct pmx_dev spear1310_pmx_pci = {
 /* Pad multiplexing for smii_0_1_2 device */
 static struct pmx_mux_reg pmx_smii_0_1_2_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR1310_PMX_SMII_0_1_2_MASK,
 		.value = 0,
 	},
@@ -551,7 +551,7 @@ struct pmx_dev spear1310_pmx_smii_0_1_2 = {
 /* Pad multiplexing for ssp1_dis_kbd device */
 static struct pmx_mux_reg pmx_ssp1_dis_kbd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_KBD_ROWCOL25_MASK |
 			SPEAR13XX_PMX_KBD_COL1_MASK |
 			SPEAR13XX_PMX_KBD_COL0_MASK,
@@ -575,7 +575,7 @@ struct pmx_dev spear1310_pmx_ssp1_dis_kbd = {
 /* Pad multiplexing for ssp1_dis_sd device */
 static struct pmx_mux_reg pmx_ssp1_dis_sd_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCIADDR0ALE_MASK |
 			SPEAR13XX_PMX_MCIADDR2_MASK | SPEAR13XX_PMX_MCICECF_MASK
 			| SPEAR13XX_PMX_MCICEXD_MASK,
@@ -599,7 +599,7 @@ struct pmx_dev spear1310_pmx_ssp1_dis_sd = {
 /* Pad multiplexing for gpt64 device */
 static struct pmx_mux_reg pmx_gpt64_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG2,
+		.address = SPEAR1310_PAD_FUNCTION_EN_3,
 		.mask = SPEAR13XX_PMX_MCICDCF1_MASK |
 			SPEAR13XX_PMX_MCICDCF2_MASK |
 			SPEAR13XX_PMX_MCICDXD_MASK |
@@ -624,7 +624,7 @@ struct pmx_dev spear1310_pmx_gpt64 = {
 /* Pad multiplexing for ras_mii_txclk device */
 static struct pmx_mux_reg pmx_ras_mii_txclk_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = SPEAR1310_PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_NFCE2_MASK,
 		.value = 0,
 	},
