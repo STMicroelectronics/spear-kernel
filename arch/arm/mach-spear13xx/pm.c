@@ -92,11 +92,28 @@ static void spear_pm_finish(void)
 	enable_hlt();
 }
 
+/*
+ *	spear_pm_valid_state- check the valid states in PM for the SPEAr
+ *	platform
+ */
+static int spear_pm_valid_state(suspend_state_t state)
+{
+        switch (state) {
+                case PM_SUSPEND_STANDBY:
+                case PM_SUSPEND_MEM:
+                        return 1;
+
+                default:
+                        return 0;
+        }
+}
+
+
 static struct platform_suspend_ops spear_pm_ops = {
 	.prepare	= spear_pm_prepare,
 	.enter		= spear_pm_enter,
 	.finish		= spear_pm_finish,
-	.valid		= suspend_valid_only_mem,
+	.valid		= spear_pm_valid_state,
 };
 
 static int __init spear_pm_init(void)
