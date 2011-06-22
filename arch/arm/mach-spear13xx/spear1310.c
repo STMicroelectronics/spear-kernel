@@ -646,7 +646,7 @@ struct pmx_dev spear1310_pmx_ras_mii_txclk = {
 /* pad multiplexing for pcie0 device */
 static struct pmx_mux_reg pmx_pcie0_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_PCIE_CFG_VAL(0),
 		.value = SPEAR1310_PCIE_CFG_VAL(0),
 	},
@@ -668,7 +668,7 @@ struct pmx_dev spear1310_pmx_pcie0 = {
 /* pad multiplexing for pcie1 device */
 static struct pmx_mux_reg pmx_pcie1_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_PCIE_CFG_VAL(1),
 		.value = SPEAR1310_PCIE_CFG_VAL(1),
 	},
@@ -690,7 +690,7 @@ struct pmx_dev spear1310_pmx_pcie1 = {
 /* pad multiplexing for pcie2 device */
 static struct pmx_mux_reg pmx_pcie2_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_PCIE_CFG_VAL(2),
 		.value = SPEAR1310_PCIE_CFG_VAL(2),
 	},
@@ -712,7 +712,7 @@ struct pmx_dev spear1310_pmx_pcie2 = {
 /* pad multiplexing for sata0 device */
 static struct pmx_mux_reg pmx_sata0_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_SATA_CFG_VAL(0),
 		.value = SPEAR1310_SATA_CFG_VAL(0),
 	},
@@ -734,7 +734,7 @@ struct pmx_dev spear1310_pmx_sata0 = {
 /* pad multiplexing for sata1 device */
 static struct pmx_mux_reg pmx_sata1_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_SATA_CFG_VAL(1),
 		.value = SPEAR1310_SATA_CFG_VAL(1),
 	},
@@ -756,7 +756,7 @@ struct pmx_dev spear1310_pmx_sata1 = {
 /* pad multiplexing for sata2 device */
 static struct pmx_mux_reg pmx_sata2_mux[] = {
 	{
-		.address = VA_SPEAR1310_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1310_PCIE_SATA_CFG,
 		.mask = SPEAR1310_SATA_CFG_VAL(2),
 		.value = SPEAR1310_SATA_CFG_VAL(2),
 	},

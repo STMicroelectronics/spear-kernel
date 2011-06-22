@@ -492,7 +492,7 @@ struct pmx_dev spear1340_pmx_mcif = {
 /* Pad multiplexing for sdhci device */
 static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	{
-		.address = VA_SPEAR1340_PERIP_CFG,
+		.address = (u32)VA_SPEAR1340_PERIP_CFG,
 		.mask = SPEAR1340_MCIF_SEL_MASK,
 		.value = SPEAR1340_MCIF_SEL_SD,
 	},
@@ -514,7 +514,7 @@ struct pmx_dev spear1340_pmx_sdhci = {
 /* Pad multiplexing for cf device */
 static struct pmx_mux_reg pmx_cf_mux[] = {
 	{
-		.address = VA_SPEAR1340_PERIP_CFG,
+		.address = (u32)VA_SPEAR1340_PERIP_CFG,
 		.mask = SPEAR1340_MCIF_SEL_MASK,
 		.value = SPEAR1340_MCIF_SEL_CF,
 	},
@@ -536,7 +536,7 @@ struct pmx_dev spear1340_pmx_cf = {
 /* Pad multiplexing for xd device */
 static struct pmx_mux_reg pmx_xd_mux[] = {
 	{
-		.address = VA_SPEAR1340_PERIP_CFG,
+		.address = (u32)VA_SPEAR1340_PERIP_CFG,
 		.mask = SPEAR1340_MCIF_SEL_MASK,
 		.value = SPEAR1340_MCIF_SEL_XD,
 	},
@@ -647,7 +647,7 @@ struct pmx_dev spear1340_pmx_miphy_dbg = {
 /* pad multiplexing for gmii device */
 static struct pmx_mux_reg pmx_gmii_mux[] = {
 	{
-		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.address = (u32)VA_SPEAR1340_GMAC_CLK_CFG,
 		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
 		.value = SPEAR1340_GMAC_PHY_IF_GMII_VAL,
 	},
@@ -669,7 +669,7 @@ struct pmx_dev spear1340_pmx_gmii = {
 /* pad multiplexing for rgmii device */
 static struct pmx_mux_reg pmx_rgmii_mux[] = {
 	{
-		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.address = (u32)VA_SPEAR1340_GMAC_CLK_CFG,
 		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
 		.value = SPEAR1340_GMAC_PHY_IF_RGMII_VAL,
 	},
@@ -691,7 +691,7 @@ struct pmx_dev spear1340_pmx_rgmii = {
 /* pad multiplexing for rmii device */
 static struct pmx_mux_reg pmx_rmii_mux[] = {
 	{
-		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.address = (u32)VA_SPEAR1340_GMAC_CLK_CFG,
 		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
 		.value = SPEAR1340_GMAC_PHY_IF_RMII_VAL,
 	},
@@ -713,7 +713,7 @@ struct pmx_dev spear1340_pmx_rmii = {
 /* pad multiplexing for sgmii device */
 static struct pmx_mux_reg pmx_sgmii_mux[] = {
 	{
-		.address = VA_SPEAR1340_GMAC_CLK_CFG,
+		.address = (u32)VA_SPEAR1340_GMAC_CLK_CFG,
 		.mask = SPEAR1340_GMAC_PHY_IF_SEL_MASK,
 		.value = SPEAR1340_GMAC_PHY_IF_SGMII_VAL,
 	},
@@ -735,7 +735,7 @@ struct pmx_dev spear1340_pmx_sgmii = {
 /* pad multiplexing for pcie device */
 static struct pmx_mux_reg pmx_pcie_mux[] = {
 	{
-		.address = VA_SPEAR1340_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1340_PCIE_SATA_CFG,
 		.mask = SPEAR1340_PCIE_CFG_VAL,
 		.value = SPEAR1340_PCIE_CFG_VAL,
 	},
@@ -757,7 +757,7 @@ struct pmx_dev spear1340_pmx_pcie = {
 /* pad multiplexing for sata device */
 static struct pmx_mux_reg pmx_sata_mux[] = {
 	{
-		.address = VA_SPEAR1340_PCIE_SATA_CFG,
+		.address = (u32)VA_SPEAR1340_PCIE_SATA_CFG,
 		.mask = SPEAR1340_SATA_CFG_VAL,
 		.value = SPEAR1340_SATA_CFG_VAL,
 	},

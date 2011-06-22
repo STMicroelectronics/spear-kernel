@@ -18,33 +18,33 @@
 
 #ifdef CONFIG_CPU_SPEAR1340
 #include <mach/spear1340_misc_regs.h>
-#undef MISC_BASE
+#undef VA_MISC_BASE
 #endif
 
 #ifdef CONFIG_CPU_SPEAR1310
 #include <mach/spear1310_misc_regs.h>
-#undef MISC_BASE
+#undef VA_MISC_BASE
 #endif
 
-#define MISC_BASE		IOMEM(VA_SPEAR13XX_MISC_BASE)
+#define VA_MISC_BASE			IOMEM(VA_SPEAR13XX_MISC_BASE)
 
 /* General Configuration */
-#define SOC_CFG			(MISC_BASE + 0x000)
-#define BOOTSTRAP_CFG		(MISC_BASE + 0x004)
+#define VA_SOC_CFG			(VA_MISC_BASE + 0x000)
+#define VA_BOOTSTRAP_CFG		(VA_MISC_BASE + 0x004)
 
 /* Power Management Registers */
-#define PCM_CFG			(MISC_BASE + 0x100)
-#define PCM_WKUP_CFG		(MISC_BASE + 0x104)
-#define SWITCH_CTR		(MISC_BASE + 0x108)
+#define VA_PCM_CFG			(VA_MISC_BASE + 0x100)
+#define VA_PCM_WKUP_CFG			(VA_MISC_BASE + 0x104)
+#define VA_SWITCH_CTR			(VA_MISC_BASE + 0x108)
 
 /* Clock Configuration Registers */
-#define SYS_CLK_CTRL		(MISC_BASE + 0x200)
-#define SYS_SW_RES		(MISC_BASE + 0x204)
-#define SYS_CLK_PLLTIMER	(MISC_BASE + 0x208)
-#define SYS_CLK_OSCITIMER	(MISC_BASE + 0x20C)
+#define VA_SYS_CLK_CTRL			(VA_MISC_BASE + 0x200)
+#define VA_SYS_SW_RES			(VA_MISC_BASE + 0x204)
+#define VA_SYS_CLK_PLLTIMER		(VA_MISC_BASE + 0x208)
+#define VA_SYS_CLK_OSCITIMER		(VA_MISC_BASE + 0x20C)
 
 /* PLL related registers and bit values */
-#define PLL_CFG			(MISC_BASE + 0x210)
+#define VA_PLL_CFG			(VA_MISC_BASE + 0x210)
 	/* PLL_CFG bit values */
 	#define CLCD_SYNT_VCO1_DIV4_VAL		0
 	#define CLCD_SYNT_PLL2_VAL		1
@@ -67,16 +67,16 @@
 	#define PLL2_CLK_SHIFT			22
 	#define PLL1_CLK_SHIFT			20
 
-#define PLL1_CTR		(MISC_BASE + 0x214)
-#define PLL1_FRQ		(MISC_BASE + 0x218)
-#define PLL1_MOD		(MISC_BASE + 0x21C)
-#define PLL2_CTR		(MISC_BASE + 0x220)
-#define PLL2_FRQ		(MISC_BASE + 0x224)
-#define PLL2_MOD		(MISC_BASE + 0x228)
-#define PLL3_CTR		(MISC_BASE + 0x22C)
-#define PLL3_FRQ		(MISC_BASE + 0x230)
-#define PLL3_MOD		(MISC_BASE + 0x234)
-#define PLL4_CTR		(MISC_BASE + 0x238)
+#define VA_PLL1_CTR			(VA_MISC_BASE + 0x214)
+#define VA_PLL1_FRQ			(VA_MISC_BASE + 0x218)
+#define VA_PLL1_MOD			(VA_MISC_BASE + 0x21C)
+#define VA_PLL2_CTR			(VA_MISC_BASE + 0x220)
+#define VA_PLL2_FRQ			(VA_MISC_BASE + 0x224)
+#define VA_PLL2_MOD			(VA_MISC_BASE + 0x228)
+#define VA_PLL3_CTR			(VA_MISC_BASE + 0x22C)
+#define VA_PLL3_FRQ			(VA_MISC_BASE + 0x230)
+#define VA_PLL3_MOD			(VA_MISC_BASE + 0x234)
+#define VA_PLL4_CTR			(VA_MISC_BASE + 0x238)
 	/* PLL_CTR register masks */
 	#define PLL_MODE_NORMAL		0
 	#define PLL_MODE_FRACTION	1
@@ -86,7 +86,7 @@
 	#define PLL_MODE_SHIFT		3
 	#define PLL_ENABLE		1
 
-#define PLL4_FRQ		(MISC_BASE + 0x23C)
+#define VA_PLL4_FRQ			(VA_MISC_BASE + 0x23C)
 	/* PLL FRQ register masks */
 	#define PLL_NORM_FDBK_M_MASK	0xFF
 	#define PLL_NORM_FDBK_M_SHIFT	24
@@ -97,8 +97,8 @@
 	#define PLL_DIV_N_MASK		0xFF
 	#define PLL_DIV_N_SHIFT		0
 
-#define PLL4_MOD		(MISC_BASE + 0x240)
-#define PERIP_CLK_CFG		(MISC_BASE + 0x244)
+#define VA_PLL4_MOD			(VA_MISC_BASE + 0x240)
+#define VA_PERIP_CLK_CFG		(VA_MISC_BASE + 0x244)
 	/* PERIP_CLK_CFG bit values */
 	#define GPT3_CLK_SHIFT		13
 	#define GPT2_CLK_SHIFT		12
@@ -121,7 +121,7 @@
 	#define C3_CLK_MASK		1
 	#define C3_CLK_SHIFT		1
 
-#define GMAC_CLK_CFG		(MISC_BASE + 0x248)
+#define VA_GMAC_CLK_CFG			(VA_MISC_BASE + 0x248)
 	#define GMAC_PHY_IF_GMII_VAL		0
 	#define GMAC_PHY_IF_RGMII_VAL		1
 	#define GMAC_PHY_IF_RMII_VAL		4
@@ -137,17 +137,17 @@
 	#define GMAC_PHY_INPUT_CLK_MASK		3
 	#define GMAC_PHY_INPUT_CLK_SHIFT	1
 
-#define C3_CLK_SYNT		(MISC_BASE + 0x24C)
+#define VA_C3_CLK_SYNT			(VA_MISC_BASE + 0x24C)
 	/* refer AUX_* macros for reg masks */
-#define CLCD_CLK_SYNT		(MISC_BASE + 0x250)
+#define VA_CLCD_CLK_SYNT		(VA_MISC_BASE + 0x250)
 	/* Fractional synthesizer reg masks */
 	#define FRAC_SYNT_DIV_FACTOR_MASK	0x1FFFF
 	#define FRAC_SYNT_DIV_FACTOR_SHIFT	0
 
-#define UART_CLK_SYNT		(MISC_BASE + 0x254)
-#define GMAC_CLK_SYNT		(MISC_BASE + 0x258)
-#define SDHCI_CLK_SYNT		(MISC_BASE + 0x25C)
-#define CFXD_CLK_SYNT		(MISC_BASE + 0x260)
+#define VA_UART_CLK_SYNT		(VA_MISC_BASE + 0x254)
+#define VA_GMAC_CLK_SYNT		(VA_MISC_BASE + 0x258)
+#define VA_SDHCI_CLK_SYNT		(VA_MISC_BASE + 0x25C)
+#define VA_CFXD_CLK_SYNT		(VA_MISC_BASE + 0x260)
 	/* aux clk synthesizer register masks */
 	#define AUX_SYNT_ENB		31
 	#define AUX_EQ_SEL_SHIFT	30
@@ -159,13 +159,13 @@
 	#define AUX_YSCALE_SHIFT	0
 	#define AUX_YSCALE_MASK		0xFFF
 
-#define RAS_CLK_SYNT0		(MISC_BASE + 0x264)
-#define RAS_CLK_SYNT1		(MISC_BASE + 0x268)
-#define RAS_CLK_SYNT2		(MISC_BASE + 0x26C)
-#define RAS_CLK_SYNT3		(MISC_BASE + 0x270)
+#define VA_RAS_CLK_SYNT0		(VA_MISC_BASE + 0x264)
+#define VA_RAS_CLK_SYNT1		(VA_MISC_BASE + 0x268)
+#define VA_RAS_CLK_SYNT2		(VA_MISC_BASE + 0x26C)
+#define VA_RAS_CLK_SYNT3		(VA_MISC_BASE + 0x270)
 	/* Check Fractional synthesizer reg masks */
 
-#define PERIP1_CLK_ENB		(MISC_BASE + 0x274)
+#define VA_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x274)
 	/* PERIP1_CLK_ENB register masks */
 	#define RTC_CLK_ENB		31
 	#define ADC_CLK_ENB		30
@@ -199,7 +199,7 @@
 	#define SYSROM_CLK_ENB		1
 	#define BUS_CLK_ENB		0
 
-#define PERIP2_CLK_ENB		(MISC_BASE + 0x278)
+#define VA_PERIP2_CLK_ENB		(VA_MISC_BASE + 0x278)
 	/* PERIP2_CLK_ENB register masks */
 	#define THSENS_CLK_ENB		8
 	#define I2S_REF_PAD_CLK_ENB	7
@@ -211,10 +211,10 @@
 	#define DDR_CORE_CLK_ENB	1
 	#define DDR_CTRL_CLK_ENB	0
 
-#define PERIP1_SW_RST		(MISC_BASE + 0x27C)
+#define VA_PERIP1_SW_RST		(VA_MISC_BASE + 0x27C)
 	#define JPEG_SOF_RST		28
-#define PERIP2_SW_RST		(MISC_BASE + 0x280)
-#define RAS_CLK_ENB		(MISC_BASE + 0x284)
+#define VA_PERIP2_SW_RST		(VA_MISC_BASE + 0x280)
+#define VA_RAS_CLK_ENB			(VA_MISC_BASE + 0x284)
 	/* RAS_CLK_ENB register masks */
 	#define SYNT3_CLK_ENB		17
 	#define SYNT2_CLK_ENB		16
@@ -234,11 +234,11 @@
 	#define OSC1_CLK_ENB		2
 	#define PCLK_CLK_ENB		1
 	#define ACLK_CLK_ENB		0
-#define RAS_SW_RST		(MISC_BASE + 0x288)
-#define PLL1_SYNT		(MISC_BASE + 0x28C)
+#define VA_RAS_SW_RST			(VA_MISC_BASE + 0x288)
+#define VA_PLL1_SYNT			(VA_MISC_BASE + 0x28C)
 	/* Check Fractional synthesizer reg masks */
 
-#define I2S_CLK_CFG		(MISC_BASE + 0x290)
+#define VA_I2S_CLK_CFG			(VA_MISC_BASE + 0x290)
 	/* I2S_CLK_CFG register mask */
 	#define I2S_SCLK_X_MASK		0x1F
 	#define I2S_SCLK_X_SHIFT	27
@@ -262,16 +262,16 @@
 	#define I2S_SRC_CLK_SHIFT	0
 
 /* Peripheral Configuration Registers */
-#define DMAC_HS_SEL		(MISC_BASE + 0x300)
-#define DMAC_SEL		(MISC_BASE + 0x304)
-#define DMAC_FLOW_SEL		(MISC_BASE + 0x308)
-#define DMAC_DIR_SEL		(MISC_BASE + 0x30C)
-#define DMAC_CFG		(MISC_BASE + 0x310)
-#define USBPHY_GEN_CFG		(MISC_BASE + 0x314)
-#define USBPHY_P1_CFG		(MISC_BASE + 0x318)
-#define USBPHY_P2_CFG		(MISC_BASE + 0x31C)
-#define USBPHY_P3_CFG		(MISC_BASE + 0x320)
-#define PCIE_CFG		(MISC_BASE + 0x324)
+#define VA_DMAC_HS_SEL			(VA_MISC_BASE + 0x300)
+#define VA_DMAC_SEL			(VA_MISC_BASE + 0x304)
+#define VA_DMAC_FLOW_SEL		(VA_MISC_BASE + 0x308)
+#define VA_DMAC_DIR_SEL			(VA_MISC_BASE + 0x30C)
+#define VA_DMAC_CFG			(VA_MISC_BASE + 0x310)
+#define VA_USBPHY_GEN_CFG		(VA_MISC_BASE + 0x314)
+#define VA_USBPHY_P1_CFG		(VA_MISC_BASE + 0x318)
+#define VA_USBPHY_P2_CFG		(VA_MISC_BASE + 0x31C)
+#define VA_USBPHY_P3_CFG		(VA_MISC_BASE + 0x320)
+#define VA_PCIE_CFG			(VA_MISC_BASE + 0x324)
 	/* PCIE CFG MASks */
 	#define PCIE0_CFG_DEVICE_PRESENT	(1 << 11)
 	#define PCIE1_CFG_DEVICE_PRESENT	(1 << 10)
@@ -292,16 +292,16 @@
 	#define PCIE2_CFG_VAL	(PCIE2_CFG_AUX_CLK_EN | PCIE2_CFG_CORE_CLK_EN \
 			| PCIE2_CFG_POWERUP_RESET | PCIE2_CFG_DEVICE_PRESENT)
 
-#define PCIE_MIPHY_CFG		(MISC_BASE + 0x328)
-#define PERIP_CFG		(MISC_BASE + 0x32C)
-#define VA_PERIP_CFG		(SPEAR13XX_MISC_BASE + 0x32C)
+#define VA_PCIE_MIPHY_CFG		(VA_MISC_BASE + 0x328)
+#define VA_PERIP_CFG			(VA_MISC_BASE + 0x32C)
+#define PERIP_CFG		(SPEAR13XX_MISC_BASE + 0x32C)
 	/* PERIP_CFG register masks */
 	#define MCIF_SEL_SD	(0x1 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_CF	(0x2 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_XD	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_MASK	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_SHIFT	3
-#define FSMC_CFG		(MISC_BASE + 0x330)
+#define VA_FSMC_CFG			(VA_MISC_BASE + 0x330)
 	/* FSMC_CFG register masks */
 	#define NAND_DEV_WIDTH16	4
 	#define NAND_BANK_MASK		3
@@ -312,124 +312,124 @@
 	#define FSMC_MEMSEL_MASK	3
 	#define FSMC_MEMSEL_SHIFT	0
 
-#define MPMC_CTR_STS		(MISC_BASE + 0x334)
+#define VA_MPMC_CTR_STS			(VA_MISC_BASE + 0x334)
 
 /* Inter-Processor Communication Registers */
-#define PRC1_LOCK_CTR		(MISC_BASE + 0x500)
-#define PRC2_LOCK_CTR		(MISC_BASE + 0x504)
-#define PRC1_IRQ_CTR		(MISC_BASE + 0x508)
-#define PRC2_IRQ_CTR		(MISC_BASE + 0x51C)
+#define VA_PRC1_LOCK_CTR		(VA_MISC_BASE + 0x500)
+#define VA_PRC2_LOCK_CTR		(VA_MISC_BASE + 0x504)
+#define VA_PRC1_IRQ_CTR			(VA_MISC_BASE + 0x508)
+#define VA_PRC2_IRQ_CTR			(VA_MISC_BASE + 0x51C)
 
 /* Pad Configuration Registers */
-#define PAD_PU_CFG_1		(MISC_BASE + 0x600)
-#define PAD_PU_CFG_2		(MISC_BASE + 0x604)
-#define PAD_PU_CFG_3		(MISC_BASE + 0x608)
-#define PAD_PU_CFG_4		(MISC_BASE + 0x60C)
-#define PAD_PU_CFG_5		(MISC_BASE + 0x610)
-#define PAD_PU_CFG_6		(MISC_BASE + 0x614)
-#define PAD_PU_CFG_7		(MISC_BASE + 0x618)
-#define PAD_PU_CFG_8		(MISC_BASE + 0x61C)
-#define PAD_PD_CFG_1		(MISC_BASE + 0x620)
-#define PAD_PD_CFG_2		(MISC_BASE + 0x624)
-#define PAD_PD_CFG_3		(MISC_BASE + 0x628)
-#define PAD_PD_CFG_4		(MISC_BASE + 0x62C)
-#define PAD_PD_CFG_5		(MISC_BASE + 0x630)
-#define PAD_PD_CFG_6		(MISC_BASE + 0x634)
-#define PAD_PD_CFG_7		(MISC_BASE + 0x638)
-#define PAD_PD_CFG_8		(MISC_BASE + 0x63C)
-#define PAD_SLEEP_CFG		(MISC_BASE + 0x640)
-#define PAD_HYST_CFG		(MISC_BASE + 0x644)
-#define PAD_DRV_CFG		(MISC_BASE + 0x648)
-#define PAD_SLEW_CFG		(MISC_BASE + 0x64C)
-#define PAD_FUNCTION_EN_1	(MISC_BASE + 0x650)
-#define PAD_FUNCTION_EN_2	(MISC_BASE + 0x654)
-#define PAD_FUNCTION_EN_3	(MISC_BASE + 0x658)
-#define DDR_PAD_CFG		(MISC_BASE + 0x65C)
-#define THSENS_CFG		(MISC_BASE + 0x6C4)
+#define VA_PAD_PU_CFG_1			(VA_MISC_BASE + 0x600)
+#define VA_PAD_PU_CFG_2			(VA_MISC_BASE + 0x604)
+#define VA_PAD_PU_CFG_3			(VA_MISC_BASE + 0x608)
+#define VA_PAD_PU_CFG_4			(VA_MISC_BASE + 0x60C)
+#define VA_PAD_PU_CFG_5			(VA_MISC_BASE + 0x610)
+#define VA_PAD_PU_CFG_6			(VA_MISC_BASE + 0x614)
+#define VA_PAD_PU_CFG_7			(VA_MISC_BASE + 0x618)
+#define VA_PAD_PU_CFG_8			(VA_MISC_BASE + 0x61C)
+#define VA_PAD_PD_CFG_1			(VA_MISC_BASE + 0x620)
+#define VA_PAD_PD_CFG_2			(VA_MISC_BASE + 0x624)
+#define VA_PAD_PD_CFG_3			(VA_MISC_BASE + 0x628)
+#define VA_PAD_PD_CFG_4			(VA_MISC_BASE + 0x62C)
+#define VA_PAD_PD_CFG_5			(VA_MISC_BASE + 0x630)
+#define VA_PAD_PD_CFG_6			(VA_MISC_BASE + 0x634)
+#define VA_PAD_PD_CFG_7			(VA_MISC_BASE + 0x638)
+#define VA_PAD_PD_CFG_8			(VA_MISC_BASE + 0x63C)
+#define VA_PAD_SLEEP_CFG		(VA_MISC_BASE + 0x640)
+#define VA_PAD_HYST_CFG			(VA_MISC_BASE + 0x644)
+#define VA_PAD_DRV_CFG			(VA_MISC_BASE + 0x648)
+#define VA_PAD_SLEW_CFG			(VA_MISC_BASE + 0x64C)
+#define VA_PAD_FUNCTION_EN_1		(VA_MISC_BASE + 0x650)
+#define VA_PAD_FUNCTION_EN_2		(VA_MISC_BASE + 0x654)
+#define VA_PAD_FUNCTION_EN_3		(VA_MISC_BASE + 0x658)
+#define VA_DDR_PAD_CFG			(VA_MISC_BASE + 0x65C)
+#define VA_THSENS_CFG			(VA_MISC_BASE + 0x6C4)
 
 /* Compensation Configuration Registers */
-#define COMP_1V8_2V5_3V3__1_CFG	(MISC_BASE + 0x700)
-#define COMP_1V8_2V5_3V3__2_CFG	(MISC_BASE + 0x704)
-#define COMP_3V3_1_CFG		(MISC_BASE + 0x708)
-#define COMP_3V3_2_CFG		(MISC_BASE + 0x70C)
-#define COMP_DDR_CFG		(MISC_BASE + 0x710)
+#define VA_COMP_1V8_2V5_3V3__1_CFG	(VA_MISC_BASE + 0x700)
+#define VA_COMP_1V8_2V5_3V3__2_CFG	(VA_MISC_BASE + 0x704)
+#define VA_COMP_3V3_1_CFG		(VA_MISC_BASE + 0x708)
+#define VA_COMP_3V3_2_CFG		(VA_MISC_BASE + 0x70C)
+#define VA_COMP_DDR_CFG			(VA_MISC_BASE + 0x710)
 
 /* OTP Programming Registers */
-#define OTP_PROG_CTR		(MISC_BASE + 0x800)
-#define OTP_WDATA1_1		(MISC_BASE + 0x804)
-#define OTP_WDATA1_2		(MISC_BASE + 0x808)
-#define OTP_WDATA1_3		(MISC_BASE + 0x80C)
-#define OTP_WDATA1_4		(MISC_BASE + 0x810)
-#define OTP_WDATA1_5		(MISC_BASE + 0x814)
-#define OTP_WDATA1_6		(MISC_BASE + 0x818)
-#define OTP_WDATA1_7		(MISC_BASE + 0x81C)
-#define OTP_WDATA1_8		(MISC_BASE + 0x820)
-#define OTP_WDATA2_1		(MISC_BASE + 0x824)
-#define OTP_WDATA2_2		(MISC_BASE + 0x828)
-#define OTP_WDATA2_3		(MISC_BASE + 0x82C)
-#define OTP_WDATA2_4		(MISC_BASE + 0x830)
-#define OTP_WDATA2_5		(MISC_BASE + 0x834)
-#define OTP_WDATA2_6		(MISC_BASE + 0x838)
-#define OTP_WDATA2_7		(MISC_BASE + 0x83C)
-#define OTP_WDATA2_8		(MISC_BASE + 0x840)
-#define OTP_MASK_1		(MISC_BASE + 0x844)
-#define OTP_MASK_2		(MISC_BASE + 0x848)
-#define OTP_MASK_3		(MISC_BASE + 0x84C)
-#define OTP_MASK_4		(MISC_BASE + 0x850)
-#define OTP_MASK_5		(MISC_BASE + 0x854)
-#define OTP_MASK_6		(MISC_BASE + 0x858)
-#define OTP_MASK_7		(MISC_BASE + 0x85C)
-#define OTP_MASK_8		(MISC_BASE + 0x860)
-#define OTP_RDATA1_1		(MISC_BASE + 0x864)
-#define OTP_RDATA1_2		(MISC_BASE + 0x868)
-#define OTP_RDATA1_3		(MISC_BASE + 0x86C)
-#define OTP_RDATA1_4		(MISC_BASE + 0x870)
-#define OTP_RDATA1_5		(MISC_BASE + 0x874)
-#define OTP_RDATA1_6		(MISC_BASE + 0x878)
-#define OTP_RDATA1_7		(MISC_BASE + 0x87C)
-#define OTP_RDATA1_8		(MISC_BASE + 0x880)
-#define OTP_RDATA2_1		(MISC_BASE + 0x884)
-#define OTP_RDATA2_2		(MISC_BASE + 0x888)
-#define OTP_RDATA2_3		(MISC_BASE + 0x88C)
-#define OTP_RDATA2_4		(MISC_BASE + 0x890)
-#define OTP_RDATA2_5		(MISC_BASE + 0x894)
-#define OTP_RDATA2_6		(MISC_BASE + 0x898)
-#define OTP_RDATA2_7		(MISC_BASE + 0x89C)
-#define OTP_RDATA2_8		(MISC_BASE + 0x8A0)
-#define OTP_RDATAM_1		(MISC_BASE + 0x8A4)
-#define OTP_RDATAM_2		(MISC_BASE + 0x8A8)
-#define OTP_RDATAM_3		(MISC_BASE + 0x8AC)
-#define OTP_RDATAM_4		(MISC_BASE + 0x8B0)
-#define OTP_RDATAM_5		(MISC_BASE + 0x8B4)
-#define OTP_RDATAM_6		(MISC_BASE + 0x8B8)
-#define OTP_RDATAM_7		(MISC_BASE + 0x8BC)
-#define OTP_RDATAM_8		(MISC_BASE + 0x8C0)
+#define VA_OTP_PROG_CTR			(VA_MISC_BASE + 0x800)
+#define VA_OTP_WDATA1_1			(VA_MISC_BASE + 0x804)
+#define VA_OTP_WDATA1_2			(VA_MISC_BASE + 0x808)
+#define VA_OTP_WDATA1_3			(VA_MISC_BASE + 0x80C)
+#define VA_OTP_WDATA1_4			(VA_MISC_BASE + 0x810)
+#define VA_OTP_WDATA1_5			(VA_MISC_BASE + 0x814)
+#define VA_OTP_WDATA1_6			(VA_MISC_BASE + 0x818)
+#define VA_OTP_WDATA1_7			(VA_MISC_BASE + 0x81C)
+#define VA_OTP_WDATA1_8			(VA_MISC_BASE + 0x820)
+#define VA_OTP_WDATA2_1			(VA_MISC_BASE + 0x824)
+#define VA_OTP_WDATA2_2			(VA_MISC_BASE + 0x828)
+#define VA_OTP_WDATA2_3			(VA_MISC_BASE + 0x82C)
+#define VA_OTP_WDATA2_4			(VA_MISC_BASE + 0x830)
+#define VA_OTP_WDATA2_5			(VA_MISC_BASE + 0x834)
+#define VA_OTP_WDATA2_6			(VA_MISC_BASE + 0x838)
+#define VA_OTP_WDATA2_7			(VA_MISC_BASE + 0x83C)
+#define VA_OTP_WDATA2_8			(VA_MISC_BASE + 0x840)
+#define VA_OTP_MASK_1			(VA_MISC_BASE + 0x844)
+#define VA_OTP_MASK_2			(VA_MISC_BASE + 0x848)
+#define VA_OTP_MASK_3			(VA_MISC_BASE + 0x84C)
+#define VA_OTP_MASK_4			(VA_MISC_BASE + 0x850)
+#define VA_OTP_MASK_5			(VA_MISC_BASE + 0x854)
+#define VA_OTP_MASK_6			(VA_MISC_BASE + 0x858)
+#define VA_OTP_MASK_7			(VA_MISC_BASE + 0x85C)
+#define VA_OTP_MASK_8			(VA_MISC_BASE + 0x860)
+#define VA_OTP_RDATA1_1			(VA_MISC_BASE + 0x864)
+#define VA_OTP_RDATA1_2			(VA_MISC_BASE + 0x868)
+#define VA_OTP_RDATA1_3			(VA_MISC_BASE + 0x86C)
+#define VA_OTP_RDATA1_4			(VA_MISC_BASE + 0x870)
+#define VA_OTP_RDATA1_5			(VA_MISC_BASE + 0x874)
+#define VA_OTP_RDATA1_6			(VA_MISC_BASE + 0x878)
+#define VA_OTP_RDATA1_7			(VA_MISC_BASE + 0x87C)
+#define VA_OTP_RDATA1_8			(VA_MISC_BASE + 0x880)
+#define VA_OTP_RDATA2_1			(VA_MISC_BASE + 0x884)
+#define VA_OTP_RDATA2_2			(VA_MISC_BASE + 0x888)
+#define VA_OTP_RDATA2_3			(VA_MISC_BASE + 0x88C)
+#define VA_OTP_RDATA2_4			(VA_MISC_BASE + 0x890)
+#define VA_OTP_RDATA2_5			(VA_MISC_BASE + 0x894)
+#define VA_OTP_RDATA2_6			(VA_MISC_BASE + 0x898)
+#define VA_OTP_RDATA2_7			(VA_MISC_BASE + 0x89C)
+#define VA_OTP_RDATA2_8			(VA_MISC_BASE + 0x8A0)
+#define VA_OTP_RDATAM_1			(VA_MISC_BASE + 0x8A4)
+#define VA_OTP_RDATAM_2			(VA_MISC_BASE + 0x8A8)
+#define VA_OTP_RDATAM_3			(VA_MISC_BASE + 0x8AC)
+#define VA_OTP_RDATAM_4			(VA_MISC_BASE + 0x8B0)
+#define VA_OTP_RDATAM_5			(VA_MISC_BASE + 0x8B4)
+#define VA_OTP_RDATAM_6			(VA_MISC_BASE + 0x8B8)
+#define VA_OTP_RDATAM_7			(VA_MISC_BASE + 0x8BC)
+#define VA_OTP_RDATAM_8			(VA_MISC_BASE + 0x8C0)
 
 /* A9SM Registers */
-#define A9SM_CLUSTERID		(MISC_BASE + 0x900)
-#define A9SM_STATUS		(MISC_BASE + 0x904)
-#define A9SM_DEBUG		(MISC_BASE + 0x908)
-#define A9SM_FILTER		(MISC_BASE + 0x90C)
-#define A9SM_PARITY_CFG		(MISC_BASE + 0x910)
-#define A9SM_PARITY_ERR		(MISC_BASE + 0x914)
+#define VA_A9SM_CLUSTERID		(VA_MISC_BASE + 0x900)
+#define VA_A9SM_STATUS			(VA_MISC_BASE + 0x904)
+#define VA_A9SM_DEBUG			(VA_MISC_BASE + 0x908)
+#define VA_A9SM_FILTER			(VA_MISC_BASE + 0x90C)
+#define VA_A9SM_PARITY_CFG		(VA_MISC_BASE + 0x910)
+#define VA_A9SM_PARITY_ERR		(VA_MISC_BASE + 0x914)
 
 /* SOC ID Registers */
-#define DIE_ID_1		(MISC_BASE + 0xA00)
-#define DIE_ID_2		(MISC_BASE + 0xA04)
-#define DIE_ID_3		(MISC_BASE + 0xA08)
-#define DIE_ID_4		(MISC_BASE + 0xA0C)
-#define DIE_ID_VALID		(MISC_BASE + 0xA10)
+#define VA_DIE_ID_1			(VA_MISC_BASE + 0xA00)
+#define VA_DIE_ID_2			(VA_MISC_BASE + 0xA04)
+#define VA_DIE_ID_3			(VA_MISC_BASE + 0xA08)
+#define VA_DIE_ID_4			(VA_MISC_BASE + 0xA0C)
+#define VA_DIE_ID_VALID			(VA_MISC_BASE + 0xA10)
 
 /* SOC TEST & DEBUG Registers */
-#define MIPHY_TEST		(MISC_BASE + 0x1000)
-#define PCIE_MSTR_P0		(MISC_BASE + 0x1004)
-#define PCIE_AWMISC_P0		(MISC_BASE + 0x1008)
-#define PCIE_ARMISC_P0		(MISC_BASE + 0x100C)
-#define PCIE_MSTR_P1		(MISC_BASE + 0x1010)
-#define PCIE_AWMISC_P1		(MISC_BASE + 0x1014)
-#define PCIE_ARMISC_P1		(MISC_BASE + 0x1018)
-#define PCIE_MSTR_P2		(MISC_BASE + 0x101C)
-#define PCIE_AWMISC_P2		(MISC_BASE + 0x1020)
-#define PCIE_ARMISC_P2		(MISC_BASE + 0x1024)
+#define VA_MIPHY_TEST			(VA_MISC_BASE + 0x1000)
+#define VA_PCIE_MSTR_P0			(VA_MISC_BASE + 0x1004)
+#define VA_PCIE_AWMISC_P0		(VA_MISC_BASE + 0x1008)
+#define VA_PCIE_ARMISC_P0		(VA_MISC_BASE + 0x100C)
+#define VA_PCIE_MSTR_P1			(VA_MISC_BASE + 0x1010)
+#define VA_PCIE_AWMISC_P1		(VA_MISC_BASE + 0x1014)
+#define VA_PCIE_ARMISC_P1		(VA_MISC_BASE + 0x1018)
+#define VA_PCIE_MSTR_P2			(VA_MISC_BASE + 0x101C)
+#define VA_PCIE_AWMISC_P2		(VA_MISC_BASE + 0x1020)
+#define VA_PCIE_ARMISC_P2		(VA_MISC_BASE + 0x1024)
 
 #endif /* __MACH_MISC_REGS_H */
