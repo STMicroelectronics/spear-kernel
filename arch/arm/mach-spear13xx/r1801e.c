@@ -225,15 +225,15 @@ static void __init r1801e_pcie_board_init(void)
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host0_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
-	(struct pcie_port_info *)plat_data->is_gen1 = PCIE_IS_GEN1;
+	((struct pcie_port_info *)plat_data)->is_gen1 = PCIE_IS_GEN1;
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
-	(struct pcie_port_info *)plat_data->is_gen1 = PCIE_IS_GEN1;
+	((struct pcie_port_info *)plat_data)->is_gen1 = PCIE_IS_GEN1;
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
-	(struct pcie_port_info *)plat_data->is_gen1 = PCIE_IS_GEN1;
+	((struct pcie_port_info *)plat_data)->is_gen1 = PCIE_IS_GEN1;
 }
 #endif
 
