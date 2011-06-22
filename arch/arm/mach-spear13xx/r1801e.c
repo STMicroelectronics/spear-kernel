@@ -26,6 +26,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
 
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -34,7 +35,7 @@
 /* Pad muxing for PLGPIO_11 "System Alive" LED indicator */
 static struct pmx_mux_reg pmx_plgpio_10_11_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_GPT0_TMR1_MASK,
 		.value = 0,
 	},
@@ -56,7 +57,7 @@ struct pmx_dev pmx_plgpio_10_11 = {
 /* Pad muxing for PLGPIO_9 "PWR_OFF" output */
 static struct pmx_mux_reg pmx_plgpio_8_9_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_GPT0_TMR2_MASK,
 		.value = 0,
 	},
@@ -78,7 +79,7 @@ static struct pmx_dev pmx_plgpio_8_9 = {
 /* Pad muxing for PLGPIO_7 "SHTDWN_RQST" input */
 static struct pmx_mux_reg pmx_plgpio_6_7_mux[] = {
 	{
-		.address = SPEAR13XX_PMX_CFG1,
+		.address = PAD_FUNCTION_EN_2,
 		.mask = SPEAR13XX_PMX_GPT1_TMR1_MASK,
 		.value = 0,
 	},
