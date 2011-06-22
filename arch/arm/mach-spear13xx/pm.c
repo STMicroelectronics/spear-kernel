@@ -17,6 +17,7 @@
 #include <asm/cacheflush.h>
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#include <mach/misc_regs.h>
 #include <mach/suspend.h>
 
 static int spear_pm_sleep(suspend_state_t state)
@@ -26,10 +27,16 @@ static int spear_pm_sleep(suspend_state_t state)
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 
 	if (state == PM_SUSPEND_MEM) {
+		u32 pm_cfg;
 		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
 				spear_wakeup_sz);
 		/* Increment destination pointer by the size copied*/
 		sram_dest += roundup(spear_wakeup_sz, 4);
+
+		pm_cfg = readl(PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, PCM_CFG);
 	}
 
 	/* Copy the Sleep code on to the SRAM*/
