@@ -2316,7 +2316,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	if (!driver || driver->speed < USB_SPEED_FULL || !bind ||
 			!driver->disconnect || !driver->setup)
 		return -EINVAL;
-	if (!udev)
+	if (!udev || !udev->dev)
 		return -ENODEV;
 	if (udev->driver)
 		return -EBUSY;
