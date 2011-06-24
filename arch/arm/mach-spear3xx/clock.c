@@ -595,8 +595,37 @@ static struct clk gpio_clk = {
 
 static struct clk dummy_apb_pclk;
 
-#if defined(CONFIG_CPU_SPEAR300) || defined(CONFIG_CPU_SPEAR310) || \
-	defined(CONFIG_CPU_SPEAR320)
+#ifdef CONFIG_CPU_SPEAR300
+/* fsmc0 clock */
+static struct clk fsmc0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc1 clock */
+static struct clk fsmc1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc2 clock */
+static struct clk fsmc2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc3 clock */
+static struct clk fsmc3_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* fsmc clock */
 static struct clk fsmc_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -792,7 +821,10 @@ static struct clk_lookup spear_clk_lookups[] = {
 static struct clk_lookup spear300_clk_lookups[] = {
 #ifdef CONFIG_CPU_SPEAR300
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand.0",	.clk = &fsmc0_clk},
+	{ .dev_id = "fsmc-nand.1",	.clk = &fsmc1_clk},
+	{ .dev_id = "fsmc-nand.2",	.clk = &fsmc2_clk},
+	{ .dev_id = "fsmc-nand.3",	.clk = &fsmc3_clk},
 	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
 	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
@@ -802,7 +834,7 @@ static struct clk_lookup spear300_clk_lookups[] = {
 /* array of all spear 310 clock lookups */
 static struct clk_lookup spear310_clk_lookups[] = {
 #ifdef CONFIG_CPU_SPEAR310
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "uart1",		.clk = &spear310_uart1_clk},
 	{ .dev_id = "uart2",		.clk = &spear310_uart2_clk},
@@ -816,7 +848,7 @@ static struct clk_lookup spear310_clk_lookups[] = {
 static struct clk_lookup spear320_clk_lookups[] = {
 #ifdef CONFIG_CPU_SPEAR320
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
