@@ -29,6 +29,7 @@ obj-$(CONFIG_MACH_SPEAR320_EVB)		+= i2c_eval_board.o
 obj-$(CONFIG_MACH_SPEAR600_EVB)		+= i2c_eval_board.o
 
 ifeq ($(CONFIG_PM),y)
-obj-$(CONFIG_ARCH_SPEAR3XX)	+= pm.o sleep.o
-obj-$(CONFIG_ARCH_SPEAR6XX)	+= pm.o sleep.o
+obj-$(CONFIG_ARCH_SPEAR3XX)	+= pm.o sleep.o cpu_suspend.o
+obj-$(CONFIG_ARCH_SPEAR6XX)	+= pm.o sleep.o cpu_suspend.o
+obj-$(CONFIG_ARCH_SPEAR13XX)	+= cpu_suspend.o
 endif

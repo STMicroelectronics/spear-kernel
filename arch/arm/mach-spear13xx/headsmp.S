@@ -13,8 +13,6 @@
 #include <linux/linkage.h>
 #include <linux/init.h>
 
-	__INIT
-
 /*
  * This one is picked from Tegra :-
  *
@@ -85,6 +83,10 @@ pen:	ldr	r7, [r6]
 	cmp	r7, r0
 	bne	pen
 
+	/* re-enable coherency */
+	mrc	p15, 0, r0, c1, c0, 1
+	orr	r0, r0, #(1 << 6) | (1 << 0)
+	mcr	p15, 0, r0, c1, c0, 1
 	/*
 	 * we've been released from the holding pen: secondary_stack
 	 * should now contain the SVC stack for this core

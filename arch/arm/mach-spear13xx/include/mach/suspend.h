@@ -17,31 +17,29 @@
 #include <mach/hardware.h>
 
 #ifndef __ASSEMBLER__
-extern void spear_sleep_mode(suspend_state_t state, int revision);
+extern void spear_sleep_mode(suspend_state_t state, unsigned long *saveblk,
+		int revision);
 extern unsigned int spear_sleep_mode_sz;
 extern void spear_wakeup(void);
 extern unsigned int spear_wakeup_sz;
+extern int spear_cpu_suspend(suspend_state_t, long);
+extern void spear_clocksource_resume(void);
+extern void spear_clocksource_suspend(void);
 #endif
 
 /* SRAM related defines*/
-#define SRAM_STACK_STRT_OFF	0x500
-#define SRAM_STACK_SCR_OFFS	0xF00
+#define SRAM_STACK_STRT_OFF	0x650
+#define SRAM_STACK_SCR_OFFS	0x900
 #define SPEAR_START_SRAM	SPEAR13XX_SYSRAM1_BASE
-#define SPEAR_LIMIT_SRAM	(SPEAR_START_SRAM + SZ_4K - 1)
+#define SPEAR_LIMIT_SRAM	(SPEAR_START_SRAM + SZ_4K - 4)
+#define SPEAR_SRAM_START_PA	SPEAR_START_SRAM
+#define SPEAR_SRAM_STACK_L2	(SPEAR_START_SRAM + SRAM_STACK_STRT_OFF - 0x30)
 #define SPEAR_SRAM_STACK_PA	(SPEAR_START_SRAM + SRAM_STACK_STRT_OFF)
 #define SPEAR_SRAM_SCR_REG	(SPEAR_START_SRAM + SRAM_STACK_SCR_OFFS)
+#define SRAM_SCRATCH_PA		(SPEAR13XX_SYS_LOCATION)
 /* SPEAr subsystem physical addresses */
 #define MPMC_BASE_PA		SPEAR13XX_MPMC_BASE
 #define MISC_BASE_PA		SPEAR13XX_MISC_BASE
-
-/* ARM Modes of Operation */
-#define MODE_USR_32		0x10
-#define MODE_FIQ_32		0x11
-#define MODE_IRQ_32		0x12
-#define MODE_SVC_32		0x13
-#define MODE_ABT_32		0x17
-#define MODE_UND_32		0x1B
-#define MODE_SYS_32		0x1F
-#define MODE_BITS		0x1F
+#define GPIO_START_PA		SPEAR13XX_GPIO0_BASE
 
 #endif /* __MACH_SUSPEND_H */

@@ -1150,7 +1150,7 @@ put_src_clk:
 #endif
 
 /* Do spear13xx familiy common initialization part here */
-void __init spear13xx_init(void)
+void spear13xx_init(void)
 {
 	int ret;
 
