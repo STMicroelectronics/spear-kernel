@@ -34,10 +34,10 @@ static int spear_pm_sleep(suspend_state_t state)
 		/* Increment destination pointer by the size copied*/
 		sram_dest += roundup(spear_wakeup_sz, 4);
 
-		pm_cfg = readl(PCM_CFG);
+		pm_cfg = readl(VA_PCM_CFG);
 		/* source gpio interrupt through GIC */
 		pm_cfg &= ~(1 << 2);
-		writel(pm_cfg, PCM_CFG);
+		writel(pm_cfg, VA_PCM_CFG);
 	}
 
 	/* Copy the Sleep code on to the SRAM*/
