@@ -305,7 +305,7 @@ static unsigned int _c3_user2kernel(c3_buffer_t *buffer,
 		for (cnt = 0; cnt < buffer->size / 4; cnt++)
 			printk(
 				C3_KERN_DEBUG "\t[@%d] %08x\n", cnt,
-				C3_CONV_INT_32((unsigned int)(((unsigned int *)
+				cpu_to_be32((unsigned int)(((unsigned int *)
 				buffer->kernel_ptr)[cnt])));*/
 	}
 #endif  /* DEBUG */
