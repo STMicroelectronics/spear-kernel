@@ -1047,7 +1047,7 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 	/* Set the Pll-2 as parent for gmac_phy_input_clk */
 	clk_set_parent(input_clk, input_pclk);
 
-	if (pdata->interface == PHY_INTERFACE_MODE_RGMII) {
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
 		/*
 		 * For the rmii interface select gmac_phy_synth_clk
 		 * as the parent and set the clock to 50 Mhz
