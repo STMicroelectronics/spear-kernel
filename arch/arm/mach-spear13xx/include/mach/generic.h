@@ -430,6 +430,7 @@ void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
+void nand_select_bank(u32 bank, u32 busw);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
 void pcm_init(struct device *dma_dev);
@@ -510,6 +511,7 @@ void __init spear1310_map_io(void);
 /* Add spear1340 machine device structure declarations here */
 extern struct amba_device spear1340_uart1_device;
 extern struct platform_device spear1340_i2c1_device;
+extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;

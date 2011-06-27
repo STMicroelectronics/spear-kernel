@@ -111,7 +111,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
-	&spear13xx_nand_device,
+	&spear1340_nand_device,
 	&spear1340_i2s_play_device,
 	&spear1340_i2s_record_device,
 	&spear13xx_ohci0_device,
@@ -287,7 +287,7 @@ static void __init spear1340_evb_init(void)
 	 */
 	/* set nand device's plat data */
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
+	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
 

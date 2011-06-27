@@ -413,7 +413,7 @@ void __init nand_mach_init(u32 busw)
 	writel(fsmc_cfg, reg);
 }
 
-static void nand_select_bank(u32 bank, u32 busw)
+void nand_select_bank(u32 bank, u32 busw)
 {
 	u32 fsmc_cfg = readl(VA_FSMC_CFG);
 
