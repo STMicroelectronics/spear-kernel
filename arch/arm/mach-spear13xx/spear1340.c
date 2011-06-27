@@ -13,6 +13,7 @@
 
 #include <asm/irq.h>
 #include <linux/amba/serial.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
 #include <mach/dma.h>
@@ -823,6 +824,32 @@ struct amba_device spear1340_uart1_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {SPEAR1340_IRQ_UART1, NO_IRQ},
+};
+
+static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
+	.select_bank = nand_select_bank,
+};
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR1340_FSMC_NAND_BASE,
+		.end = SPEAR1340_FSMC_NAND_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR13XX_FSMC_BASE,
+		.end = SPEAR13XX_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1340_nand_device = {
+	.name = "fsmc-nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &spear1340_nand_platform_data,
 };
 
 /* i2c device registeration */
