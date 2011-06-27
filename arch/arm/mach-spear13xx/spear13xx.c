@@ -1171,7 +1171,13 @@ void __init spear13xx_init(void)
 	 * Comment from nomadik:
 	 * At full speed latency must be >=2, so 0x249 in low bits
 	 */
-	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+	if (cpu_is_spear1340() || cpu_is_spear1310()) {
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260000,
+				0xfe00ffff);
+	} else {
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249,
+				0xfe00ffff);
+	}
 #endif
 
 #ifdef CONFIG_SND_SOC_STA529
