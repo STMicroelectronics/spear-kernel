@@ -1332,55 +1332,55 @@ static struct clk cec1_clk = {
 	.recalc = &follow_parent,
 };
 
-/* SPDIFF Out clk */
-static struct pclk_info spdiff_out_pclk_info[] = {
+/* SPDIF Out clk */
+static struct pclk_info spdif_out_pclk_info[] = {
 	{
 		.pclk = &gen_synth2_clk,
-		.pclk_val = SPEAR1340_SPDIFF_OUT_GSYNT2_VAL,
+		.pclk_val = SPEAR1340_SPDIF_OUT_GSYNT2_VAL,
 	}, {
 		.pclk = &i2s_src_pad_clk,
-		.pclk_val = SPEAR1340_SPDIFF_OUT_I2S_PAD_VAL,
+		.pclk_val = SPEAR1340_SPDIF_OUT_I2S_PAD_VAL,
 	},
 };
 
-static struct pclk_sel spdiff_out_pclk_sel = {
-	.pclk_info = spdiff_out_pclk_info,
-	.pclk_count = ARRAY_SIZE(spdiff_out_pclk_info),
+static struct pclk_sel spdif_out_pclk_sel = {
+	.pclk_info = spdif_out_pclk_info,
+	.pclk_count = ARRAY_SIZE(spdif_out_pclk_info),
 	.pclk_sel_reg = VA_SPEAR1340_PERIP_CLK_CFG,
-	.pclk_sel_mask = SPEAR1340_SPDIFF_CLK_MASK,
+	.pclk_sel_mask = SPEAR1340_SPDIF_CLK_MASK,
 };
 
-static struct clk spdiff_out_clk = {
+static struct clk spdif_out_clk = {
 	.en_reg = VA_SPEAR1340_PERIP3_CLK_ENB,
-	.en_reg_bit = SPEAR1340_SPDIFF_OUT_CLK_ENB,
-	.pclk_sel = &spdiff_out_pclk_sel,
-	.pclk_sel_shift = SPEAR1340_SPDIFF_OUT_CLK_SHIFT,
+	.en_reg_bit = SPEAR1340_SPDIF_OUT_CLK_ENB,
+	.pclk_sel = &spdif_out_pclk_sel,
+	.pclk_sel_shift = SPEAR1340_SPDIF_OUT_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
-/* SPDIFF In clk */
-static struct pclk_info spdiff_in_pclk_info[] = {
+/* SPDIF In clk */
+static struct pclk_info spdif_in_pclk_info[] = {
 	{
 		.pclk = &pll2_clk,
-		.pclk_val = SPEAR1340_SPDIFF_IN_PLL2_VAL,
+		.pclk_val = SPEAR1340_SPDIF_IN_PLL2_VAL,
 	}, {
 		.pclk = &gen_synth0_clk,
-		.pclk_val = SPEAR1340_SPDIFF_IN_GSYNT0_VAL,
+		.pclk_val = SPEAR1340_SPDIF_IN_GSYNT0_VAL,
 	},
 };
 
-static struct pclk_sel spdiff_in_pclk_sel = {
-	.pclk_info = spdiff_in_pclk_info,
-	.pclk_count = ARRAY_SIZE(spdiff_in_pclk_info),
+static struct pclk_sel spdif_in_pclk_sel = {
+	.pclk_info = spdif_in_pclk_info,
+	.pclk_count = ARRAY_SIZE(spdif_in_pclk_info),
 	.pclk_sel_reg = VA_SPEAR1340_PERIP_CLK_CFG,
-	.pclk_sel_mask = SPEAR1340_SPDIFF_CLK_MASK,
+	.pclk_sel_mask = SPEAR1340_SPDIF_CLK_MASK,
 };
 
-static struct clk spdiff_in_clk = {
+static struct clk spdif_in_clk = {
 	.en_reg = VA_SPEAR1340_PERIP3_CLK_ENB,
-	.en_reg_bit = SPEAR1340_SPDIFF_IN_CLK_ENB,
-	.pclk_sel = &spdiff_in_pclk_sel,
-	.pclk_sel_shift = SPEAR1340_SPDIFF_IN_CLK_SHIFT,
+	.en_reg_bit = SPEAR1340_SPDIF_IN_CLK_ENB,
+	.pclk_sel = &spdif_in_pclk_sel,
+	.pclk_sel_shift = SPEAR1340_SPDIF_IN_CLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1545,8 +1545,8 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "arasan_cf",			.clk = &cfxd_clk},
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
 	{.dev_id = "mali",			.clk = &mali_clk},
-	{.dev_id = "spdif_out",			.clk = &spdiff_out_clk},
-	{.dev_id = "spdif_in",			.clk = &spdiff_in_clk},
+	{.dev_id = "spdif_out",			.clk = &spdif_out_clk},
+	{.dev_id = "spdif_in",			.clk = &spdif_in_clk},
 	{.dev_id = "video_dec",			.clk = &video_dec_clk},
 	{.dev_id = "video_enc",			.clk = &video_enc_clk},
 
