@@ -1529,8 +1529,8 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "cec_synth_input_clk",	.clk = &cec_synth_input_clk},
 	{.dev_id = "cec0_synth_clk",		.clk = &cec0_synth_clk},
 	{.dev_id = "cec1_synth_clk",		.clk = &cec1_synth_clk},
-	{.dev_id = "cec0_clk",			.clk = &cec0_clk},
-	{.dev_id = "cec1_clk",			.clk = &cec1_clk},
+	{.dev_id = "cec.0",			.clk = &cec0_clk},
+	{.dev_id = "cec.1",			.clk = &cec1_clk},
 
 	/* clocks having multiple parent source from above clocks */
 	{.dev_id = "clcd_pixel_clk",		.clk = &clcd_pixel_clk},
@@ -1544,11 +1544,11 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "sdhci",			.clk = &sdhci_clk},
 	{.dev_id = "arasan_cf",			.clk = &cfxd_clk},
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
-	{.dev_id = "mali_clk",			.clk = &mali_clk},
-	{.dev_id = "spdiff_out_clk",		.clk = &spdiff_out_clk},
-	{.dev_id = "spdiff_in_clk",		.clk = &spdiff_in_clk},
-	{.dev_id = "video_dec_clk",		.clk = &video_dec_clk},
-	{.dev_id = "video_enc_clk",		.clk = &video_enc_clk},
+	{.dev_id = "mali",			.clk = &mali_clk},
+	{.dev_id = "spdif_out",			.clk = &spdiff_out_clk},
+	{.dev_id = "spdif_in",			.clk = &spdiff_in_clk},
+	{.dev_id = "video_dec",			.clk = &video_dec_clk},
+	{.dev_id = "video_enc",			.clk = &video_enc_clk},
 
 	/* clock derived from ahb clk */
 	{.dev_id = "smi",			.clk = &smi_clk},
@@ -1570,13 +1570,13 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "sysram0",			.clk = &sysram0_clk},
 	{.dev_id = "sysram1",			.clk = &sysram1_clk},
 	{.dev_id = "acp_clk",			.clk = &acp_clk},
-	{.dev_id = "cam0_clk",			.clk = &cam0_clk},
-	{.dev_id = "cam1_clk",			.clk = &cam1_clk},
-	{.dev_id = "cam2_clk",			.clk = &cam2_clk},
-	{.dev_id = "cam3_clk",			.clk = &cam3_clk},
-	{.dev_id = "plgpio_clk",		.clk = &plgpio_clk},
-	{.dev_id = "pwm_clk",			.clk = &pwm_clk},
-	{.dev_id = "video_input_port_clk",	.clk = &video_input_port_clk},
+	{.dev_id = "spear_camif.0",		.clk = &cam0_clk},
+	{.dev_id = "spear_camif.1",		.clk = &cam1_clk},
+	{.dev_id = "spear_camif.2",		.clk = &cam2_clk},
+	{.dev_id = "spear_camif.3",		.clk = &cam3_clk},
+	{.dev_id = "plgpio",			.clk = &plgpio_clk},
+	{.dev_id = "pwm",			.clk = &pwm_clk},
+	{.dev_id = "video_input_port",		.clk = &video_input_port_clk},
 
 	/* clock derived from apb clk */
 	{.dev_id = "adc",			.clk = &adc_clk},
