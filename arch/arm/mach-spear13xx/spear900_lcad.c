@@ -28,6 +28,69 @@
 #include <mach/gpio.h>
 #include <mach/hardware.h>
 
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN7	7
+#define SPEAR_GPIO_BTN5	5
+#define SPEAR_GPIO_BTN6	6
+#define SPEAR_GPIO_BTN8	8
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0, 
+		.gpio = SPEAR_GPIO_BTN7, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_1, 
+		.gpio = SPEAR_GPIO_BTN5, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN1",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_2, 
+		.gpio = SPEAR_GPIO_BTN6, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN2",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_3, 
+		.gpio = SPEAR_GPIO_BTN8, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN3",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+};
+ 
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons        = spear_gpio_keys_table,
+	.nbuttons       = ARRAY_SIZE(spear_gpio_keys_table),
+};
+ 
+static struct platform_device spear900_device_gpiokeys = {
+	.name      = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+#endif
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
@@ -70,8 +133,12 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_wdt_device,
-
+	
 	/* spear900 specific devices */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear900_device_gpiokeys,
+#endif
+	
 };
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
