@@ -27,6 +27,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	void (*spear_sram_wake)(void) = NULL;
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 
+	/* At the moment STANDBY and S2RAM does the same things: ONLY FOR TEST */
 	if (state == PM_SUSPEND_MEM) {
 		u32 pm_cfg;
 		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
@@ -40,6 +41,19 @@ static int spear_pm_sleep(suspend_state_t state)
 		writel(pm_cfg, VA_PCM_CFG);
 	}
 
+	if (state == PM_SUSPEND_STANDBY) {
+		u32 pm_cfg;
+		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
+				spear_wakeup_sz);
+		/* Increment destination pointer by the size copied*/
+		sram_dest += roundup(spear_wakeup_sz, 4);
+
+		pm_cfg = readl(VA_PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, VA_PCM_CFG);
+	}
+	
 	/* Copy the Sleep code on to the SRAM*/
 	spear_sram_sleep = memcpy(sram_dest, (void *)spear_sleep_mode,
 			spear_sleep_mode_sz);
