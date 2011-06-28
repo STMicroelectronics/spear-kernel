@@ -26,6 +26,7 @@
  *
  */
 
+#include <linux/backlight.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/kernel.h>
@@ -480,6 +481,83 @@ static inline void db9000fb_set_truecolor(u_int is_true_color)
 	/* do your machine-specific setup if needed */
 }
 
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+
+static int db9000_bl_update_status(struct backlight_device *bl)
+{
+	struct db9000fb_info *fbi = bl_get_data(bl);
+	int power = fbi->bl_power;
+	int brightness = bl->props.brightness;
+
+	if (bl->props.fb_blank != fbi->bl_power)
+		power =	bl->props.fb_blank;
+	else if (bl->props.power != fbi->bl_power)
+		power =	bl->props.power;
+
+	if (power == FB_BLANK_UNBLANK && brightness < 0)
+		brightness = lcd_readl(fbi, DB9000_PWMDCR);
+	else if (power != FB_BLANK_UNBLANK)
+		brightness = 0;
+
+	lcd_writel(fbi, DB9000_PWMDCR, brightness);
+	bl->props.fb_blank = bl->props.power = fbi->bl_power = power;
+
+	return 0;
+}
+
+static int db9000_bl_get_brightness(struct backlight_device *bl)
+{
+	struct db9000fb_info *fbi = bl_get_data(bl);
+
+	return lcd_readl(fbi, DB9000_PWMDCR);
+}
+
+static const struct backlight_ops db9000_lcd_bl_ops = {
+	.update_status = db9000_bl_update_status,
+	.get_brightness	= db9000_bl_get_brightness,
+};
+
+static void init_backlight(struct db9000fb_info *fbi)
+{
+	struct backlight_device *bl;
+	struct backlight_properties props = {0, };
+
+	if (fbi->backlight)
+		return;
+	fbi->bl_power = FB_BLANK_UNBLANK;
+
+	props.max_brightness = 0xff;
+	bl = backlight_device_register("backlight", &fbi->pdev->dev, fbi,
+			&db9000_lcd_bl_ops, &props);
+	if (IS_ERR(bl)) {
+		dev_err(&fbi->pdev->dev, "error %ld on backlight register\n",
+				PTR_ERR(bl));
+		return;
+	}
+	fbi->backlight = bl;
+
+	bl->props.power = FB_BLANK_UNBLANK;
+	bl->props.fb_blank = FB_BLANK_UNBLANK;
+	bl->props.brightness = db9000_bl_get_brightness(bl);
+}
+
+static void exit_backlight(struct db9000fb_info *fbi)
+{
+	if (fbi->backlight)
+		backlight_device_unregister(fbi->backlight);
+}
+#else
+
+static void init_backlight(struct db9000fb_info *fbi)
+{
+	printk(KERN_ERR "backlight control is not available\n");
+}
+
+static void exit_backlight(struct db9000fb_info *fbi)
+{
+}
+#endif
+
 /*
  * db9000fb_set_par():
  *	Set the user defined part of the display for the specified console
@@ -818,9 +896,10 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
  */
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on)
 {
-/* pr_debug("db9000fb: backlight o%s\n", on ? "n" : "ff"); */
-/* fbi->reg_pwmfr = (DB9000_PWMFR_PWM_FCE | DB9000_PWMFR_PWM_FCD(0x1000)); */
-/* fbi->reg_pwmdcr = DB9000_PWMDCR_DCR(0x40); */
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	fbi->reg_pwmdcr		= 0x80;
+	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
+#endif
 }
 
 static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
@@ -866,7 +945,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
-	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
+	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dear);
 
 	/* enable BAU event for IRQ */
 	isr = lcd_readl(fbi, DB9000_ISR);
@@ -876,12 +955,15 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 
 	lcd_writel(fbi, DB9000_CR1,
 		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE);
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
+	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
+#endif
 }
 
 static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 {
 	uint32_t cr1;
-
 	cr1 = lcd_readl(fbi, DB9000_CR1) & ~DB9000_CR1_ENB;
 	lcd_writel(fbi, DB9000_CR1, cr1);
 	msleep(100);
@@ -1127,6 +1209,9 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 	fbi->reg_cr1		= inf->modes->cr1;
 	fbi->reg_pctr		= inf->modes->pctr;
 	fbi->reg_dear		= inf->modes->dear;
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	fbi->reg_pwmfr		= inf->modes->pwmfr;
+#endif
 /* decode_mode: */
 	db9000fb_decode_mode_info(fbi, inf->modes, inf->num_modes);
 }
@@ -1603,6 +1688,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_free_fbi;
 	}
+
 	/* Read the core version register and print it out */
 	db9000_reg = lcd_readl(fbi, DB9000_CIR);
 	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
@@ -1649,6 +1735,9 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	 * This makes sure that our colour bitfield
 	 * descriptors are correctly initialised.
 	 */
+	fbi->pdev = pdev;
+	init_backlight(fbi);
+
 	ret = db9000fb_check_var(&fbi->fb.var, &fbi->fb);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get suitable mode\n");
@@ -1715,6 +1804,7 @@ err_clear_plat_data:
 err_free_irq:
 	free_irq(irq, fbi);
 err_free_framebuffer_addr:
+	exit_backlight(fbi);
 	iounmap(addr);
 err_free_mmio_base:
 	iounmap(fbi->mmio_base);
@@ -1749,6 +1839,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, fbi);
+	exit_backlight(fbi);
 	iounmap(fbi->fb.screen_base);
 	iounmap(fbi->mmio_base);
 

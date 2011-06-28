@@ -75,6 +75,7 @@ struct db9000fb_info {
 	dma_addr_t		dma_buff_phys;
 	unsigned long		frame_base;
 	struct db9000fb_dma_descriptor	*f_descriptor;
+	struct platform_device *pdev;
 	/*
 	 * These are the addresses we mapped
 	 * the framebuffer memory region to.
@@ -137,6 +138,10 @@ struct db9000fb_info {
 #endif
 	/* Completion - for PAN display alignment with VSYNC/BAU event */
 	struct completion vsync_notifier;
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	struct backlight_device *backlight;
+	u8 bl_power;
+#endif
 };
 
 #define TO_INF(ptr, member) container_of(ptr, struct db9000fb_info, member)
