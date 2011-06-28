@@ -92,21 +92,47 @@ static struct snd_soc_ops sta529_evb_ops = {
 };
 
 /* synopsys digital audio interface glue - connects codec <--> CPU */
-static struct snd_soc_dai_link evb_dai = {
-	.name		= "STA529",
-	.stream_name	= "STA529",
-	.cpu_dai_name	= "designware-i2s.0",
-	.platform_name	= "designware-pcm-audio",
-	.codec_dai_name	= "sta529-audio",
-	.codec_name	= "sta529-codec.0-001a",
-	.ops		= &sta529_evb_ops,
+static struct snd_soc_dai_link spear13xx_evb_dai = {
+		.name		= "sta529-pcm",
+		.stream_name	= "pcm",
+		.cpu_dai_name	= "designware-i2s.0",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_evb_ops,
+};
+
+static struct snd_soc_dai_link spear1340_evb_dai[] = {
+	{
+		.name		= "sta529-pcm0",
+		.stream_name	= "pcm",
+		.cpu_dai_name	= "designware-i2s.0",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_evb_ops,
+	}, {
+		.name		= "sta529-pcm1",
+		.stream_name	= "pcm",
+		.cpu_dai_name	= "designware-i2s.1",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_evb_ops,
+	},
 };
 
 /* synopsys audio machine driver */
-static struct snd_soc_card spear_sta529 = {
+static struct snd_soc_card spear13xx_sta529 = {
 	.name		= "spear_sta529",
-	.dai_link	= &evb_dai,
+	.dai_link	= &spear13xx_evb_dai,
 	.num_links	= 1,
+};
+
+static struct snd_soc_card spear1340_sta529 = {
+	.name		= "spear_sta529",
+	.dai_link	= spear1340_evb_dai,
+	.num_links	= ARRAY_SIZE(spear1340_evb_dai),
 };
 
 static struct platform_device *evb_snd_device;
@@ -114,6 +140,12 @@ static struct platform_device *evb_snd_device;
 static int __init dw_init(void)
 {
 	int ret;
+	struct snd_soc_card *spear_soc_card;
+
+	if (cpu_is_spear1340())
+		spear_soc_card = &spear1340_sta529;
+	else
+		spear_soc_card = &spear13xx_sta529;
 
 	/* Create and register platform device */
 	evb_snd_device = platform_device_alloc("soc-audio", 0);
@@ -121,8 +153,7 @@ static int __init dw_init(void)
 		printk(KERN_ERR "platform_device_alloc fails\n");
 		return -ENOMEM;
 	}
-
-	platform_set_drvdata(evb_snd_device, &spear_sta529);
+	platform_set_drvdata(evb_snd_device, spear_soc_card);
 	ret = platform_device_add(evb_snd_device);
 	if (ret) {
 		printk(KERN_ERR "Unable to add platform device\n");
