@@ -39,6 +39,8 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x18),
 	.pctr = 0,
 	.dear = 0,
 };
@@ -69,6 +71,8 @@ static struct db9000fb_mode_info hannstar_hsd07_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x18),
 	.pctr = 0,
 	.dear = 0,
 };
@@ -100,6 +104,8 @@ static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
+	.pwmfr = DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x8),
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
