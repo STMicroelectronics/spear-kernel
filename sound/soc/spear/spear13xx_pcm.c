@@ -472,7 +472,7 @@ static int __devexit spear13xx_soc_platform_remove(struct platform_device *pdev)
 
 static struct platform_driver spear13xx_pcm_driver = {
 	.driver = {
-			.name = "spear13xx-pcm-audio",
+			.name = "spear-pcm-audio",
 			.owner = THIS_MODULE,
 	},
 

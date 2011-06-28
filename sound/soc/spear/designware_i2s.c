@@ -131,6 +131,7 @@ struct dw_i2s_dev {
 	int max_channel;
 	int capture_irq;
 	struct device *dev;
+	struct snd_soc_dai_driver *dai_driver;
 	struct dw_pcm_dma_params *dma_params[2];
 };
 
@@ -457,22 +458,6 @@ static struct snd_soc_dai_ops dw_i2s_dai_ops = {
 	.trigger	= dw_i2s_trigger,
 };
 
-struct snd_soc_dai_driver dw_i2s_dai = {
-	.playback = {
-		.channels_min = MIN_CHANNEL_NUM,
-		.channels_max = MAX_CHANNEL_NUM,
-		.rates = DESIGNWARE_I2S_RATES,
-		.formats = DESIGNWARE_I2S_FORMAT,
-	},
-	.capture = {
-		.channels_min = MIN_CHANNEL_NUM,
-		.channels_max = MAX_CHANNEL_NUM,
-		.rates = DESIGNWARE_I2S_RATES,
-		.formats = DESIGNWARE_I2S_FORMAT,
-	},
-	.ops = &dw_i2s_dai_ops,
-};
-
 static int
 dw_i2s_probe(struct platform_device *pdev)
 {
@@ -481,6 +466,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 	unsigned int cap;
+	struct snd_soc_dai_driver *dw_i2s_dai;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "Invalid platform data\n");
@@ -524,16 +510,23 @@ dw_i2s_probe(struct platform_device *pdev)
 		goto err_clk_disable;
 	}
 
+	dw_i2s_dai = kzalloc(sizeof(*dw_i2s_dai), GFP_KERNEL);
+	if (!dw_i2s_dai) {
+		dev_err(&pdev->dev, "mem allocation failed for dai driver\n");
+		ret = -ENOMEM;
+		goto err_soc_dai_driver;
+	}
+
 	if (cap & PLAY) {
 		dev_dbg(&pdev->dev, " SPEAr13xx: play supported\n");
 		dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
 		if (!dev->play_irq)
 			dev_warn(&pdev->dev, "play irq not defined\n");
 		else {
-
-			memset((void *)&dw_i2s_dai.capture, 0 ,
-					sizeof(dw_i2s_dai.capture));
-			dw_i2s_dai.playback.channels_max = dev->max_channel;
+			dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
+			dw_i2s_dai->playback.channels_max = dev->max_channel;
+			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
+			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 		}
 	}
 
@@ -543,15 +536,19 @@ dw_i2s_probe(struct platform_device *pdev)
 		if (!dev->capture_irq)
 			dev_warn(&pdev->dev, "record irq not defined\n");
 		else {
-			memset((void *)&dw_i2s_dai.playback, 0 ,
-					sizeof(dw_i2s_dai.playback));
-			dw_i2s_dai.capture.channels_max = dev->max_channel;
+			dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
+			dw_i2s_dai->capture.channels_max = dev->max_channel;
+			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
+			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 		}
 	}
 
+	dw_i2s_dai->ops = &dw_i2s_dai_ops,
+
 	dev->dev = &pdev->dev;
+	dev->dai_driver = dw_i2s_dai;
 	dev_set_drvdata(&pdev->dev, dev);
-	ret = snd_soc_register_dai(&pdev->dev, &dw_i2s_dai);
+	ret = snd_soc_register_dai(&pdev->dev, dw_i2s_dai);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "not able to register dai\n");
 		goto err_set_drvdata;
@@ -563,6 +560,8 @@ err_set_drvdata:
 	dev_set_drvdata(&pdev->dev, NULL);
 	free_irq(dev->capture_irq, pdev);
 	free_irq(dev->play_irq, pdev);
+	kfree(dw_i2s_dai);
+err_soc_dai_driver:
 	iounmap(dev->i2s_base);
 err_clk_disable:
 	clk_disable(dev->clk);
@@ -586,6 +585,7 @@ dw_i2s_remove(struct platform_device *pdev)
 	iounmap(dev->i2s_base);
 	clk_disable(dev->clk);
 	clk_put(dev->clk);
+	kfree(dev->dai_driver);
 	kfree(dev);
 	release_mem_region(dev->res->start, resource_size(dev->res));
 
