@@ -24,12 +24,69 @@
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
 
+/*
+ * Pad multiplexing for making all pads as gpio's. This is done to override the
+ * values passed from bootloader and start from scratch.
+ */
+static struct pmx_mux_reg pmx_pads_as_gpio_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REG1_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_4,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_6,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = SPEAR1340_PMX_PADS_AS_GPIO_REG8_MASK,
+		.value = 0x0,
+	},
+};
+
+static struct pmx_dev_mode pmx_pads_as_gpio_modes[] = {
+	{
+		.mux_regs = pmx_pads_as_gpio_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pads_as_gpio_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_pads_as_gpio = {
+	.name = "pads_as_gpio",
+	.modes = pmx_pads_as_gpio_modes,
+	.mode_count = ARRAY_SIZE(pmx_pads_as_gpio_modes),
+};
+
 /* Pad multiplexing for fsmc_16bit device */
 static struct pmx_mux_reg pmx_fsmc_16bit_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
+		.value = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
 	},
 };
 
@@ -52,6 +109,10 @@ static struct pmx_mux_reg pmx_keyboard_row_col_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_ROW_COL_MASK,
 		.value = SPEAR1340_PMX_KBD_ROW_COL_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
+		.value = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
 	},
 };
 
@@ -74,6 +135,10 @@ static struct pmx_mux_reg pmx_keyboard_col5_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_COL5_MASK,
 		.value = SPEAR1340_PMX_KBD_COL5_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM1_AND_KBD_COL5_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM1_AND_KBD_COL5_REG1_MASK,
 	},
 };
 
@@ -96,6 +161,10 @@ static struct pmx_mux_reg pmx_uart0_enh_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_UART0_ENH_AND_GPT_REG1_MASK,
+		.value = SPEAR1340_PMX_UART0_ENH_AND_GPT_REG1_MASK,
 	},
 };
 
@@ -112,6 +181,50 @@ struct pmx_dev spear1340_pmx_uart0_enh = {
 	.mode_count = ARRAY_SIZE(pmx_uart0_enh_modes),
 };
 
+/* pad multiplexing for i2c1 device */
+static struct pmx_mux_reg pmx_i2c1_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_I2C1_REG1_MASK,
+		.value = SPEAR1340_PMX_I2C1_REG1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c1_modes[] = {
+	{
+		.mux_regs = pmx_i2c1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2c1_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_i2c1 = {
+	.name = "i2c1",
+	.modes = pmx_i2c1_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
+};
+
+/* pad multiplexing for spdif_in device */
+static struct pmx_mux_reg pmx_spdif_in_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_SPDIF_IN_REG1_MASK,
+		.value = SPEAR1340_PMX_SPDIF_IN_REG1_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_spdif_in_modes[] = {
+	{
+		.mux_regs = pmx_spdif_in_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_spdif_in_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_spdif_in = {
+	.name = "spdif_in",
+	.modes = pmx_spdif_in_modes,
+	.mode_count = ARRAY_SIZE(pmx_spdif_in_modes),
+};
+
 /* pad multiplexing for gpt_0_1 device */
 static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
 	{
@@ -122,6 +235,14 @@ static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
 		.value = SPEAR1340_PMX_GPT_MASK |
 			SPEAR1340_PMX_GPT0_TMR0_CPT_MASK |
 			SPEAR1340_PMX_GPT0_TMR1_CLK_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_UART0_ENH_AND_GPT_REG1_MASK |
+			SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK |
+			SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK,
+		.value = SPEAR1340_PMX_UART0_ENH_AND_GPT_REG1_MASK |
+			SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK |
+			SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK,
 	},
 };
 
@@ -144,6 +265,10 @@ static struct pmx_mux_reg pmx_pwm1_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_KBD_COL5_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM1_AND_KBD_COL5_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM1_AND_KBD_COL5_REG1_MASK,
 	},
 };
 
@@ -166,6 +291,10 @@ static struct pmx_mux_reg pmx_pwm2_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT0_TMR0_CPT_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK,
 	},
 };
 
@@ -188,6 +317,10 @@ static struct pmx_mux_reg pmx_pwm3_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_GPT0_TMR1_CLK_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK,
 	},
 };
 
@@ -210,6 +343,10 @@ static struct pmx_mux_reg pmx_pwm0_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK,
 	},
 };
 
@@ -232,6 +369,10 @@ static struct pmx_mux_reg pmx_ssp0_cs1_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
 		.value = SPEAR1340_PMX_SSP0_CS1_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK,
+		.value = SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK,
 	},
 };
 
@@ -254,6 +395,14 @@ static struct pmx_mux_reg pmx_video_in_mux_cam0_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
 	},
 };
 
@@ -276,6 +425,16 @@ static struct pmx_mux_reg pmx_video_in_mux_cam1_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM1_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
 	},
 };
 
@@ -298,6 +457,12 @@ static struct pmx_mux_reg pmx_video_in_mux_cam2_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM2_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
 	},
 };
 
@@ -320,6 +485,16 @@ static struct pmx_mux_reg pmx_video_in_mux_cam3_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM3_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
+			SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
 	},
 };
 
@@ -342,6 +517,14 @@ static struct pmx_mux_reg pmx_cam3_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM3_MASK,
 		.value = SPEAR1340_PMX_CAM3_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
 	},
 };
 
@@ -364,6 +547,10 @@ static struct pmx_mux_reg pmx_cam2_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM2_MASK,
 		.value = SPEAR1340_PMX_CAM2_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
 	},
 };
 
@@ -386,6 +573,14 @@ static struct pmx_mux_reg pmx_cam1_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM1_MASK,
 		.value = SPEAR1340_PMX_CAM1_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
 	},
 };
 
@@ -408,6 +603,10 @@ static struct pmx_mux_reg pmx_cam0_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = SPEAR1340_PMX_CAM0_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
+		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
 	},
 };
 
@@ -424,12 +623,60 @@ struct pmx_dev spear1340_pmx_cam0 = {
 	.mode_count = ARRAY_SIZE(pmx_cam0_modes),
 };
 
+/* pad multiplexing for smi device */
+static struct pmx_mux_reg pmx_smi_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_SMI_REG3_MASK,
+		.value = SPEAR1340_PMX_SMI_REG3_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_smi_modes[] = {
+	{
+		.mux_regs = pmx_smi_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_smi_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_smi = {
+	.name = "smi",
+	.modes = pmx_smi_modes,
+	.mode_count = ARRAY_SIZE(pmx_smi_modes),
+};
+
+/* pad multiplexing for ssp0 device */
+static struct pmx_mux_reg pmx_ssp0_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_SSP0_REG3_MASK,
+		.value = SPEAR1340_PMX_SSP0_REG3_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_ssp0 = {
+	.name = "ssp0",
+	.modes = pmx_ssp0_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_modes),
+};
+
 /* pad multiplexing for ssp0_cs2 device */
 static struct pmx_mux_reg pmx_ssp0_cs2_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_SSP0_CS2_MASK,
 		.value = SPEAR1340_PMX_SSP0_CS2_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_TS_AND_SSP0_CS2_REG3_MASK,
+		.value = SPEAR1340_PMX_TS_AND_SSP0_CS2_REG3_MASK,
 	},
 };
 
@@ -446,12 +693,248 @@ struct pmx_dev spear1340_pmx_ssp0_cs2 = {
 	.mode_count = ARRAY_SIZE(pmx_ssp0_cs2_modes),
 };
 
+/* pad multiplexing for uart0 device */
+static struct pmx_mux_reg pmx_uart0_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_UART0_REG3_MASK,
+		.value = SPEAR1340_PMX_UART0_REG3_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart0_modes[] = {
+	{
+		.mux_regs = pmx_uart0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart0_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_uart0 = {
+	.name = "uart0",
+	.modes = pmx_uart0_modes,
+	.mode_count = ARRAY_SIZE(pmx_uart0_modes),
+};
+
+/* pad multiplexing for uart1 device */
+static struct pmx_mux_reg pmx_uart1_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_UART1_REG3_MASK,
+		.value = SPEAR1340_PMX_UART1_REG3_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart1_modes[] = {
+	{
+		.mux_regs = pmx_uart1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_uart1 = {
+	.name = "uart1",
+	.modes = pmx_uart1_modes,
+	.mode_count = ARRAY_SIZE(pmx_uart1_modes),
+};
+
+/* pad multiplexing for i2s_in device */
+static struct pmx_mux_reg pmx_i2s_in_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = SPEAR1340_PMX_I2S_IN_REG3_MASK,
+		.value = SPEAR1340_PMX_I2S_IN_REG3_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_4,
+		.mask = SPEAR1340_PMX_I2S_IN_REG4_MASK,
+		.value = SPEAR1340_PMX_I2S_IN_REG4_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2s_in_modes[] = {
+	{
+		.mux_regs = pmx_i2s_in_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_in_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_i2s_in = {
+	.name = "i2s_in",
+	.modes = pmx_i2s_in_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2s_in_modes),
+};
+
+/* pad multiplexing for i2s_out device */
+static struct pmx_mux_reg pmx_i2s_out_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_4,
+		.mask = SPEAR1340_PMX_I2S_OUT_REG4_MASK,
+		.value = SPEAR1340_PMX_I2S_OUT_REG4_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2s_out_modes[] = {
+	{
+		.mux_regs = pmx_i2s_out_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_out_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_i2s_out = {
+	.name = "i2s_out",
+	.modes = pmx_i2s_out_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2s_out_modes),
+};
+
+/* pad multiplexing for gmac device */
+static struct pmx_mux_reg pmx_gmac_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_4,
+		.mask = SPEAR1340_PMX_GMAC_REG4_MASK,
+		.value = SPEAR1340_PMX_GMAC_REG4_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_GMAC_REG5_MASK,
+		.value = SPEAR1340_PMX_GMAC_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_gmac_modes[] = {
+	{
+		.mux_regs = pmx_gmac_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_gmac_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_gmac = {
+	.name = "gmac",
+	.modes = pmx_gmac_modes,
+	.mode_count = ARRAY_SIZE(pmx_gmac_modes),
+};
+
+/* pad multiplexing for ssp0_cs3 device */
+static struct pmx_mux_reg pmx_ssp0_cs3_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_SSP0_CS3_REG5_MASK,
+		.value = SPEAR1340_PMX_SSP0_CS3_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_cs3_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_cs3_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs3_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_ssp0_cs3 = {
+	.name = "ssp0_cs3",
+	.modes = pmx_ssp0_cs3_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs3_modes),
+};
+
+/* pad multiplexing for i2c0 device */
+static struct pmx_mux_reg pmx_i2c0_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_I2C0_REG5_MASK,
+		.value = SPEAR1340_PMX_I2C0_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c0_modes[] = {
+	{
+		.mux_regs = pmx_i2c0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2c0_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_i2c0 = {
+	.name = "i2c0",
+	.modes = pmx_i2c0_modes,
+	.mode_count = ARRAY_SIZE(pmx_i2c0_modes),
+};
+
+/* pad multiplexing for cec0 device */
+static struct pmx_mux_reg pmx_cec0_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_CEC0_REG5_MASK,
+		.value = SPEAR1340_PMX_CEC0_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_cec0_modes[] = {
+	{
+		.mux_regs = pmx_cec0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_cec0_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_cec0 = {
+	.name = "cec0",
+	.modes = pmx_cec0_modes,
+	.mode_count = ARRAY_SIZE(pmx_cec0_modes),
+};
+
+/* pad multiplexing for cec1 device */
+static struct pmx_mux_reg pmx_cec1_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_CEC1_REG5_MASK,
+		.value = SPEAR1340_PMX_CEC1_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_cec1_modes[] = {
+	{
+		.mux_regs = pmx_cec1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_cec1_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_cec1 = {
+	.name = "cec1",
+	.modes = pmx_cec1_modes,
+	.mode_count = ARRAY_SIZE(pmx_cec1_modes),
+};
+
+/* pad multiplexing for spdif_out device */
+static struct pmx_mux_reg pmx_spdif_out_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
+		.value = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_spdif_out_modes[] = {
+	{
+		.mux_regs = pmx_spdif_out_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_spdif_out_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_spdif_out = {
+	.name = "spdif_out",
+	.modes = pmx_spdif_out_modes,
+	.mode_count = ARRAY_SIZE(pmx_spdif_out_modes),
+};
+
 /* pad multiplexing for fsmc_pnor device */
 static struct pmx_mux_reg pmx_fsmc_pnor_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MCIF_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK,
+		.value = SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = SPEAR1340_PMX_FSMC_PNOR_REG8_MASK,
+		.value = SPEAR1340_PMX_FSMC_PNOR_REG8_MASK,
 	},
 };
 
@@ -474,6 +957,16 @@ static struct pmx_mux_reg pmx_mcif_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MCIF_MASK,
 		.value = SPEAR1340_PMX_MCIF_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK |
+			SPEAR1340_PMX_MCIF_REG7_MASK,
+		.value = SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK |
+			SPEAR1340_PMX_MCIF_REG7_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = SPEAR1340_PMX_MCIF_REG8_MASK,
+		.value = SPEAR1340_PMX_MCIF_REG8_MASK,
 	},
 };
 
@@ -563,6 +1056,20 @@ static struct pmx_mux_reg pmx_clcd_mux[] = {
 		.mask = SPEAR1340_PMX_ARM_TRACE_MASK |
 			SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_CLCD_REG5_MASK |
+			SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG5_MASK,
+		.value = SPEAR1340_PMX_CLCD_REG5_MASK |
+			SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG5_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_6,
+		.mask = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG6_MASK,
+		.value = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG6_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG7_MASK,
+		.value = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG7_MASK,
 	},
 };
 
@@ -585,6 +1092,10 @@ static struct pmx_mux_reg pmx_arm_trace_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_ARM_TRACE_MASK,
 		.value = SPEAR1340_PMX_ARM_TRACE_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG5_MASK,
+		.value = SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG5_MASK,
 	},
 };
 
@@ -607,6 +1118,10 @@ static struct pmx_mux_reg pmx_devs_grp_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG5_MASK,
+		.value = SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG5_MASK,
 	},
 };
 
@@ -629,6 +1144,10 @@ static struct pmx_mux_reg pmx_miphy_dbg_mux[] = {
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_MIPHY_DBG_MASK,
 		.value = SPEAR1340_PMX_MIPHY_DBG_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG5_MASK,
+		.value = SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG5_MASK,
 	},
 };
 
