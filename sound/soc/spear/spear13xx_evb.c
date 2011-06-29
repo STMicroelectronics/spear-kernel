@@ -64,13 +64,13 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	if (cpu_is_spear1340()) {
-		val = readl(SPEAR1340_PERIP_CFG);
+		val = readl(VA_SPEAR1340_PERIP_CFG);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			val = (val & ~CHANNEL_MASK_M) | (channel << 4);
-			writel(val, SPEAR1340_PERIP_CFG);
+			writel(val, VA_SPEAR1340_PERIP_CFG);
 		} else {
 			val = (val & ~CHANNEL_MASK_S) | (channel << 6);
-			writel(val, SPEAR1340_PERIP_CFG);
+			writel(val, VA_SPEAR1340_PERIP_CFG);
 		}
 
 	}
@@ -78,9 +78,9 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 	else if (cpu_is_spear1300() || cpu_is_spear1310_reva() ||
 			cpu_is_spear900() || cpu_is_spear1310()) {
 		/*setting mode 0 in conf regiter: 32c offset*/
-		val = readl(PERIP_CFG);
+		val = readl(VA_PERIP_CFG);
 		val &= ~0x7;
-		writel(val, PERIP_CFG);
+		writel(val, VA_PERIP_CFG);
 
 	}
 
