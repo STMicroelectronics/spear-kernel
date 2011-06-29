@@ -301,7 +301,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_GPT0_TMR1_CLK_MASK	(1 << 4) /* Only clk & cpt */
 
 /* Write 0 to enable PWM0 */
-#define SPEAR1340_PMX_SSP0_CS0_MASK		(1 << 5)
+#define SPEAR1340_PMX_SSP0_CS1_MASK		(1 << 5)
 
 /* Write 0 to enable VIDEO_IN */
 #define SPEAR1340_PMX_CAM3_MASK			(1 << 6)
@@ -316,7 +316,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_CAM0_MASK			(1 << 9)
 
 /* Write 0 to enable TS */
-#define SPEAR1340_PMX_SSP0_CS1_MASK		(1 << 10)
+#define SPEAR1340_PMX_SSP0_CS2_MASK		(1 << 10)
 
 /* Write 0 to enable FSMC PNOR */
 #define SPEAR1340_PMX_MCIF_MASK			(1 << 11)
@@ -324,7 +324,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable CLCD */
 #define SPEAR1340_PMX_ARM_TRACE_MASK		(1 << 12)
 
-/* Write 0 to enable I2S, SSP0_CS2, CEC0, 1, SPDIF out, CLCD */
+/* Write 0 to enable I2S, SSP0_CS3, CEC0, 1, SPDIFF out, CLCD */
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
@@ -336,7 +336,7 @@ extern struct pmx_dev spear1340_pmx_pwm0;
 extern struct pmx_dev spear1340_pmx_pwm1;
 extern struct pmx_dev spear1340_pmx_pwm2;
 extern struct pmx_dev spear1340_pmx_pwm3;
-extern struct pmx_dev spear1340_pmx_ssp0_cs0;
+extern struct pmx_dev spear1340_pmx_ssp0_cs1;
 extern struct pmx_dev spear1340_pmx_video_in_mux_cam0;
 extern struct pmx_dev spear1340_pmx_video_in_mux_cam1;
 extern struct pmx_dev spear1340_pmx_video_in_mux_cam2;
@@ -345,7 +345,7 @@ extern struct pmx_dev spear1340_pmx_cam0;
 extern struct pmx_dev spear1340_pmx_cam1;
 extern struct pmx_dev spear1340_pmx_cam2;
 extern struct pmx_dev spear1340_pmx_cam3;
-extern struct pmx_dev spear1340_pmx_ssp0_cs1;
+extern struct pmx_dev spear1340_pmx_ssp0_cs2;
 extern struct pmx_dev spear1340_pmx_fsmc_pnor;
 extern struct pmx_dev spear1340_pmx_mcif;
 extern struct pmx_dev spear1340_pmx_sdhci;

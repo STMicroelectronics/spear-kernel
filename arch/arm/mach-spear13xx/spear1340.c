@@ -208,7 +208,7 @@ struct pmx_dev spear1340_pmx_pwm3 = {
 static struct pmx_mux_reg pmx_pwm0_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
-		.mask = SPEAR1340_PMX_SSP0_CS0_MASK,
+		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
 		.value = 0,
 	},
 };
@@ -226,26 +226,26 @@ struct pmx_dev spear1340_pmx_pwm0 = {
 	.mode_count = ARRAY_SIZE(pmx_pwm0_modes),
 };
 
-/* pad multiplexing for ssp0_cs0 device */
-static struct pmx_mux_reg pmx_ssp0_cs0_mux[] = {
+/* pad multiplexing for ssp0_cs1 device */
+static struct pmx_mux_reg pmx_ssp0_cs1_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
-		.mask = SPEAR1340_PMX_SSP0_CS0_MASK,
-		.value = SPEAR1340_PMX_SSP0_CS0_MASK,
+		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
+		.value = SPEAR1340_PMX_SSP0_CS1_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_ssp0_cs0_modes[] = {
+static struct pmx_dev_mode pmx_ssp0_cs1_modes[] = {
 	{
-		.mux_regs = pmx_ssp0_cs0_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs0_mux),
+		.mux_regs = pmx_ssp0_cs1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs1_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_ssp0_cs0 = {
-	.name = "ssp0_cs0",
-	.modes = pmx_ssp0_cs0_modes,
-	.mode_count = ARRAY_SIZE(pmx_ssp0_cs0_modes),
+struct pmx_dev spear1340_pmx_ssp0_cs1 = {
+	.name = "ssp0_cs1",
+	.modes = pmx_ssp0_cs1_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_modes),
 };
 
 /* pad multiplexing for video_in_mux_cam0 (disables cam0) device */
@@ -424,26 +424,26 @@ struct pmx_dev spear1340_pmx_cam0 = {
 	.mode_count = ARRAY_SIZE(pmx_cam0_modes),
 };
 
-/* pad multiplexing for ssp0_cs1 device */
-static struct pmx_mux_reg pmx_ssp0_cs1_mux[] = {
+/* pad multiplexing for ssp0_cs2 device */
+static struct pmx_mux_reg pmx_ssp0_cs2_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
-		.mask = SPEAR1340_PMX_SSP0_CS1_MASK,
-		.value = SPEAR1340_PMX_SSP0_CS1_MASK,
+		.mask = SPEAR1340_PMX_SSP0_CS2_MASK,
+		.value = SPEAR1340_PMX_SSP0_CS2_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_ssp0_cs1_modes[] = {
+static struct pmx_dev_mode pmx_ssp0_cs2_modes[] = {
 	{
-		.mux_regs = pmx_ssp0_cs1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs1_mux),
+		.mux_regs = pmx_ssp0_cs2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs2_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_ssp0_cs1 = {
-	.name = "ssp0_cs1",
-	.modes = pmx_ssp0_cs1_modes,
-	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_modes),
+struct pmx_dev spear1340_pmx_ssp0_cs2 = {
+	.name = "ssp0_cs2",
+	.modes = pmx_ssp0_cs2_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs2_modes),
 };
 
 /* pad multiplexing for fsmc_pnor device */
@@ -601,7 +601,7 @@ struct pmx_dev spear1340_pmx_arm_trace = {
 	.mode_count = ARRAY_SIZE(pmx_arm_trace_modes),
 };
 
-/* pad multiplexing for device group: I2S, SSP0_CS2, CEC0-1, SPDIF out, CLCD */
+/* pad multiplexing for device group: I2S, SSP0_CS3, CEC0-1, SPDIFF out, CLCD */
 static struct pmx_mux_reg pmx_devs_grp_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
