@@ -345,24 +345,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
-	u32 ret = 0;
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		ret = request_irq(dev->play_irq, dw_i2s_play, 0,
-				"dw-i2s", dev);
-	} else {
-		ret = request_irq(dev->capture_irq, dw_i2s_capture,
-				0, "dw-i2s", dev);
-	}
-	if (ret) {
-		dev_err(dev->dev, "irq registration failure\n");
-		iounmap(dev->i2s_base);
-		clk_disable(dev->clk);
-		clk_put(dev->clk);
-		kfree(dev);
-		release_mem_region(dev->res->start, resource_size(dev->res));
-		return ret;
-	}
 	/* unmask i2s interrupt for channel 0 */
 	i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 
@@ -396,14 +379,6 @@ static void
 dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (dev->play_irq)
-			free_irq(dev->play_irq, dev);
-	} else {
-		if (dev->capture_irq)
-			free_irq(dev->capture_irq, dev);
-	}
 
 	/* mask i2s interrupt for channel 0 */
 	i2s_write_reg(dev->i2s_base, IMR0, 0x33);
@@ -527,6 +502,13 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->playback.channels_max = dev->max_channel;
 			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
+			ret = request_irq(dev->play_irq, dw_i2s_play, 0,
+					"dw-i2s", dev);
+			if (ret) {
+				dev_err(&pdev->dev,
+						"Can't register play irq\n");
+				goto err_play_irq;
+			}
 		}
 	}
 
@@ -540,6 +522,13 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->capture.channels_max = dev->max_channel;
 			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
+			ret = request_irq(dev->capture_irq, dw_i2s_capture, 0,
+					"dw-i2s", dev);
+			if (ret) {
+				dev_err(&pdev->dev,
+						"Can't register capture irq\n");
+				goto err_capture_irq;
+			}
 		}
 	}
 
@@ -559,7 +548,9 @@ dw_i2s_probe(struct platform_device *pdev)
 err_set_drvdata:
 	dev_set_drvdata(&pdev->dev, NULL);
 	free_irq(dev->capture_irq, pdev);
+err_capture_irq:
 	free_irq(dev->play_irq, pdev);
+err_play_irq:
 	kfree(dw_i2s_dai);
 err_soc_dai_driver:
 	iounmap(dev->i2s_base);
@@ -580,8 +571,13 @@ dw_i2s_remove(struct platform_device *pdev)
 	struct dw_i2s_dev *dev = dev_get_drvdata(&pdev->dev);
 
 	snd_soc_unregister_dai(&pdev->dev);
-	free_irq(dev->capture_irq, pdev);
-	free_irq(dev->play_irq, pdev);
+
+	if (dev->play_irq)
+		free_irq(dev->play_irq, dev);
+
+	if (dev->capture_irq)
+		free_irq(dev->capture_irq, dev);
+
 	iounmap(dev->i2s_base);
 	clk_disable(dev->clk);
 	clk_put(dev->clk);
