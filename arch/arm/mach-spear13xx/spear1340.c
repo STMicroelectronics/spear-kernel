@@ -892,14 +892,10 @@ static struct resource i2s_play_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	}, {
 
-		.name	= "play_empty_irq",
+		.name	= "play_irq",
 		.start	= SPEAR1340_IRQ_I2S_PLAY_EMP_M,
 		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "play_overrun_irq",
-		.start	= SPEAR1340_IRQ_I2S_PLAY_OR_M,
-		.flags	= IORESOURCE_IRQ,
-	},
+	}
 };
 
 struct platform_device spear1340_i2s_play_device = {
@@ -920,12 +916,7 @@ static struct resource i2s_record_resources[] = {
 		.end	= SPEAR1340_I2S_REC_BASE + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	}, {
-
-		.name	= "rec_data_avail_irq",
-		.start	= SPEAR1340_IRQ_I2S_REC_DA_S,
-		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "rec_overrun_irq",
+		.name	= "record_irq",
 		.start	= SPEAR1340_IRQ_I2S_REC_OR_S,
 		.flags	= IORESOURCE_IRQ,
 	},
