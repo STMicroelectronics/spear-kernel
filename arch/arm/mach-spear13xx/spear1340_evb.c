@@ -71,9 +71,17 @@ static struct platform_device spear1340_phy0_device = {
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
+	/*
+	 * Keep pads_as_gpio as the first element in this array. Don't ever
+	 * remove it. It makes all pads as gpio's in starting, and then pads are
+	 * configured as peripherals wherever required.
+	 */
+	&spear1340_pmx_pads_as_gpio,
 	&spear1340_pmx_keyboard_row_col,
 	&spear1340_pmx_keyboard_col5,
 	&spear1340_pmx_uart0_enh,
+	&spear1340_pmx_i2c1,
+	&spear1340_pmx_spdif_in,
 	&spear1340_pmx_ssp0_cs1,
 	&spear1340_pmx_pwm2,
 	&spear1340_pmx_pwm3,
@@ -81,7 +89,19 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_video_in_mux_cam2,
 	&spear1340_pmx_video_in_mux_cam3,
 	&spear1340_pmx_cam0,
+	&spear1340_pmx_smi,
+	&spear1340_pmx_ssp0,
 	&spear1340_pmx_ssp0_cs2,
+	&spear1340_pmx_uart0,
+	&spear1340_pmx_uart1,
+	&spear1340_pmx_i2s_in,
+	&spear1340_pmx_i2s_out,
+	&spear1340_pmx_gmac,
+	&spear1340_pmx_ssp0_cs3,
+	&spear1340_pmx_i2c0,
+	&spear1340_pmx_cec0,
+	&spear1340_pmx_cec1,
+	&spear1340_pmx_spdif_out,
 	&spear1340_pmx_mcif,
 	&spear1340_pmx_sdhci,
 	&spear1340_pmx_clcd,

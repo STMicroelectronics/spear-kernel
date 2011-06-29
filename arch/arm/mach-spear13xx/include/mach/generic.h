@@ -285,6 +285,64 @@ extern struct pmx_dev spear1310_pmx_sata2;
 
 #if defined(CONFIG_CPU_SPEAR1340)
 /* pad mux declarations */
+/*
+ * In SPEAr1340 there are two levels of pad muxing
+ * - pads as gpio OR peripherals
+ * - If peripherals, then primary OR alternate peripheral.
+ */
+
+/*
+ * Macro's for first level of pmx - pads as gpio OR peripherals
+ * There are 8 registers with 32 bits each for handling gpio pads, register 8
+ * has only 26 relevant bits
+ */
+#define SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK	0x00000FFE
+#define SPEAR1340_PMX_UART0_ENH_AND_GPT_REG1_MASK		0x0003F000
+#define SPEAR1340_PMX_PWM1_AND_KBD_COL5_REG1_MASK		0x00040000
+#define SPEAR1340_PMX_I2C1_REG1_MASK				0x01080000
+#define SPEAR1340_PMX_SPDIF_IN_REG1_MASK			0x00100000
+#define SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK		0x00400000
+#define SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK		0x00800000
+#define SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK		0x02000000
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK		0xFC200000
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK		0x0000000F
+#define SPEAR1340_PMX_VIDEO_IN_REG2_MASK			0x00001EF0
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK		0x007FE100
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK		0xFF800000
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK		0x00000003
+#define SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK		0x00001FFC
+#define SPEAR1340_PMX_SMI_REG3_MASK				0x0021E000
+#define SPEAR1340_PMX_SSP0_REG3_MASK				0x001E0000
+#define SPEAR1340_PMX_TS_AND_SSP0_CS2_REG3_MASK			0x00400000
+#define SPEAR1340_PMX_UART0_REG3_MASK				0x01800000
+#define SPEAR1340_PMX_UART1_REG3_MASK				0x06000000
+#define SPEAR1340_PMX_I2S_IN_REG3_MASK				0xF8000000
+#define SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG4_MASK		0x000001FE
+#define SPEAR1340_PMX_I2S_OUT_REG4_MASK				0x000001EF
+#define SPEAR1340_PMX_I2S_IN_REG4_MASK				0x00000010
+#define SPEAR1340_PMX_GMAC_REG4_MASK				0xFFFFFE00
+#define SPEAR1340_PMX_GMAC_REG5_MASK				0x0000001F
+#define SPEAR1340_PMX_DEVS_GRP_AND_MIPHY_DBG_REG5_MASK		0x7FFFFF20
+#define SPEAR1340_PMX_SSP0_CS3_REG5_MASK			0x00000020
+#define SPEAR1340_PMX_I2C0_REG5_MASK				0x000000C0
+#define SPEAR1340_PMX_CEC0_REG5_MASK				0x00000100
+#define SPEAR1340_PMX_CEC1_REG5_MASK				0x00000200
+#define SPEAR1340_PMX_SPDIF_OUT_REG5_MASK			0x00000400
+#define SPEAR1340_PMX_CLCD_REG5_MASK				0x7FFFF800
+#define SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG5_MASK		0x80000000
+#define SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG6_MASK		0xFFFFFFFF
+#define SPEAR1340_PMX_CLCD_AND_ARM_TRACE_REG7_MASK		0x00000001
+#define SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK		0x073FFFFE
+#define SPEAR1340_PMX_MCIF_REG7_MASK				0xF8C00000
+#define SPEAR1340_PMX_MCIF_REG8_MASK				0x000043FF
+#define SPEAR1340_PMX_FSMC_PNOR_REG8_MASK			0x07FFBC00
+
+/* macro's for making pads as gpio's */
+#define SPEAR1340_PMX_PADS_AS_GPIO_REG1_MASK			0xFFFFFFFE
+#define SPEAR1340_PMX_PADS_AS_GPIO_REGS_MASK			0xFFFFFFFF
+#define SPEAR1340_PMX_PADS_AS_GPIO_REG8_MASK			0x07FFFFFF
+
+/* Macro's for second level of pmx - pads as primary OR alternate peripheral */
 /* Write 0 to enable FSMC_16_BIT */
 #define SPEAR1340_PMX_KBD_ROW_COL_MASK		(1 << 0)
 
@@ -327,10 +385,13 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable I2S, SSP0_CS3, CEC0, 1, SPDIFF out, CLCD */
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
+extern struct pmx_dev spear1340_pmx_pads_as_gpio;
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
 extern struct pmx_dev spear1340_pmx_keyboard_row_col;
 extern struct pmx_dev spear1340_pmx_keyboard_col5;
 extern struct pmx_dev spear1340_pmx_uart0_enh;
+extern struct pmx_dev spear1340_pmx_i2c1;
+extern struct pmx_dev spear1340_pmx_spdif_in;
 extern struct pmx_dev spear1340_pmx_gpt_0_1;
 extern struct pmx_dev spear1340_pmx_pwm0;
 extern struct pmx_dev spear1340_pmx_pwm1;
@@ -345,7 +406,19 @@ extern struct pmx_dev spear1340_pmx_cam0;
 extern struct pmx_dev spear1340_pmx_cam1;
 extern struct pmx_dev spear1340_pmx_cam2;
 extern struct pmx_dev spear1340_pmx_cam3;
+extern struct pmx_dev spear1340_pmx_smi;
+extern struct pmx_dev spear1340_pmx_ssp0;
 extern struct pmx_dev spear1340_pmx_ssp0_cs2;
+extern struct pmx_dev spear1340_pmx_uart0;
+extern struct pmx_dev spear1340_pmx_uart1;
+extern struct pmx_dev spear1340_pmx_i2s_in;
+extern struct pmx_dev spear1340_pmx_i2s_out;
+extern struct pmx_dev spear1340_pmx_gmac;
+extern struct pmx_dev spear1340_pmx_ssp0_cs3;
+extern struct pmx_dev spear1340_pmx_i2c0;
+extern struct pmx_dev spear1340_pmx_cec0;
+extern struct pmx_dev spear1340_pmx_cec1;
+extern struct pmx_dev spear1340_pmx_spdif_out;
 extern struct pmx_dev spear1340_pmx_fsmc_pnor;
 extern struct pmx_dev spear1340_pmx_mcif;
 extern struct pmx_dev spear1340_pmx_sdhci;
