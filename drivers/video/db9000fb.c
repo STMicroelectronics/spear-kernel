@@ -1272,6 +1272,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	INIT_WORK(&fbi->task, db9000fb_task);
 	mutex_init(&fbi->ctrlr_lock);
 	init_completion(&fbi->disable_done);
+	init_completion(&fbi->vsync_notifier);
 
 	return fbi;
 }
@@ -1793,8 +1794,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
-	init_completion(&fbi->vsync_notifier);
-
 	return 0;
 
 err_clear_plat_data:
