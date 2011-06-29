@@ -1034,10 +1034,10 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state != C_DISABLE) {
 			fbi->state = state;
-			if (old_state != C_DISABLE_CLKCHANGE)
-				db9000fb_disable_controller(fbi);
 			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
+			if (old_state != C_DISABLE_CLKCHANGE)
+				db9000fb_disable_controller(fbi);
 		}
 		break;
 
