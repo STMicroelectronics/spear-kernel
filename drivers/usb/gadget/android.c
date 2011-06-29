@@ -82,7 +82,7 @@ static struct usb_string strings_dev[] = {
 	/* These dummy values should be overridden by platform data */
 	[STRING_MANUFACTURER_IDX].s = "Android",
 	[STRING_PRODUCT_IDX].s = "Android",
-	[STRING_SERIAL_IDX].s = "0123456789ABCDEF",
+	[STRING_SERIAL_IDX].s = "SPEArLCAD",
 	{  }			/* end of list */
 };
 

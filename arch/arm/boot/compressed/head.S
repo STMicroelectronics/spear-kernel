@@ -21,8 +21,8 @@
 
 #if defined(CONFIG_DEBUG_ICEDCC)
 
-#ifdef CONFIG_CPU_V6
-		.macro	loadsp, rb, tmp
+#ifdef defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V7)
+		.macro	loadsp, rb
 		.endm
 		.macro	writeb, ch, rb
 		mcr	p14, 0, \ch, c0, c5, 0

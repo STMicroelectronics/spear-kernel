@@ -38,6 +38,14 @@
 #include <mach/hardware.h>
 #include <mach/spear_pcie.h>
 
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+#include <linux/usb/android_composite.h>
+#endif
+
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 #include <linux/gpio_keys.h>
@@ -136,6 +144,85 @@ static struct platform_device spear900_phy0_device = {
 	.dev.platform_data = &phy0_private_data,
 };
 
+#ifdef CONFIG_ANDROID_PMEM
+static int __init early_pmem_generic_parse(char *p, struct android_pmem_platform_data * data)
+{
+	data->size = memparse(p, &p);
+	if (*p == '@')
+		data->start = memparse(p + 1, &p);
+
+	return 0;
+}
+
+/********************************************************************************
+ * Pmem device used by surface flinger
+ ********************************************************************************/
+
+static struct android_pmem_platform_data pmem_pdata = {
+	.name = "pmem",
+	.no_allocator = 1,	/* MemoryHeapBase is having an allocator */
+	.cached = 1,
+	.start = 0,
+	.size = 0,
+};
+
+static int __init early_pmem(char *p)
+{
+	return early_pmem_generic_parse(p, &pmem_pdata);
+}
+early_param("pmem", early_pmem);
+
+static struct platform_device SPEAr_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = {
+		.platform_data = &pmem_pdata,
+	},
+};
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+#define VENDOR_ID  0x04CC
+#define PRODUCT_ID  0x0001
+#define ADB_PRODUCT_ID 0x0002
+
+static char *usb_functions_adb[] = {
+#ifdef CONFIG_USB_ANDROID_ADB
+       "adb",
+#endif
+};
+
+
+static struct android_usb_product usb_products[] = {
+       {
+               .product_id     = PRODUCT_ID,
+               .num_functions  = ARRAY_SIZE(usb_functions_adb),
+               .functions      = usb_functions_adb,
+       },
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+       .vendor_id      = VENDOR_ID,
+       .product_id     = ADB_PRODUCT_ID,
+       .version        = 0x0100,
+       .product_name   = "Android SPEAr",
+       .manufacturer_name = "STM_CCI",
+       .num_products = ARRAY_SIZE(usb_products),
+       .products = usb_products,
+       .num_functions = ARRAY_SIZE(usb_functions_adb),
+       .functions = usb_functions_adb,
+};
+
+static struct platform_device android_usb_device = {
+       .name   = "android_usb",
+       .id             = -1,
+       .dev            = {
+       .platform_data = &android_usb_pdata,
+       },
+};
+#endif /* CONFIG_USB_ANDROID */
+
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
@@ -195,6 +282,13 @@ static struct platform_device *plat_devs[] __initdata = {
 #endif
 	&spear900_phy0_device,
 
+#ifdef CONFIG_ANDROID_PMEM
+    	&SPEAr_pmem_device,
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+  	&android_usb_device,
+#endif
 };
 
 static struct arasan_cf_pdata cf_pdata = {

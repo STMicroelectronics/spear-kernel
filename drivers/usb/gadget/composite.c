@@ -25,6 +25,9 @@
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/utsname.h>
+#include <linux/kdev_t.h>
+#include <linux/delay.h>
+#include <linux/switch.h>
 
 #include <linux/usb/composite.h>
 #include "designware_udc.h"
