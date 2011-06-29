@@ -27,6 +27,22 @@ static int spear_pm_sleep(suspend_state_t state)
 	void (*spear_sram_wake)(void) = NULL;
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 
+#ifdef CONFIG_EARLYSUSPEND
+	if (state == PM_SUSPEND_ON) {
+		/* Android Early Suspend  Support */
+		u32 pm_cfg;
+		
+		cpu_do_idle();
+		
+		pm_cfg = readl(VA_PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, VA_PCM_CFG);
+		
+		return 0;
+	}
+#endif
+	
 	/* At the moment STANDBY and S2RAM does the same things: ONLY FOR TEST */
 	if (state == PM_SUSPEND_MEM) {
 		u32 pm_cfg;
@@ -113,6 +129,9 @@ static void spear_pm_finish(void)
 static int spear_pm_valid_state(suspend_state_t state)
 {
         switch (state) {
+#ifdef CONFIG_EARLYSUSPEND
+		case PM_SUSPEND_ON:
+#endif
                 case PM_SUSPEND_STANDBY:
                 case PM_SUSPEND_MEM:
                         return 1;
