@@ -130,6 +130,7 @@ struct dw_i2s_dev {
 	int play_irq;
 	int max_channel;
 	int capture_irq;
+	unsigned int capability;
 	struct device *dev;
 	struct snd_soc_dai_driver *dai_driver;
 	struct dw_pcm_dma_params *dma_params[2];
@@ -346,6 +347,14 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
 
+	if (!(dev->capability & RECORD) &&
+			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
+		return -EINVAL;
+
+	if (!(dev->capability & PLAY) &&
+			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
+		return -EINVAL;
+
 	/* unmask i2s interrupt for channel 0 */
 	i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 
@@ -379,6 +388,14 @@ static void
 dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
+
+	if (!(dev->capability & RECORD) &&
+			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
+		return;
+
+	if (!(dev->capability & PLAY) &&
+			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
+		return;
 
 	/* mask i2s interrupt for channel 0 */
 	i2s_write_reg(dev->i2s_base, IMR0, 0x33);
@@ -467,6 +484,7 @@ dw_i2s_probe(struct platform_device *pdev)
 
 	dev->res = res;
 	dev->max_channel = pdata->channel;
+	dev->capability = cap;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {
