@@ -48,7 +48,7 @@ static struct mtd_partition partition_info[] = {
 /* Ethernet phy-0 device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
 	.bus_id = 0,
-	.phy_addr = 0,
+	.phy_addr = -1,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_RGMII,
 	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
