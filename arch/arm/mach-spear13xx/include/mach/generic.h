@@ -584,6 +584,11 @@ void __init spear1310_map_io(void);
 #ifdef CONFIG_CPU_SPEAR1340
 /* Add spear1340 machine device structure declarations here */
 extern struct amba_device spear1340_uart1_device;
+extern struct platform_device spear1340_camif0_device;
+extern struct platform_device spear1340_camif1_device;
+extern struct platform_device spear1340_camif2_device;
+extern struct platform_device spear1340_camif3_device;
+extern struct platform_device spear1340_cam_sensor0_device;
 extern struct platform_device spear1340_i2c1_device;
 extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_pwm_device;
