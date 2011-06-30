@@ -69,6 +69,68 @@ static struct platform_device spear1340_phy0_device = {
 	.dev.platform_data = &phy0_private_data,
 };
 
+/*
+ * Pad multiplexing for making few pads as plgpio's.
+ * Please retain original values and addresses, and update only mask as
+ * required.
+ * For example: if we need to enable plgpio's on pads: 15, 28, 45 & 102.
+ * They corresponds to following bits in registers: 16, 29, 46 & 103
+ * So following mask entries will solve this purpose:
+ * Reg1: .mask = 0x20010000,
+ * Reg2: .mask = 0x00004000,
+ * Reg4: .mask = 0x00000080,
+ *
+ * Note: Counting of bits and pads start from 0.
+ */
+static struct pmx_mux_reg pmx_plgpios_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_1,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_2,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_4,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_6,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = 0x0,
+		.value = 0x0,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = 0x0,
+		.value = 0x0,
+	},
+};
+
+static struct pmx_dev_mode pmx_plgpios_modes[] = {
+	{
+		.mux_regs = pmx_plgpios_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_plgpios_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_plgpios = {
+	.name = "plgpios",
+	.modes = pmx_plgpios_modes,
+	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/*
@@ -108,6 +170,9 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
 	&spear1340_pmx_pcie,
+
+	/* Keep this entry at the bottom of table to override earlier setting */
+	&spear1340_pmx_plgpios,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
