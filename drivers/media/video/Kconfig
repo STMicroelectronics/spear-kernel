@@ -865,6 +865,13 @@ config VIDEO_OMAP2
 	---help---
 	  This is a v4l2 driver for the TI OMAP2 camera capture interface
 
+config VIDEO_SPEAR_CAMIF
+	tristate "SPEAr Camera Interface driver"
+	depends on VIDEO_DEV && ARCH_SPEAR13XX && SOC_CAMERA
+	select VIDEOBUF_DMA_SG
+	---help---
+	  This is a v4l2 driver for the ST SPEAr camera capture interface
+
 config VIDEO_MX2_HOSTSUPPORT
         bool
 
