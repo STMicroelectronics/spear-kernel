@@ -23,6 +23,7 @@
 #include <linux/stmmac.h>
 #include <linux/stmpe610.h>
 #include <plat/adc.h>
+#include <plat/camif.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
@@ -208,6 +209,11 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
+	&spear1340_camif0_device,
+	&spear1340_camif1_device,
+	&spear1340_camif2_device,
+	&spear1340_camif3_device,
+	&spear1340_cam_sensor0_device,
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
@@ -231,6 +237,51 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_6x6,
+};
+
+/* camif specific platform data */
+struct spear_camif_plat_data cam0_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
+struct spear_camif_plat_data cam1_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
+struct spear_camif_plat_data cam2_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
+struct spear_camif_plat_data cam3_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
 };
 
 /* spi master's configuration routine */
@@ -387,6 +438,12 @@ static void __init spear1340_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 #endif
 
+	/* set camif plat data */
+	camif_set_plat_data(&spear1340_camif0_device, &cam0_data);
+	camif_set_plat_data(&spear1340_camif0_device, &cam1_data);
+	camif_set_plat_data(&spear1340_camif0_device, &cam2_data);
+	camif_set_plat_data(&spear1340_camif0_device, &cam3_data);
+
 #ifdef CONFIG_SPEAR_PCIE_REV370
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
@@ -394,7 +451,6 @@ static void __init spear1340_evb_init(void)
 	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
 #endif
-
 	/* Miphy configuration for SATA */
 	/*
 	 * writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA,

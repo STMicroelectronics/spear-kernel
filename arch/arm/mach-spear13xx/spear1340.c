@@ -16,9 +16,11 @@
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
+#include <plat/camif.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <media/soc_camera.h>
 #include <mach/spear1340_misc_regs.h>
 
 /* pmx driver structure */
@@ -1297,6 +1299,285 @@ struct pmx_dev spear1340_pmx_sata = {
 };
 
 /* Add spear1340 specific devices here */
+
+/* camera interface 0 device registeration */
+struct dw_dma_slave camif0_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif0_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif0_dma_param[0],
+	.dma_even_param = &camif0_dma_param[1],
+};
+
+static struct resource camif0_resources[] = {
+	{
+		.start = SPEAR1340_CAM0_BASE,
+		.end = SPEAR1340_CAM0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM0_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM0_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif0_device = {
+	.name = "spear_camera",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif0_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif0_resources),
+	.resource = camif0_resources,
+};
+
+/* camera interface 1 device registeration */
+struct dw_dma_slave camif1_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif1_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif1_dma_param[0],
+	.dma_even_param = &camif1_dma_param[1],
+};
+
+static struct resource camif1_resources[] = {
+	{
+		.start = SPEAR1340_CAM1_BASE,
+		.end = SPEAR1340_CAM1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM1_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM1_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif1_device = {
+	.name = "spear_camera",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif1_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif1_resources),
+	.resource = camif1_resources,
+};
+
+/* camera interface 2 device registeration */
+struct dw_dma_slave camif2_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif2_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif2_dma_param[0],
+	.dma_even_param = &camif2_dma_param[1],
+};
+
+static struct resource camif2_resources[] = {
+	{
+		.start = SPEAR1340_CAM1_BASE,
+		.end = SPEAR1340_CAM2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM2_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM2_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif2_device = {
+	.name = "spear_camera",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif2_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif2_resources),
+	.resource = camif2_resources,
+};
+
+/* camera interface 3 device registeration */
+struct dw_dma_slave camif3_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_256,
+		.dst_msize = DW_DMA_MSIZE_256,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif3_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif3_dma_param[0],
+	.dma_even_param = &camif3_dma_param[1],
+};
+
+static struct resource camif3_resources[] = {
+	{
+		.start = SPEAR1340_CAM3_BASE,
+		.end = SPEAR1340_CAM3_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM3_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM3_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif3_device = {
+	.name = "spear_camera",
+	.id = 3,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif3_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif3_resources),
+	.resource = camif3_resources,
+};
+
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info[] = {
+	{
+		I2C_BOARD_INFO("vs6725", 0x10),
+	},
+};
+
+static struct soc_camera_link __initdata vs6725_cam_sensor_iclink = {
+	.bus_id = 0,	/* SPEAr SoC camera bus */
+	.i2c_adapter_id = 0,
+	.board_info = &vs6725_camera_sensor_info[0],
+	.module_name = "vs6725",
+};
+
+struct platform_device spear1340_cam_sensor0_device = {
+	.name = "soc-camera-pdrv",
+	.id = 0,
+	.dev = {
+		.platform_data = &vs6725_cam_sensor_iclink,
+	},
+};
+
 /* uart device registeration */
 struct dw_dma_slave uart1_dma_param[] = {
 	{
