@@ -40,6 +40,7 @@
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <mach/misc_regs.h>
 
 /* SPEAr GPIO Buttons definition */
 #define SPEAR_GPIO_BTN7	7
@@ -97,6 +98,16 @@ static struct platform_device spear900_device_gpiokeys = {
 		.platform_data = &spear_gpio_keys_data,
 	},
 };
+
+static void spear900_gpio7_fixup(void)
+{
+		u32 pm_cfg;
+	
+		pm_cfg = readl(VA_PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, VA_PCM_CFG);
+}
 #endif
 
 #ifdef CONFIG_ANDROID_PMEM
@@ -283,7 +294,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.mode = SPI_MODE_1,
 	},
 };
-
+	
 static void spear900_lcad_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
 {
@@ -338,6 +349,11 @@ static void __init spear900_lcad_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	
+	/* SPEAr GPIO Button 7 Fix */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	spear900_gpio7_fixup();
+#endif
 }
 
 MACHINE_START(SPEAR900_LCAD, "ST-SPEAR900-LCAD")
