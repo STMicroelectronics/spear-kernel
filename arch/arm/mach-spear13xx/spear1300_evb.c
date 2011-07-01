@@ -35,6 +35,88 @@
 #include <mach/hardware.h>
 #include <mach/spear_pcie.h>
 
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+#include <linux/usb/android_composite.h>
+#endif
+
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+#include <mach/misc_regs.h>
+
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN7	7
+#define SPEAR_GPIO_BTN5	5
+#define SPEAR_GPIO_BTN6	6
+#define SPEAR_GPIO_BTN8	8
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0, 
+		.gpio = SPEAR_GPIO_BTN7, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_1, 
+		.gpio = SPEAR_GPIO_BTN5, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN1",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_2, 
+		.gpio = SPEAR_GPIO_BTN6, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN2",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+	{
+		.code = BTN_3, 
+		.gpio = SPEAR_GPIO_BTN8, 
+		.active_low = 0, 
+		.desc = "gpio-keys: BTN3",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+};
+ 
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons        = spear_gpio_keys_table,
+	.nbuttons       = ARRAY_SIZE(spear_gpio_keys_table),
+};
+ 
+static struct platform_device spear900_device_gpiokeys = {
+	.name      = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+
+static void spear900_gpio7_fixup(void)
+{
+		u32 pm_cfg;
+	
+		pm_cfg = readl(VA_PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, VA_PCM_CFG);
+}
+#endif
+
 /* fsmc nor partition info */
 #if 0
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
@@ -69,6 +151,84 @@ static struct platform_device spear1300_phy0_device = {
 	.resource	= &phy0_resources,
 	.dev.platform_data = &phy0_private_data,
 };
+
+#ifdef CONFIG_ANDROID_PMEM
+static int __init early_pmem_generic_parse(char *p, struct android_pmem_platform_data * data)
+{
+	data->size = memparse(p, &p);
+	if (*p == '@')
+		data->start = memparse(p + 1, &p);
+
+	return 0;
+}
+
+/********************************************************************************
+ * Pmem device used by surface flinger
+ ********************************************************************************/
+
+static struct android_pmem_platform_data pmem_pdata = {
+	.name = "pmem",
+	.no_allocator = 1,	/* MemoryHeapBase is having an allocator */
+	.cached = 1,
+	.start = 0,
+	.size = 0,
+};
+
+static int __init early_pmem(char *p)
+{
+	return early_pmem_generic_parse(p, &pmem_pdata);
+}
+early_param("pmem", early_pmem);
+
+static struct platform_device SPEAr_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+	.dev = {
+		.platform_data = &pmem_pdata,
+	},
+};
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+#define VENDOR_ID  0x04CC
+#define PRODUCT_ID  0x0001
+#define ADB_PRODUCT_ID 0x0002
+
+static char *usb_functions_adb[] = {
+#ifdef CONFIG_USB_ANDROID_ADB
+       "adb",
+#endif
+};
+
+
+static struct android_usb_product usb_products[] = {
+       {
+               .product_id     = PRODUCT_ID,
+               .num_functions  = ARRAY_SIZE(usb_functions_adb),
+               .functions      = usb_functions_adb,
+       },
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+       .vendor_id      = VENDOR_ID,
+       .product_id     = ADB_PRODUCT_ID,
+       .version        = 0x0100,
+       .product_name   = "Android SPEAr",
+       .manufacturer_name = "STM_CCI",
+       .num_products = ARRAY_SIZE(usb_products),
+       .products = usb_products,
+       .num_functions = ARRAY_SIZE(usb_functions_adb),
+       .functions = usb_functions_adb,
+};
+
+static struct platform_device android_usb_device = {
+       .name   = "android_usb",
+       .id             = -1,
+       .dev            = {
+       .platform_data = &android_usb_pdata,
+       },
+};
+#endif /* CONFIG_USB_ANDROID */
 
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
@@ -125,6 +285,18 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear1300 specific devices */
 	&spear1300_phy0_device,
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear900_device_gpiokeys,
+#endif
+
+#ifdef CONFIG_ANDROID_PMEM
+    	&SPEAr_pmem_device,
+#endif
+
+#ifdef CONFIG_USB_ANDROID
+  	&android_usb_device,
+#endif
+
 };
 
 static struct arasan_cf_pdata cf_pdata = {
@@ -325,6 +497,12 @@ static void __init spear1300_evb_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
+	/* SPEAr GPIO Button 7 Fix */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	spear900_gpio7_fixup();
+#endif
+
 }
 
 MACHINE_START(SPEAR1300_EVB, "ST-SPEAR1300-EVB")
