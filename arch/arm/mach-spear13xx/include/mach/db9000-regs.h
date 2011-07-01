@@ -168,6 +168,8 @@
 #define DB9000_PCTR_PCB		(1 << 8)
 /* Pixel Clock Input Select */
 #define DB9000_PCTR_PCI		(1 << 9)
+/* clock reset select */
+#define DB9000_PCTR_PCR		(1 << 10)
 
 /* Interrupt Status Register, Offset 0x018 */
 #define DB9000_ISR_OFU	(1 << 0) /* Output FIFO Underrun */
