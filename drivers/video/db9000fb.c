@@ -768,7 +768,7 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
 			fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
-			fbi->reg_pctr |= pcd;
+			fbi->reg_pctr |= pcd | DB9000_PCTR_PCR;
 			set_hsync_time(fbi, pcd);
 		}
 	} else
@@ -941,7 +941,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_HTR, fbi->reg_htr);
 	lcd_writel(fbi, DB9000_VTR1, fbi->reg_vtr1);
 	lcd_writel(fbi, DB9000_VTR2, fbi->reg_vtr2);
-	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr);
+	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
@@ -1757,13 +1757,9 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	else if (fbi->palette_mode == PAL_IN_FB)
 		fbi->video_mem_size_used =
 			video_buf_size + (fbi->palette_size * 2);
-	if ((inf->modes->bpp == 24) &&
-			((inf->modes->cr1 & DB9000_CR1_FBP) == 1)) {
-		if (fbi->reg_dear == 0)
-			fbi->reg_dear =
-				fbi->video_mem_size_used +
-				fbi->fb.fix.smem_start;
-	}
+	if (fbi->reg_dear == 0)
+		fbi->reg_dear = fbi->video_mem_size_used +
+			fbi->fb.fix.smem_start;
 
 	 /* Ok, now enable the LCD controller */
 	set_ctrlr_state(fbi, C_ENABLE);
