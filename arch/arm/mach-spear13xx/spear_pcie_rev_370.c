@@ -51,7 +51,7 @@ static void pcie_wr_own_conf(struct pcie_port *pp, int where, int size,
 		writeb(val, va_address + (where & 3));
 }
 
-static void spear_pcie_prog_viewport_cfg0(struct pcie_port *pp, u32 address)
+static void spear_pcie_prog_viewport_cfg0(struct pcie_port *pp, u32 busdev)
 {
 	u32 val;
 	void __iomem *dbi_base = pp->va_app_base;
@@ -66,11 +66,11 @@ static void spear_pcie_prog_viewport_cfg0(struct pcie_port *pp, u32 address)
 	writel(0, ((u32)dbi_base + PCIE_ATU_UPPER_BASE));
 	writel((u32)pp->cfg0_base + (pp->config.cfg0_size - 1),
 			((u32)dbi_base + PCIE_ATU_LIMIT));
-	writel(address, ((u32)dbi_base + PCIE_ATU_LOWER_TARGET));
+	writel(busdev, ((u32)dbi_base + PCIE_ATU_LOWER_TARGET));
 	writel(0, ((u32)dbi_base + PCIE_ATU_UPPER_TARGET));
 }
 
-static void spear_pcie_prog_viewport_cfg1(struct pcie_port *pp, u32 address)
+static void spear_pcie_prog_viewport_cfg1(struct pcie_port *pp, u32 busdev)
 {
 	u32 val;
 	void __iomem *dbi_base = pp->va_app_base;
@@ -85,7 +85,7 @@ static void spear_pcie_prog_viewport_cfg1(struct pcie_port *pp, u32 address)
 	writel(0, ((u32)dbi_base + PCIE_ATU_UPPER_BASE));
 	writel((u32)pp->cfg1_base + (pp->config.cfg1_size - 1),
 			((u32)dbi_base + PCIE_ATU_LIMIT));
-	writel(address, ((u32)dbi_base + PCIE_ATU_LOWER_TARGET));
+	writel(busdev, ((u32)dbi_base + PCIE_ATU_LOWER_TARGET));
 	writel(0, ((u32)dbi_base + PCIE_ATU_UPPER_TARGET));
 }
 
@@ -128,12 +128,13 @@ static void spear_pcie_prog_viewport_io(struct pcie_port *pp)
 static int pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)
 {
-	u32 address;
+	u32 address, busdev;
 
-	address = (bus->number << 24) | (PCI_SLOT(devfn) << 19)
-		| (PCI_FUNC(devfn) << 16) | (where & 0xFFFC);
+	busdev = (bus->number << 24) | (PCI_SLOT(devfn) << 19);
+	address = (PCI_FUNC(devfn) << 16) | (where & 0xFFFC);
+
 	if (bus->parent->number == pp->root_bus_nr) {
-		spear_pcie_prog_viewport_cfg0(pp, address);
+		spear_pcie_prog_viewport_cfg0(pp, busdev);
 		*val = readl((u32)pp->va_cfg0_base + address);
 		if (size == 1)
 			*val = (*val >> (8 * (where & 3))) & 0xff;
@@ -141,7 +142,7 @@ static int pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			*val = (*val >> (8 * (where & 3))) & 0xffff;
 		spear_pcie_prog_viewport_mem(pp);
 	} else {
-		spear_pcie_prog_viewport_cfg1(pp, address);
+		spear_pcie_prog_viewport_cfg1(pp, busdev);
 		*val = readl((u32)pp->va_cfg1_base + address);
 		if (size == 1)
 			*val = (*val >> (8 * (where & 3))) & 0xff;
@@ -157,13 +158,13 @@ static int pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 val)
 {
 	int ret = PCIBIOS_SUCCESSFUL;
-	u32 address;
+	u32 address, busdev;
 
-	address = (bus->number << 24) | (PCI_SLOT(devfn) << 19)
-		| (PCI_FUNC(devfn) << 16) | (where & 0xFFFC);
+	busdev = (bus->number << 24) | (PCI_SLOT(devfn) << 19);
+	address = (PCI_FUNC(devfn) << 16) | (where & 0xFFFC);
 
 	if (bus->parent->number == pp->root_bus_nr) {
-		spear_pcie_prog_viewport_cfg0(pp, address);
+		spear_pcie_prog_viewport_cfg0(pp, busdev);
 		address = (u32)pp->va_cfg0_base + address;
 		if (size == 4)
 			writel(val, address);
@@ -175,7 +176,7 @@ static int pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			ret = PCIBIOS_BAD_REGISTER_NUMBER;
 		spear_pcie_prog_viewport_mem(pp);
 	} else {
-		spear_pcie_prog_viewport_cfg1(pp, address);
+		spear_pcie_prog_viewport_cfg1(pp, busdev);
 		address = (u32)pp->va_cfg1_base + address;
 		if (size == 4)
 			writel(val, address);
