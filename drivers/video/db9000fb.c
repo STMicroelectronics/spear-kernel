@@ -654,6 +654,8 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	/* There are some probing calls with no buffer switch */
 	if (fbi->reg_dbar != next_frame_address) {
 		lcd_writel(fbi, DB9000_DBAR, next_frame_address);
+		lcd_writel(fbi, DB9000_DEAR, next_frame_address +
+				fbi->video_mem_size_used);
 		/*
 		 * Force waiting till the current buffer is completely drawn by
 		 * video controller
@@ -944,8 +946,9 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
+	fbi->reg_dear = fbi->reg_dbar + fbi->video_mem_size_used;
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
-	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dear);
+	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
 
 	/* enable BAU event for IRQ */
 	isr = lcd_readl(fbi, DB9000_ISR);
@@ -984,6 +987,7 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 		dbar = lcd_readl(fbi, DB9000_DBAR);
 		if (dbar != fbi->reg_dbar) {
 			fbi->reg_dbar = dbar;
+			fbi->reg_dear = dbar + fbi->video_mem_size_used;
 			complete(&fbi->vsync_notifier);
 		}
 	}
