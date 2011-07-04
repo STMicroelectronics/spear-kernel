@@ -336,6 +336,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_MCIF_REG7_MASK				0xF8C00000
 #define SPEAR1340_PMX_MCIF_REG8_MASK				0x000043FF
 #define SPEAR1340_PMX_FSMC_PNOR_REG8_MASK			0x07FFBC00
+#define SPEAR1340_PMX_FSMC_8_BIT_AND_PLGPIO_REG8_MASK		0x07FFBC00
 
 /* macro's for making pads as gpio's */
 #define SPEAR1340_PMX_PADS_AS_GPIO_REG1_MASK			0xFFFFFFFE
@@ -386,6 +387,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
 extern struct pmx_dev spear1340_pmx_pads_as_gpio;
+extern struct pmx_dev spear1340_pmx_fsmc_8bit;
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
 extern struct pmx_dev spear1340_pmx_keyboard_row_col;
 extern struct pmx_dev spear1340_pmx_keyboard_col5;

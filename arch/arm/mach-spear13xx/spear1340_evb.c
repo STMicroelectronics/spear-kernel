@@ -140,6 +140,7 @@ static struct pmx_dev *pmx_devs[] = {
 	 * configured as peripherals wherever required.
 	 */
 	&spear1340_pmx_pads_as_gpio,
+	&spear1340_pmx_fsmc_8bit,
 	&spear1340_pmx_keyboard_row_col,
 	&spear1340_pmx_keyboard_col5,
 	&spear1340_pmx_uart0_enh,

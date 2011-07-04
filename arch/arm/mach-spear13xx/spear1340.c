@@ -79,6 +79,28 @@ struct pmx_dev spear1340_pmx_pads_as_gpio = {
 	.mode_count = ARRAY_SIZE(pmx_pads_as_gpio_modes),
 };
 
+/* Pad multiplexing for fsmc_8bit device */
+static struct pmx_mux_reg pmx_fsmc_8bit_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = SPEAR1340_PMX_FSMC_8_BIT_AND_PLGPIO_REG8_MASK,
+		.value = SPEAR1340_PMX_FSMC_8_BIT_AND_PLGPIO_REG8_MASK,
+	}
+};
+
+static struct pmx_dev_mode pmx_fsmc_8bit_modes[] = {
+	{
+		.mux_regs = pmx_fsmc_8bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_8bit_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_fsmc_8bit = {
+	.name = "fsmc_8bit",
+	.modes = pmx_fsmc_8bit_modes,
+	.mode_count = ARRAY_SIZE(pmx_fsmc_8bit_modes),
+};
+
 /* Pad multiplexing for fsmc_16bit device */
 static struct pmx_mux_reg pmx_fsmc_16bit_mux[] = {
 	{
