@@ -17,7 +17,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
-#include <mach/spear_pcie.h>
+#include <mach/spear_pcie_rev_341.h>
 
 static void enable_dbi_access(struct pcie_app_reg __iomem *app_reg)
 {

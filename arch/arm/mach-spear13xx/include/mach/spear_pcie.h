@@ -87,12 +87,6 @@ struct pcie_app_reg {
 #define APPS_PM_XMT_TURNOFF_ID			2
 #define APPS_PM_XMT_PME_ID			5
 
-/*CR3 ID*/
-#define XMLH_LTSSM_STATE_ID			0
-#define XMLH_LTSSM_STATE_L0	((u32)0x11 << XMLH_LTSSM_STATE_ID)
-#define XMLH_LTSSM_STATE_MASK	((u32)0x1F << XMLH_LTSSM_STATE_ID)
-#define XMLH_LINK_UP_ID				5
-
 /*CR4 ID*/
 #define CFG_MSI_EN_ID				18
 

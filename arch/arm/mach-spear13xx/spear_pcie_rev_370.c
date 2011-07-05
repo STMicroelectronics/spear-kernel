@@ -17,7 +17,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
-#include <mach/spear_pcie.h>
+#include <mach/spear_pcie_rev_370.h>
 
 #define PCIE_APP_SPECIFIC_OFFSET	0x2000
 
@@ -457,7 +457,7 @@ static int pcie_link_up(void __iomem *va_app_base)
 
 	do {
 		if (readl(&app_reg->app_status_1) &
-				((u32)1 << XMLH_LINK_UP_ID))
+			((u32)1 << XMLH_LINK_UP_ID))
 			return 1;
 		ucount++;
 		udelay(1);
