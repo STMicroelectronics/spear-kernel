@@ -41,6 +41,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <mach/misc_regs.h>
+#include <linux/gpio.h>
 
 /* SPEAr GPIO Buttons definition */
 #define SPEAR_GPIO_BTN7	7
@@ -50,37 +51,37 @@
 
 static struct gpio_keys_button spear_gpio_keys_table[] = {
 	{
-		.code = BTN_0, 
+		.code = KEY_POWER, 
 		.gpio = SPEAR_GPIO_BTN7, 
-		.active_low = 0, 
-		.desc = "gpio-keys: BTN0",
+		.active_low = 1, 
+		.desc = "gpio-keys: BTN0:POWER",
 		.type = EV_KEY,
 		.wakeup = 1,
 		.debounce_interval = 20,
 	},
 	{
-		.code = BTN_1, 
+		.code = KEY_BACK, 
 		.gpio = SPEAR_GPIO_BTN5, 
-		.active_low = 0, 
-		.desc = "gpio-keys: BTN1",
+		.active_low = 1, 
+		.desc = "gpio-keys: BTN1:BACK",
 		.type = EV_KEY,
 		.wakeup = 0,
 		.debounce_interval = 20,
 	},
 	{
-		.code = BTN_2, 
+		.code = KEY_MENU, 
 		.gpio = SPEAR_GPIO_BTN6, 
-		.active_low = 0, 
-		.desc = "gpio-keys: BTN2",
+		.active_low = 1, 
+		.desc = "gpio-keys: BTN2:MENU",
 		.type = EV_KEY,
 		.wakeup = 0,
 		.debounce_interval = 20,
 	},
 	{
-		.code = BTN_3, 
+		.code = KEY_HOME, 
 		.gpio = SPEAR_GPIO_BTN8, 
-		.active_low = 0, 
-		.desc = "gpio-keys: BTN3",
+		.active_low = 1, 
+		.desc = "gpio-keys: BTN3:HOME",
 		.type = EV_KEY,
 		.wakeup = 0,
 		.debounce_interval = 20,

@@ -660,7 +660,11 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 		 * Force waiting till the current buffer is completely drawn by
 		 * video controller
 		 */
-		wait_for_completion(&fbi->vsync_notifier);
+#ifdef CONFIG_ANDROID
+                wait_for_completion_timeout(&fbi->vsync_notifier, msecs_to_jiffies(50));
+#else
+                wait_for_completion(&fbi->vsync_notifier);
+#endif
 	}
 
 	return 0;
