@@ -83,8 +83,8 @@ struct pmx_dev spear1340_pmx_pads_as_gpio = {
 static struct pmx_mux_reg pmx_fsmc_8bit_mux[] = {
 	{
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = SPEAR1340_PMX_FSMC_8_BIT_AND_PLGPIO_REG8_MASK,
-		.value = SPEAR1340_PMX_FSMC_8_BIT_AND_PLGPIO_REG8_MASK,
+		.mask = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
+		.value = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
 	}
 };
 
@@ -111,6 +111,10 @@ static struct pmx_mux_reg pmx_fsmc_16bit_mux[] = {
 		.address = SPEAR1340_PAD_FUNCTION_EN_1,
 		.mask = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
 		.value = SPEAR1340_PMX_FSMC_16_BIT_AND_KBD_ROW_COL_REG1_MASK,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_8,
+		.mask = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
+		.value = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
 	},
 };
 
@@ -957,8 +961,8 @@ static struct pmx_mux_reg pmx_fsmc_pnor_mux[] = {
 		.value = SPEAR1340_PMX_FSMC_PNOR_AND_MCIF_REG7_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = SPEAR1340_PMX_FSMC_PNOR_REG8_MASK,
-		.value = SPEAR1340_PMX_FSMC_PNOR_REG8_MASK,
+		.mask = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
+		.value = SPEAR1340_PMX_FSMC_8BIT_REG8_MASK,
 	},
 };
 
