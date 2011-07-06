@@ -521,7 +521,7 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->play_irq, dw_i2s_play, 0,
-					"dw-i2s", dev);
+					"dw-i2s-play", dev);
 			if (ret) {
 				dev_err(&pdev->dev,
 						"Can't register play irq\n");
@@ -541,7 +541,7 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->capture_irq, dw_i2s_capture, 0,
-					"dw-i2s", dev);
+					"dw-i2s-rec", dev);
 			if (ret) {
 				dev_err(&pdev->dev,
 						"Can't register capture irq\n");
