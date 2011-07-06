@@ -456,12 +456,8 @@ static int pcie_link_up(void __iomem *va_app_base)
 	int ucount = 0;
 
 	do {
-		/*
-		 * In SPEAr1340 linkup bit is not set. However, LTSSM
-		 * state transitions into LO state. Therefore, modifying
-		 * the code till this issue is resolved.
-		 */
-		if (readl(&app_reg->app_status_1) & XMLH_LTSSM_STATE_L0)
+		if (readl(&app_reg->app_status_1) &
+				((u32)1 << XMLH_LINK_UP_ID))
 			return 1;
 		ucount++;
 		udelay(1);
