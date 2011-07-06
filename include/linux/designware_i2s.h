@@ -31,6 +31,11 @@ struct i2s_platform_data {
 	int channel;
 };
 
+#define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
+#define FOUR_CHANNEL_SUPPORT	4	/* up to 3.1 */
+#define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
+#define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
+
 void get_dma_start_addr(struct snd_pcm_substream *substream);
 
 #endif /* DESIGNWARE_I2S_H */

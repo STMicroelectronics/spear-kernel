@@ -16,6 +16,7 @@
 #include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
+#include <linux/designware_i2s.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
@@ -117,10 +118,6 @@
 #define DESIGNWARE_I2S_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
 #define MAX_CHANNEL_NUM		8
 #define MIN_CHANNEL_NUM		2
-#define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
-#define FOUR_CHANNEL_SUPPORT	4	/* up to 3.1 */
-#define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
-#define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
 
 struct dw_i2s_dev {
 	void __iomem *i2s_base;
