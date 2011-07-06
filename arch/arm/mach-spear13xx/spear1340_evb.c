@@ -313,7 +313,7 @@ DECLARE_SPI_CS_CFG(0, VA_SPEAR1340_PERIP_CFG, SPEAR1340_SSP_CS_SEL_MASK,
 		SPEAR1340_SSP_CS_VAL_MASK, SPEAR1340_SSP_CS_VAL_SHIFT);
 
 /* spi0 flash Chip Select Control function */
-DECLARE_SPI_CS_CONTROL(0, flash, SPEAR1340_SSP_CS_SEL_CS1);
+DECLARE_SPI_CS_CONTROL(0, flash, SPEAR1340_SSP_CS_SEL_CS0);
 /* spi0 flash Chip Info structure */
 DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
 
@@ -345,7 +345,7 @@ static struct stmpe610_pdata stmpe610_spi_pdata = {
 };
 
 /* spi0 stmpe610 Chip Select Control function */
-DECLARE_SPI_CS_CONTROL(0, ts, SPEAR1340_SSP_CS_SEL_CS0);
+DECLARE_SPI_CS_CONTROL(0, ts, SPEAR1340_SSP_CS_SEL_CS1);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
@@ -362,20 +362,20 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 
 static struct spi_board_info __initdata spi_board_info[] = {
 	{
+		.modalias = "m25p80",
+		.controller_data = &spi0_flash_chip_info,
+		.max_speed_hz = 25000000,
+		.bus_num = 0,
+		.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
+		.mode = SPI_MODE_3,
+	}, {
 		.modalias = "stmpe610-spi",
 		.platform_data = &stmpe610_spi_pdata,
 		.controller_data = &spi0_ts_chip_info,
 		.max_speed_hz = 1000000,
 		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
-		.mode = SPI_MODE_1,
-	}, {
-		.modalias = "m25p80",
-		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 25000000,
-		.bus_num = 0,
 		.chip_select = SPEAR1340_SSP_CS_SEL_CS1,
-		.mode = SPI_MODE_3,
+		.mode = SPI_MODE_1,
 	}, {
 		.modalias = "spidev",
 		.controller_data = &spi0_dev_chip_info,
