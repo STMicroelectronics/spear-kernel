@@ -1704,10 +1704,10 @@ struct platform_device spear1340_i2c1_device = {
 static struct i2s_platform_data i2s_data[] = {
 	{
 		.cap = PLAY,
-		.channel = 8,
+		.channel = 2,
 	}, {
 		.cap = RECORD,
-		.channel = 8,
+		.channel = 2,
 	},
 };
 
