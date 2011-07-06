@@ -1719,7 +1719,7 @@ static struct resource i2s_play_resources[] = {
 	}, {
 
 		.name	= "play_irq",
-		.start	= SPEAR1340_IRQ_I2S_PLAY_EMP_M,
+		.start	= SPEAR1340_IRQ_I2S_PLAY_OR_M,
 		.flags	= IORESOURCE_IRQ,
 	}
 };
