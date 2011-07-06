@@ -14,6 +14,8 @@
 #include <linux/clk.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
+#include <linux/i2c.h>
+#include <linux/i2c/l3g4200d.h>
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
@@ -285,6 +287,25 @@ struct spear_camif_plat_data cam3_data = {
 	.channel = EVEN_CHANNEL,
 };
 
+/* Initializing platform data for spear1340 evb specific I2C devices */
+/* Gyroscope platform data */
+static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
+	.poll_interval = 5,
+	.min_interval = 2,
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+};
+
+static struct i2c_board_info __initdata i2c_board_info[] = {
+	/* gyroscope board info */
+	{
+		.type = "l3g4200d_gyr",
+		.addr = 0x69,
+		.platform_data = &l3g4200d_pdata,
+	},
+};
+
 /* spi master's configuration routine */
 DECLARE_SPI_CS_CFG(0, VA_SPEAR1340_PERIP_CFG, SPEAR1340_SSP_CS_SEL_MASK,
 		SPEAR1340_SSP_CS_SEL_SHIFT, SPEAR1340_SSP_CS_CTL_MASK,
@@ -460,6 +481,10 @@ static void __init spear1340_evb_init(void)
 
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+
+	/* Register spear1340 evb board specific i2c slave devices */
+	i2c_register_board_info(0, i2c_board_info,
+				ARRAY_SIZE(i2c_board_info));
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
