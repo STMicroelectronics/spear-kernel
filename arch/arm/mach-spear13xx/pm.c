@@ -20,6 +20,9 @@
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/suspend.h>
+#include <mach/pm_common.h>
+#include <linux/delay.h>
+#include <linux/interrupt.h>
 
 static int spear_pm_sleep(suspend_state_t state)
 {
@@ -141,6 +144,16 @@ static int spear_pm_valid_state(suspend_state_t state)
         }
 }
 
+/* spear_power_off callback definition */
+static void spear_pm_power_off(void)
+{
+	printk("SPEAr Power Management: System is Halted\n");
+	mdelay(100);
+	local_irq_disable();
+	
+	spear13xx_pm_functions(SPEAR_POWEROFF);
+	for(;;);
+}
 
 static struct platform_suspend_ops spear_pm_ops = {
 	.prepare	= spear_pm_prepare,
@@ -153,7 +166,10 @@ static int __init spear_pm_init(void)
 {
 	void * sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
 	void * sram_st_va = (void *)IO_ADDRESS(SPEAR_START_SRAM);
-
+	
+	/* definition of the pm_power_off callback */
+	pm_power_off = spear_pm_power_off;
+	
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
 		return	-ENOMEM;
