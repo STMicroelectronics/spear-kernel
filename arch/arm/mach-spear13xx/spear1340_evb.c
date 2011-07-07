@@ -221,6 +221,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
+	&spear1340_plgpio_device,
 	&spear1340_otg_device,
 };
 

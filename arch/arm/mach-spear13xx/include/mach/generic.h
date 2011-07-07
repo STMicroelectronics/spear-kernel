@@ -591,6 +591,7 @@ extern struct platform_device spear1340_camif3_device;
 extern struct platform_device spear1340_cam_sensor0_device;
 extern struct platform_device spear1340_i2c1_device;
 extern struct platform_device spear1340_nand_device;
+extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;
