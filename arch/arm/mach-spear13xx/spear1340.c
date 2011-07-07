@@ -13,6 +13,7 @@
 
 #include <asm/irq.h>
 #include <linux/amba/serial.h>
+#include <linux/delay.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
@@ -1851,9 +1852,59 @@ static struct resource otg_resources[] = {
 struct platform_device spear1340_otg_device = {
 	.name = "dwc_otg",
 	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
 	.num_resources = ARRAY_SIZE(otg_resources),
 	.resource = otg_resources,
 };
+
+int spear1340_otg_phy_init(void)
+{
+	u32 temp;
+	void __iomem *grxfsiz;
+
+	/* phy por deassert */
+	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
+	temp &= ~SPEAR1340_USBPHYPOR;
+	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
+	udelay(1);
+
+	/* phy clock enable */
+	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
+	temp |= SPEAR1340_USBPHYRST;
+	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
+
+	/* wait for pll lock */
+	while (!(readl(VA_SPEAR1340_USBPHY_GEN_CFG) & SPEAR1340_USBPLLLOCK))
+		;
+
+	udelay(1);
+
+	/* otg prstnt deassert */
+	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
+	temp |= SPEAR1340_USBPRSNT;
+	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
+
+	udelay(1);
+
+	/* OTG HCLK Disable */
+	temp = readl(VA_SPEAR1340_PERIP1_CLK_ENB);
+	temp &= ~(1 << SPEAR1340_UOC_CLK_ENB);
+	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
+
+	/* OTG HRESET deassert */
+	temp = readl(VA_SPEAR1340_PERIP1_SW_RST);
+	temp &= ~(1 << SPEAR1340_UOC_RST_ENB);
+	writel(temp, VA_SPEAR1340_PERIP1_SW_RST);
+
+	/* OTG HCLK Enable */
+	temp = readl(VA_SPEAR1340_PERIP1_CLK_ENB);
+	temp |= (1 << SPEAR1340_UOC_CLK_ENB);
+	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
+
+	return 0;
+}
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)

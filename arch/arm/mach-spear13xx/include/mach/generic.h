@@ -601,6 +601,7 @@ void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
+int spear1340_otg_phy_init(void);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
 

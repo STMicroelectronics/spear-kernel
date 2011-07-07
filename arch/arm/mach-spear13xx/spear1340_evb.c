@@ -492,6 +492,10 @@ static void __init spear1340_evb_init(void)
 
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 
+#ifdef CONFIG_USB_DWC_OTG
+	spear1340_otg_phy_init();
+#endif
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
