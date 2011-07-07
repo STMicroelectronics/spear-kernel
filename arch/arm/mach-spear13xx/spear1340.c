@@ -1903,6 +1903,16 @@ int spear1340_otg_phy_init(void)
 	temp |= (1 << SPEAR1340_UOC_CLK_ENB);
 	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
 
+	/*
+	 * Temp code: till otg driver is properly modified for
+	 * module parameter selection for different platform.
+	 */
+	grxfsiz = ioremap(SPEAR1340_UOC_BASE + 0x24, 4);
+	if (!grxfsiz)
+		return -ENOMEM;
+	writel(0x400, grxfsiz);
+	iounmap(grxfsiz);
+
 	return 0;
 }
 
