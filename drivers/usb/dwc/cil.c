@@ -240,7 +240,7 @@ static void dwc_otg_core_reset(struct core_if *core_if)
 				   __func__, greset);
 			return;
 		}
-	} while (greset & DWC_RSTCTL_AHB_IDLE);
+	} while (!(greset & DWC_RSTCTL_AHB_IDLE));
 
 	/* Core Soft Reset */
 	count = 0;
