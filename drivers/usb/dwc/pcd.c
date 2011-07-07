@@ -1592,7 +1592,9 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	struct dwc_pcd *pcd;
 	struct dwc_otg_device *otg_dev = dev_get_drvdata(dev);
 	struct core_if *core_if = otg_dev->core_if;
+	struct device_if *dev_if = core_if->dev_if;
 	int retval;
+	u32 dctl;
 
 	/* Allocate PCD structure */
 	pcd = kzalloc(sizeof(*pcd), GFP_KERNEL);
@@ -1651,6 +1653,12 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	/* Initialize tasklet */
 	start_xfer_tasklet.data = (unsigned long)pcd;
 	pcd->start_xfer_tasklet = &start_xfer_tasklet;
+
+	/* Remove Soft Disconnect */
+	dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+	dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
+	dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+
 	return 0;
 
 err_cleanup:
