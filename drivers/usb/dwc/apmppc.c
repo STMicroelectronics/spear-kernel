@@ -51,7 +51,7 @@
  * device.
  */
 
-#include <linux/of_platform.h>
+#include <linux/platform_device.h>
 
 #include "driver.h"
 
@@ -169,7 +169,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	int retval;
 	struct dwc_otg_device *dwc_dev;
 	struct device *dev = &ofdev->dev;
-	struct resource res;
+	struct resource *res;
 	ulong gusbcfg_addr;
 	u32 usbcfg = 0;
 
@@ -183,7 +183,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	}
 
 	/* Retrieve the memory and IRQ resources. */
-	dwc_dev->irq = irq_of_parse_and_map(ofdev->dev.of_node, 0);
+	dwc_dev->irq = platform_get_irq(ofdev, 0);
 	if (dwc_dev->irq == NO_IRQ) {
 		dev_err(dev, "no device irq\n");
 		retval = -ENODEV;
@@ -191,17 +191,18 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	}
 	dev_dbg(dev, "OTG - device irq: %d\n", dwc_dev->irq);
 
-	if (of_address_to_resource(ofdev->dev.of_node, 0, &res)) {
+	res = platform_get_resource(ofdev, IORESOURCE_MEM, 0);
+	if (!res) {
 		dev_err(dev, "%s: Can't get USB-OTG register address\n",
 			__func__);
 		retval = -ENOMEM;
 		goto fail_of_irq;
 	}
 	dev_dbg(dev, "OTG - ioresource_mem start0x%llx: end:0x%llx\n",
-		(unsigned long long)res.start, (unsigned long long)res.end);
+		(unsigned long long)res->start, (unsigned long long)res->end);
 
-	dwc_dev->phys_addr = res.start;
-	dwc_dev->base_len = res.end - res.start + 1;
+	dwc_dev->phys_addr = res->start;
+	dwc_dev->base_len = res->end - res->start + 1;
 	if (!request_mem_region(dwc_dev->phys_addr,
 				dwc_dev->base_len, dwc_driver_name)) {
 		dev_err(dev, "request_mem_region failed\n");
@@ -297,8 +298,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 			goto fail_hcd;
 		}
 		/* configure chargepump interrupt */
-		dwc_dev->hcd->cp_irq = irq_of_parse_and_map(ofdev->dev.of_node,
-							    3);
+		dwc_dev->hcd->cp_irq = platform_get_irq(ofdev, 1);
 		if (dwc_dev->hcd->cp_irq) {
 			retval = request_irq(dwc_dev->hcd->cp_irq,
 					     dwc_otg_externalchgpump_irq,
@@ -362,12 +362,14 @@ fail_dwc_dev:
  * to this driver. The remove function is called when a device is
  * unregistered with the bus driver.
  */
+
+#if defined(CONFIG_OF)
 static const struct of_device_id dwc_otg_match[] = {
 	{.compatible = "amcc,dwc-otg",},
 	{}
 };
-
 MODULE_DEVICE_TABLE(of, dwc_otg_match);
+#endif
 
 static struct platform_driver dwc_otg_driver = {
 	.probe = dwc_otg_driver_probe,
@@ -375,7 +377,9 @@ static struct platform_driver dwc_otg_driver = {
 	.driver = {
 		   .name = "dwc_otg",
 		   .owner = THIS_MODULE,
+#if defined(CONFIG_OF)
 		   .of_match_table = dwc_otg_match,
+#endif
 		   },
 };
 
