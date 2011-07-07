@@ -37,6 +37,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <plat/adc.h>
+#include <plat/hardware.h>
 #include "spear_adc.h"
 
 #define DRIVER_NAME "spear-adc"
@@ -89,6 +90,7 @@ struct adc_regs {
 
 #ifndef CONFIG_ARCH_SPEAR6XX
 #define RESOLUTION(x)		((x) << 13)
+#define SPEAR1340_RESOLUTION(x)	((x) << 16)
 #endif
 
 #define AVG_SAMPLE_RESET	(~(7 << 5))
@@ -698,7 +700,10 @@ u32 adc_configure(struct adc_config *config)
 
 	status_reg |= VOLT_REF(config->volt_ref);
 #ifndef CONFIG_ARCH_SPEAR6XX
-	status_reg |= RESOLUTION(config->resolution);
+	if (cpu_is_spear1340() || cpu_is_spear1310())
+		status_reg |= SPEAR1340_RESOLUTION(config->resolution);
+	else
+		status_reg |= RESOLUTION(config->resolution);
 #endif
 	status_reg |= ADC_ENABLE;
 
