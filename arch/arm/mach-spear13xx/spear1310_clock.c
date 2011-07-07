@@ -1043,15 +1043,43 @@ static struct clk sysram1_clk = {
 	.recalc = &follow_parent,
 };
 
-/* clock derived from apb clk */
+/* adc configurations */
+static struct aux_clk_config adc_synth_config = {
+	.synth_reg = VA_SPEAR1310_ADC_CLK_SYNT,
+	.masks = &aux_masks,
+};
+
+/* adc rate configuration table, in ascending order of rates */
+/* possible adc range is 2.5 MHz to 20 MHz. */
+static struct aux_rate_tbl adc_rtbl[] = {
+	/* For ahb = 166.67 MHz */
+	{.xscale = 1, .yscale = 31, .eq = 0}, /* 2.68 MHz */
+	{.xscale = 2, .yscale = 21, .eq = 0}, /* 7.94 MHz */
+	{.xscale = 4, .yscale = 21, .eq = 0}, /* 15.87 MHz */
+	{.xscale = 10, .yscale = 42, .eq = 0}, /* 19.84 MHz */
+};
+
+/* adc synth clock */
+static struct clk adc_synth_clk = {
+	.en_reg = VA_SPEAR1310_ADC_CLK_SYNT,
+	.en_reg_bit = SPEAR1310_AUX_SYNT_ENB,
+	.pclk = &ahb_clk,
+	.calc_rate = &aux_calc_rate,
+	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {adc_rtbl, ARRAY_SIZE(adc_rtbl), 0},
+	.private_data = &adc_synth_config,
+};
+
 /* adc clock */
 static struct clk adc_clk = {
 	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
 	.en_reg_bit = SPEAR1310_ADC_CLK_ENB,
-	.pclk = &apb_clk,
+	.pclk = &adc_synth_clk,
 	.recalc = &follow_parent,
 };
 
+/* clock derived from apb clk */
 /* ssp clock */
 static struct clk ssp_clk = {
 	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
@@ -1788,9 +1816,10 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "sysram1",			.clk = &sysram1_clk},
 	{.dev_id = "arasan_cf",			.clk = &cfxd_clk},
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
+	{.con_id = "adc_synth_clk",		.clk = &adc_synth_clk},
+	{.dev_id = "adc",			.clk = &adc_clk},
 
 	/* clock derived from apb clk */
-	{.dev_id = "adc",			.clk = &adc_clk},
 	{.dev_id = "designware-i2s.0",		.clk = &i2s0_clk},
 	{.dev_id = "designware-i2s.1",		.clk = &i2s1_clk},
 	{.dev_id = "ssp-pl022.0",		.clk = &ssp_clk},
