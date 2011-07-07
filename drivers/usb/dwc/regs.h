@@ -868,7 +868,7 @@
 #define MAX_TX_FIFOS			15	/* Max non-periodic FIFOs */
 
 /* Maximum number of Endpoints/HostChannels */
-#define MAX_EPS_CHANNELS 12	/* This come from device tree or defconfig */
+#define MAX_EPS_CHANNELS 16	/* This come from device tree or defconfig */
 
 /*
  * The device_if structure contains information needed to manage the DWC_otg
