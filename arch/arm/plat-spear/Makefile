@@ -12,6 +12,7 @@ obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o
 obj-$(CONFIG_CPU_SPEAR1300)	+= jpeg.o udc.o
 obj-$(CONFIG_CPU_SPEAR1310_REVA) += plgpio.o jpeg.o udc.o
 obj-$(CONFIG_CPU_SPEAR1310)	+= plgpio.o jpeg.o
+obj-$(CONFIG_CPU_SPEAR1340)	+= plgpio.o
 obj-$(CONFIG_CPU_SPEAR900)	+= jpeg.o udc.o
 obj-$(CONFIG_CPU_SPEAR310)	+= plgpio.o
 obj-$(CONFIG_CPU_SPEAR320)	+= plgpio.o
