@@ -71,9 +71,15 @@ ENTRY(spear_wakeup_sz)
 /*
  * spear_sleep_mode()
  * Forces SPEAr into sleep
+ * r0: state
+ * r1: revision:
+ *	- 0 for spear13xx devices
+ *	- 1 for spear1310 and spear1340 devices
  */
 ENTRY(spear_sleep_mode)
 	stmfd	sp!, {r0-r12, lr}		@ save registers on stack
+	mov	r10, r0
+	mov	r11, r1
 	/* Store Stack address in r8 */
 	ldr	r8, =IO_ADDRESS(SPEAR_SRAM_STACK_PA)
 
@@ -158,17 +164,37 @@ ENTRY(spear_sleep_mode)
 mmu_off:
 	/* Put the DDR in self refresh mode */
 	ldr	r6, =MISC_BASE_PA
+	/* Check for the SPEAr revision */
+	cmp	r11, #1
+	bne	srefresh_enter_rev_0
+
+	/* This is Rev-1 */
+	/* Program MPMC Control Status register in Misc Space */
+	ldr	r0, [r6, #0x438]
+	/* Set srefresh_enter bit(2) */
+	orr	r0, r0, #0x4
+	str	r0, [r6, #0x438]
+wait_till_srefresh_on_r1:
+	ldr	r0, [r6, #0x438]
+	/* check for cke_status bit(13) */
+	tst	r0, #0x2000
+	bne	wait_till_srefresh_on_r1
+	b	srefresh_on
+
+	/* This is Rev-0 */
+srefresh_enter_rev_0:
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x334]
 	/* Set srefresh_enter bit(2) */
 	orr	r0, r0, #0x4
 	str	r0, [r6, #0x334]
-wait_till_srefresh_on:
+wait_till_srefresh_on_r0:
 	ldr	r0, [r6, #0x334]
 	/* check for cke_status bit(13) */
 	tst	r0, #0x2000
-	beq	wait_till_srefresh_on
+	beq	wait_till_srefresh_on_r0
 
+srefresh_on:
 	/* Put the system in slow mode */
 	ldr	r0, [r6, #0x200]
 	bic	r0, r0, #0x4
@@ -409,31 +435,51 @@ wait_till_normal_mode:
 	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 	adr	r5, mmu_on
-	io_p2v  r5, r4, r1
-
+	io_p2v	r5, r4, r1
 
 	/* Move the DDR out of self refresh mode */
 	ldr	r6, =MISC_BASE_PA
 	ldr	r7, =MPMC_BASE_PA
-	/* Program MPMC Control Status register in Misc Space */
-	ldr	r0, [r6, #0x334]
-	/* Clear srefresh_enter bit(2) */
-	bic	r0, r0, #0x4
-	str	r0, [r6, #0x334]
-	/* Additional clearance is required in the mpmc space */
-	ldr	r0, [r7, #0x2c]
+
+	/* Clearance is required in the mpmc space */
+	ldr	r1, [r7, #0x2c]
 	/*
 	 * Clear bit srefresh bit (2) of MPMC_11 register
 	 * The misc wrapper does not works fine by itself till
 	 * this bit is also cleared.
 	 */
-	bic	r0, r0, #0x10000
-	str	r0, [r7, #0x2c]
-wait_for_refresh_exit:
+	bic	r1, r1, #0x10000
+
+	/* Check for the SPEAr revision */
+	cmp	r11, #1
+	bne	srefresh_exit_rev_0
+
+	/* This is Rev-1 */
+	ldr	r0, [r6, #0x438]
+	/* Clear srefresh_enter bit(2) */
+	bic	r0, r0, #0x4
+	str	r0, [r6, #0x438]
+	str	r1, [r7, #0x2c]
+wait_for_srefresh_exit_r1:
+	ldr	r0, [r6, #0x438]
+	tst	r0, #0x2000
+	beq	wait_for_srefresh_exit_r1
+	b	srefresh_off
+
+	/* This is Rev-0 */
+srefresh_exit_rev_0:
+	/* Program MPMC Control Status register in Misc Space */
+	ldr	r0, [r6, #0x334]
+	/* Clear srefresh_enter bit(2) */
+	bic	r0, r0, #0x4
+	str	r0, [r6, #0x334]
+	str	r1, [r7, #0x2c]
+wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x334]
 	tst	r0, #0x2000
-	bne	wait_for_refresh_exit
+	bne	wait_for_srefresh_exit_r0
 
+srefresh_off:
 	ldmfd	r3!, {r2}
 	/* restore the MMU control register from stack to enable mmu */
 	mcr	p15, 0, r2, c1, c0, 0

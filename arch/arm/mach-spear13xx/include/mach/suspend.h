@@ -17,7 +17,7 @@
 #include <mach/hardware.h>
 
 #ifndef __ASSEMBLER__
-extern void spear_sleep_mode(suspend_state_t state);
+extern void spear_sleep_mode(suspend_state_t state, int revision);
 extern unsigned int spear_sleep_mode_sz;
 extern void spear_wakeup(void);
 extern unsigned int spear_wakeup_sz;

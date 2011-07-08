@@ -23,7 +23,7 @@
 
 static int spear_pm_sleep(suspend_state_t state)
 {
-	void (*spear_sram_sleep)(suspend_state_t state) = NULL;
+	void (*spear_sram_sleep)(suspend_state_t state, int revision) = NULL;
 	void (*spear_sram_wake)(void) = NULL;
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 
@@ -45,7 +45,10 @@ static int spear_pm_sleep(suspend_state_t state)
 			spear_sleep_mode_sz);
 	flush_cache_all();
 	/* Jump to the suspend routines in sram */
-	spear_sram_sleep(state);
+	if (cpu_is_spear1340() || cpu_is_spear1310())
+		spear_sram_sleep(state, 1);
+	else
+		spear_sram_sleep(state, 0);
 	return 0;
 }
 
