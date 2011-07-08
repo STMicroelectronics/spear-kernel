@@ -1766,6 +1766,7 @@ static struct plgpio_platform_data plgpio_plat_data = {
 	.irq_base = SPEAR_PLGPIO_INT_BASE,
 	.gpio_count = SPEAR_PLGPIO_COUNT,
 	.regs = {
+		.enb = -1,
 		.wdata = SPEAR1340_PLGPIO_WDATA_OFF,
 		.dir = SPEAR1340_PLGPIO_DIR_OFF,
 		.rdata = SPEAR1340_PLGPIO_RDATA_OFF,
