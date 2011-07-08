@@ -1170,7 +1170,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->ici.v4l2_dev.dev = &pdev->dev;
 	camif->ici.nr = pdev->id;
 	camif->ici.priv = camif;
-	camif->ici.drv_name = "camif";
+	camif->ici.drv_name = "spear_camif";
 	camif->ici.ops = &camif_soc_camera_host_ops;
 
 	ret = soc_camera_host_register(&camif->ici);
@@ -1247,7 +1247,7 @@ static struct platform_driver camif_driver = {
 	.probe = camif_probe,
 	.remove = __devexit_p(camif_remove),
 	.driver = {
-		.name = "spear_camera",
+		.name = "spear_camif",
 		.owner = THIS_MODULE,
 	},
 };

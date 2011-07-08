@@ -1381,7 +1381,7 @@ static struct resource camif0_resources[] = {
 };
 
 struct platform_device spear1340_camif0_device = {
-	.name = "spear_camera",
+	.name = "spear_camif",
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
@@ -1445,7 +1445,7 @@ static struct resource camif1_resources[] = {
 };
 
 struct platform_device spear1340_camif1_device = {
-	.name = "spear_camera",
+	.name = "spear_camif",
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
@@ -1509,7 +1509,7 @@ static struct resource camif2_resources[] = {
 };
 
 struct platform_device spear1340_camif2_device = {
-	.name = "spear_camera",
+	.name = "spear_camif",
 	.id = 2,
 	.dev = {
 		.coherent_dma_mask = ~0,
@@ -1573,7 +1573,7 @@ static struct resource camif3_resources[] = {
 };
 
 struct platform_device spear1340_camif3_device = {
-	.name = "spear_camera",
+	.name = "spear_camif",
 	.id = 3,
 	.dev = {
 		.coherent_dma_mask = ~0,
