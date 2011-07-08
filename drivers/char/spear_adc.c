@@ -37,7 +37,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <plat/adc.h>
-#include "spear_adc.h"
+#include <linux/spear_adc.h>
 
 #define DRIVER_NAME "spear-adc"
 
