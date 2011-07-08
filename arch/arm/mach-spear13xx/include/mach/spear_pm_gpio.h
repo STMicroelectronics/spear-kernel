@@ -15,13 +15,29 @@
 #define SPEAR_GPIO_H
 #include <mach/pm_common.h>
 
-
 /* SPEAr Power Management GPIOs */
 static struct gpio spear_gpio[] = {
+	/* PowerOFF GPIO */
 	{ 
 		.gpio	= 	POWEROFF_GPIO, 
 		.flags	=	GPIOF_OUT_INIT_HIGH, 
-		.label	=	"PowerOFF GPIO", 
+		.label	=	"PowerOFF_GPIO", 
+	},
+	/* BATTERY GPIOs */
+	{ 
+		.gpio	= 	BATTERY_SWC_GPIO, 
+		.flags	=	GPIOF_IN, 
+		.label	=	"BATTERY_SWC_GPIO", 
+	},
+	{ 
+		.gpio	= 	BATTERY_ST2_GPIO, 
+		.flags	=	GPIOF_IN, 
+		.label	=	"BATTERY_ST2_GPIO", 
+	},
+	{ 
+		.gpio	= 	BATTERY_ST1_GPIO, 
+		.flags	=	GPIOF_IN, 
+		.label	=	"BATTERY_ST1_GPIO", 
 	},
 };
 
