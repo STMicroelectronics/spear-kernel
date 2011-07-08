@@ -1494,7 +1494,7 @@ static struct camif_controller camif2_platform_data = {
 
 static struct resource camif2_resources[] = {
 	{
-		.start = SPEAR1340_CAM1_BASE,
+		.start = SPEAR1340_CAM2_BASE,
 		.end = SPEAR1340_CAM2_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
