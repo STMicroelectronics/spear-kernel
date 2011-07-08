@@ -12,6 +12,8 @@
  */
 
 #include <linux/bitops.h>
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
 #include <linux/errno.h>
@@ -48,6 +50,7 @@
 struct plgpio {
 	spinlock_t		lock;
 	void __iomem		*base;
+	struct clk		*clk;
 	unsigned		irq_base;
 	struct gpio_chip	chip;
 	u32			grp_size;
@@ -189,6 +192,12 @@ static int plgpio_request(struct gpio_chip *chip, unsigned offset)
 	if (offset >= chip->ngpio)
 		return -EINVAL;
 
+	if (plgpio->clk) {
+		ret = clk_enable(plgpio->clk);
+		if (ret)
+			return ret;
+	}
+
 	/*
 	 * put gpio in IN mode before enabling it. This make enabling gpio safe
 	 */
@@ -216,6 +225,9 @@ static void plgpio_free(struct gpio_chip *chip, unsigned offset)
 
 	if (offset >= chip->ngpio)
 		return;
+
+	if (plgpio->clk)
+		clk_disable(plgpio->clk);
 
 	/* get correct offset for "offset" pin */
 	if (plgpio->p2o && (plgpio->p2o_regs & PTO_ENB_REG)) {
@@ -403,6 +415,12 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		goto release_region;
 	}
 
+	plgpio->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(plgpio->clk)) {
+		dev_warn(&pdev->dev, "could not retrieve clock\n");
+		plgpio->clk = NULL;
+	}
+
 	plgpio->base = ioremap(res->start, resource_size(res));
 	if (!plgpio->base) {
 		ret = -ENOMEM;
@@ -475,6 +493,8 @@ remove_gpiochip:
 iounmap:
 	iounmap(plgpio->base);
 kfree:
+	if (plgpio->clk)
+		clk_put(plgpio->clk);
 	kfree(plgpio);
 release_region:
 	release_mem_region(res->start, resource_size(res));
