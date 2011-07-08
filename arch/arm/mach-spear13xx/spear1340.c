@@ -1860,16 +1860,16 @@ struct platform_device spear1340_otg_device = {
 	.resource = otg_resources,
 };
 
+#ifdef CONFIG_USB_DWC_OTG
 int spear1340_otg_phy_init(void)
 {
-	u32 temp;
+	u32 temp, msec = 1000;
 	void __iomem *grxfsiz;
 
 	/* phy por deassert */
 	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
 	temp &= ~SPEAR1340_USBPHYPOR;
 	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
-	udelay(1);
 
 	/* phy clock enable */
 	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
@@ -1877,17 +1877,18 @@ int spear1340_otg_phy_init(void)
 	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
 
 	/* wait for pll lock */
-	while (!(readl(VA_SPEAR1340_USBPHY_GEN_CFG) & SPEAR1340_USBPLLLOCK))
-		;
-
-	udelay(1);
+	while (!(readl(VA_SPEAR1340_USBPHY_GEN_CFG) & SPEAR1340_USBPLLLOCK)) {
+		if (msec--) {
+			pr_err(" Problem with USB PHY PLL Lock\n");
+			return -ETIMEDOUT;
+		}
+		udelay(1);
+	}
 
 	/* otg prstnt deassert */
 	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
 	temp |= SPEAR1340_USBPRSNT;
 	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
-
-	udelay(1);
 
 	/* OTG HCLK Disable */
 	temp = readl(VA_SPEAR1340_PERIP1_CLK_ENB);
@@ -1916,6 +1917,7 @@ int spear1340_otg_phy_init(void)
 
 	return 0;
 }
+#endif
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
