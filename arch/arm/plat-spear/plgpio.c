@@ -459,6 +459,7 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 	plgpio->regs.ie = pdata->regs.ie;
 	plgpio->regs.rdata = pdata->regs.rdata;
 	plgpio->regs.mis = pdata->regs.mis;
+	plgpio->regs.eit = pdata->regs.eit;
 
 	ret = gpiochip_add(&plgpio->chip);
 	if (ret) {
