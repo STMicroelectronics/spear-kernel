@@ -205,6 +205,9 @@ static int plgpio_request(struct gpio_chip *chip, unsigned offset)
 	if (ret)
 		return ret;
 
+	if (plgpio->regs.enb == -1)
+		return 0;
+
 	/* get correct offset for "offset" pin */
 	if (plgpio->p2o && (plgpio->p2o_regs & PTO_ENB_REG)) {
 		offset = plgpio->p2o(offset);
@@ -228,6 +231,9 @@ static void plgpio_free(struct gpio_chip *chip, unsigned offset)
 
 	if (plgpio->clk)
 		clk_disable(plgpio->clk);
+
+	if (plgpio->regs.enb == -1)
+		return;
 
 	/* get correct offset for "offset" pin */
 	if (plgpio->p2o && (plgpio->p2o_regs & PTO_ENB_REG)) {
