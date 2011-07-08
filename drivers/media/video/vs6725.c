@@ -33,10 +33,10 @@
 #define VS6725_ROW_SKIP			8
 
 /* device parameters */
-#define DEVICE_ID_HI			0x02
-#define DEVICE_ID_LO			0xD5
-#define FIRMWARE_VERSION		0x1
-#define PATCH_VERSION			0
+#define VS6725_DEVICE_ID_HI		0x02
+#define VS6725_DEVICE_ID_LO		0xD5
+#define VS6725_FIRMWARE_VERSION		0x1
+#define VS6725_PATCH_VERSION		0
 
 /* hsync, vsync related */
 #define HSYNC_ENABLE			BIT(0)
@@ -100,331 +100,221 @@
  */
 
 /* vs6725 device parameter registers */
-struct device_param {
-	u8 device_id_hi;
-	u8 device_id_lo;
-	u8 fm_version;
-	u8 patch_version;
-};
-
+#define DEVICE_ID_HI			0x0000
+#define DEVICE_ID_LO			0x0001
+#define FM_VERSION			0x0002
+#define PATCH_VERSION			0x0003
 /* vs6725 mode manager registers */
-struct mode_manager {
-	u8 user_cmd;
-	u8 state;
-	u8 active_pipe_bank;
-	u8 view_live_en;
-	u8 frames_streamed;
-	u8 stream_length;
-	u8 csi_en;
-};
-
+#define USER_CMD			0x0010
+#define	STATE				0x0011
+#define ACTIVE_PIPE_BANK		0x0012
+#define VIEW_LIVE_EN			0x0013
+#define FRAMES_STREAMED			0x0014
+#define STREAM_LENGTH			0x0015
+#define CSI_EN				0x0016
 /* vs6725 zoom control registers */
-struct zoom_control {
-	u8 zoom_ctrl;
-	u8 zoom_size_hi;
-	u8 zoom_size_lo;
-	u8 _reserved_zoom[13];
-	u8 max_derating;
-};
-
-/* vs6725 pipe setup registers */
-struct pipe_setup {
-	u8 sensor_mode;
-	u8 image_size;
-	u8 manual_hs_hi;
-	u8 manual_hs_lo;
-	u8 manual_vs_hi;
-	u8 manual_vs_lo;
-	u8 data_format;
-	u8 bayer_out_align;
-	u8 channel_id;
-	u8 gamma_r;
-	u8 gamma_g;
-	u8 gamma_b;
-	u8 peaking_gain;
-	u8 _reserved_pipe[3];
-};
-
+#define ZOOM_CTRL			0x0020
+#define ZOOM_SIZE_HI			0x0021
+#define ZOOM_SIZE_LO			0x0022
+#define MAX_DERATING			0x0030
+/* vs6725 pipe0 setup registers */
+#define PIPE0_SENSOR_MODE		0x0040
+#define PIPE0_IMAGE_SIZE		0x0041
+#define PIPE0_MANUAL_HS_HI		0x0042
+#define PIPE0_MANUAL_HS_LO		0x0043
+#define PIPE0_MANUAL_VS_HI		0x0044
+#define PIPE0_MANUAL_VS_LO		0x0045
+#define PIPE0_DATA_FORMAT		0x0046
+#define PIPE0_BAYER_OUT_ALIGN		0x0047
+#define PIPE0_CHANNEL_ID		0x0048
+#define PIPE0_GAMMA_R			0x0049
+#define PIPE0_GAMMA_G			0x004A
+#define PIPE0_GAMMA_B			0x004B
+#define PIPE0_PEAKING_GAIN		0x004C
+/* vs6725 pipe1 setup registers */
+#define PIPE1_SENSOR_MODE		0x0050
+#define PIPE1_IMAGE_SIZE		0x0051
+#define PIPE1_MANUAL_HS_HI		0x0052
+#define PIPE1_MANUAL_HS_LO		0x0053
+#define PIPE1_MANUAL_VS_HI		0x0054
+#define PIPE1_MANUAL_VS_LO		0x0055
+#define PIPE1_DATA_FORMAT		0x0056
+#define PIPE1_BAYER_OUT_ALIGN		0x0057
+#define PIPE1_CHANNEL_ID		0x0058
+#define PIPE1_GAMMA_R			0x0059
+#define PIPE1_GAMMA_G			0x005A
+#define PIPE1_GAMMA_B			0x005B
+#define PIPE1_PEAKING_GAIN		0x005C
 /* vs6725 pipe setup common registers */
-struct pipe_setup_common {
-	u8 contrast;
-	u8 color_saturation;
-	u8 brightness;
-	u8 hori_mirror;
-	u8 vert_flip;
-};
-
+#define CONTRAST			0x0060
+#define COLOR_SATURATION		0x0061
+#define BRIGHTNESS			0x0062
+#define HORI_MIRROR			0x0063
+#define VERT_FLIP			0x0064
 /* vs6725 clock chain param FP inputs */
-struct clock_chain_param {
-	u8 ext_clock_freq_hi;
-	u8 ext_clock_freq_lo;
-	u8 pll_out_freq_hi;
-	u8 pll_out_freq_lo;
-	u8 e_div;
-};
-
+#define EXT_CLOCK_FREQ_HI		0x0070
+#define EXT_CLOCK_FREQ_LO		0x0071
+#define PLL_OUT_FREQ_HI			0x0072
+#define PLL_OUT_FREQ_LO			0x0073
+#define E_DIV				0x0074
 /* vs6725 static frame rate control registers */
-struct static_frame_rate_ctrl {
-	u8 des_frame_rate_num_hi;
-	u8 des_frame_rate_num_lo;
-	u8 des_frame_rate_den;
-};
-
+#define DES_FRAME_RATE_NUM_HI		0x0090
+#define DES_FRAME_RATE_NUM_LO		0x0091
+#define DES_FRAME_RATE_DEN		0x0092
 /* vs6725 static frame rate status registers */
-struct static_frame_rate_sts {
-	u8 req_frame_rate_hi;
-	u8 req_frame_rate_lo;
-	u8 max_frame_rate;
-	u8 min_frame_rate;
-};
-
+#define REQ_FRAME_RATE_HI		0x00A0
+#define REQ_FRAME_RATE_LO		0x00A1
+#define MAX_FRAME_RATE_HI		0x00A2
+#define MAX_FRAME_RATE_LO		0x00A3
+#define MIN_FRAME_RATE_HI		0x00A4
+#define MIN_FRAME_RATE_LO		0x00A5
 /* vs6725 auto frame rate control registers */
-struct auto_frame_rate_ctrl {
-	u8 mode;
-	u8 gain_thresh_lo_num;
-	u8 gain_thresh_lo_den;
-	u8 gain_thresh_hi_num;
-	u8 gain_thresh_hi_den;
-	u8 usr_min_frame_rate;
-	u8 usr_max_frame_rate;
-	u8 relative_change_num;
-	u8 relative_change_den;
-	u8 divorce_min_frame_rate;
-};
-
+#define AUTO_FRAME_MODE			0x00B0
+#define GAIN_THRESH_LO_NUM		0x00B1
+#define GAIN_THRESH_LO_DEN		0x00B2
+#define GAIN_THRESH_HI_NUM		0x00B3
+#define GAIN_THRESH_HI_DEN		0x00B4
+#define USR_MIN_FRAME_RATE		0x00B5
+#define USR_MAX_FRAME_RATE		0x00B6
+#define RELATIVE_CHANGE_NUM		0x00B7
+#define RELATIVE_CHANGE_DEN		0x00B8
+#define DIVORCE_MIN_FRAME_RATE		0x00B9
 /* vs6725 auto frame rate status registers */
-struct auto_frame_rate_sts {
-	u8 implied_gain_hi;
-	u8 implied_gain_lo;
-	u8 max_frame_len_lines_hi;
-	u8 max_frame_len_lines_lo;
-	u8 min_frame_len_lines_hi;
-	u8 min_frame_len_lines_lo;
-	u8 frame_len_change_lines_hi;
-	u8 frame_len_change_lines_lo;
-	u8 desired_auto_frame_rate_hi;
-	u8 desired_auto_frame_rate_lo;
-	u8 curr_frame_len_lines_hi;
-	u8 curr_frame_len_lines_lo;
-	u8 desired_frame_len_lines_hi;
-	u8 desired_frame_len_lines_lo;
-	u8 auto_frame_rate_stable;
-	u8 auto_frame_rate_clip;
-};
-
+#define IMPLIED_GAIN_HI			0x00C0
+#define IMPLIED_GAIN_LO			0x00C1
+#define MAX_FRAME_LEN_LINES_HI		0x00C2
+#define MAX_FRAME_LEN_LINES_LO		0x00C3
+#define MIN_FRAME_LEN_LINES_HI		0x00C4
+#define MIN_FRAME_LEN_LINES_LO		0x00C5
+#define FRAME_LEN_CHANGE_LINES_HI	0x00C6
+#define FRAME_LEN_CHANGE_LINES_LO	0x00C7
+#define DESIRED_AUTO_FRAME_RATE_HI	0x00C8
+#define DESIRED_AUTO_FRAME_RATE_LO	0x00C9
+#define CURR_FRAME_LEN_LINES_HI		0x00CA
+#define CURR_FRAME_LEN_LINES_LO		0x00CB
+#define DESIRED_FRAME_LEN_LINES_HI	0x00CC
+#define DESIRED_FRAME_LEN_LINES_LO	0x00CD
+#define AUTO_FRAME_RATE_STABLE		0x00CE
+#define AUTO_FRAME_RATE_CLIP		0x00CF
 /* vs6725 exposure control registers */
-struct exposure_ctrl {
-	u8 mode;
-	u8 metering;
-	u8 manual_exp_time_num;
-	u8 manual_exp_time_den;
-	u8 manual_des_exp_time_hi;
-	u8 manual_des_exp_time_lo;
-	u8 cold_start_time_hi;
-	u8 cold_start_time_lo;
-	u8 exp_compensation;
-	u8 misc_settings;
-	u8 direct_mode_int_lines_hi;
-	u8 direct_mode_int_lines_lo;
-	u8 direct_mode_int_pixels_hi;
-	u8 direct_mode_int_pixels_lo;
-	u8 direct_mode_analog_gain_hi;
-	u8 direct_mode_analog_gain_lo;
-	u8 direct_mode_digital_gain_hi;
-	u8 direct_mode_digital_gain_lo;
-	u8 fg_mode_int_lines_hi;
-	u8 fg_mode_int_lines_lo;
-	u8 fg_mode_int_pixels_hi;
-	u8 fg_mode_int_pixels_lo;
-	u8 fg_mode_analog_gain_hi;
-	u8 fg_mode_analog_gain_lo;
-	u8 fg_mode_digital_gain_hi;
-	u8 fg_mode_digital_gain_lo;
-	u8 freeze_auto_exp;
-	u8 usr_max_int_time_hi;
-	u8 usr_max_int_time_lo;
-	u8 rec_fg_thresh_hi;
-	u8 rec_fg_thresh_lo;
-	u8 _reserved_exp_ctrl;
-	u8 anti_flicker_mode;
-};
-
+#define EXP_CTRL_MODE			0x00F0
+#define METERING			0x00F1
+#define MANUAL_EXP_TIME_NUM		0x00F2
+#define MANUAL_EXP_TIME_DEN		0x00F3
+#define MANUAL_DES_EXP_TIME_HI		0x00F4
+#define MANUAL_DES_EXP_TIME_LO		0x00F5
+#define COLD_START_TIME_HI		0x00F6
+#define COLD_START_TIME_LO		0x00F7
+#define EXP_COMPENSATION		0x00F8
+#define EXP_MISC_SETTINGS		0x00F9
+#define DIRECT_MODE_INT_LINES_HI	0x00FA
+#define DIRECT_MODE_INT_LINES_LO	0x00FB
+#define DIRECT_MODE_INT_PIXELS_HI	0x00FC
+#define DIRECT_MODE_INT_PIXELS_LO	0x00FD
+#define DIRECT_MODE_ANALOG_GAIN_HI	0x00FE
+#define DIRECT_MODE_ANALOG_GAIN_LO	0x00FF
+#define DIRECT_MODE_DIGITAL_GAIN_HI	0x0100
+#define DIRECT_MODE_DIGITAL_GAIN_LO	0x0101
+#define FG_MODE_INT_LINES_HI		0x0102
+#define FG_MODE_INT_LINES_LO		0x0103
+#define FG_MODE_INT_PIXELS_HI		0x0104
+#define FG_MODE_INT_PIXELS_LO		0x0105
+#define FG_MODE_ANALOG_GAIN_HI		0x0106
+#define FG_MODE_ANALOG_GAIN_LO		0x0107
+#define FG_MODE_DIGITAL_GAIN_HI		0x0108
+#define FG_MODE_DIGITAL_GAIN_LO		0x0109
+#define FREEZE_AUTO_EXP			0x010A
+#define USR_MAX_INT_TIME_HI		0x010B
+#define USR_MAX_INT_TIME_LO		0x010C
+#define REC_FG_THRESH_HI		0x010D
+#define REC_FG_THRESH_LO		0x010E
+#define ANTI_FLICKER_MODE		0x0110
 /* vs6725 exposure algo controls registers */
-struct exposure_algo_ctrl {
-	u8 digital_gain_ceiling_hi;
-	u8 digital_gain_ceiling_lo;
-};
-
+#define DIGITAL_GAIN_CEILING_HI		0x012E
+#define DIGITAL_GAIN_CEILING_LO		0x012F
 /* vs6725 exposure status registers */
-struct exposure_sts {
-	u8 int_pending_lines_hi;
-	u8 int_pending_lines_lo;
-	u8 int_pending_pixels_hi;
-	u8 int_pending_pixels_lo;
-	u8 analog_gain_pending_hi;
-	u8 analog_gain_pending_lo;
-	u8 digital_gain_pending_hi;
-	u8 digital_gain_pending_lo;
-	u8 desired_exp_time_hi;
-	u8 desired_exp_time_lo;
-	u8 compiled_exp_time_hi;
-	u8 compiled_exp_time_lo;
-	u8 _reserved_exp_sts;
-	u8 max_int_lines_hi;
-	u8 max_int_lines_lo;
-	u8 total_int_time_hi;
-	u8 total_int_time_lo;
-	u8 a_gain_pending_hi;
-	u8 a_gain_pending_lo;
-};
-
+#define INT_PENDING_LINES_HI		0x0154
+#define INT_PENDING_LINES_LO		0x0155
+#define INT_PENDING_PIXELS_HI		0x0156
+#define INT_PENDING_PIXELS_LO		0x0157
+#define ANALOG_GAIN_PENDING_HI		0x0158
+#define ANALOG_GAIN_PENDING_LO		0x0159
+#define DIGITAL_GAIN_PENDING_HI		0x015A
+#define DIGITAL_GAIN_PENDING_LO		0x015B
+#define DESIRED_EXP_TIME_HI		0x015C
+#define DESIRED_EXP_TIME_LO		0x015D
+#define COMPILED_EXP_TIME_HI		0x015E
+#define COMPILED_EXP_TIME_LO		0x015F
+#define MAX_INT_LINES_HI		0x0161
+#define MAX_INT_LINES_LO		0x0162
+#define TOTAL_INT_TIME_HI		0x0163
+#define TOTAL_INT_TIME_LO		0x0164
+#define A_GAIN_PENDING_HI		0x0165
+#define A_GAIN_PENDING_LO		0x0166
 /* vs6725 flicker detect registers */
-struct flicker_detect {
-	u8 enb_detect;
-	u8 detect_start;
-	u8 flicker_id_thresh_hi;
-	u8 flicker_id_thresh_lo;
-	u8 win_times;
-	u8 frame_rate_shift_no;
-	u8 manual_fref_enb;
-	u8 manual_fref100_hi;
-	u8 manual_fref100_lo;
-	u8 manual_fref120_hi;
-	u8 manual_fref120_lo;
-	u8 flicker_freq_hi;
-	u8 flicker_freq_lo;
-};
-
+#define ENB_DETECT			0x0170
+#define DETECT_START			0x0171
+#define MAX_NO_ATTEMPT			0x0172
+#define FLICKER_ID_THRESH_HI		0x0173
+#define FLICKER_ID_THRESH_LO		0x0174
+#define WIN_TIMES			0x0175
+#define FRAME_RATE_SHIFT_NO		0x0176
+#define MANUAL_FREF_ENB			0x0177
+#define MANUAL_FREF100_HI		0x0178
+#define MANUAL_FREF100_LO		0x0179
+#define MANUAL_FREF120_HI		0x017A
+#define MANUAL_FREF120_LO		0x017B
+#define FLICKER_FREQ_HI			0x017C
+#define FLICKER_FREQ_LO			0x017D
 /* vs6725 white balance control registers */
-struct white_bal_ctrl {
-	u8 mode;
-	u8 manu_red_gain;
-	u8 manu_green_gain;
-	u8 manu_blue_gain;
-	u8 misc_settings;
-	u8 hue_r_bias_hi;
-	u8 hue_r_bias_lo;
-	u8 hue_b_bias_hi;
-	u8 hue_b_bias_lo;
-	u8 flash_red_gain_hi;
-	u8 flash_red_gain_lo;
-	u8 flash_green_gain_hi;
-	u8 flash_green_gain_lo;
-	u8 flash_blue_gain_hi;
-	u8 flash_blue_gain_lo;
-};
-
+#define WB_CTL_MODE			0x0180
+#define MANU_RED_GAIN			0x0181
+#define MANU_GREEN_GAIN			0x0182
+#define MANU_BLUE_GAIN			0x0183
+#define WB_MISC_SETTINGS		0x0184
+#define HUE_R_BIAS_HI			0x0185
+#define HUE_R_BIAS_LO			0x0186
+#define HUE_B_BIAS_HI			0x0187
+#define HUE_B_BIAS_LO			0x0188
+#define FLASH_RED_GAIN_HI		0x0189
+#define FLASH_RED_GAIN_LO		0x018A
+#define FLASH_GREEN_GAIN_HI		0x018B
+#define FLASH_GREEN_GAIN_LO		0x018C
+#define FLASH_BLUE_GAIN_HI		0x018D
+#define FLASH_BLUE_GAIN_LO		0x018E
 /* vs6725 image stability registers */
-struct image_stability {
-	u8 white_bal_stable;
-	u8 exp_stable;
-	u8 _reserved_image_stb;
-	u8 stable;
-};
-
+#define WHITE_BAL_STABLE		0x0211
+#define EXP_STABLE			0x0212
+#define STABLE				0x0214
 /* vs6725 exposure sensor constant registers */
-struct exp_sensor_const {
-	u8 sensor_a_gain_ceiling_hi;
-	u8 sensor_a_gain_ceiling_lo;
-};
-
+#define SENSOR_A_GAIN_CEILING_HI	0x0232
+#define SENSOR_A_GAIN_CEILING_LO	0x0233
 /* vs6725 flash control registers */
-struct flash_control {
-	u8 flash_mode;
-	u8 _reserved_flash_ctr[7];
-	u8 flash_recommended;
-};
-
+#define FLASH_MODE			0x0240
+#define FLASH_RECOMMENDED		0x0248
 /* vs6725 anti-vignettte registers */
-struct anti_vignette {
-	u8 disable;
-};
-
+#define DISABLE				0x0260
 /* vs6725 special effect control registers */
-struct spl_effect_ctrl {
-	u8 negative;
-	u8 solarising;
-	u8 sketch;
-	u8 _reserved_spl_eff;
-	u8 colour_effect;
-};
-
+#define NEGATIVE			0x02C0
+#define SOLARISING			0x02C1
+#define SKETCH				0x02C2
+#define COLOUR_EFFECT			0x02C4
 /* vs6725 test pattern registers */
-struct test_pattern {
-	u8 enb_test_pattern;
-	u8 test_pattern;
-};
+#define ENB_TEST_PATTERN		0x04A0
+#define TEST_PATTERN			0x04A1
 
 /*
  * low-level hardware registers
  */
 
 /* vs6725 output format registers */
-struct output_format {
-	u8 opf_dctrl;
-	u8 _reserved_out_fmt1[3];
-	u8 opf_ycbcr_setup;
-	u8 _reserved_out_fmt2[3];
-	u8 opf_rgb_setup;
-};
-
+#define OPF_DCTRL			0xD900
+#define OPF_YCBCR_SETUP			0xD904
+#define OPF_RGB_SETUP			0xD908
 /* vs6725 output interface registers */
-struct output_interface {
-	u8 oif_hsync_setup;
-	u8 _reserved_oi1[3];
-	u8 oif_vsync_setup;
-	u8 _reserved_oi2[31];
-	u8 oif_pclk_setup;
-};
-
-struct vs6725_user_intf_regs {
-	struct device_param dev_param;		/* 0x0000 to 0x0003 */
-	u8 _reserved0[12];			/* 0x0004 to 0x000F */
-	struct mode_manager mode_mgr;		/* 0x0010 to 0x0016 */
-	u8 _reserved1[12];			/* 0x0017 to 0x001F */
-	struct zoom_control zoom_ctrl;		/* 0x0020 to 0x0030 */
-	u8 _reserved2[15];			/* 0x0031 to 0x003F */
-	struct pipe_setup pipe[2];		/* [0]=pipe 0, [1]=pipe 1 */
-	struct pipe_setup_common pipe_common;	/* 0x0060 to 0x0064 */
-	u8 _reserved3[11];			/* 0x0065 to 0x006F */
-	struct clock_chain_param clk_chn_param;	/* 0x0070 to 0x0074 */
-	u8 _reserved4[27];			/* 0x0075 to 0x008F */
-	struct static_frame_rate_ctrl stat_ctr;	/* 0x0090 to 0x0092 */
-	u8 _reserved5[13];			/* 0x0093 to 0x009F */
-	struct static_frame_rate_sts stat_sts;	/* 0x00A0 to 0x00A5 */
-	u8 _reserved6[10];			/* 0x00A6 to 0x00AF */
-	struct auto_frame_rate_ctrl auto_ctr;	/* 0x00B0 to 0x00B9 */
-	u8 _reserved7[6];			/* 0x00BA to 0x00BF */
-	struct auto_frame_rate_sts auto_sts;	/* 0x00C0 to 0x00CF */
-	u8 _reserved8[32];			/* 0x00D0 to 0x00EF */
-	struct exposure_ctrl exp_ctrl;		/* 0x00F0 to 0x0110 */
-	u8 _reserved9[29];			/* 0x0111 to 0x012D */
-	struct exposure_algo_ctrl exp_a_ctrl;	/* 0x012E to 0x012F */
-	u8 _reserved10[36];			/* 0x0130 to 0x0153 */
-	struct exposure_sts exp_sts;		/* 0x0154 to 0x0166 */
-	u8 _reserved11[9];			/* 0x0167 to 0x016F */
-	struct flicker_detect flick_detect;	/* 0x0170 to 0x017D */
-	u8 _reserved12[2];			/* 0x017E to 0x017F */
-	struct white_bal_ctrl wb_ctrl;		/* 0x0180 to 0x018E */
-	u8 _reserved13[130];			/* 0x018F to 0x0210 */
-	struct image_stability img_stability;	/* 0x0211 to 0x0214 */
-	u8 _reserved14[29];			/* 0x0215 to 0x0231 */
-	struct exp_sensor_const exp_sensor;	/* 0x0232 to 0x0233 */
-	u8 _reserved15[12];			/* 0x0234 to 0x023F */
-	struct flash_control flash_ctr;		/* 0x0240 to 0x0248 */
-	u8 _reserved16[23];			/* 0x0249 to 0x025F */
-	struct anti_vignette vignette;		/* 0x0260 */
-	u8 _reserved17[95];			/* 0x0261 to 0x02BF */
-	struct spl_effect_ctrl effect_ctr;	/* 0x02C0 to 0x02C4 */
-	u8 _reserved18[95];			/* 0x02C5 to 0x049F */
-	struct test_pattern test;		/* 0x04A0 to 0x04A1 */
-};
-
-struct vs6725_hardware_regs {
-	struct output_format out_format;	/* 0xD900 to 0xD908 */
-	u8 _reserved19[259];			/* 0xD909 to 0xDA0B */
-	struct output_interface out_intf;	/* 0xDA0C to 0xDA30 */
-};
+#define OIF_HSYNC_SETUP			0xDA0C
+#define OIF_VSYNC_SETUP			0xDA10
+#define OIF_PCLK_SETUP			0xDA30
 
 struct vs6725 {
 	struct v4l2_subdev subdev;
@@ -443,8 +333,6 @@ struct vs6725 {
 	struct v4l2_rect rect;		/* sensor cropping window */
 	enum v4l2_mbus_pixelcode code;
 	enum v4l2_colorspace colorspace;
-	struct vs6725_user_intf_regs *intf_regs;
-	struct vs6725_hardware_regs *hw_regs;
 };
 
 enum vs6725_exposure_ctrl_mode {
@@ -663,7 +551,6 @@ static const struct v4l2_queryctrl vs6725_controls[] = {
 		.step		= 1,
 		.default_value	= 0,
 	},
-
 };
 
 static bool is_unscaled_image_ok(int width, int height, struct v4l2_rect *rect)
@@ -672,39 +559,38 @@ static bool is_unscaled_image_ok(int width, int height, struct v4l2_rect *rect)
 }
 
 /* read a register */
-static int vs6725_reg_read(struct i2c_client *client, u8 reg, u8 *val)
+static int vs6725_reg_read(struct i2c_client *client, int reg, u8 *val)
 {
 	int ret;
-	u8 data = reg;
-	struct i2c_msg msg = {
-		.addr = client->addr,
-		.flags = 0,
-		.len = 1,
-		.buf = &data,
+	u8 data[2] = {reg >> 8, reg};
+	struct i2c_msg msg[2] = {
+		{
+			.addr = client->addr,
+			.flags = 0,
+			.len = 1,
+			.buf = data,
+		}, {
+			.addr = client->addr,
+			.flags = I2C_M_RD,
+			.len = 1,
+			.buf = val,
+		}
 	};
 
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto err;
+	ret = i2c_transfer(client->adapter, msg, 2);
+	if (ret != 2) {
+		dev_err(&client->dev, "Failed reading register 0x%02x!\n", reg);
+		return ret;
+	}
 
-	msg.flags = I2C_M_RD;
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto err;
-
-	*val = data;
 	return 0;
-
-err:
-	dev_err(&client->dev, "Failed reading register 0x%02x!\n", reg);
-	return ret;
 }
 
 /* write a register */
-static int vs6725_reg_write(struct i2c_client *client, u8 reg, u8 val)
+static int vs6725_reg_write(struct i2c_client *client, int reg, u8 val)
 {
 	int ret;
-	unsigned char data[2] = {reg, val};
+	u8 data[3] = {reg >> 8, reg, val};
 	struct i2c_msg msg = {
 		.addr = client->addr,
 		.flags = 0,
@@ -715,7 +601,7 @@ static int vs6725_reg_write(struct i2c_client *client, u8 reg, u8 val)
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	udelay(100);
 
-	if (ret < 0) {
+	if (ret != 1) {
 		dev_err(&client->dev, "Failed writing register 0x%02x!\n", reg);
 		return ret;
 	}
@@ -734,40 +620,39 @@ static int vs6725_set_bus_param(struct soc_camera_device *icd,
 {
 	struct soc_camera_link *icl = to_soc_camera_link(icd);
 	struct i2c_client *client = to_i2c_client(to_soc_camera_control(icd));
-	struct vs6725 *priv = to_vs6725(client);
 	int ret;
 
 	flags = soc_camera_apply_sensor_flags(icl, flags);
 
 	if (flags & SOCAM_PCLK_SAMPLE_RISING)
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_pclk_setup,
+				OIF_PCLK_SETUP,
 				PCLK_PROG_POL_HI_INIT_LO);
 	else
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_pclk_setup,
+				OIF_PCLK_SETUP,
 				PCLK_PROG_POL_LO_INIT_LO);
 	if (ret)
 		return ret;
 
 	if (flags & SOCAM_HSYNC_ACTIVE_LOW)
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_hsync_setup,
+				OIF_HSYNC_SETUP,
 				HSYNC_POLARITY_ACTIVE_LO);
 	else
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_hsync_setup,
+				OIF_HSYNC_SETUP,
 				VSYNC_POLARITY_ACTIVE_HI);
 	if (ret)
 		return ret;
 
 	if (flags & SOCAM_VSYNC_ACTIVE_LOW)
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_vsync_setup,
+				OIF_VSYNC_SETUP,
 				VSYNC_POLARITY_ACTIVE_LO);
 	else
 		ret = vs6725_reg_write(client,
-				priv->hw_regs->out_intf.oif_hsync_setup,
+				OIF_VSYNC_SETUP,
 				VSYNC_POLARITY_ACTIVE_HI);
 
 	return ret;
@@ -802,20 +687,20 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_read(client,
-				priv->intf_regs->pipe_common.contrast,
+				CONTRAST,
 				&val);
 		ctrl->value = val;
 		break;
 	case V4L2_CID_SATURATION:
 		ret = vs6725_reg_read(client,
-				priv->intf_regs->pipe_common.color_saturation,
+				COLOR_SATURATION,
 				&val);
 		ctrl->value = val;
 		break;
 	case V4L2_CID_GAIN:
 		ret = vs6725_reg_read(client,
-			priv->intf_regs->pipe[priv->active_pipe].peaking_gain,
-			&val);
+			priv->active_pipe == PIPE_0 ? PIPE0_PEAKING_GAIN :
+				PIPE1_PEAKING_GAIN, &val);
 		ctrl->value = val;
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
@@ -835,13 +720,13 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_VFLIP:
 		ret = vs6725_reg_read(client,
-				priv->intf_regs->pipe_common.vert_flip,
+				VERT_FLIP,
 				&val);
 		ctrl->value = val;
 		break;
 	case V4L2_CID_HFLIP:
 		ret = vs6725_reg_read(client,
-				priv->intf_regs->pipe_common.hori_mirror,
+				HORI_MIRROR,
 				&val);
 		ctrl->value = val;
 		break;
@@ -863,27 +748,28 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe_common.contrast,
+				CONTRAST,
 				ctrl->value);
 		if (!ret)
 			priv->contrast = ctrl->value;
 		break;
 	case V4L2_CID_SATURATION:
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe_common.color_saturation,
+				COLOR_SATURATION,
 				ctrl->value);
 		if (!ret)
 			priv->saturation = ctrl->value;
 		break;
 	case V4L2_CID_GAIN:
 		ret = vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].peaking_gain,
+			priv->active_pipe == PIPE_0 ? PIPE0_PEAKING_GAIN :
+				PIPE1_PEAKING_GAIN,
 			ctrl->value);
 		if (!ret)
 			priv->gain = ctrl->value;
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		ret = vs6725_reg_write(client, priv->intf_regs->wb_ctrl.mode,
+		ret = vs6725_reg_write(client, WB_CTL_MODE,
 					ctrl->value);
 		if (!ret)
 			priv->awb = ctrl->value;
@@ -893,7 +779,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ctrl->value) {
 		case V4L2_EXPOSURE_AUTO:
 			ret = vs6725_reg_write(client,
-					priv->intf_regs->exp_ctrl.mode,
+					EXP_CTRL_MODE,
 					AUTOMATIC_MODE);
 			break;
 		default:
@@ -907,7 +793,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			 * clarification from the sensor designers
 			 */
 			ret = vs6725_reg_write(client,
-					priv->intf_regs->exp_ctrl.mode,
+					EXP_CTRL_MODE,
 					DIRECT_MANUAL_MODE);
 			break;
 		}
@@ -927,29 +813,32 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 * sensor designers.
 		 */
 		ret = vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].gamma_r,
+			priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_R :
+				PIPE1_GAMMA_R,
 			ctrl->value);
 		if (!ret)
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe[priv->active_pipe].
-				gamma_g, ctrl->value);
+				priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_G :
+					PIPE1_GAMMA_G,
+				ctrl->value);
 		if (!ret)
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe[priv->active_pipe].
-				gamma_b, ctrl->value);
+				priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_B :
+					PIPE1_GAMMA_B,
+				ctrl->value);
 		if (!ret)
 			priv->gamma = ctrl->value;
 		break;
 	case V4L2_CID_VFLIP:
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe_common.vert_flip,
+				VERT_FLIP,
 				ctrl->value);
 		if (!ret)
 			priv->vflip = ctrl->value;
 		break;
 	case V4L2_CID_HFLIP:
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->pipe_common.hori_mirror,
+				HORI_MIRROR,
 				ctrl->value);
 		if (!ret)
 			priv->hflip = ctrl->value;
@@ -960,11 +849,11 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 * operation
 		 */
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->zoom_ctrl.zoom_size_hi,
+				ZOOM_SIZE_HI,
 				DEFAULT_ZOOM_STEP_SIZE_HI);
 		if (!ret)
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->zoom_ctrl.zoom_size_lo,
+				ZOOM_SIZE_LO,
 				DEFAULT_ZOOM_STEP_SIZE_LO);
 		if (!ret) {
 			/*
@@ -974,11 +863,11 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			 */
 			if (ctrl->value < 0) {
 				ret = vs6725_reg_write(client,
-					priv->intf_regs->zoom_ctrl.zoom_ctrl,
+					ZOOM_CTRL,
 					ZOOM_STEP_IN);
 			} else {
 				ret = vs6725_reg_write(client,
-					priv->intf_regs->zoom_ctrl.zoom_ctrl,
+					ZOOM_CTRL,
 					ZOOM_STEP_OUT);
 			}
 		}
@@ -997,15 +886,15 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 */
 		if (ctrl->value < 0)
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->zoom_ctrl.zoom_ctrl,
+				ZOOM_CTRL,
 				ZOOM_START_OUT);
 		else if (ctrl->value > 0)
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->zoom_ctrl.zoom_ctrl,
+				ZOOM_CTRL,
 				ZOOM_START_IN);
 		else
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->zoom_ctrl.zoom_ctrl,
+				ZOOM_CTRL,
 				ZOOM_STOP);
 
 		if (ret != 0)
@@ -1016,27 +905,27 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ctrl->value) {
 		case V4L2_COLORFX_NONE:
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.colour_effect,
+				COLOUR_EFFECT,
 				COLOR_EFFECT_NORMAL);
 			break;
 		case V4L2_COLORFX_BW:
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.colour_effect,
+				COLOUR_EFFECT,
 				COLOR_EFFECT_BLACKNWHITE);
 			break;
 		case V4L2_COLORFX_SEPIA:
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.colour_effect,
+				COLOUR_EFFECT,
 				COLOR_EFFECT_SEPIA);
 			break;
 		case V4L2_COLORFX_NEGATIVE:
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.negative,
+				NEGATIVE,
 				SET_TO_ONE);
 			break;
 		case V4L2_COLORFX_SKETCH:
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.sketch,
+				SKETCH,
 				SET_TO_ONE);
 			break;
 		default:
@@ -1050,7 +939,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			dev_info(&client->dev, "color format not supported"
 					"setting color effect as none\n");
 			ret = vs6725_reg_write(client,
-				priv->intf_regs->effect_ctr.colour_effect,
+				COLOUR_EFFECT,
 				COLOR_EFFECT_NORMAL);
 			break;
 		}
@@ -1132,16 +1021,11 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	int ret;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
 
 	if (enable)
-		ret = vs6725_reg_write(client,
-				priv->intf_regs->mode_mgr.user_cmd,
-				CMD_RUN);
+		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
 	else
-		ret = vs6725_reg_write(client,
-				priv->intf_regs->mode_mgr.user_cmd,
-				CMD_STOP);
+		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
 
 	if (ret < 0)
 		return ret;
@@ -1204,16 +1088,19 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 
 	/* cropping means we set the image size manually */
 	ret = vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].image_size,
-				IMAGE_SIZE_MANUAL);
+			priv->active_pipe == PIPE_0 ? PIPE0_IMAGE_SIZE :
+				PIPE1_IMAGE_SIZE,
+			IMAGE_SIZE_MANUAL);
 	if (!ret) {
 		priv->rect.left = rect->left;
 		priv->rect.width = rect->width;
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].manual_hs_lo,
+			priv->active_pipe == PIPE_0 ? PIPE0_MANUAL_HS_LO :
+				PIPE1_MANUAL_HS_LO,
 			WRITE_LO_BYTE(rect->left + rect->width));
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].manual_hs_hi,
+			priv->active_pipe == PIPE_0 ? PIPE0_MANUAL_HS_HI :
+				PIPE1_MANUAL_HS_HI,
 			WRITE_HI_BYTE(rect->left + rect->width));
 	}
 
@@ -1221,10 +1108,12 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 		priv->rect.height = rect->height;
 		priv->rect.top = rect->top;
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].manual_vs_lo,
+			priv->active_pipe == PIPE_0 ? PIPE0_MANUAL_VS_LO :
+				PIPE1_MANUAL_VS_LO,
 			WRITE_LO_BYTE(rect->top + rect->height));
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].manual_vs_hi,
+			priv->active_pipe == PIPE_0 ? PIPE0_MANUAL_VS_HI :
+				PIPE1_MANUAL_VS_HI,
 			WRITE_HI_BYTE(rect->top + rect->height));
 	}
 
@@ -1290,50 +1179,55 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 		dev_dbg(&client->dev, "pixel format YUYV8_2X8\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_YCBCR_JFIF);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_ycbcr_setup,
+			OPF_YCBCR_SETUP,
 			YCBYCR_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		dev_dbg(&client->dev, "pixel format UYVY8_2X8\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_YCBCR_JFIF);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_ycbcr_setup,
+			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_YVYU8_2X8:
 		dev_dbg(&client->dev, "pixel format YVYU8_2X8\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_YCBCR_JFIF);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_ycbcr_setup,
+			OPF_YCBCR_SETUP,
 			YCRYCB_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
 		dev_dbg(&client->dev, "pixel format VYUY8_2X8\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_YCBCR_JFIF);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_ycbcr_setup,
+			OPF_YCBCR_SETUP,
 			CRYCBY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
 		dev_dbg(&client->dev, "pixel format RBG444_2X8_PADHI_BE\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_RGB_444);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_rgb_setup,
+			OPF_RGB_SETUP,
 			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
 			RGB444_ZERO_PADDING_ON);
 		priv->colorspace = V4L2_COLORSPACE_SRGB;
@@ -1341,10 +1235,11 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	case V4L2_MBUS_FMT_RGB565_2X8_BE:
 		dev_dbg(&client->dev, "pixel format RGB565_2X8_BE\n");
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_RGB_565);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_rgb_setup,
+			OPF_RGB_SETUP,
 			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
 		priv->colorspace = V4L2_COLORSPACE_SRGB;
 		break;
@@ -1358,10 +1253,11 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		dev_err(&client->dev, "Pixel format not handled: 0x%x\n"
 			"Reverting to default YCbCr-JFIF format\n", code);
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].data_format,
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
 			DATA_FORMAT_YCBCR_JFIF);
 		ret |= vs6725_reg_write(client,
-			priv->hw_regs->out_format.opf_ycbcr_setup,
+			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
@@ -1470,38 +1366,41 @@ static int vs6725_prog_default(struct i2c_client *client)
 	 * be no switching between pipe 0 and 1 for alternative frames
 	 */
 	ret = vs6725_reg_write(client,
-				priv->intf_regs->mode_mgr.view_live_en,
+				VIEW_LIVE_EN,
 				DISABLE_VIEW_LIVE);
 
 	if (!ret)
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->mode_mgr.active_pipe_bank,
+				ACTIVE_PIPE_BANK,
 				PIPE_0);
 
 	/* pipe 0 related settings */
 	if (!ret) {
 		priv->active_pipe = PIPE_0;
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].
-			sensor_mode, UXGA_MODE);
+			priv->active_pipe == PIPE_0 ? PIPE0_SENSOR_MODE :
+				PIPE1_SENSOR_MODE,
+			UXGA_MODE);
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].
-			image_size, IMAGE_SIZE_UXGA);
+			priv->active_pipe == PIPE_0 ? PIPE0_IMAGE_SIZE :
+				PIPE1_IMAGE_SIZE,
+			IMAGE_SIZE_UXGA);
 		ret |= vs6725_reg_write(client,
-			priv->intf_regs->pipe[priv->active_pipe].
-			data_format, DATA_FORMAT_YCBCR_JFIF);
+			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
+				PIPE1_DATA_FORMAT,
+			DATA_FORMAT_YCBCR_JFIF);
 	}
 
 	/* we set automatic frame rate control as default ... */
 	if (!ret)
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->auto_ctr.mode,
+				AUTO_FRAME_MODE,
 				AUTO_FRAME_RATE);
 
 	/* ... and automatic expsoure control */
 	if (!ret)
 		ret = vs6725_reg_write(client,
-				priv->intf_regs->exp_ctrl.mode,
+				EXP_CTRL_MODE,
 				AUTOMATIC_MODE);
 
 	/*
@@ -1525,26 +1424,19 @@ static int vs6725_camera_init(struct soc_camera_device *icd,
 	/*
 	 * check and show device id, firmware version and patch version
 	 */
-	ret = vs6725_reg_read(client, priv->intf_regs->dev_param.device_id_hi,
-				&dev_id_hi);
+	ret = vs6725_reg_read(client, DEVICE_ID_HI, &dev_id_hi);
 	if (!ret)
-		ret = vs6725_reg_read(client,
-				priv->intf_regs->dev_param.device_id_lo,
-				&dev_id_lo);
+		ret = vs6725_reg_read(client, DEVICE_ID_LO, &dev_id_lo);
 	if (!ret)
-		ret = vs6725_reg_read(client,
-				priv->intf_regs->dev_param.fm_version,
-				&fm_ver);
+		ret = vs6725_reg_read(client, FM_VERSION, &fm_ver);
 	if (!ret)
-		ret = vs6725_reg_read(client,
-				priv->intf_regs->dev_param.patch_version,
-				&patch_ver);
+		ret = vs6725_reg_read(client, PATCH_VERSION, &patch_ver);
 
 	if (ret)
 		return ret;
 
-	if ((dev_id_hi != DEVICE_ID_HI) ||
-			(dev_id_lo != DEVICE_ID_LO)) {
+	if ((dev_id_hi != VS6725_DEVICE_ID_HI) ||
+			(dev_id_lo != VS6725_DEVICE_ID_LO)) {
 		dev_err(&client->dev, "Device ID error 0x%02x:0x%02x\n",
 				dev_id_hi, dev_id_lo);
 		return -ENODEV;
@@ -1598,11 +1490,6 @@ static int vs6725_probe(struct i2c_client *client,
 	priv->code = V4L2_MBUS_FMT_YUYV8_2X8;
 	priv->colorspace = V4L2_COLORSPACE_JPEG;
 
-	/* assign starting addresses */
-	priv->intf_regs = (struct vs6725_user_intf_regs *)
-				USER_INTERFACE_REG_BASE;
-	priv->hw_regs = (struct vs6725_hardware_regs *)
-				HARDWARE_REG_BASE;
 	ret = vs6725_camera_init(icd, client);
 	if (ret) {
 		icd->ops = NULL;
