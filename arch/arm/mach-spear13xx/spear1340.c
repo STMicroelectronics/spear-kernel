@@ -1823,11 +1823,17 @@ static struct resource sata_resources[] = {
 	},
 };
 
+static u64 ahci_dmamask = DMA_BIT_MASK(32);
+
 struct platform_device spear1340_sata0_device = {
 	.name = "ahci",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(sata_resources),
 	.resource = sata_resources,
+	.dev = {
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* OTG device registration */
