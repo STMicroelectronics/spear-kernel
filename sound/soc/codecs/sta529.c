@@ -129,6 +129,33 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	return 0;
 }
 
+static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_codec *codec = rtd->codec;
+
+	if (cpu_is_spear1340()) {
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			/*
+			 * On SPEAr1340 SoC I2S capture controller is in
+			 * slave mode. Hence sta529 must be configured
+			 * to provide the bit clock and word select
+			 * clock. For this sta529 capture part must be
+			 * programmed in master mode.
+			 * Another thing is this that unlike other SPEAr
+			 * SoCs, bit clock would not be shared for play
+			 * and record lines of sta529.
+			 */
+			sta529_write(codec, STA529_S2PCFG0, 0x12);
+			sta529_write(codec, STA529_P2SCFG0, 0x93);
+		}
+	}
+
+	return 0;
+}
+
 static int
 spear_sta_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
 		unsigned int freq, int dir)
@@ -199,6 +226,7 @@ sta529_set_bias_level(struct snd_soc_codec *codec,
 }
 
 static struct snd_soc_dai_ops sta529_dai_ops = {
+	.hw_params	= spear_sta529_hw_params,
 	.set_fmt	= spear_sta529_set_dai_fmt,
 	.digital_mute	= spear_sta529_mute,
 	.set_sysclk	= spear_sta_set_dai_sysclk,
