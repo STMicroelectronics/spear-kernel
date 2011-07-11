@@ -334,6 +334,13 @@ static irqreturn_t dw_i2s_capture(int irq, void *_dev)
 
 		/* clear rx data overrun interrupt: channel 3 */
 		i2s_read_reg(dev->i2s_base, ROR3);
+
+		/* enable rx block */
+		i2s_write_reg(dev->i2s_base, IRER, 1);
+
+		/* enable i2s block */
+		i2s_write_reg(dev->i2s_base, IER, 1);
+
 	}
 
 	return IRQ_HANDLED;
