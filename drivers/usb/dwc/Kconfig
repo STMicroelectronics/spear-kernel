@@ -11,7 +11,7 @@ config USB_DWC_OTG
 	depends on USB || USB_GADGET
 	select NOP_USB_XCEIV
 	select USB_OTG_UTILS
-	default USB_GADGET
+	default n
 	help
 	  This driver provides USB Device Controller support for the
 	  Synopsys DesignWare USB OTG Core used on the AppliedMicro PowerPC SoC.
