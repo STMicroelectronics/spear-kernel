@@ -72,6 +72,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&eth_device,
 	&phy_device,
 	&i2c_device,
+	&irda_device,
 	&jpeg_device,
 	&ohci0_device,
 	&ohci1_device,
@@ -84,24 +85,15 @@ static struct platform_device *plat_devs[] __initdata = {
 
 /* Currently no gpios are free on eval board so it is kept commented */
 #if 0
-/*
- * External spi memory chips that we use for testing doesn't have a jedec id,
- * and return 0 if we try to read their id. So we must send the correct chip
- * type here.
- */
-static const struct flash_platform_data spix_flash_data = {
-	.type = "m25p40-nonjedec",
-};
-
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_gpio_control);
 
 /* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, dev, /* mention gpio number here */);
 /* spi0 spidev Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_gpio_control);
 #endif
 
 static struct spi_board_info __initdata spi_board_info[] = {
@@ -117,11 +109,10 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.platform_data = &spix_flash_data,
-		.max_speed_hz = 25000000,
+		.max_speed_hz = 12000000,
 		.bus_num = 0,
 		.chip_select = 1,
-		.mode = SPI_MODE_1,
+		.mode = SPI_MODE_3,
 	}
 #endif
 };
@@ -159,7 +150,7 @@ static void __init spear600_evb_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
-MACHINE_START(SPEAR600, "ST-SPEAR600-EVB")
+MACHINE_START(SPEAR600_EVB, "ST-SPEAR600-EVB")
 	.boot_params	=	0x00000100,
 	.map_io		=	spear6xx_map_io,
 	.init_irq	=	spear6xx_init_irq,

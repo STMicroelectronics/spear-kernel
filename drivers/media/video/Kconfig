@@ -807,6 +807,13 @@ config SOC_CAMERA_OV9640
 	help
 	  This is a ov9640 camera driver
 
+config SOC_CAMERA_VS6725
+	tristate "ST VS6725 camera sensor support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This is a driver for the ST VS6725 camera sensor.
+	  See further details here: http://www.st.com
+
 config MX1_VIDEO
 	bool
 
@@ -864,6 +871,13 @@ config VIDEO_OMAP2
 	select VIDEOBUF_DMA_SG
 	---help---
 	  This is a v4l2 driver for the TI OMAP2 camera capture interface
+
+config VIDEO_SPEAR_CAMIF
+	tristate "SPEAr Camera Interface driver"
+	depends on VIDEO_DEV && ARCH_SPEAR13XX && SOC_CAMERA
+	select VIDEOBUF_DMA_SG
+	---help---
+	  This is a v4l2 driver for the ST SPEAr camera capture interface
 
 config VIDEO_MX2_HOSTSUPPORT
         bool

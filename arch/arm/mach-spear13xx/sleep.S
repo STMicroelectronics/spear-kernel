@@ -19,6 +19,45 @@
 
 /* #define DDR_PLL_SREFRESH */
 /* #define TEST_PWRDOMAINS */
+
+#define PLL_VAL2	0x060e
+#define PLL_VAL1	0x060a
+#define PLL_VAL3	0x0606
+#define MISC_PLL_OFFS	0x214
+#define DISABLE_I_C_M_V	0x1805
+
+
+.macro  io_v2p, pa, va, tmp
+        ldr     \tmp, =0xfff
+        bic     \pa, \va, \tmp
+
+	/*
+	 * Following code uses VA to PA Translation Registers to
+	 * translate the virtual address provided by a general-purpose
+	 * register and store the corresponding physical address in the
+	 * PA Register.
+	 */
+        mcr     p15, 0, \pa, c7, c8, 1
+        mrc     p15, 0, \pa, c7, c4, 0
+        bic     \pa, \pa, \tmp
+        and     \tmp, \va, \tmp
+        orr     \pa, \pa, \tmp
+.endm
+
+.macro	io_p2v, pa, va, tmp
+
+	ldr	\tmp, =0xfff00000
+	and	\va, \pa, \tmp
+	lsr	\va, \va, #4
+
+	ldr	\tmp, =0xffff
+	and	\tmp, \pa, \tmp
+	orr	\va, \va, \tmp
+
+	ldr	\tmp, =0xf0000000
+	orr	\va, \va, \tmp
+.endm
+
 .text
 ENTRY(spear_wakeup)
 
@@ -32,13 +71,19 @@ ENTRY(spear_wakeup_sz)
 /*
  * spear_sleep_mode()
  * Forces SPEAr into sleep
+ * r0: state
+ * r1: revision:
+ *	- 0 for spear13xx devices
+ *	- 1 for spear1310 and spear1340 devices
  */
 ENTRY(spear_sleep_mode)
 	stmfd	sp!, {r0-r12, lr}		@ save registers on stack
+	mov	r10, r0
+	mov	r11, r1
 	/* Store Stack address in r8 */
-	ldr	r8, SRAM_STACK_VA
+	ldr	r8, =IO_ADDRESS(SPEAR_SRAM_STACK_PA)
 
-	/* Store sp and spsr to SDRAM */
+	/* Store sp and spsr to SRAM */
 	mov	r4, sp
 	mrs	r5, spsr
 	mov	r6, lr
@@ -106,15 +151,11 @@ ENTRY(spear_sleep_mode)
 	isb
 	/* Extract the physical address to jump to */
 	adr	r0, mmu_off
-	mov	r1, #0xcfffffff
-	and	r0, r0, r1
-	ldr	r1, =0x20000000
-	orr	r0, r0, r1
-	mov	r2, r0
+	io_v2p	r2, r0, r1
 
 	/* Disable MMU */
 	mrc	p15, 0, r0, c1, c0, 0
-	ldr	r1, DISABLE_I_C_M_V
+	ldr	r1, =DISABLE_I_C_M_V
 	bic	r0, r0, r1
 	mcr	p15, 0, r0, c1, c0, 0
 	/* Move the Physical address into PC */
@@ -122,18 +163,38 @@ ENTRY(spear_sleep_mode)
 	nop
 mmu_off:
 	/* Put the DDR in self refresh mode */
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
+	/* Check for the SPEAr revision */
+	cmp	r11, #1
+	bne	srefresh_enter_rev_0
+
+	/* This is Rev-1 */
+	/* Program MPMC Control Status register in Misc Space */
+	ldr	r0, [r6, #0x438]
+	/* Set srefresh_enter bit(2) */
+	orr	r0, r0, #0x4
+	str	r0, [r6, #0x438]
+wait_till_srefresh_on_r1:
+	ldr	r0, [r6, #0x438]
+	/* check for cke_status bit(13) */
+	tst	r0, #0x2000
+	bne	wait_till_srefresh_on_r1
+	b	srefresh_on
+
+	/* This is Rev-0 */
+srefresh_enter_rev_0:
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x334]
 	/* Set srefresh_enter bit(2) */
 	orr	r0, r0, #0x4
 	str	r0, [r6, #0x334]
-wait_till_srefresh_on:
+wait_till_srefresh_on_r0:
 	ldr	r0, [r6, #0x334]
 	/* check for cke_status bit(13) */
 	tst	r0, #0x2000
-	beq	wait_till_srefresh_on
+	beq	wait_till_srefresh_on_r0
 
+srefresh_on:
 	/* Put the system in slow mode */
 	ldr	r0, [r6, #0x200]
 	bic	r0, r0, #0x4
@@ -156,7 +217,7 @@ wait_till_slow_mode:
 	 * registers in the misc space.
 	 * DDR pll-4 requires different processing.
 	 */
-	ldr	r1, MISC_PLL_OFFS
+	ldr	r1, =MISC_PLL_OFFS
 	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
 swoff_pll:
 	ldr	r0, [r6, r1]
@@ -179,7 +240,7 @@ swoff_pll:
 #ifdef TEST_PWRDOMAINS
 	/* Switch off the undesired PLL's */
 	nop
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
 	ldr	r0, [r6, #0x200]
 	bic	r0, r0, #0x7
 	orr	r0, r0, #0x2
@@ -189,7 +250,7 @@ wait_ack0:
 	and	r0, r0, #0xF0000
 	cmp	r0, #0xA0000
 	bne	wait_ack0
-	ldr	r6, MISC_BASE_P
+	ldr	r6, =MISC_BASE_PA
 	ldr	r0, [r6, #0x100]
 
 	/*
@@ -239,8 +300,8 @@ spear_sleep_restore:
 	 * The strobing is done for pll-4 only.
 	 */
 
-	ldr	r6, MISC_BASE_P
-	ldr	r1, MISC_PLL_OFFS
+	ldr	r6, =MISC_BASE_PA
+	ldr	r1, =MISC_PLL_OFFS
 	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
 swon_pll_1_3:
 	/* Switch on Pll-1/2/3 */
@@ -264,13 +325,13 @@ pll_lock_1_3:
 #ifdef DDR_PLL_SREFRESH
 	/* Switch on PLL-4, strobe the pll also */
 	ldr	r0, [r6, r1]
-	ldr	r0, PLL_VAL1
+	ldr	r0, =PLL_VAL1
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL2
+	ldr	r0, =PLL_VAL2
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL3
+	ldr	r0, =PLL_VAL3
 	str	r0, [r6, r1]
-	ldr	r0, PLL_VAL2
+	ldr	r0, =PLL_VAL2
 	str	r0, [r6, r1]
 pll_lock_4:
 	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
@@ -302,7 +363,7 @@ wait_till_normal_mode:
 	mov	r1, #0
 	mcr	p15, 0, r1, c7, c5, 0
 
-	ldr	r3, SRAM_STACK_PA
+	ldr	r3, =SPEAR_SRAM_STACK_PA
 	ldmia	r3!, {r4-r6}
 	mov	sp, r4
 	msr	spsr_cxsf, r5
@@ -374,34 +435,51 @@ wait_till_normal_mode:
 	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 	adr	r5, mmu_on
-	mov	r1, #0xcfffffff
-	and	r5, r5, r1
-	ldr	r1, =0x30000000
-	orr	r5, r5, r1
-	mov	r4, r5
+	io_p2v	r5, r4, r1
 
 	/* Move the DDR out of self refresh mode */
-	ldr	r6, MISC_BASE_P
-	ldr	r7, MPMC_BASE_P
-	/* Program MPMC Control Status register in Misc Space */
-	ldr	r0, [r6, #0x334]
-	/* Clear srefresh_enter bit(2) */
-	bic	r0, r0, #0x4
-	str	r0, [r6, #0x334]
-	/* Additional clearance is required in the mpmc space */
-	ldr	r0, [r7, #0x2c]
+	ldr	r6, =MISC_BASE_PA
+	ldr	r7, =MPMC_BASE_PA
+
+	/* Clearance is required in the mpmc space */
+	ldr	r1, [r7, #0x2c]
 	/*
 	 * Clear bit srefresh bit (2) of MPMC_11 register
 	 * The misc wrapper does not works fine by itself till
 	 * this bit is also cleared.
 	 */
-	bic	r0, r0, #0x10000
-	str	r0, [r7, #0x2c]
-wait_for_refresh_exit:
+	bic	r1, r1, #0x10000
+
+	/* Check for the SPEAr revision */
+	cmp	r11, #1
+	bne	srefresh_exit_rev_0
+
+	/* This is Rev-1 */
+	ldr	r0, [r6, #0x438]
+	/* Clear srefresh_enter bit(2) */
+	bic	r0, r0, #0x4
+	str	r0, [r6, #0x438]
+	str	r1, [r7, #0x2c]
+wait_for_srefresh_exit_r1:
+	ldr	r0, [r6, #0x438]
+	tst	r0, #0x2000
+	beq	wait_for_srefresh_exit_r1
+	b	srefresh_off
+
+	/* This is Rev-0 */
+srefresh_exit_rev_0:
+	/* Program MPMC Control Status register in Misc Space */
+	ldr	r0, [r6, #0x334]
+	/* Clear srefresh_enter bit(2) */
+	bic	r0, r0, #0x4
+	str	r0, [r6, #0x334]
+	str	r1, [r7, #0x2c]
+wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x334]
 	tst	r0, #0x2000
-	bne	wait_for_refresh_exit
+	bne	wait_for_srefresh_exit_r0
 
+srefresh_off:
 	ldmfd	r3!, {r2}
 	/* restore the MMU control register from stack to enable mmu */
 	mcr	p15, 0, r2, c1, c0, 0
@@ -411,25 +489,8 @@ mmu_on:
 	ldmfd	sp!, {r0-r12, pc}		@ restore regs and return
 	nop
 
-MPMC_BASE_P :
-	.word MPMC_BASE_PA
-MISC_BASE_P :
-	.word MISC_BASE_PA
-SRAM_STACK_VA :
-	.word IO_ADDRESS(SPEAR_SRAM_STACK_PA)
-SRAM_STACK_PA :
-	.word SPEAR_SRAM_STACK_PA
-DISABLE_I_C_M_V:
-	.word 0x1805
-MISC_PLL_OFFS:
-	.word 0x214
-#ifdef DDR_PLL_SREFRESH
-PLL_VAL1:
-	.word 0x060a
-PLL_VAL2:
-	.word 0x060e
-PLL_VAL3:
-	.word 0x0606
-#endif
+	.ltorg
+	.align
+
 ENTRY(spear_sleep_mode_sz)
 	.word	. - spear_sleep_mode

@@ -13,6 +13,7 @@
  */
 #include <linux/spinlock.h>
 #include <linux/errno.h>
+#include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/io.h>
@@ -54,8 +55,11 @@ struct pl061_gpio {
 	spinlock_t		irq_lock;	/* IRQ registers */
 
 	void __iomem		*base;
+	int			irq;		/* real irq */
 	unsigned		irq_base;
 	struct gpio_chip	gc;
+	u8			wakeups;
+	u8			irq_wake;
 };
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
@@ -129,6 +133,25 @@ static int pl061_to_irq(struct gpio_chip *gc, unsigned offset)
 /*
  * PL061 GPIO IRQ
  */
+static int pl061_irq_set_wake(unsigned irq, unsigned state)
+{
+	struct pl061_gpio *chip = get_irq_chip_data(irq);
+	int offset = irq - chip->irq_base;
+
+	if (state) {
+		chip->wakeups |= 1 << offset;
+		if (!enable_irq_wake(chip->irq))
+			chip->irq_wake = 1;
+	} else {
+		if (chip->irq_wake) {
+			disable_irq_wake(chip->irq);
+			chip->irq_wake = 0;
+		}
+	}
+
+	return 0;
+}
+
 static void pl061_irq_disable(unsigned irq)
 {
 	struct pl061_gpio *chip = get_irq_chip_data(irq);
@@ -136,11 +159,13 @@ static void pl061_irq_disable(unsigned irq)
 	unsigned long flags;
 	u8 gpioie;
 
-	spin_lock_irqsave(&chip->irq_lock, flags);
-	gpioie = readb(chip->base + GPIOIE);
-	gpioie &= ~(1 << offset);
-	writeb(gpioie, chip->base + GPIOIE);
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	if (!(chip->wakeups & (1 << offset))) {
+		spin_lock_irqsave(&chip->irq_lock, flags);
+		gpioie = readb(chip->base + GPIOIE);
+		gpioie &= ~(1 << offset);
+		writeb(gpioie, chip->base + GPIOIE);
+		spin_unlock_irqrestore(&chip->irq_lock, flags);
+	}
 }
 
 static void pl061_irq_enable(unsigned irq)
@@ -150,11 +175,13 @@ static void pl061_irq_enable(unsigned irq)
 	unsigned long flags;
 	u8 gpioie;
 
-	spin_lock_irqsave(&chip->irq_lock, flags);
-	gpioie = readb(chip->base + GPIOIE);
-	gpioie |= 1 << offset;
-	writeb(gpioie, chip->base + GPIOIE);
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	if (!(chip->wakeups & (1 << offset))) {
+		spin_lock_irqsave(&chip->irq_lock, flags);
+		gpioie = readb(chip->base + GPIOIE);
+		gpioie |= 1 << offset;
+		writeb(gpioie, chip->base + GPIOIE);
+		spin_unlock_irqrestore(&chip->irq_lock, flags);
+	}
 }
 
 static int pl061_irq_type(unsigned irq, unsigned trigger)
@@ -206,6 +233,7 @@ static struct irq_chip pl061_irqchip = {
 	.enable		= pl061_irq_enable,
 	.disable	= pl061_irq_disable,
 	.set_type	= pl061_irq_type,
+	.set_wake	= pl061_irq_set_wake,
 };
 
 static void pl061_irq_handler(unsigned irq, struct irq_desc *desc)
@@ -232,7 +260,7 @@ static void pl061_irq_handler(unsigned irq, struct irq_desc *desc)
 	desc->chip->unmask(irq);
 }
 
-static int pl061_probe(struct amba_device *dev, struct amba_id *id)
+static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 {
 	struct pl061_platform_data *pdata;
 	struct pl061_gpio *chip;
@@ -290,6 +318,8 @@ static int pl061_probe(struct amba_device *dev, struct amba_id *id)
 
 	writeb(0, chip->base + GPIOIE); /* disable irqs */
 	irq = dev->irq[0];
+	chip->irq = irq;
+
 	if (irq < 0) {
 		ret = -ENODEV;
 		goto iounmap;

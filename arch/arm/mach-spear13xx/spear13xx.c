@@ -14,9 +14,12 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/amba/serial.h>
 #include <linux/dw_dmac.h>
+#include <linux/designware_i2s.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
+#include <linux/phy.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/netdevice.h>
@@ -33,8 +36,23 @@
 #include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
+#include <mach/spear_pcie.h>
 
 /* Add spear13xx machines common devices here */
+/* common dw_dma filter routine to be used by peripherals */
+bool dw_dma_filter(struct dma_chan *chan, void *slave)
+{
+	struct dw_dma *dw = to_dw_dma(chan->device);
+	struct dw_dma_slave *dws = (struct dw_dma_slave *)slave;
+
+	if (dws->dma_dev == dw->dma.dev) {
+		chan->private = slave;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 /* gpio device registeration */
 static struct pl061_platform_data gpio_plat_data[] = {
 	{
@@ -57,7 +75,7 @@ struct amba_device spear13xx_gpio_device[] = {
 			.end = SPEAR13XX_GPIO0_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
-		.irq = {IRQ_GPIO0, NO_IRQ},
+		.irq = {SPEAR13XX_IRQ_GPIO0, NO_IRQ},
 	}, {
 		.dev = {
 			.init_name = "gpio1",
@@ -68,24 +86,54 @@ struct amba_device spear13xx_gpio_device[] = {
 			.end = SPEAR13XX_GPIO1_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
-		.irq = {IRQ_GPIO1, NO_IRQ},
+		.irq = {SPEAR13XX_IRQ_GPIO1, NO_IRQ},
 	}
 };
 
 /* ssp device registeration */
+#define SSP_DR(base)		(base + 0x008)
+struct dw_dma_slave ssp_dma_param[] = {
+	{
+		/* Tx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_SSP0_TX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR13XX_DMA_MASTER_SSP0,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Rx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_SSP0_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_SSP0,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
-	.enable_dma = 0,
+	.enable_dma = 1,
+	.dma_filter = dw_dma_filter,
+	.dma_rx_param = &ssp_dma_param[0],
+	.dma_tx_param = &ssp_dma_param[1],
 	/*
-	 * This is number of spi devices that can be connected to spi. There are
-	 * two type of chipselects on which slave devices can work. One is chip
-	 * select provided by spi masters other is controlled through external
-	 * gpio's. We can't use chipselect provided from spi master (because as
-	 * soon as FIFO becomes empty, CS is disabled and transfer ends). So
-	 * this number now depends on number of gpios available for spi. each
-	 * slave on each master requires a separate gpio pin.
+	 * Following is the number of chip selects from spi controller
+	 * to which spi devices can be connected.
+	 * There are two type of chipselects on which slave devices can
+	 * work. One is chip select provided by spi masters other is
+	 * controlled through external gpio's.
 	 */
-	.num_chipselect = 2,
+	.num_chipselect = 3,
 };
 
 struct amba_device spear13xx_ssp_device = {
@@ -99,20 +147,58 @@ struct amba_device spear13xx_ssp_device = {
 		.end = SPEAR13XX_SSP_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_SSP, NO_IRQ},
+	.irq = {SPEAR13XX_IRQ_SSP, NO_IRQ},
 };
 
 /* uart device registeration */
+/* As uart0 is used for console, so disable DMA here */
+#if 0
+struct dw_dma_slave uart_dma_param[] = {
+	{
+		/* Tx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR13XX_UART_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_UART0_TX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR13XX_DMA_MASTER_UART0,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Rx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR13XX_UART_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_UART0_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_UART0,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+struct amba_pl011_data uart_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_tx_param = &uart_dma_param[0],
+	.dma_rx_param = &uart_dma_param[1],
+};
+#endif
+
 struct amba_device spear13xx_uart_device = {
 	.dev = {
 		.init_name = "uart",
+/*		.platform_data = &uart_data, */
 	},
 	.res = {
 		.start = SPEAR13XX_UART_BASE,
 		.end = SPEAR13XX_UART_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	.irq = {IRQ_UART, NO_IRQ},
+	.irq = {SPEAR13XX_IRQ_UART, NO_IRQ},
 };
 
 /* adc device registeration */
@@ -122,7 +208,7 @@ static struct resource adc_resources[] = {
 		.end = SPEAR13XX_ADC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_ADC,
+		.start = SPEAR13XX_IRQ_ADC,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -154,7 +240,7 @@ static struct resource cf_resources[] = {
 		.end = SPEAR13XX_MCIF_CF_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_CF,
+		.start = SPEAR13XX_IRQ_CF,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -183,7 +269,7 @@ static struct resource dmac_resources[][2] = {
 			.end = SPEAR13XX_DMAC0_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		}, {
-			.start = IRQ_DMAC0_COMBINED,
+			.start = SPEAR13XX_IRQ_DMAC0_COMBINED,
 			.flags = IORESOURCE_IRQ,
 		},
 	},
@@ -193,7 +279,7 @@ static struct resource dmac_resources[][2] = {
 			.end = SPEAR13XX_DMAC1_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		}, {
-			.start = IRQ_DMAC1_COMBINED,
+			.start = SPEAR13XX_IRQ_DMAC1_COMBINED,
 			.flags = IORESOURCE_IRQ,
 		},
 	},
@@ -223,7 +309,7 @@ struct platform_device spear13xx_dmac_device[] = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacenet_data ether0_platform_data = {
+static struct plat_stmmacenet_data ether_platform_data = {
 	.bus_id = 0,
 	.has_gmac = 1,
 	.enh_desc = 1,
@@ -235,95 +321,34 @@ static struct plat_stmmacenet_data ether0_platform_data = {
 	.pmt = 1,
 };
 
-static struct resource eth0_resources[] = {
+static struct resource eth_resources[] = {
 	[0] = {
-		.start = SPEAR13XX_GETH0_BASE,
-		.end = SPEAR13XX_GETH0_BASE + SZ_32K - 1,
+		.start = SPEAR13XX_GETH_BASE,
+		.end = SPEAR13XX_GETH_BASE + SZ_32K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_GMAC_1,
+		.start = SPEAR13XX_IRQ_GETH_SBD,
 		.flags = IORESOURCE_IRQ,
 		.name = "macirq",
 	},
 	[2] = {
-		.start = IRQ_GMAC_2,
+		.start = SPEAR13XX_IRQ_GETH_PMT,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-static u64 eth0_dma_mask = ~(u32) 0;
-struct platform_device spear13xx_eth0_device = {
+static u64 eth_dma_mask = ~(u32) 0;
+struct platform_device spear13xx_eth_device = {
 	.name = "stmmaceth",
 	.id = 0,
-	.num_resources = ARRAY_SIZE(eth0_resources),
-	.resource = eth0_resources,
+	.num_resources = ARRAY_SIZE(eth_resources),
+	.resource = eth_resources,
 	.dev = {
-		.platform_data = &ether0_platform_data,
-		.dma_mask = &eth0_dma_mask,
+		.platform_data = &ether_platform_data,
+		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
-};
-
-/* i2s0 device registeration */
-static struct resource i2s0_resources[] = {
-	{
-		.start	= SPEAR13XX_I2S0_BASE,
-		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-
-		.name	= "play_irq",
-		.start	= IRQ_PLAY_I2S0,
-		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "record_irq",
-		.start	= IRQ_REC_I2S0,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_i2s0_device = {
-	.name = "spear13xx-i2s",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(i2s0_resources),
-	.resource = i2s0_resources,
-};
-
-/* i2s1 device registeration */
-static struct resource i2s1_resources[] = {
-	{
-		.start	= SPEAR13XX_I2S1_BASE,
-		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	}, {
-
-		.name	= "play_irq",
-		.start	= IRQ_PLAY_I2S1,
-		.flags	= IORESOURCE_IRQ,
-	}, {
-		.name	= "record_irq",
-		.start	= IRQ_REC_I2S1,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_i2s1_device = {
-	.name = "spear13xx-i2s",
-	.id = 1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(i2s1_resources),
-	.resource = i2s1_resources,
-};
-
-struct platform_device spear13xx_pcm_device = {
-	.name		= "spear-pcm-audio",
-	.id		= -1,
 };
 
 /* i2c device registeration */
@@ -333,7 +358,7 @@ static struct resource i2c_resources[] = {
 		.end = SPEAR13XX_I2C_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_I2C,
+		.start = SPEAR13XX_IRQ_I2C,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -369,7 +394,21 @@ struct platform_device spear13xx_fsmc_nor_device = {
 /* nand device registeration */
 void __init nand_mach_init(u32 busw)
 {
-	u32 fsmc_cfg = readl(FSMC_CFG);
+	void __iomem *reg;
+	u32 fsmc_cfg;
+
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		reg = VA_SPEAR1340_FSMC_CFG;
+#endif
+	} else if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		reg = VA_SPEAR1310_FSMC_CFG;
+#endif
+	} else
+		reg = VA_FSMC_CFG;
+
+	fsmc_cfg = readl(reg);
 	fsmc_cfg &= ~(FSMC_MEMSEL_MASK << FSMC_MEMSEL_SHIFT);
 	fsmc_cfg |= (FSMC_MEM_NAND << FSMC_MEMSEL_SHIFT);
 
@@ -378,12 +417,12 @@ void __init nand_mach_init(u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, FSMC_CFG);
+	writel(fsmc_cfg, reg);
 }
 
-static void nand_select_bank(u32 bank, u32 busw)
+void nand_select_bank(u32 bank, u32 busw)
 {
-	u32 fsmc_cfg = readl(FSMC_CFG);
+	u32 fsmc_cfg = readl(VA_FSMC_CFG);
 
 	fsmc_cfg &= ~(NAND_BANK_MASK << NAND_BANK_SHIFT);
 	fsmc_cfg |= (bank << NAND_BANK_SHIFT);
@@ -393,7 +432,7 @@ static void nand_select_bank(u32 bank, u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, FSMC_CFG);
+	writel(fsmc_cfg, VA_FSMC_CFG);
 }
 
 static struct fsmc_nand_platform_data nand_platform_data = {
@@ -430,7 +469,7 @@ static struct resource ehci0_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USBH_EHCI0,
+		.start = SPEAR13XX_IRQ_USBH_EHCI0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -442,7 +481,7 @@ static struct resource ehci1_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USBH_EHCI1,
+		.start = SPEAR13XX_IRQ_USBH_EHCI1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -454,7 +493,7 @@ static struct resource ohci0_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USBH_OHCI0,
+		.start = SPEAR13XX_IRQ_USBH_OHCI0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -465,7 +504,7 @@ static struct resource ohci1_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_USBH_OHCI1,
+		.start = SPEAR13XX_IRQ_USBH_OHCI1,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -528,28 +567,6 @@ struct platform_device spear13xx_ohci1_device = {
 	.resource = ohci1_resources,
 };
 
-/* jpeg device registeration */
-static struct resource jpeg_resources[] = {
-	{
-		.start = SPEAR13XX_JPEG_BASE,
-		.end = SPEAR13XX_JPEG_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_JPEG,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_jpeg_device = {
-	.name = "jpeg-designware",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(jpeg_resources),
-	.resource = jpeg_resources,
-};
-
 /* keyboard device registration */
 static struct resource kbd_resources[] = {
 	{
@@ -557,7 +574,7 @@ static struct resource kbd_resources[] = {
 		.end = SPEAR13XX_KBD_BASE + SZ_1K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_KBD,
+		.start = SPEAR13XX_IRQ_KBD,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -572,13 +589,13 @@ struct platform_device spear13xx_kbd_device = {
 /* clcd db9000 devide registration */
 static struct resource db9000fb_resources[] = {
 	[0] = {
-		.start = SPEAR13XX_DB9000_LCD_BASE,
-		.end = SPEAR13XX_DB9000_LCD_BASE + SZ_4K - 1,
+		.start = SPEAR13XX_CLCD_BASE,
+		.end = SPEAR13XX_CLCD_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_CLCD,
-		.end = IRQ_CLCD,
+		.start = SPEAR13XX_IRQ_CLCD,
+		.end = SPEAR13XX_IRQ_CLCD,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -604,7 +621,7 @@ static struct resource rtc_resources[] = {
 		.end = SPEAR13XX_RTC_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_RTC,
+		.start = SPEAR13XX_IRQ_RTC,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -616,122 +633,6 @@ struct platform_device spear13xx_rtc_device = {
 	.resource = rtc_resources,
 };
 
-#ifdef CONFIG_PCIEPORTBUS
-/* PCIE0 clock always needs to be enabled if any of the three PCIE port
- * have to be used. So call this function from the board initilization
- * file. Ideally , all controller should have been independent from
- * others with respect to clock.
- */
-int enable_pcie0_clk(void)
-{
-	struct clk *clk;
-	/*Enable all CLK in CFG registers here only. Idealy only PCIE0
-	 * should have been enabled. But Controler does not work
-	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
-	 */
-	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, PCIE_CFG);
-	clk = clk_get_sys("pcie0", NULL);
-	if (IS_ERR(clk)) {
-		pr_err("%s:couldn't get clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-	if (clk_enable(clk)) {
-		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-
-	return 0;
-}
-#endif
-
-/* pcie gadget registration */
-static int pcie_gadget0_id;
-static u64 pcie_gadget0_dmamask = ~0;
-static struct resource pcie_gadget0_resources[] = {
-	{
-		.start = SPEAR13XX_PCIE0_APP_BASE,
-		.end = SPEAR13XX_PCIE0_APP_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_PCIE0_BASE,
-		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE0,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_pcie_gadget0_device = {
-	.name = "pcie-gadget-spear",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget0_dmamask,
-		.platform_data = &pcie_gadget0_id,
-	},
-	.num_resources = ARRAY_SIZE(pcie_gadget0_resources),
-	.resource = pcie_gadget0_resources,
-};
-
-static int pcie_gadget1_id;
-static u64 pcie_gadget1_dmamask = ~0;
-static struct resource pcie_gadget1_resources[] = {
-	{
-		.start = SPEAR13XX_PCIE1_APP_BASE,
-		.end = SPEAR13XX_PCIE1_APP_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_PCIE1_BASE,
-		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_pcie_gadget1_device = {
-	.name = "pcie-gadget-spear",
-	.id = 1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget1_dmamask,
-		.platform_data = &pcie_gadget1_id,
-	},
-	.num_resources = ARRAY_SIZE(pcie_gadget1_resources),
-	.resource = pcie_gadget1_resources,
-};
-
-static int pcie_gadget2_id;
-static u64 pcie_gadget2_dmamask = ~0;
-static struct resource pcie_gadget2_resources[] = {
-	{
-		.start = SPEAR13XX_PCIE2_APP_BASE,
-		.end = SPEAR13XX_PCIE2_APP_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR13XX_PCIE2_BASE,
-		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_PCIE2,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_pcie_gadget2_device = {
-	.name = "pcie-gadget-spear",
-	.id = 2,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.dma_mask = &pcie_gadget2_dmamask,
-		.platform_data = &pcie_gadget2_id,
-	},
-	.num_resources = ARRAY_SIZE(pcie_gadget2_resources),
-	.resource = pcie_gadget2_resources,
-};
-
 /* sdhci (sdio) device declaration */
 static struct resource sdhci_resources[] = {
 	{
@@ -739,7 +640,7 @@ static struct resource sdhci_resources[] = {
 		.end	= SPEAR13XX_MCIF_SDHCI_BASE + SZ_256 - 1,
 		.flags	= IORESOURCE_MEM,
 	}, {
-		.start	= IRQ_SDHCI,
+		.start	= SPEAR13XX_IRQ_SDHCI,
 		.flags	= IORESOURCE_IRQ,
 	}
 };
@@ -761,7 +662,7 @@ static struct resource smi_resources[] = {
 		.end = SPEAR13XX_SMI_CTRL_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = IRQ_SMI,
+		.start = SPEAR13XX_IRQ_SMI,
 		.flags = IORESOURCE_IRQ,
 	},
 };
@@ -771,35 +672,6 @@ struct platform_device spear13xx_smi_device = {
 	.id = -1,
 	.num_resources = ARRAY_SIZE(smi_resources),
 	.resource = smi_resources,
-};
-
-/* usb device registeration */
-static struct resource udc_resources[] = {
-	[0] = {
-		.start = SPEAR13XX_UDC_BASE,
-		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = SPEAR13XX_UPD_BASE,
-		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[3] = {
-		.start = IRQ_UDC,
-		.end = IRQ_UDC,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear13xx_udc_device = {
-	.name = "designware_udc",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = 0xffffffff,
-	},
-	.num_resources = ARRAY_SIZE(udc_resources),
-	.resource = udc_resources,
 };
 
 /* wdt device registration */
@@ -818,6 +690,306 @@ struct platform_device spear13xx_wdt_device = {
 	.resource = wdt_resources,
 };
 
+struct platform_device spear13xx_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
+};
+
+/* pcie host/gadget registration */
+static int pcie_gadget0_id;
+
+static u64 pcie_gadget0_dmamask = ~0;
+
+static struct pcie_port_info	pcie_host0_info;
+
+static u64 pcie_host0_dmamask = ~0;
+
+static struct resource pcie0_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE0_APP_BASE,
+		.end = SPEAR13XX_PCIE0_APP_BASE + SZ_16K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE0_BASE,
+		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_PCIE0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pcie_gadget0_device = {
+	.name = "pcie-gadget-spear",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget0_dmamask,
+		.platform_data = &pcie_gadget0_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie0_resources),
+	.resource = pcie0_resources,
+};
+
+struct platform_device spear13xx_pcie_host0_device = {
+	.name = "dw_pcie",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_host0_dmamask,
+		.platform_data = &pcie_host0_info,
+	},
+	.num_resources = ARRAY_SIZE(pcie0_resources),
+	.resource = pcie0_resources,
+};
+
+/*
+ * Devices present on CPU_SPEAR1300, CPU_SPEAR1310, CPU_SPEAR1310_REVA or
+ * CPU_SPEAR900
+ */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
+
+static struct i2s_platform_data i2s_data = {
+	.cap = PLAY | RECORD,
+	.channel = 2,
+};
+/* i2s0 device registeration */
+static struct resource i2s0_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S0_BASE,
+		.end	= SPEAR13XX_I2S0_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= SPEAR13XX_IRQ_PLAY_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= SPEAR13XX_IRQ_REC_I2S0,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s0_device = {
+	.name = "designware-i2s",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data,
+	},
+	.num_resources = ARRAY_SIZE(i2s0_resources),
+	.resource = i2s0_resources,
+};
+
+/* i2s1 device registeration */
+static struct resource i2s1_resources[] = {
+	{
+		.start	= SPEAR13XX_I2S1_BASE,
+		.end	= SPEAR13XX_I2S1_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	}, {
+
+		.name	= "play_irq",
+		.start	= SPEAR13XX_IRQ_PLAY_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.name	= "record_irq",
+		.start	= SPEAR13XX_IRQ_REC_I2S1,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_i2s1_device = {
+	.name = "designware-i2s",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data,
+	},
+	.num_resources = ARRAY_SIZE(i2s1_resources),
+	.resource = i2s1_resources,
+};
+
+/* jpeg device registeration */
+static struct resource jpeg_resources[] = {
+	{
+		.start = SPEAR13XX_JPEG_BASE,
+		.end = SPEAR13XX_JPEG_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_JPEG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_jpeg_device = {
+	.name = "jpeg-designware",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(jpeg_resources),
+	.resource = jpeg_resources,
+};
+
+/* pcie host/gadget registration */
+static int pcie_gadget1_id;
+static int pcie_gadget2_id;
+
+static u64 pcie_gadget1_dmamask = ~0;
+static u64 pcie_gadget2_dmamask = ~0;
+
+static struct pcie_port_info	pcie_host1_info;
+static struct pcie_port_info	pcie_host2_info;
+
+static u64 pcie_host1_dmamask = ~0;
+static u64 pcie_host2_dmamask = ~0;
+
+static struct resource pcie1_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE1_APP_BASE,
+		.end = SPEAR13XX_PCIE1_APP_BASE + SZ_16K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE1_BASE,
+		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_PCIE1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource pcie2_resources[] = {
+	{
+		.start = SPEAR13XX_PCIE2_APP_BASE,
+		.end = SPEAR13XX_PCIE2_APP_BASE + SZ_16K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_PCIE2_BASE,
+		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_IRQ_PCIE2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pcie_gadget1_device = {
+	.name = "pcie-gadget-spear",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget1_dmamask,
+		.platform_data = &pcie_gadget1_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie1_resources),
+	.resource = pcie1_resources,
+};
+
+struct platform_device spear13xx_pcie_gadget2_device = {
+	.name = "pcie-gadget-spear",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_gadget2_dmamask,
+		.platform_data = &pcie_gadget2_id,
+	},
+	.num_resources = ARRAY_SIZE(pcie2_resources),
+	.resource = pcie2_resources,
+};
+
+struct platform_device spear13xx_pcie_host1_device = {
+	.name = "dw_pcie",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_host1_dmamask,
+		.platform_data = &pcie_host1_info,
+	},
+	.num_resources = ARRAY_SIZE(pcie1_resources),
+	.resource = pcie1_resources,
+};
+
+struct platform_device spear13xx_pcie_host2_device = {
+	.name = "dw_pcie",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &pcie_host2_dmamask,
+		.platform_data = &pcie_host2_info,
+	},
+	.num_resources = ARRAY_SIZE(pcie2_resources),
+	.resource = pcie2_resources,
+};
+
+#endif
+
+/*Devices present on CPU_SPEAR1300, CPU_SPEAR1310_REVA or CPU_SPEAR900 */
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900)
+/* usb device registeration */
+static struct resource udc_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_UDC_BASE,
+		.end = SPEAR13XX_UDC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR13XX_UPD_BASE,
+		.end = SPEAR13XX_UPD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[3] = {
+		.start = SPEAR13XX_IRQ_UDC,
+		.end = SPEAR13XX_IRQ_UDC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_udc_device = {
+	.name = "designware_udc",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources = ARRAY_SIZE(udc_resources),
+	.resource = udc_resources,
+};
+#endif
+
+#ifdef CONFIG_PCIEPORTBUS
+/* PCIE0 clock always needs to be enabled if any of the three PCIE port
+ * have to be used. So call this function from the board initilization
+ * file. Ideally , all controller should have been independent from
+ * others with respect to clock.
+ */
+int enable_pcie0_clk(void)
+{
+	struct clk *clk;
+	/*
+	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
+	clk = clk_get_sys("dw_pcie.0", NULL);
+	if (IS_ERR(clk)) {
+		pr_err("%s:couldn't get clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+	if (clk_enable(clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+#endif
+
 static void dmac_setup(void)
 {
 	/*
@@ -825,55 +997,173 @@ static void dmac_setup(void)
 	 * operations.
 	 */
 	/* setting Peripheral flow controller for jpeg */
-	writel(1 << DMA_REQ_FROM_JPEG, DMAC_FLOW_SEL);
+	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
+}
+
+/*
+ * Generic function to configure ethernet phy clock as per the selected
+ * interface
+ */
+int spear13xx_eth_phy_clk_cfg(void *data)
+{
+	int ret;
+	struct platform_device *pdev = data;
+	struct clk *input_clk, *input_pclk, *phy_pclk;
+	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
+	const char *phy_clk_src[] = {
+		"gmac_phy_input_clk",
+		"gmac_phy_synth_clk",
+	};
+	const char *input_clk_src[] = {
+		"pll2_clk",
+		"gmii_125m_pad",
+		"osc3_25m_clk",
+	};
+
+	if (pdata == NULL)
+		return -EFAULT;
+
+	/* Get the Pll-2 Clock as parent for PHY Input Clock Source */
+	input_pclk = clk_get(NULL, input_clk_src[0]);
+	if (IS_ERR(input_pclk)) {
+		ret = PTR_ERR(input_pclk);
+		goto fail_get_input_pclk;
+	}
+
+	/*
+	 * Get the Phy Input clock source as parent for Phy clock. Default
+	 * selection is gmac_phy_input_clk. This selection would be driving both
+	 * the synthesizer and phy clock.
+	 */
+	input_clk = clk_get(NULL, phy_clk_src[0]);
+	if (IS_ERR(input_clk)) {
+		ret = PTR_ERR(input_clk);
+		goto fail_get_input_clk;
+	}
+
+	/* Fetch the phy clock */
+	pdata->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(pdata->clk)) {
+		ret = PTR_ERR(pdata->clk);
+		goto fail_get_phy_clk;
+	}
+
+	/* Set the pll-2 to 125 MHz */
+	clk_set_rate(input_pclk, 125000000);
+
+	/* Set the Pll-2 as parent for gmac_phy_input_clk */
+	clk_set_parent(input_clk, input_pclk);
+
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
+		/*
+		 * For the rmii interface select gmac_phy_synth_clk
+		 * as the parent and set the clock to 50 Mhz
+		 */
+		phy_pclk = clk_get(NULL, phy_clk_src[1]);
+		clk_set_rate(phy_pclk, 50000000);
+	} else {
+		/*
+		 * Set the gmac_phy_input_clk as the parent,
+		 * and pll-2 is already running as parent of
+		 * gmac_phy_input_clk at 125 Mhz
+		 */
+		phy_pclk = input_clk;
+	}
+
+	/* Select the parent for phy clock */
+	clk_set_parent(pdata->clk, phy_pclk);
+	ret = clk_enable(pdata->clk);
+
+	return ret;
+fail_get_phy_clk:
+	clk_put(input_clk);
+fail_get_input_clk:
+	clk_put(input_pclk);
+fail_get_input_pclk:
+	return ret;
 }
 
 #ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
-	struct clk *i2s_src_clk, *pll3_clk, *i2s_ref_clk;
+	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk,
+		*i2s_ref_clk, *i2s_sclk_clk;
 
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get clk for i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
 		return;
 	}
 
 	pll3_clk = clk_get_sys(NULL, "pll3_clk");
 	if (IS_ERR(pll3_clk)) {
-		pr_err("%s:couldn't get clk for pll3_clck\n", __func__);
+		pr_err("%s:couldn't get pll3_clck\n", __func__);
 		goto put_src_clk;
+	}
+
+	i2s_prs1_clk = clk_get_sys(NULL, "i2s_prs1_clk");
+	if (IS_ERR(i2s_prs1_clk)) {
+		pr_err("%s:couldn't get i2s_prs1_clk\n", __func__);
+		goto put_pll3_clk;
 	}
 
 	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
 	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get clk for i2s_ref_clk\n", __func__);
-		goto put_pll3_clk;
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		goto put_prs1_clk;
 	}
 
-	if (clk_set_parent(i2s_src_clk, pll3_clk))
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
 		goto put_ref_clk;
+	}
+
+	i2s_ref_pad_clk = clk_get_sys(NULL, "i2s_ref_pad_clk");
+	if (IS_ERR(i2s_ref_pad_clk)) {
+		pr_err("%s:couldn't get i2s_ref_pad_clk\n", __func__);
+		goto put_sclk_clk;
+	}
+
+	if (clk_set_parent(i2s_src_clk, pll3_clk)) {
+		pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
+				__func__);
+		goto put_ref_pad_clk;
+	}
 
 	if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
-		goto put_ref_clk;
+		goto put_ref_pad_clk;
 
-	if (clk_set_rate(i2s_ref_clk, 12288000)) /*12.288 Mhz */
-		goto put_ref_clk;
+	if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
+		goto put_ref_pad_clk;
 
-	if (clk_enable(i2s_ref_clk)) {
-		pr_err("%s:enabling i2s_ref_clk_fail\n", __func__);
-		goto put_ref_clk;
+	if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
+		pr_err("%s:set_parent prs1_clk of ref_clk fail\n", __func__);
+		goto put_ref_pad_clk;
 	}
-	goto put_pll3_clk;
 
+	if (clk_enable(i2s_ref_pad_clk)) {
+		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
+		goto put_ref_pad_clk;
+	}
+
+	if (clk_enable(i2s_sclk_clk)) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_ref_pad_clk;
+	}
+
+put_ref_pad_clk:
+	clk_put(i2s_ref_pad_clk);
+put_sclk_clk:
+	clk_put(i2s_sclk_clk);
 put_ref_clk:
 	clk_put(i2s_ref_clk);
+put_prs1_clk:
+	clk_put(i2s_prs1_clk);
 put_pll3_clk:
 	clk_put(pll3_clk);
 put_src_clk:
 	clk_put(i2s_src_clk);
-
-	return;
 }
 #endif
 
@@ -888,7 +1178,13 @@ void __init spear13xx_init(void)
 	 * Comment from nomadik:
 	 * At full speed latency must be >=2, so 0x249 in low bits
 	 */
-	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+	if (cpu_is_spear1340() || cpu_is_spear1310()) {
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260000,
+				0xfe00ffff);
+	} else {
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249,
+				0xfe00ffff);
+	}
 #endif
 
 #ifdef CONFIG_SND_SOC_STA529
@@ -896,7 +1192,11 @@ void __init spear13xx_init(void)
 #endif
 
 	dmac_setup();
-	set_udc_plat_data(&spear13xx_udc_device);
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900)
+	if (!cpu_is_spear1340() && !cpu_is_spear1310())
+		set_udc_plat_data(&spear13xx_udc_device);
+#endif
 }
 
 /* This will initialize vic */
@@ -952,9 +1252,24 @@ struct map_desc spear13xx_io_desc[] __initdata = {
 	}, {
 		.virtual	= IO_ADDRESS(SPEAR13XX_SYSRAM1_BASE),
 		.pfn		= __phys_to_pfn(SPEAR13XX_SYSRAM1_BASE),
-		.length		= SZ_1M,
+		.length		= SZ_4K,
 		.type		= MT_MEMORY_NONCACHED
-	},
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE0_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE0_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE1_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE1_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR13XX_PCIE2_BASE),
+		.pfn		= __phys_to_pfn(SPEAR13XX_PCIE2_BASE),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE
+	}
 };
 
 /* This will create static memory mapping for selected devices */
@@ -963,7 +1278,16 @@ void __init spear13xx_map_io(void)
 	iotable_init(spear13xx_io_desc, ARRAY_SIZE(spear13xx_io_desc));
 
 	/* This will initialize clock framework */
-	spear13xx_clk_init();
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		spear1340_clk_init();
+#endif
+	} else if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		spear1310_clk_init();
+#endif
+	} else
+		spear13xx_clk_init();
 }
 
 static void __init spear13xx_timer_init(void)
@@ -1002,15 +1326,18 @@ struct sys_timer spear13xx_timer = {
 	.init = spear13xx_timer_init,
 };
 
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+			defined(CONFIG_CPU_SPEAR900) || \
+			defined(CONFIG_CPU_SPEAR1310)
 /* pad multiplexing support */
 /* devices */
 
 /* Pad multiplexing for i2c device */
 static struct pmx_mux_reg pmx_i2c_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_I2C_MASK,
-		.value = PMX_I2C_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_I2C_MASK,
+		.value = SPEAR13XX_PMX_I2C_MASK,
 	},
 };
 
@@ -1021,7 +1348,7 @@ static struct pmx_dev_mode pmx_i2c_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2c = {
+struct pmx_dev spear13xx_pmx_i2c = {
 	.name = "i2c",
 	.modes = pmx_i2c_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2c_modes),
@@ -1030,9 +1357,9 @@ struct pmx_dev pmx_i2c = {
 /* Pad multiplexing for ssp device */
 static struct pmx_mux_reg pmx_ssp_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SSP_MASK,
-		.value = PMX_SSP_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_SSP_MASK,
+		.value = SPEAR13XX_PMX_SSP_MASK,
 	},
 };
 
@@ -1043,7 +1370,7 @@ static struct pmx_dev_mode pmx_ssp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_ssp = {
+struct pmx_dev spear13xx_pmx_ssp = {
 	.name = "ssp",
 	.modes = pmx_ssp_modes,
 	.mode_count = ARRAY_SIZE(pmx_ssp_modes),
@@ -1052,9 +1379,9 @@ struct pmx_dev pmx_ssp = {
 /* Pad multiplexing for i2s1 device */
 static struct pmx_mux_reg pmx_i2s1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_I2S1_MASK,
-		.value = PMX_I2S1_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_I2S1_MASK,
+		.value = SPEAR13XX_PMX_I2S1_MASK,
 	},
 };
 
@@ -1065,7 +1392,7 @@ static struct pmx_dev_mode pmx_i2s1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2s1 = {
+struct pmx_dev spear13xx_pmx_i2s1 = {
 	.name = "i2s1",
 	.modes = pmx_i2s1_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s1_modes),
@@ -1074,9 +1401,9 @@ struct pmx_dev pmx_i2s1 = {
 /* Pad multiplexing for i2s2 device */
 static struct pmx_mux_reg pmx_i2s2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_I2S2_MASK,
-		.value = PMX_I2S2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_I2S2_MASK,
+		.value = SPEAR13XX_PMX_I2S2_MASK,
 	},
 };
 
@@ -1087,7 +1414,7 @@ static struct pmx_dev_mode pmx_i2s2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_i2s2 = {
+struct pmx_dev spear13xx_pmx_i2s2 = {
 	.name = "i2s2",
 	.modes = pmx_i2s2_modes,
 	.mode_count = ARRAY_SIZE(pmx_i2s2_modes),
@@ -1096,9 +1423,9 @@ struct pmx_dev pmx_i2s2 = {
 /* Pad multiplexing for clcd device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_CLCD1_MASK,
-		.value = PMX_CLCD1_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_CLCD1_MASK,
+		.value = SPEAR13XX_PMX_CLCD1_MASK,
 	},
 };
 
@@ -1109,7 +1436,7 @@ static struct pmx_dev_mode pmx_clcd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd = {
+struct pmx_dev spear13xx_pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
@@ -1118,13 +1445,13 @@ struct pmx_dev pmx_clcd = {
 /* Pad multiplexing for clcd_hires device */
 static struct pmx_mux_reg pmx_clcd_hires_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_CLCD1_MASK,
-		.value = PMX_CLCD1_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_CLCD1_MASK,
+		.value = SPEAR13XX_PMX_CLCD1_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_CLCD2_MASK,
-		.value = PMX_CLCD2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_CLCD2_MASK,
+		.value = SPEAR13XX_PMX_CLCD2_MASK,
 	},
 };
 
@@ -1135,7 +1462,7 @@ static struct pmx_dev_mode pmx_clcd_hires_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_clcd_hires = {
+struct pmx_dev spear13xx_pmx_clcd_hires = {
 	.name = "clcd_high_res",
 	.modes = pmx_clcd_hires_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_hires_modes),
@@ -1147,13 +1474,13 @@ struct pmx_dev pmx_clcd_hires = {
  */
 static struct pmx_mux_reg pmx_egpio_grp_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_EGPIO_0_GRP_MASK,
-		.value = PMX_EGPIO_0_GRP_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_EGPIO_0_GRP_MASK,
+		.value = SPEAR13XX_PMX_EGPIO_0_GRP_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_EGPIO_1_GRP_MASK,
-		.value = PMX_EGPIO_1_GRP_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_EGPIO_1_GRP_MASK,
+		.value = SPEAR13XX_PMX_EGPIO_1_GRP_MASK,
 	},
 };
 
@@ -1164,7 +1491,7 @@ static struct pmx_dev_mode pmx_egpio_grp_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_egpio_grp = {
+struct pmx_dev spear13xx_pmx_egpio_grp = {
 	.name = "egpios",
 	.modes = pmx_egpio_grp_modes,
 	.mode_count = ARRAY_SIZE(pmx_egpio_grp_modes),
@@ -1173,9 +1500,9 @@ struct pmx_dev pmx_egpio_grp = {
 /* Pad multiplexing for smi 2 chips device */
 static struct pmx_mux_reg pmx_smi_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SMI_MASK,
-		.value = PMX_SMI_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_SMI_MASK,
+		.value = SPEAR13XX_PMX_SMI_MASK,
 	},
 };
 
@@ -1186,7 +1513,7 @@ static struct pmx_dev_mode pmx_smi_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smi_2_chips = {
+struct pmx_dev spear13xx_pmx_smi_2_chips = {
 	.name = "smi_2_chips",
 	.modes = pmx_smi_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_smi_2_modes),
@@ -1195,13 +1522,14 @@ struct pmx_dev pmx_smi_2_chips = {
 /* Pad multiplexing for smi 4 chips device */
 static struct pmx_mux_reg pmx_smi_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_SMI_MASK,
-		.value = PMX_SMI_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_SMI_MASK,
+		.value = SPEAR13XX_PMX_SMI_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
-		.value = PMX_SMINCS2_MASK | PMX_SMINCS3_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_SMINCS2_MASK | SPEAR13XX_PMX_SMINCS3_MASK,
+		.value = SPEAR13XX_PMX_SMINCS2_MASK | \
+			 SPEAR13XX_PMX_SMINCS3_MASK,
 	},
 };
 
@@ -1212,7 +1540,7 @@ static struct pmx_dev_mode pmx_smi_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_smi_4_chips = {
+struct pmx_dev spear13xx_pmx_smi_4_chips = {
 	.name = "smi_4_chips",
 	.modes = pmx_smi_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_smi_4_modes),
@@ -1221,9 +1549,9 @@ struct pmx_dev pmx_smi_4_chips = {
 /* Pad multiplexing for gmii device */
 static struct pmx_mux_reg pmx_gmii_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_GMII_MASK,
-		.value = PMX_GMII_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_GMII_MASK,
+		.value = SPEAR13XX_PMX_GMII_MASK,
 	},
 };
 
@@ -1234,7 +1562,7 @@ static struct pmx_dev_mode pmx_gmii_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gmii = {
+struct pmx_dev spear13xx_pmx_gmii = {
 	.name = "gmii",
 	.modes = pmx_gmii_modes,
 	.mode_count = ARRAY_SIZE(pmx_gmii_modes),
@@ -1243,13 +1571,15 @@ struct pmx_dev pmx_gmii = {
 /* Pad multiplexing for nand 8bit (4 chips) */
 static struct pmx_mux_reg pmx_nand8_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND8BIT4DEV_0_MASK,
-		.value = PMX_NAND8BIT4DEV_0_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_NAND8BIT4DEV_0_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT4DEV_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND8BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND8BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NAND8BIT4DEV_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT4DEV_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1260,7 +1590,7 @@ static struct pmx_dev_mode pmx_nand8_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_8bit_4_chips = {
+struct pmx_dev spear13xx_pmx_nand_8bit_4_chips = {
 	.name = "nand-8bit_4_chips",
 	.modes = pmx_nand8_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand8_4_modes),
@@ -1269,13 +1599,15 @@ struct pmx_dev pmx_nand_8bit_4_chips = {
 /* Pad multiplexing for nand 8bit device (cs0 only) */
 static struct pmx_mux_reg pmx_nand8_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND8BIT_0_MASK,
-		.value = PMX_NAND8BIT_0_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_NAND8BIT_0_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND8BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND8BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NAND8BIT_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND8BIT_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1286,7 +1618,7 @@ static struct pmx_dev_mode pmx_nand8_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_8bit = {
+struct pmx_dev spear13xx_pmx_nand_8bit = {
 	.name = "nand-8bit",
 	.modes = pmx_nand8_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand8_modes),
@@ -1300,13 +1632,15 @@ struct pmx_dev pmx_nand_8bit = {
  */
 static struct pmx_mux_reg pmx_nand16_4_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND16BIT4DEV_0_MASK,
-		.value = PMX_NAND16BIT4DEV_0_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_NAND16BIT4DEV_0_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT4DEV_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND16BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND16BIT4DEV_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NAND16BIT4DEV_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT4DEV_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1317,7 +1651,7 @@ static struct pmx_dev_mode pmx_nand16_4_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_16bit_4_chips = {
+struct pmx_dev spear13xx_pmx_nand_16bit_4_chips = {
 	.name = "nand-16bit_4_chips",
 	.modes = pmx_nand16_4_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand16_4_modes),
@@ -1326,13 +1660,15 @@ struct pmx_dev pmx_nand_16bit_4_chips = {
 /* Pad multiplexing for nand 16bit device (cs0 only) */
 static struct pmx_mux_reg pmx_nand16_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_NAND16BIT_0_MASK,
-		.value = PMX_NAND16BIT_0_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_NAND16BIT_0_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT_0_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NAND16BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_NAND16BIT_1_MASK | PMX_KEYBOARD_6X6_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NAND16BIT_1_MASK | \
+			SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_NAND16BIT_1_MASK | \
+			 SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
@@ -1343,7 +1679,7 @@ static struct pmx_dev_mode pmx_nand16_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_nand_16bit = {
+struct pmx_dev spear13xx_pmx_nand_16bit = {
 	.name = "nand-16bit",
 	.modes = pmx_nand16_modes,
 	.mode_count = ARRAY_SIZE(pmx_nand16_modes),
@@ -1352,13 +1688,14 @@ struct pmx_dev pmx_nand_16bit = {
 /* Pad multiplexing for keyboard_6x6 device */
 static struct pmx_mux_reg pmx_keyboard_6x6_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_KEYBOARD_6X6_MASK,
-		.value = PMX_KEYBOARD_6X6_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
+		.value = SPEAR13XX_PMX_KEYBOARD_6X6_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NFIO815_MASK | PMX_NFCE1_MASK | \
-			PMX_NFCE2_MASK | PMX_NFWPRT1_MASK | PMX_NFWPRT2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NFIO815_MASK | SPEAR13XX_PMX_NFCE1_MASK |\
+			SPEAR13XX_PMX_NFCE2_MASK | SPEAR13XX_PMX_NFWPRT1_MASK |\
+			SPEAR13XX_PMX_NFWPRT2_MASK,
 		.value = 0,
 	},
 };
@@ -1370,7 +1707,7 @@ static struct pmx_dev_mode pmx_keyboard_6x6_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_keyboard_6x6 = {
+struct pmx_dev spear13xx_pmx_keyboard_6x6 = {
 	.name = "keyboard_6x6",
 	.modes = pmx_keyboard_6x6_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_6x6_modes),
@@ -1379,13 +1716,16 @@ struct pmx_dev pmx_keyboard_6x6 = {
 /* Pad multiplexing for keyboard_9x9 device */
 static struct pmx_mux_reg pmx_keyboard_9x9_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_KEYBOARD_6X6_MASK | PMX_KBD_ROWCOL68_MASK,
-		.value = PMX_KEYBOARD_6X6_MASK | PMX_KBD_ROWCOL68_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_KEYBOARD_6X6_MASK | \
+			SPEAR13XX_PMX_KBD_ROWCOL68_MASK,
+		.value = SPEAR13XX_PMX_KEYBOARD_6X6_MASK | \
+			 SPEAR13XX_PMX_KBD_ROWCOL68_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_NFIO815_MASK | PMX_NFCE1_MASK | \
-			PMX_NFCE2_MASK | PMX_NFWPRT1_MASK | PMX_NFWPRT2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_NFIO815_MASK | SPEAR13XX_PMX_NFCE1_MASK |\
+			SPEAR13XX_PMX_NFCE2_MASK | SPEAR13XX_PMX_NFWPRT1_MASK |\
+			SPEAR13XX_PMX_NFWPRT2_MASK,
 		.value = 0,
 	},
 };
@@ -1397,7 +1737,7 @@ static struct pmx_dev_mode pmx_keyboard_9x9_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_keyboard_9x9 = {
+struct pmx_dev spear13xx_pmx_keyboard_9x9 = {
 	.name = "keyboard_9x9",
 	.modes = pmx_keyboard_9x9_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_9x9_modes),
@@ -1406,9 +1746,9 @@ struct pmx_dev pmx_keyboard_9x9 = {
 /* Pad multiplexing for uart0 device */
 static struct pmx_mux_reg pmx_uart0_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_0,
-		.mask = PMX_UART0_MASK,
-		.value = PMX_UART0_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_UART0_MASK,
+		.value = SPEAR13XX_PMX_UART0_MASK,
 	},
 };
 
@@ -1419,7 +1759,7 @@ static struct pmx_dev_mode pmx_uart0_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0 = {
+struct pmx_dev spear13xx_pmx_uart0 = {
 	.name = "uart0",
 	.modes = pmx_uart0_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modes),
@@ -1428,9 +1768,9 @@ struct pmx_dev pmx_uart0 = {
 /* Pad multiplexing for uart0_modem device */
 static struct pmx_mux_reg pmx_uart0_modem_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_UART0_MODEM_MASK,
-		.value = PMX_UART0_MODEM_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_UART0_MODEM_MASK,
+		.value = SPEAR13XX_PMX_UART0_MODEM_MASK,
 	},
 };
 
@@ -1441,7 +1781,7 @@ static struct pmx_dev_mode pmx_uart0_modem_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_uart0_modem = {
+struct pmx_dev spear13xx_pmx_uart0_modem = {
 	.name = "uart0_modem",
 	.modes = pmx_uart0_modem_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart0_modem_modes),
@@ -1450,9 +1790,9 @@ struct pmx_dev pmx_uart0_modem = {
 /* Pad multiplexing for gpt_0_1 device */
 static struct pmx_mux_reg pmx_gpt_0_1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT0_TMR1_MASK,
-		.value = PMX_GPT0_TMR1_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_GPT0_TMR1_MASK,
+		.value = SPEAR13XX_PMX_GPT0_TMR1_MASK,
 	},
 };
 
@@ -1463,7 +1803,7 @@ static struct pmx_dev_mode pmx_gpt_0_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_0_1 = {
+struct pmx_dev spear13xx_pmx_gpt_0_1 = {
 	.name = "gpt_0_1",
 	.modes = pmx_gpt_0_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_0_1_modes),
@@ -1472,9 +1812,9 @@ struct pmx_dev pmx_gpt_0_1 = {
 /* Pad multiplexing for gpt_0_2 device */
 static struct pmx_mux_reg pmx_gpt_0_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT0_TMR2_MASK,
-		.value = PMX_GPT0_TMR2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_GPT0_TMR2_MASK,
+		.value = SPEAR13XX_PMX_GPT0_TMR2_MASK,
 	},
 };
 
@@ -1485,7 +1825,7 @@ static struct pmx_dev_mode pmx_gpt_0_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_0_2 = {
+struct pmx_dev spear13xx_pmx_gpt_0_2 = {
 	.name = "gpt_0_2",
 	.modes = pmx_gpt_0_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_0_2_modes),
@@ -1494,9 +1834,9 @@ struct pmx_dev pmx_gpt_0_2 = {
 /* Pad multiplexing for gpt_1_1 device */
 static struct pmx_mux_reg pmx_gpt_1_1_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT1_TMR1_MASK,
-		.value = PMX_GPT1_TMR1_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_GPT1_TMR1_MASK,
+		.value = SPEAR13XX_PMX_GPT1_TMR1_MASK,
 	},
 };
 
@@ -1507,7 +1847,7 @@ static struct pmx_dev_mode pmx_gpt_1_1_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_1_1 = {
+struct pmx_dev spear13xx_pmx_gpt_1_1 = {
 	.name = "gpt_1_1",
 	.modes = pmx_gpt_1_1_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_1_1_modes),
@@ -1516,9 +1856,9 @@ struct pmx_dev pmx_gpt_1_1 = {
 /* Pad multiplexing for gpt_1_2 device */
 static struct pmx_mux_reg pmx_gpt_1_2_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_GPT1_TMR2_MASK,
-		.value = PMX_GPT1_TMR2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_GPT1_TMR2_MASK,
+		.value = SPEAR13XX_PMX_GPT1_TMR2_MASK,
 	},
 };
 
@@ -1529,7 +1869,7 @@ static struct pmx_dev_mode pmx_gpt_1_2_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_gpt_1_2 = {
+struct pmx_dev spear13xx_pmx_gpt_1_2 = {
 	.name = "gpt_1_2",
 	.modes = pmx_gpt_1_2_modes,
 	.mode_count = ARRAY_SIZE(pmx_gpt_1_2_modes),
@@ -1538,13 +1878,17 @@ struct pmx_dev pmx_gpt_1_2 = {
 /* Pad multiplexing for mcif device */
 static struct pmx_mux_reg pmx_mcif_mux[] = {
 	{
-		.address = PAD_MUX_CONFIG_REG_1,
-		.mask = PMX_MCIFALL_1_MASK,
-		.value = PMX_MCIFALL_1_MASK,
+		.address = PAD_FUNCTION_EN_1,
+		.mask = SPEAR13XX_PMX_MCI_DATA8_15_MASK,
+		.value = SPEAR13XX_PMX_MCI_DATA8_15_MASK,
 	}, {
-		.address = PAD_MUX_CONFIG_REG_2,
-		.mask = PMX_MCIFALL_2_MASK,
-		.value = PMX_MCIFALL_2_MASK,
+		.address = PAD_FUNCTION_EN_2,
+		.mask = SPEAR13XX_PMX_MCIFALL_1_MASK,
+		.value = SPEAR13XX_PMX_MCIFALL_1_MASK,
+	}, {
+		.address = PAD_FUNCTION_EN_3,
+		.mask = SPEAR13XX_PMX_MCIFALL_2_MASK,
+		.value = SPEAR13XX_PMX_MCIFALL_2_MASK,
 	},
 };
 
@@ -1555,7 +1899,7 @@ static struct pmx_dev_mode pmx_mcif_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_mcif = {
+struct pmx_dev spear13xx_pmx_mcif = {
 	.name = "mcif",
 	.modes = pmx_mcif_modes,
 	.mode_count = ARRAY_SIZE(pmx_mcif_modes),
@@ -1564,7 +1908,7 @@ struct pmx_dev pmx_mcif = {
 /* Pad multiplexing for sdhci device */
 static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_SD,
 	},
@@ -1577,7 +1921,7 @@ static struct pmx_dev_mode pmx_sdhci_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_sdhci = {
+struct pmx_dev spear13xx_pmx_sdhci = {
 	.name = "sdhci",
 	.modes = pmx_sdhci_modes,
 	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
@@ -1586,7 +1930,7 @@ struct pmx_dev pmx_sdhci = {
 /* Pad multiplexing for cf device */
 static struct pmx_mux_reg pmx_cf_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_CF,
 	},
@@ -1599,7 +1943,7 @@ static struct pmx_dev_mode pmx_cf_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_cf = {
+struct pmx_dev spear13xx_pmx_cf = {
 	.name = "cf",
 	.modes = pmx_cf_modes,
 	.mode_count = ARRAY_SIZE(pmx_cf_modes),
@@ -1608,7 +1952,7 @@ struct pmx_dev pmx_cf = {
 /* Pad multiplexing for xd device */
 static struct pmx_mux_reg pmx_xd_mux[] = {
 	{
-		.address = SDHCI_CFG,
+		.address = PERIP_CFG,
 		.mask = MCIF_SEL_MASK,
 		.value = MCIF_SEL_XD,
 	},
@@ -1621,8 +1965,75 @@ static struct pmx_dev_mode pmx_xd_modes[] = {
 	},
 };
 
-struct pmx_dev pmx_xd = {
+struct pmx_dev spear13xx_pmx_xd = {
 	.name = "xd",
 	.modes = pmx_xd_modes,
 	.mode_count = ARRAY_SIZE(pmx_xd_modes),
 };
+
+/* Pad multiplexing for touch_xy device */
+static struct pmx_mux_reg pmx_touch_xy_mux[] = {
+	{
+		.address = PAD_FUNCTION_EN_3,
+		.mask = SPEAR13XX_PMX_TOUCH_XY_MASK,
+		.value = SPEAR13XX_PMX_TOUCH_XY_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_touch_xy_modes[] = {
+	{
+		.mux_regs = pmx_touch_xy_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_touch_xy_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_touch_xy = {
+	.name = "touch_xy",
+	.modes = pmx_touch_xy_modes,
+	.mode_count = ARRAY_SIZE(pmx_touch_xy_modes),
+};
+
+/* Pad multiplexing for ssp0_cs0 device */
+static struct pmx_mux_reg pmx_ssp0_cs0_mux[] = {
+	{
+		.address = PAD_FUNCTION_EN_3,
+		.mask = SPEAR13XX_PMX_SSP0_CS0_MASK,
+		.value = SPEAR13XX_PMX_SSP0_CS0_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_cs0_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_cs0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs0_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_ssp0_cs0 = {
+	.name = "ssp0_cs0",
+	.modes = pmx_ssp0_cs0_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs0_modes),
+};
+
+/* Pad multiplexing for ssp0_cs1_2 device */
+static struct pmx_mux_reg pmx_ssp0_cs1_2_mux[] = {
+	{
+		.address = PAD_FUNCTION_EN_3,
+		.mask = SPEAR13XX_PMX_SSP0_CS1_2_MASK,
+		.value = SPEAR13XX_PMX_SSP0_CS1_2_MASK,
+	},
+};
+
+static struct pmx_dev_mode pmx_ssp0_cs1_2_modes[] = {
+	{
+		.mux_regs = pmx_ssp0_cs1_2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp0_cs1_2_mux),
+	},
+};
+
+struct pmx_dev spear13xx_pmx_ssp0_cs1_2 = {
+	.name = "ssp0_cs1_2",
+	.modes = pmx_ssp0_cs1_2_modes,
+	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_2_modes),
+};
+#endif

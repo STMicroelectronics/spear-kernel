@@ -37,6 +37,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <plat/adc.h>
+#include <plat/hardware.h>
 #include "spear_adc.h"
 
 #define DRIVER_NAME "spear-adc"
@@ -49,7 +50,7 @@ struct adc_regs {
 	u32 STATUS;
 	u32 AVG;
 	u32 SCAN_RATE_REG;
-	u32 CLK;
+	u32 CLK; /* Not avail for 1340 & 1310 */
 	u32 CHAN_CTRL[ADC_CHANNEL_NUM];
 	u32 CHAN_DATA[ADC_CHANNEL_NUM];
 };
@@ -89,6 +90,7 @@ struct adc_regs {
 
 #ifndef CONFIG_ARCH_SPEAR6XX
 #define RESOLUTION(x)		((x) << 13)
+#define SPEAR1340_RESOLUTION(x)	((x) << 16)
 #endif
 
 #define AVG_SAMPLE_RESET	(~(7 << 5))
@@ -110,7 +112,7 @@ struct adc_regs {
 #define SCAN_RATE_HI(x)		(((x) >> 0x10) & 0xFFFF)
 #endif
 
-/* adc clk reg */
+/* adc clk reg, Not avail for 1340 & 1310 */
 #define CLK_LOW(x)		(((x) & 0xf) << 0)
 #define CLK_HIGH(x)		(((x) & 0xf) << 4)
 #define GET_CLK_LOW(x)		((x) & 0xf)
@@ -224,7 +226,8 @@ void adc_reset(void)
 	enum adc_chan_id i = ADC_CHANNEL0;
 
 	adc_writel(g_drv_data->regs, STATUS, 0);
-	adc_writel(g_drv_data->regs, CLK, 0);
+	if (!cpu_is_spear1340() && !cpu_is_spear1310())
+		adc_writel(g_drv_data->regs, CLK, 0);
 	while (i <= ADC_CHANNEL7) {
 		adc_writel(g_drv_data->regs, CHAN_CTRL[i], 0);
 		i += ADC_CHANNEL1;
@@ -675,16 +678,35 @@ static irqreturn_t spear_adc_irq(int irq, void *dev_id)
  */
 u32 adc_configure(struct adc_config *config)
 {
-	u32 clk_high = 0, clk_low = 0, count;
-	u32 status_reg = 0;
-	u32 apb_clk = clk_get_rate(g_drv_data->clk);
+	u32 status_reg = 0, ret = 0, clk_high = 0, clk_low = 0, count, clk_min,
+	    clk_max;
 
-	count = (apb_clk + config->req_clk - 1) / config->req_clk;
-	clk_low = count/2;
-	clk_high = count - clk_low;
-	config->avail_clk = apb_clk / count;
+	if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+		clk_min = 2500000;
+		clk_max = 20000000;
+	} else {
+		clk_min = 3000000;
+		clk_max = 14000000;
+	}
 
-	if ((config->avail_clk < 3000000) || (config->avail_clk > 14000000))
+	if ((config->req_clk < clk_min) || (config->req_clk > clk_max))
+		return -EINVAL;
+
+	if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+		u32 apb_clk = clk_get_rate(g_drv_data->clk);
+
+		count = (apb_clk + config->req_clk - 1) / config->req_clk;
+		clk_low = count/2;
+		clk_high = count - clk_low;
+		config->avail_clk = apb_clk / count;
+	} else {
+		ret = clk_set_rate(g_drv_data->clk, config->req_clk);
+		if (ret)
+			return ret;
+		config->avail_clk = clk_get_rate(g_drv_data->clk);
+	}
+
+	if ((config->avail_clk < clk_max) || (config->avail_clk > clk_max))
 		return -EINVAL;
 
 	adc_reset();
@@ -698,13 +720,17 @@ u32 adc_configure(struct adc_config *config)
 
 	status_reg |= VOLT_REF(config->volt_ref);
 #ifndef CONFIG_ARCH_SPEAR6XX
-	status_reg |= RESOLUTION(config->resolution);
+	if (cpu_is_spear1340() || cpu_is_spear1310())
+		status_reg |= SPEAR1340_RESOLUTION(config->resolution);
+	else
+		status_reg |= RESOLUTION(config->resolution);
 #endif
 	status_reg |= ADC_ENABLE;
 
 	adc_writel(g_drv_data->regs, STATUS, status_reg);
-	adc_writel(g_drv_data->regs, CLK, CLK_LOW(clk_low) |
-			CLK_HIGH(clk_high));
+	if (!cpu_is_spear1340() && !cpu_is_spear1310())
+		adc_writel(g_drv_data->regs, CLK, CLK_LOW(clk_low) |
+				CLK_HIGH(clk_high));
 	return 0;
 }
 
@@ -848,11 +874,17 @@ s32 spear_adc_get_configure(void *dev_id, enum adc_chan_id chan_id,
 #ifndef CONFIG_ARCH_SPEAR6XX
 		config->resolution = g_drv_data->resolution;
 #endif
-		reg = adc_readl(g_drv_data->regs, CLK);
-		config->req_clk = clk_get_rate(g_drv_data->clk) /
-			(GET_CLK_HIGH(reg) + GET_CLK_LOW(reg));
-		config->avail_clk = config->req_clk;
 		config->mvolt = g_drv_data->mvolt;
+
+		if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+			reg = adc_readl(g_drv_data->regs, CLK);
+			config->req_clk = clk_get_rate(g_drv_data->clk) /
+				(GET_CLK_HIGH(reg) + GET_CLK_LOW(reg));
+			config->avail_clk = config->req_clk;
+		} else {
+			config->avail_clk = config->req_clk =
+				clk_get_rate(g_drv_data->clk);
+		}
 	} else {
 		dev_err(&g_drv_data->pdev->dev, "adc not configured\n");
 		status = -EPERM;

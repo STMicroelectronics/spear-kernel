@@ -15,7 +15,7 @@
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/io.h>
-#include <asm/mach-types.h>
+#include <mach/hardware.h>
 #include <mach/emi.h>
 
 int __init emi_init(struct platform_device *pdev, unsigned long base,
@@ -28,7 +28,7 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 	/* u32 timeout_reg, irq_reg; */
 
 	/* fixing machine dependent values */
-	if (machine_is_spear310()) {
+	if (cpu_is_spear310()) {
 		ack_reg = SPEAR310_ACK_REG;
 		max_banks = SPEAR310_EMI_MAX_BANKS;
 		/* timeout_reg = SPEAR310_TIMEOUT_REG; */

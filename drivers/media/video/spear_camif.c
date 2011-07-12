@@ -1,0 +1,1269 @@
+/*
+ * V4L2 SoC Camera driver for SPEAr Camera Interface(CAMIF)
+ *
+ * Copyright (C) 2011 ST Microelectronics
+ * Bhupesh Sharma <bhupesh.sharma@st.com>
+ *
+ * Based on PXA SoC camera driver
+ * Copyright (C) 2006, Sascha Hauer, Pengutronix
+ * Copyright (C) 2008, Guennadi Liakhovetski <kernel@pengutronix.de>
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2. This program is licensed "as is" without any
+ * warranty of any kind, whether express or implied.
+ */
+
+/*
+ * TODO:
+ *
+ * 1. Add support for camera sense (as generally PCLK is used to latch
+ * data from the sensor.
+ *
+ * 2. Interleaving dma channels are not supported as of now. We support
+ * even dma channel only as of now. Add interleaving support later, i.e.
+ * odd and even frames. It is also not very clear as of now how the
+ * driver should perform DMA in such a case:
+ * Should we DMA the even and odd lines received from the interface onto
+ * different locations in the DDR and the application should be
+ * intelligent enough to pick up the data from these locations
+ * automatically in a proper fashion?
+ *
+ * 3. Perform DMA operations in a DMA tasklet rather than in the frame
+ * end interrupt handler.
+ */
+
+#include <linux/clk.h>
+#include <linux/dma-mapping.h>
+#include <linux/dmaengine.h>
+#include <linux/dw_dmac.h>
+#include <linux/gpio.h>
+#include <linux/i2c.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/kernel.h>
+#include <linux/io.h>
+#include <linux/platform_device.h>
+#include <linux/version.h>
+#include <linux/videodev2.h>
+#include <linux/vmalloc.h>
+
+#include <media/soc_camera.h>
+#include <media/soc_mediabus.h>
+#include <media/v4l2-common.h>
+#include <media/v4l2-dev.h>
+#include <media/videobuf-dma-sg.h>
+
+#include <plat/camif.h>
+
+/* CAMIF register map */
+#define CAMIF_CTRL		0x00	/* Control Register */
+#define CAMIF_EFEC		0x04	/* Even Field Embedded Codes Register */
+#define CAMIF_CSTARTP		0x08	/* Crop Start Point Register */
+#define CAMIF_CSTOPP		0x0C	/* Crop Stop Point Register */
+#define CAMIF_IR_DUR		0x10	/* Interrupt & DMA Mask Register */
+#define CAMIF_STATUS		0x14	/* Interrupt Status Register */
+#define CAMIF_DMA_PTR		0x18	/* DMA Pointer Register */
+#define CAMIF_OFEC		0x1C	/* Odd Field Embedded Codes Register */
+
+/* control register bits */
+#define CTRL_RGB_ALPHA_VALUE(a)	(((a) & 0xff) << 24)
+#define CTRL_INTL_EN		BIT(23)
+#define CTRL_SGA_TFR_EN		BIT(22)
+#define CTRL_DMA_BURST_SIZE(a)	(((a) & 0x7) << 19)
+#define CTRL_WAIT_STATE_EN	BIT(18)
+#define CTRL_CROP_SELECT	BIT(17)
+#define CTRL_EAV_SEL		BIT(16)
+#define CTRL_IF_SYNC_TYPE	BIT(12)	/* ITU656 */
+#define CTRL_IF_TRANS(a)	(((a) & 0xf) << 8)
+#define CTRL_VS_POL		BIT(7)
+#define CTRL_HS_POL		BIT(6)
+#define CTRL_PCK_POL		BIT(5)
+#define CTRL_EMB_CODES_EN	BIT(4)
+#define CTRL_CAPTURE_MODES(a)	((a) & 0xf)
+
+/* interrupt and dma mask register bits */
+#define IR_DUR_MASK_BREQ	BIT(15)
+#define IR_DUR_UNMASK_BREQ	(0 << 15)
+#define IR_DUR_MASK_SREQ	BIT(14)
+#define IR_DUR_UNMASK_SREQ	(0 << 14)
+#define IR_DUR_DMA_DUAL		BIT(12)
+#define IR_DUR_DMA_EN		BIT(11)
+#define IR_DUR_DMA_DIS		(0 << 11)
+#define IR_DUR_FRAME_START_EN	BIT(6)
+#define IR_DUR_FRAME_START_DIS	(0 << 6)
+#define IR_DUR_FRAME_END_EN	BIT(5)
+#define IR_DUR_FRAME_END_DIS	(0 << 5)
+#define IR_DUR_LINE_END_EN	BIT(4)
+#define IR_DUR_LINE_END_DIS	(0 << 4)
+
+/* interrupt status register bits */
+#define IRQ_STATUS_FRAME_START	BIT(6)
+#define IRQ_STATUS_FRAME_END	BIT(5)
+#define IRQ_STATUS_LINE_END	BIT(4)
+
+#define IRQ_ENABLE_ALL		(IR_DUR_UNMASK_BREQ | IR_DUR_UNMASK_SREQ | \
+				IR_DUR_DMA_DUAL | IR_DUR_DMA_EN |	\
+				IR_DUR_FRAME_START_EN | IR_DUR_LINE_END_EN | \
+				IR_DUR_FRAME_END_EN)
+
+#define IRQ_DISABLE_ALL		(IR_DUR_MASK_BREQ | IR_DUR_MASK_SREQ | \
+				IR_DUR_DMA_DIS | IR_DUR_FRAME_START_DIS | \
+				IR_DUR_FRAME_END_DIS | IR_DUR_LINE_END_DIS)
+
+/* embedded codes */
+#define ITU656_EMBED_EVEN_CODE	0xABB6809D
+#define ITU656_EMBED_ODD_CODE	0xECF1C7DA
+
+/* video memory limit */
+#define MAX_VIDEO_MEM		16	/* MiB */
+
+#define CAM_IF_VERSION_CODE	KERNEL_VERSION(0, 0, 1)
+
+/* camif bus capabilities */
+#define CAM_IF_BUS_FLAGS	(SOCAM_MASTER | SOCAM_DATAWIDTH_8 |	\
+				SOCAM_HSYNC_ACTIVE_HIGH |		\
+				SOCAM_HSYNC_ACTIVE_LOW |		\
+				SOCAM_VSYNC_ACTIVE_HIGH |		\
+				SOCAM_VSYNC_ACTIVE_LOW |		\
+				SOCAM_PCLK_SAMPLE_RISING |		\
+				SOCAM_PCLK_SAMPLE_FALLING |		\
+				SOCAM_DATA_ACTIVE_HIGH |		\
+				SOCAM_DATA_ACTIVE_LOW)
+
+/* crop masks */
+#define CROP_V_MASK		0xffff0000
+#define CROP_H_MASK		0xffff
+
+/* Buffer for one video frame */
+struct camif_buffer {
+	/* common v4l buffer stuff -- must be first */
+	struct videobuf_buffer vb;
+	enum v4l2_mbus_pixelcode code;
+	/* rest of the details */
+	const struct soc_camera_data_format *fmt;
+	int inwork;
+	struct dma_async_tx_descriptor *desc;
+};
+
+/* camif device */
+struct camif {
+	/* soc camera related */
+	struct soc_camera_host ici;
+	struct soc_camera_device *icd;
+	struct clk *clk;
+
+	/* resource related */
+	int line_irq;
+	int frm_start_end_irq;
+	void __iomem *base;
+
+	/* dma related */
+	struct dma_chan *chan;
+	dma_cookie_t cookie;
+
+	spinlock_t lock;
+	struct list_head capture;
+
+	/* video buffer and queue */
+	struct camif_buffer *active;
+	struct videobuf_queue *vq;
+
+	/* flags to indicate states */
+	bool dma_complete;
+	bool frame_start;
+	bool first_entry;
+
+	/* platform data */
+	struct spear_camif_plat_data *pdata;
+};
+
+/*
+ * here we specify the pixel formats, to which the host controller can convert
+ * some other formats on the hardware.
+ *
+ * For e.g. consider that a client (sensor) supports the mode
+ * V4L2_MBUS_FMT_UYVY8_2X8. Then we have a entry for this mode here if the host
+ * recognises that it supports that format natively and apart from serving it to
+ * the application in the pass-through mode, it can also convert it to
+ * some other format (for e.g. say the planar V4L2_PIX_FMT_YUV422P format)
+ */
+static const struct soc_mbus_pixelfmt camif_formats[] = {
+	/* added */
+	[V4L2_MBUS_FMT_UYVY8_2X8] = {
+		.fourcc			= V4L2_PIX_FMT_YUYV,
+		.name			= "YUYV",
+		.bits_per_sample	= 8,
+		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
+		.order			= SOC_MBUS_ORDER_BE,
+	},
+
+	/* 3-byte RGB-888 received -> 4-byte RGBa stored */
+	[V4L2_MBUS_FMT_RGB888_2X8_LE] = {
+		.fourcc			= V4L2_PIX_FMT_RGB32,
+		.name			= "RGBa 32 bit",
+		.bits_per_sample	= 8,
+		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
+		.order			= SOC_MBUS_ORDER_LE,
+	},
+	/* 3-byte BGR-888 received -> 4-byte BGRa stored */
+	[V4L2_MBUS_FMT_BGR888_2X8_LE] = {
+		.fourcc			= V4L2_PIX_FMT_BGR32,
+		.name			= "BGRa 32 bit",
+		.bits_per_sample	= 8,
+		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
+		.order			= SOC_MBUS_ORDER_LE,
+	},
+};
+
+static void start_camif(struct camif *camif)
+{
+	u32 ctrl = 0;
+	bool emb_synchro = 0;
+	bool eav_sel = 0;
+
+	if (camif->pdata->sync_type == EMBEDDED_SYNC) {
+		emb_synchro = 1;
+		eav_sel = 1;
+		writel(ITU656_EMBED_EVEN_CODE, camif->base + CAMIF_EFEC);
+		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
+	}
+
+	ctrl = (camif->pdata->burst_size << 19) |
+		(eav_sel << 16) | (emb_synchro << 12) |
+		(camif->pdata->transform << 8) |
+		(camif->pdata->vsync_polarity << 7) |
+		(camif->pdata->hsync_polarity << 6) |
+		(camif->pdata->pclk_polarity << 5) |
+		(camif->pdata->sync_type << 4) |
+		camif->pdata->capture_mode;
+
+	writel(ctrl, camif->base + CAMIF_CTRL);
+}
+
+static void stop_camif(struct camif *camif)
+{
+	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
+
+	writel(0x0, camif->base + CAMIF_CTRL);
+	writel(0x0, camif->base + CAMIF_EFEC);
+	writel(0x0, camif->base + CAMIF_OFEC);
+	writel(0x0, camif->base + CAMIF_CSTARTP);
+	writel(0x0, camif->base + CAMIF_CSTOPP);
+}
+
+/*
+ * start video capturing:
+ * Launch capturing. DMA channels should not be active yet. They should get
+ * activated at the end of frame interrupt, to capture only whole frames, and
+ * never begin the capture of a partial frame.
+ */
+static void camif_start_capture(struct camif *camif)
+{
+	writel(IRQ_ENABLE_ALL, camif->base + CAMIF_IR_DUR);
+}
+
+static void camif_stop_capture(struct camif *camif)
+{
+	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
+	camif->active = NULL;
+}
+
+/*
+ * TODO: At present we mask all interrupt sources while handling the
+ * dma completion stuff and enable the interrupt sources when we are
+ * done with the same. This needs to be implemented in a better way as
+ * this may cause some interrupts to be missed while we are inside the
+ * dma completion routine
+ */
+static void camif_rx_dma_complete(void *arg)
+{
+	struct camif *camif = (struct camif *)arg;
+	struct camif_buffer *buf;
+	struct videobuf_buffer *vb;
+	unsigned long flags;
+
+	spin_lock_irqsave(&camif->lock, flags);
+
+	/* disable all interrupt sources */
+	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
+
+	/* check if we have an active buffer */
+	if (!camif->active) {
+		dev_err(camif->ici.v4l2_dev.dev, "buffer is not active\n");
+		goto out;
+	}
+
+	vb = &camif->active->vb;
+	buf = container_of(vb, struct camif_buffer, vb);
+	WARN_ON(buf->inwork || list_empty(&vb->queue));
+	camif->dma_complete = 1;
+
+	/* _init is used to debug races, see comment in camif_reqbufs() */
+	list_del_init(&vb->queue);
+	vb->state = VIDEOBUF_DONE;
+	do_gettimeofday(&vb->ts);
+	vb->field_count++;
+	wake_up(&vb->done);
+	dev_dbg(camif->ici.v4l2_dev.dev, "%s dequeud buffer (vb=0x%p)\n",
+			__func__, vb);
+
+	if (list_empty(&camif->capture)) {
+		camif_stop_capture(camif);
+		goto out;
+	}
+
+	camif->active = list_entry(camif->capture.next,
+				struct camif_buffer, vb.queue);
+	if (camif->active)
+		camif_start_capture(camif);
+
+out:
+	spin_unlock_irqrestore(&camif->lock, flags);
+
+	return;
+}
+
+static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
+{
+	int direction = DMA_FROM_DEVICE;
+	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
+
+	buf->desc =
+		camif->chan->device->device_prep_slave_sg(
+				camif->chan,
+				dma->sglist, dma->sglen, direction,
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!buf->desc)
+		return -ENOMEM;
+
+	buf->desc->callback = camif_rx_dma_complete;
+	buf->desc->callback_param = camif;
+
+	return 0;
+}
+
+/*
+ * line interrupt signifies that we have received a complete line in the
+ * line buffer. Currently we don't perform a lot of tasks here.
+ */
+static irqreturn_t camif_line_int(int irq, void *dev_id)
+{
+	struct camif *camif = (struct camif *)dev_id;
+
+	/* perform a dummy write to clear line-end interrupt */
+	writel(IRQ_STATUS_LINE_END, camif->base + CAMIF_STATUS);
+
+	return IRQ_HANDLED;
+}
+
+/*
+ * Note: a single interrupt line is shared for indicating both the frame start
+ * and the frame end. So, in the ISR we read the status register to determine
+ * the exact source of interrupt.
+ *
+ * At the moment frame start interrupt is used merely to set a
+ * corresponding flag and no major action is performed in case of frame
+ * start interrupt. In case of frame end interrupt we trigger the
+ * next dma transfer.
+ */
+static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
+{
+	struct camif *camif = (struct camif *)dev_id;
+	struct camif_buffer *active;
+	unsigned long flags;
+	int status_reg;
+
+	status_reg = readl(camif->base + CAMIF_STATUS);
+	if (!status_reg)
+		return IRQ_NONE;
+
+	if (status_reg & IRQ_STATUS_FRAME_START) {
+		/* perform a dummy write to clear frame-start interrupt */
+		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
+		spin_lock_irqsave(&camif->lock, flags);
+		camif->frame_start = 1;
+		spin_unlock_irqrestore(&camif->lock, flags);
+	}
+
+	if (status_reg & IRQ_STATUS_FRAME_END) {
+		/* perform a dummy write to clear frame-end interrupt */
+		writel(IRQ_STATUS_FRAME_END, camif->base + CAMIF_STATUS);
+
+		/*
+		 * we should receive a frame-end interrupt only after we have
+		 * received the frame start interrupt first. Check for the same.
+		 */
+		if (!camif->frame_start)
+			return IRQ_HANDLED;
+		else
+			camif->frame_start = 0;
+
+		spin_lock_irqsave(&camif->lock, flags);
+		/* check if the previous dma is complete */
+		if (!camif->first_entry) {
+			if (!camif->dma_complete) {
+				spin_unlock_irqrestore(&camif->lock, flags);
+				return IRQ_HANDLED;
+			}
+		}
+
+		camif->first_entry = 0;
+		if (!list_empty(&camif->capture)) {
+			camif->active = list_first_entry(&camif->capture,
+					 struct camif_buffer, vb.queue);
+			active = camif->active;
+			camif->cookie = active->desc->tx_submit(active->desc);
+			if (dma_submit_error(camif->cookie)) {
+				dev_err(camif->ici.v4l2_dev.dev,
+					"dma submit error %d\n",
+					camif->cookie);
+				return -EAGAIN;
+			}
+
+			camif->chan->device->device_issue_pending(camif->chan);
+			camif->dma_complete = 0;
+		} else {
+			dev_err(camif->ici.v4l2_dev.dev,
+					"cam->capture is NULL\n");
+		}
+
+		spin_unlock_irqrestore(&camif->lock, flags);
+	}
+
+	return IRQ_HANDLED;
+}
+
+static void free_buffer(struct videobuf_queue *vq, struct camif_buffer *buf)
+{
+	struct soc_camera_device *icd = vq->priv_data;
+	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
+	struct videobuf_buffer *vb = &buf->vb;
+
+	BUG_ON(in_interrupt());
+
+	dev_dbg(icd->dev.parent, "(vb=0x%p) 0x%08lx %d\n",
+			&buf->vb, buf->vb.baddr, buf->vb.bsize);
+
+	vb->state = VIDEOBUF_DONE;
+
+	/*
+	 * This waits until this buffer is out of danger, i.e., until it is no
+	 * longer in STATE_QUEUED or STATE_ACTIVE
+	 */
+	videobuf_waiton(vq, &buf->vb, 0, 0);
+	videobuf_dma_unmap(vq->dev, dma);
+	videobuf_dma_free(dma);
+
+	buf->vb.state = VIDEOBUF_NEEDS_INIT;
+}
+
+static int camif_videobuf_setup(struct videobuf_queue *vq,
+		unsigned int *count, unsigned int *size)
+{
+	struct soc_camera_device *icd = vq->priv_data;
+
+	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
+						icd->current_fmt->host_fmt);
+
+	if (bytes_per_line < 0)
+		return bytes_per_line;
+
+	*size = bytes_per_line * icd->user_height;
+
+	if (!*count)
+		*count = VIDEO_MAX_FRAME;
+
+	if (*size * *count > MAX_VIDEO_MEM * 1024 * 1024)
+		*count = (MAX_VIDEO_MEM * 1024 * 1024) / *size;
+
+	dev_dbg(icd->dev.parent, "count=%d, size=%d\n", *count, *size);
+
+	return 0;
+}
+
+static int camif_videobuf_prepare(struct videobuf_queue *vq,
+		struct videobuf_buffer *vb, enum v4l2_field field)
+{
+	int ret;
+	struct soc_camera_device *icd = vq->priv_data;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+	struct device *dev = camif->ici.v4l2_dev.dev;
+	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
+	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
+						icd->current_fmt->host_fmt);
+
+	if (bytes_per_line < 0)
+		return bytes_per_line;
+
+	dev_dbg(dev, "%s (vb=0x%p) 0x%08lx %d\n", __func__,
+		vb, vb->baddr, vb->bsize);
+
+	/* Added list head initialization on alloc */
+	WARN_ON(!list_empty(&vb->queue));
+
+#ifdef DEBUG
+	/* This can be useful if you want to see if we actually fill
+	 * the buffer with something */
+	memset((void *)vb->baddr, 0xaa, vb->bsize);
+#endif
+
+	BUG_ON(NULL == icd->current_fmt);
+
+	/* I think, in buf_prepare you only have to protect global data,
+	 * the actual buffer is yours */
+	buf->inwork = 1;
+
+	if ((buf->code != icd->current_fmt->code) ||
+			(vb->width != icd->user_width) ||
+			(vb->height != icd->user_height) ||
+			(vb->field != field)) {
+		buf->code = icd->current_fmt->code;
+		vb->width = icd->user_width;
+		vb->height = icd->user_height;
+		vb->field = field;
+		vb->state = VIDEOBUF_NEEDS_INIT;
+	}
+
+	vb->size = bytes_per_line * vb->height;
+	if (0 != vb->baddr && vb->bsize < vb->size) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (vb->state == VIDEOBUF_NEEDS_INIT) {
+		ret = videobuf_iolock(vq, vb, NULL);
+		if (ret)
+			goto fail;
+
+		vb->state = VIDEOBUF_PREPARED;
+	}
+	buf->inwork = 0;
+	camif->vq = vq;
+
+	return 0;
+fail:
+	free_buffer(vq, buf);
+out:
+	buf->inwork = 0;
+
+	return ret;
+}
+
+static void camif_videobuf_queue(struct videobuf_queue *vq,
+		struct videobuf_buffer *vb)
+{
+	int ret;
+	struct soc_camera_device *icd = vq->priv_data;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
+	struct camif *camif = ici->priv;
+
+	dev_dbg(icd->dev.parent, "%s (vb=0x%p) 0x%08lx %d active=%p\n",
+		__func__, vb, vb->baddr, vb->bsize, camif->active);
+
+	ret = camif_init_dma_channel(camif, buf);
+	if (ret) {
+		dev_err(icd->dev.parent,
+				"DMA initialization failed\n");
+		return;
+	}
+
+	list_add_tail(&vb->queue, &camif->capture);
+
+	vb->state = VIDEOBUF_ACTIVE;
+
+	if (!camif->active)
+		camif_start_capture(camif);
+}
+
+static void camif_videobuf_release(struct videobuf_queue *vq,
+				 struct videobuf_buffer *vb)
+{
+	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
+
+#ifdef DEBUG
+	struct soc_camera_device *icd = vq->priv_data;
+	struct device *dev = icd->dev.parent;
+
+	dev_dbg(dev, "%s (vb=0x%p) 0x%08lx %d\n", __func__,
+		vb, vb->baddr, vb->bsize);
+
+	switch (vb->state) {
+	case VIDEOBUF_ACTIVE:
+		dev_dbg(dev, "%s (active)\n", __func__);
+		break;
+	case VIDEOBUF_QUEUED:
+		dev_dbg(dev, "%s (queued)\n", __func__);
+		break;
+	case VIDEOBUF_PREPARED:
+		dev_dbg(dev, "%s (prepared)\n", __func__);
+		break;
+	default:
+		dev_dbg(dev, "%s (unknown)\n", __func__);
+		break;
+	}
+#endif
+	free_buffer(vq, buf);
+}
+
+static struct videobuf_queue_ops camif_videobuf_ops = {
+	.buf_setup = camif_videobuf_setup,
+	.buf_prepare = camif_videobuf_prepare,
+	.buf_queue = camif_videobuf_queue,
+	.buf_release = camif_videobuf_release,
+};
+
+/* SOC Camera host operations */
+
+/*
+ * The following two functions absolutely depend on the fact, that
+ * there can be only one camera on CAMIF camera sensor interface
+ * Called with .video_lock held.
+ */
+static int camif_add_device(struct soc_camera_device *icd)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+
+	/* camif can manage a single camera at one time */
+	if (camif->icd)
+		return -EBUSY;
+
+	start_camif(camif);
+
+	camif->icd = icd;
+	camif->frame_start = 0;
+
+	dev_info(icd->dev.parent, "SPEAr Camera driver attached to camera %d\n",
+		 icd->devnum);
+
+	return 0;
+}
+
+/* Called with .video_lock held */
+static void camif_remove_device(struct soc_camera_device *icd)
+{
+	int i;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct camif *camif = ici->priv;
+
+	BUG_ON(icd != camif->icd);
+
+	if (camif->vq && camif->vq->streaming) {
+		/*
+		 * This calls buf_release from host driver's videobuf_queue_ops
+		 * for all remaining buffers. When the last buffer is freed,
+		 * stop capture
+		 */
+		videobuf_streamoff(camif->vq);
+	}
+
+	v4l2_subdev_call(sd, video, s_stream, 0);
+	stop_camif(camif);
+	if (camif->vq) {
+		mutex_lock(&camif->vq->vb_lock);
+		for (i = 0; i < VIDEO_MAX_FRAME; i++) {
+			if (NULL == camif->vq->bufs[i])
+				continue;
+			kfree(camif->vq->bufs[i]);
+			camif->vq->bufs[i] = NULL;
+		}
+		mutex_unlock(&camif->vq->vb_lock);
+		camif->vq = NULL;
+	}
+
+	dev_dbg(icd->dev.parent,
+		"SPEAr Camera driver detached from camera %d\n", icd->devnum);
+
+	camif->icd = NULL;
+}
+
+static int camif_get_formats(struct soc_camera_device *icd, unsigned int idx,
+				struct soc_camera_format_xlate *xlate)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct device *dev = icd->dev.parent;
+	int formats = 0, ret;
+	enum v4l2_mbus_pixelcode code;
+	const struct soc_mbus_pixelfmt *fmt;
+
+	ret = v4l2_subdev_call(sd, video, enum_mbus_fmt, idx, &code);
+	if (ret < 0)
+		/* No more formats */
+		return 0;
+
+	fmt = soc_mbus_get_fmtdesc(code);
+	if (!fmt) {
+		dev_err(dev, "Invalid format code #%u: %d\n", idx, code);
+		return 0;
+	}
+
+	switch (code) {
+	case V4L2_MBUS_FMT_RGB888_2X8_LE:
+	case V4L2_MBUS_FMT_BGR888_2X8_LE:
+		formats++;
+		if (xlate) {
+			xlate->host_fmt	= &camif_formats[code];
+			xlate->code = code;
+			xlate++;
+			dev_dbg(dev, "providing format %s using code %d\n",
+					camif_formats[code].name, code);
+		}
+	default:
+		if (xlate)
+			dev_dbg(dev, "providing format %s"
+					"in pass-through mode\n", fmt->name);
+	}
+
+	/* Generic pass-through */
+	formats++;
+	if (xlate) {
+		xlate->host_fmt	= fmt;
+		xlate->code = code;
+		xlate++;
+	}
+
+	return formats;
+}
+
+static void camif_put_formats(struct soc_camera_device *icd)
+{
+	kfree(icd->host_priv);
+	icd->host_priv = NULL;
+}
+
+/*
+ * while performing cropping operation we must check for the cropping
+ * bounds. For the same, we need to consider whether cropping can be
+ * performed for the user defined cropping params (specified by 'crop'
+ * param) and the image rectangle details received from the sensor
+ * (specified by 'mbus_framefmt')
+ *
+ *	mf.width
+ *	+-------------------------------+
+ *	m|	(rect->left, rect->top)	|
+ *	f|	 |			|
+ *	.|	 +--------------+	|
+ *	h|	r|		|	|
+ *	e|	e|		|	|
+ *	i|	c|		|	|
+ *	g|	t| IMAGE	|	|
+ *	h|	|| DATA		|	|
+ *	t|	V|		|	|
+ *	 |	h|		|	|
+ *	 |	e|		|	|
+ *	 |	i|		|	|
+ *	 |	g|		|	|
+ *	 |	h|		|	|
+ *	 |	t|		|	|
+ *	 |	 +--------------+	|
+ *	 |	 rect->width		|
+ *	+-------------------------------+
+ */
+static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
+{
+
+	struct v4l2_rect *rect = &crop->c;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+	struct device *dev = icd->dev.parent;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_format f;
+	struct v4l2_mbus_framefmt mf;
+	struct v4l2_pix_format *pix = &f.fmt.pix;
+	int ret;
+
+	ret = v4l2_subdev_call(sd, video, s_crop, crop);
+	if (ret < 0) {
+		dev_warn(dev, "failed to crop to %ux%u@%u:%u\n",
+			 rect->width, rect->height, rect->left, rect->top);
+		return ret;
+	}
+
+	ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
+	if (ret < 0) {
+		dev_warn(dev, "%s: failed to fetch current format\n", __func__);
+		return ret;
+	}
+
+	if (rect->width > mf.width || rect->height > mf.height) {
+		dev_warn(dev, "No cropping is desired\n");
+		return -1;
+	}
+
+	if (((rect->left + rect->width) > pix->width)
+		|| ((rect->top + rect->height) > pix->height)) {
+		dev_warn(dev, "Cropping cannot be done\n");
+		return -1;
+	}
+
+	/*
+	 * program the crop start and stop registers to ensure correct cropping
+	 * coordinates
+	 */
+	writel((rect->left & CROP_H_MASK), camif->base + CAMIF_CSTARTP);
+	writel((rect->top & CROP_V_MASK), camif->base + CAMIF_CSTARTP);
+
+	writel(((rect->left + rect->width) & CROP_H_MASK),
+			camif->base + CAMIF_CSTOPP);
+	writel(((rect->top + rect->height) & CROP_V_MASK),
+			camif->base + CAMIF_CSTOPP);
+
+	/* enable cropping */
+	writel(readl(camif->base + CAMIF_CTRL) | CTRL_CROP_SELECT,
+			camif->base + CAMIF_CTRL);
+
+	icd->user_width = mf.width;
+	icd->user_height = mf.height;
+
+	return 0;
+}
+
+static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
+{
+	struct device *dev = icd->dev.parent;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	const struct soc_camera_format_xlate *xlate = NULL;
+	struct v4l2_pix_format *pix = &f->fmt.pix;
+	struct v4l2_mbus_framefmt mf;
+	int ret;
+
+	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
+	if (!xlate) {
+		dev_warn(dev, "format %x not found\n", pix->pixelformat);
+		return -EINVAL;
+	}
+
+	mf.width = pix->width;
+	mf.height = pix->height;
+	mf.field = pix->field;
+	mf.colorspace = pix->colorspace;
+	mf.code = xlate->code;
+
+	ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
+	if (ret < 0)
+		return ret;
+
+	if (mf.code != xlate->code)
+		return -EINVAL;
+
+	pix->width = mf.width;
+	pix->height = mf.height;
+	pix->field = mf.field;
+	pix->colorspace	= mf.colorspace;
+	icd->current_fmt = xlate;
+
+	return ret;
+}
+
+static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	const struct soc_camera_format_xlate *xlate;
+	struct v4l2_pix_format *pix = &f->fmt.pix;
+	__u32 pixfmt = pix->pixelformat;
+	struct v4l2_mbus_framefmt mf;
+	int ret;
+
+	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
+	if (!xlate) {
+		dev_warn(icd->dev.parent, "format %x not found\n", pixfmt);
+		return -EINVAL;
+	}
+
+	pix->bytesperline = soc_mbus_bytes_per_line(pix->width,
+						xlate->host_fmt);
+	if (pix->bytesperline < 0)
+		return pix->bytesperline;
+
+	pix->sizeimage = pix->height * pix->bytesperline;
+
+	mf.width	= pix->width;
+	mf.height	= pix->height;
+	mf.field	= pix->field;
+	mf.colorspace	= pix->colorspace;
+	mf.code		= xlate->code;
+
+	/* limit to sensor capabilities */
+	ret = v4l2_subdev_call(sd, video, try_mbus_fmt, &mf);
+	if (ret < 0)
+		return ret;
+
+	pix->pixelformat = pixfmt;
+	pix->width	= mf.width;
+	pix->height	= mf.height;
+	pix->colorspace	= mf.colorspace;
+
+	switch (mf.field) {
+	case V4L2_FIELD_ANY:
+	case V4L2_FIELD_NONE:
+		pix->field = V4L2_FIELD_NONE;
+		break;
+	default:
+		/* TODO: support interlaced at least in pass-through mode */
+		dev_err(icd->dev.parent, "field type %d unsupported\n",
+				mf.field);
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
+static void camif_init_videobuf(struct videobuf_queue *q,
+		struct soc_camera_device *icd)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+
+	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
+			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
+			V4L2_FIELD_NONE, sizeof(struct camif_buffer),
+			icd, NULL);
+}
+
+static int camif_reqbufs(struct soc_camera_device *icd,
+			struct v4l2_requestbuffers *p)
+{
+	int i;
+
+	/*
+	 * This is for locking debugging only. I removed spinlocks and now I
+	 * check whether .prepare is ever called on a linked buffer, or whether
+	 * a dma IRQ can occur for an in-work or unlinked buffer. Until now
+	 * it hadn't triggered
+	 */
+	for (i = 0; i < p->count; i++) {
+		struct camif_buffer *buf = container_of(icd->vb_vidq.bufs[i],
+				struct camif_buffer, vb);
+		buf->inwork = 0;
+		INIT_LIST_HEAD(&buf->vb.queue);
+	}
+
+	return 0;
+}
+
+static int camif_querycap(struct soc_camera_host *ici,
+				struct v4l2_capability *cap)
+{
+	/* cap->name is set by the friendly caller:-> */
+	strlcpy(cap->card, "SPEAr Camera Interface", sizeof(cap->card));
+	cap->version = CAM_IF_VERSION_CODE;
+	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
+
+	return 0;
+}
+
+static void camif_setup_ctrl(struct soc_camera_device *icd,
+		unsigned long flags, __u32 pixfmt)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+	u32 ctrl;
+
+	ctrl = readl(camif->base + CAMIF_CTRL);
+	ctrl |= CTRL_PCK_POL | CTRL_VS_POL | CTRL_HS_POL;
+
+	if (flags & SOCAM_PCLK_SAMPLE_FALLING)
+		ctrl &= ~CTRL_PCK_POL;
+	if (flags & SOCAM_HSYNC_ACTIVE_LOW)
+		ctrl &= ~CTRL_HS_POL;
+	if (flags & SOCAM_VSYNC_ACTIVE_LOW)
+		ctrl &= ~CTRL_VS_POL;
+
+	writel(ctrl, camif->base + CAMIF_CTRL);
+}
+
+static int camif_set_bus_param(struct soc_camera_device *icd, __u32 pixfmt)
+{
+	unsigned long bus_flags, camera_flags, common_flags;
+	struct device *dev = icd->dev.parent;
+	int ret;
+
+	/* get bus configuration required by current camera */
+	camera_flags = icd->ops->query_bus_param(icd);
+
+	/* test compatibility between camif and current camera sensor */
+	common_flags = soc_camera_bus_param_compatible(camera_flags,
+						CAM_IF_BUS_FLAGS);
+
+	if (!common_flags) {
+		dev_err(dev,
+			"camif and current camera sensor are incompatible\n");
+		return -EINVAL;
+	}
+
+	dev_dbg(dev, "bus caps: camera 0x%lx, host 0x%lx, common 0x%lx\n",
+		camera_flags, bus_flags, common_flags);
+
+	ret = icd->ops->set_bus_param(icd, common_flags);
+	if (ret < 0)
+		return ret;
+
+	camif_setup_ctrl(icd, common_flags, pixfmt);
+
+	return 0;
+}
+
+static unsigned int camif_camera_poll(struct file *file, poll_table *pt)
+{
+	struct soc_camera_device *icd = file->private_data;
+	struct camif_buffer *buf;
+
+	buf = list_entry(icd->vb_vidq.stream.next, struct camif_buffer,
+			 vb.stream);
+
+	poll_wait(file, &buf->vb.done, pt);
+
+	if (buf->vb.state == VIDEOBUF_DONE || buf->vb.state == VIDEOBUF_ERROR)
+		return POLLIN | POLLRDNORM;
+
+	return 0;
+}
+
+static struct soc_camera_host_ops camif_soc_camera_host_ops = {
+	.owner = THIS_MODULE,
+	.add = camif_add_device,
+	.remove	= camif_remove_device,
+	.get_formats = camif_get_formats,
+	.put_formats = camif_put_formats,
+	.set_crop = camif_set_crop,
+	.set_fmt = camif_set_fmt,
+	.try_fmt = camif_try_fmt,
+	.init_videobuf = camif_init_videobuf,
+	.reqbufs = camif_reqbufs,
+	.querycap = camif_querycap,
+	.set_bus_param = camif_set_bus_param,
+	.poll = camif_camera_poll,
+};
+
+static int __devinit camif_probe(struct platform_device *pdev)
+{
+	int ret;
+	struct camif *camif;
+	void __iomem *addr;
+	dma_cap_mask_t mask;
+	struct clk *clk;
+	struct resource *mem;
+	int line_irq, frm_start_end_irq;
+	struct camif_controller *plat = pdev->dev.platform_data;
+
+	/* must have platform data */
+	if (!pdev) {
+		dev_err(&pdev->dev, "missing platform data\n");
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	/* get the platform data */
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	line_irq = platform_get_irq_byname(pdev, "line_end_irq");
+	frm_start_end_irq = platform_get_irq_byname(pdev,
+				"frame_start_frame_end_irq");
+	if (!mem || (line_irq <= 0) || (frm_start_end_irq <= 0)) {
+		ret = -ENODEV;
+		goto exit;
+	}
+
+	/* allocate camif resource */
+	camif = kzalloc(sizeof(struct camif), GFP_KERNEL);
+	if (!camif) {
+		dev_err(&pdev->dev, "not enough memory for camif device\n");
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	if (!request_mem_region(mem->start, resource_size(mem),
+				KBUILD_MODNAME)) {
+		dev_err(&pdev->dev, "resource unavailable\n");
+		ret = -ENODEV;
+		goto exit_free_camif;
+	}
+
+	addr = ioremap(mem->start, resource_size(mem));
+	if (!addr) {
+		dev_err(&pdev->dev, "failed to map camif port\n");
+		ret = -ENOMEM;
+		goto exit_release_mem;
+	}
+
+	camif->base = addr;
+	clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(clk)) {
+		dev_err(&pdev->dev, "no clock defined\n");
+		ret = -ENODEV;
+		goto exit_iounmap;
+	}
+
+	ret = clk_enable(clk);
+	if (ret < 0)
+		goto exit_clk_put;
+
+	camif->clk = clk;
+	camif->frm_start_end_irq = frm_start_end_irq;
+	camif->line_irq = line_irq;
+
+	ret = request_irq(camif->line_irq, camif_line_int, 0,
+				"camif_line", camif);
+	if (ret) {
+		dev_err(&pdev->dev,
+				"failed to allocate IRQ %d\n", camif->line_irq);
+		goto exit_clk_disable;
+	}
+
+	ret = request_irq(camif->frm_start_end_irq, camif_frame_start_end_int,
+				0, "camif_frame_start_end", camif);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to allocate IRQ %d\n",
+				camif->frm_start_end_irq);
+		goto exit_free_line_irq;
+	}
+
+	/*
+	 * There is always a async relationship between when the
+	 * application will request some data and when the sensor will
+	 * start sending the captured data.
+	 *
+	 * To prevent flooding of CPU with interrupts when application
+	 * has not yet requested data and the sensor has been
+	 * initialized, disable interrupts initially.
+	 */
+	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
+
+	camif->pdata = pdev->dev.platform_data;
+
+	/* dma related settings */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+
+	switch (camif->pdata->channel) {
+	case EVEN_CHANNEL:
+		camif->chan = dma_request_channel(mask,
+			plat->dma_filter, plat->dma_even_param);
+		if (!camif->chan) {
+			dev_err(&pdev->dev,
+				"unable to get DMA channel for even lines\n");
+			ret = -EINVAL;
+			goto exit_free_frm_start_end_irq;
+		}
+		break;
+
+	case BOTH_ODD_EVEN_CHANNELS:
+		/*
+		 * not supported as of now, warn and return to default
+		 * 'even line' _only_ settings
+		 */
+		dev_warn(&pdev->dev, "Interlaced fields are not supported"
+				"defaulting to even line settings\n");
+		camif->chan = dma_request_channel(mask,
+			plat->dma_filter, plat->dma_even_param);
+		if (!camif->chan) {
+			dev_err(&pdev->dev,
+				"unable to get DMA channel for even lines\n");
+			ret = -EINVAL;
+			goto exit_free_frm_start_end_irq;
+		}
+		break;
+	}
+
+	camif->ici.v4l2_dev.dev = &pdev->dev;
+	camif->ici.nr = pdev->id;
+	camif->ici.priv = camif;
+	camif->ici.drv_name = "spear_camif";
+	camif->ici.ops = &camif_soc_camera_host_ops;
+
+	ret = soc_camera_host_register(&camif->ici);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"failed to register camif as SoC camera host\n");
+		goto exit_dma_release;
+	}
+
+	/* reset status flags */
+	camif->dma_complete = 0;
+	camif->frame_start = 0;
+	camif->first_entry = 1;
+
+	INIT_LIST_HEAD(&camif->capture);
+	spin_lock_init(&camif->lock);
+
+	dev_info(&pdev->dev, "%s registered (base addr=%p, "
+			"lineIRQ=%d, vsyncIRQ=%d\n",
+			KBUILD_MODNAME, camif->base, camif->line_irq,
+			camif->frm_start_end_irq);
+
+	return 0;
+
+exit_dma_release:
+	dma_release_channel(camif->chan);
+exit_free_frm_start_end_irq:
+	free_irq(camif->frm_start_end_irq, camif);
+exit_free_line_irq:
+	free_irq(camif->line_irq, camif);
+exit_clk_disable:
+	clk_disable(clk);
+exit_clk_put:
+	clk_put(clk);
+exit_iounmap:
+	iounmap(addr);
+exit_release_mem:
+	release_mem_region(mem->start, resource_size(mem));
+exit_free_camif:
+	kfree(camif);
+exit:
+	dev_err(&pdev->dev, "probe failed\n");
+
+	return ret;
+}
+
+static int __devexit camif_remove(struct platform_device *pdev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(&pdev->dev);
+	struct camif *camif = container_of(ici, struct camif, ici);
+	struct resource *mem;
+
+	soc_camera_host_unregister(&camif->ici);
+
+	dma_release_channel(camif->chan);
+
+	free_irq(camif->frm_start_end_irq, camif);
+	free_irq(camif->line_irq, camif);
+
+	clk_disable(camif->clk);
+	clk_put(camif->clk);
+
+	iounmap(camif->base);
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	release_mem_region(mem->start, resource_size(mem));
+
+	kfree(camif);
+
+	return 0;
+}
+
+static struct platform_driver camif_driver = {
+	.probe = camif_probe,
+	.remove = __devexit_p(camif_remove),
+	.driver = {
+		.name = "spear_camif",
+		.owner = THIS_MODULE,
+	},
+};
+
+static int __init camif_init(void)
+{
+	return platform_driver_register(&camif_driver);
+}
+module_init(camif_init);
+
+static void __exit camif_exit(void)
+{
+	platform_driver_unregister(&camif_driver);
+}
+module_exit(camif_exit);
+
+MODULE_AUTHOR("Bhupesh Sharma <bhupesh.sharma@st.com>");
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("SoC Camera Driver for SPEAr CAMIF");

@@ -112,6 +112,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear3xx_pmx_gpio_pin3,
 	&spear3xx_pmx_gpio_pin4,
 	&spear3xx_pmx_gpio_pin5,
+	&spear3xx_pmx_mii,
 	&spear3xx_pmx_uart0,
 
 	/* spear310 specific devices */
@@ -121,8 +122,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear310_pmx_uart2,
 	&spear310_pmx_uart3_4_5,
 	&spear310_pmx_fsmc,
-	&spear310_pmx_rs485_0_1,
-	&spear310_pmx_tdm0,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -147,6 +146,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_ehci_device,
 	&spear3xx_eth_device,
 	&spear3xx_i2c_device,
+	&spear3xx_irda_device,
 	&spear3xx_jpeg_device,
 	&spear3xx_ohci0_device,
 	&spear3xx_ohci1_device,
@@ -163,9 +163,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_nand_device,
 	&spear310_phy_device,
 	&spear310_plgpio_device,
-	&spear310_tdm_hdlc_device,
-	&spear310_rs485_0_device,
-	&spear310_rs485_1_device,
 };
 
 /*
@@ -189,24 +186,15 @@ static void __init select_e1_interface(struct platform_device *pdev)
 #endif
 
 /* spi board information */
-/*
- * External spi memory chips that we use for testing doesn't have a jedec id,
- * and return 0 if we try to read their id. So we must send the correct chip
- * type here.
- */
-static const struct flash_platform_data spix_flash_data = {
-	.type = "m25p40-nonjedec",
-};
-
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, flash, BASIC_GPIO_3);
+DECLARE_SPI_CS_GPIO_CONTROL(0, flash, BASIC_GPIO_3);
 /* spi0 flash Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_gpio_control);
 
 /* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, dev, BASIC_GPIO_4);
+DECLARE_SPI_CS_GPIO_CONTROL(0, dev, BASIC_GPIO_4);
 /* spi0 spidev Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_gpio_control);
 
 static struct spi_board_info __initdata spi_board_info[] = {
 	/* spi0 board info */
@@ -220,11 +208,10 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.platform_data = &spix_flash_data,
-		.max_speed_hz = 25000000,
+		.max_speed_hz = 12000000,
 		.bus_num = 0,
 		.chip_select = 1,
-		.mode = SPI_MODE_1,
+		.mode = SPI_MODE_3,
 	}
 };
 
@@ -234,16 +221,16 @@ static void macb_enable_mem_clk(void)
 	u32 tmp;
 
 	/* Enable memory Port-1 clock */
-	tmp = readl(AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, AMEM_CLK_CFG);
+	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, VA_AMEM_CLK_CFG);
 
 	/*
 	 * Program the pad strengths of PLGPIO to drive the IO's
 	 * The Magic number being used have direct correlations
 	 * with the driving capabilities of the IO pads.
 	 */
-	writel(0x2f7bc210, PLGPIO3_PAD_PRG);
-	writel(0x017bdef6, PLGPIO4_PAD_PRG);
+	writel(0x2f7bc210, VA_PLGPIO3_PAD_PRG);
+	writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
 
 }
 
@@ -302,7 +289,7 @@ static void __init spear310_evb_init(void)
 	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 }
 
-MACHINE_START(SPEAR310, "ST-SPEAR310-EVB")
+MACHINE_START(SPEAR310_EVB, "ST-SPEAR310-EVB")
 	.boot_params	=	0x00000100,
 	.map_io		=	spear3xx_map_io,
 	.init_irq	=	spear3xx_init_irq,

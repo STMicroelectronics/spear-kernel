@@ -36,7 +36,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
-#include <mach/pcie.h>
+#include <mach/spear_pcie.h>
 
 /* fsmc nor partition info */
 #if 0
@@ -55,6 +55,7 @@ static struct plat_stmmacphy_data phy0_private_data = {
 	.phy_addr = 5,
 	.phy_mask = 0,
 	.interface = PHY_INTERFACE_MODE_GMII,
+	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
 };
 
 static struct resource phy0_resources = {
@@ -75,19 +76,19 @@ static struct platform_device spear900_phy0_device = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
-	&pmx_i2c,
-	&pmx_i2s1,
-	&pmx_i2s2,
-	&pmx_clcd,
-	&pmx_egpio_grp,
-	&pmx_gmii,
-	&pmx_keyboard_6x6,
-	&pmx_mcif,
-	&pmx_nand_8bit,
-	&pmx_smi_4_chips,
-	&pmx_ssp,
-	&pmx_uart0,
-	&pmx_sdhci,
+	&spear13xx_pmx_i2c,
+	&spear13xx_pmx_i2s1,
+	&spear13xx_pmx_i2s2,
+	&spear13xx_pmx_clcd,
+	&spear13xx_pmx_egpio_grp,
+	&spear13xx_pmx_gmii,
+	&spear13xx_pmx_keyboard_6x6,
+	&spear13xx_pmx_mcif,
+	&spear13xx_pmx_nand_8bit,
+	&spear13xx_pmx_smi_4_chips,
+	&spear13xx_pmx_ssp,
+	&spear13xx_pmx_uart0,
+	&spear13xx_pmx_sdhci,
 
 	/* spear900 specific devices */
 };
@@ -107,7 +108,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
 	&spear13xx_ehci1_device,
-	&spear13xx_eth0_device,
+	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
 	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,
@@ -116,6 +117,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcie_gadget0_device,
+	&spear13xx_pcie_host1_device,
+	&spear13xx_pcie_host2_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
@@ -134,7 +137,7 @@ static struct arasan_cf_pdata cf_pdata = {
 };
 
 /* keyboard specific platform data */
-static DECLARE_KEYMAP(keymap);
+static DECLARE_9x9_KEYMAP(keymap);
 static struct matrix_keymap_data keymap_data = {
 	.keymap = keymap,
 	.keymap_size = ARRAY_SIZE(keymap),
@@ -143,6 +146,7 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
+	.mode = KEYPAD_9x9,
 };
 
 /* Initializing platform data for SPEAr900 specific Input devices on I2C Bus */
@@ -166,24 +170,15 @@ static struct i2c_board_info __initdata i2c_board_info[] = {
 
 /* Currently no gpios are free on eval board so it is kept commented */
 #if 0
-/*
- * External spi memory chips that we use for testing doesn't have a jedec id,
- * and return 0 if we try to read their id. So we must send the correct chip
- * type here.
- */
-static const struct flash_platform_data spix_flash_data = {
-	.type = "m25p40-nonjedec",
-};
-
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, flash, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, flash, /* mention gpio number here */);
 /* spi0 flash Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_control);
+DECLARE_SPI_CHIP_INFO(0, flash, spi0_flash_cs_gpio_control);
 
 /* spi0 spidev Chip Select Control function, controlled by gpio pin mentioned */
-DECLARE_SPI_CS_CONTROL(0, dev, /* mention gpio number here */);
+DECLARE_SPI_CS_GPIO_CONTROL(0, dev, /* mention gpio number here */);
 /* spi0 spidev Chip Info structure */
-DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
+DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_gpio_control);
 #endif
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
@@ -208,7 +203,7 @@ static struct stmpe610_pdata stmpe610_spi_pdata = {
 	.i_drive = IDRIVE_50_80MA,
 };
 
-DECLARE_SPI_CS_CONTROL(0, ts, GPIO1_7);
+DECLARE_SPI_CS_GPIO_CONTROL(0, ts, GPIO1_7);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
@@ -220,7 +215,7 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.ctrl_len = SSP_BITS_8,
 	.wait_state = SSP_MWIRE_WAIT_ZERO,
 	.duplex = SSP_MICROWIRE_CHANNEL_FULL_DUPLEX,
-	.cs_control = spi0_ts_cs_control,
+	.cs_control = spi0_ts_cs_gpio_control,
 };
 
 static struct spi_board_info __initdata spi_board_info[] = {
@@ -246,44 +241,25 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.platform_data = &spix_flash_data,
-		.max_speed_hz = 25000000,
+		.max_speed_hz = 12000000,
 		.bus_num = 0,
 		.chip_select = 1,
-		.mode = SPI_MODE_1,
+		.mode = SPI_MODE_3,
 	}
 #endif
 };
 
-#ifdef CONFIG_PCIEPORTBUS
-static struct pcie_port_info __initdata pcie_port_info[] = {
-	/*pcie0 port info*/
-	{
-		.is_host = 0,
-	}, {
-	/*pcie1 port info*/
-		.is_host = 1,
-	}, {
-	/*pcie2 port info*/
-		.is_host = 1,
-	}
-};
-
-/*
- * This function is needed for PCIE host and device driver. Same
- * controller can not be programmed as host as well as device. So host
- * driver must call this function and if this function returns a
- * configuration structure which tells that this port should be a host, then
- * only host controller driver should add that particular port as RC.
- * For a port to be added as device, one must also add device's information
- * in plat_devs array defined in this file.
- */
-static struct pcie_port_info * __init spear900_pcie_port_init(int port)
+#ifdef CONFIG_SPEAR_PCIE_REV341
+/* This function is needed for board specific PCIe initilization */
+static void __init spear900_pcie_board_init(void)
 {
-	if (port < 3)
-		return &pcie_port_info[port];
-	else
-		return NULL;
+	void *plat_data;
+
+	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
+
+	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
 }
 #endif
 
@@ -359,10 +335,10 @@ static void __init spear900_evb_init(void)
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
 
-#ifdef CONFIG_PCIEPORTBUS
+#ifdef CONFIG_SPEAR_PCIE_REV341
 	/* Enable PCIE0 clk */
 	enable_pcie0_clk();
-	pcie_init(spear900_pcie_port_init);
+	spear900_pcie_board_init();
 #endif
 
 	/* initialize serial nor related data in smi plat data */
@@ -378,7 +354,7 @@ static void __init spear900_evb_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
-MACHINE_START(SPEAR900, "ST-SPEAR900-EVB")
+MACHINE_START(SPEAR900_EVB, "ST-SPEAR900-EVB")
 	.boot_params	=	0x00000100,
 	.fixup		=	spear900_evb_fixup,
 	.map_io		=	spear13xx_map_io,

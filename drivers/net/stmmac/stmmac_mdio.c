@@ -101,8 +101,10 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	ndev = bus->priv;
 	priv = netdev_priv(ndev);
 
-	if (machine_is_spear1310() && mac1_bus)
+#ifdef CONFIG_ARCH_SPEAR13XX
+	if (cpu_is_spear1310_reva() && mac1_bus)
 		ndev = (struct net_device *)mac1_bus;
+#endif
 
 	ioaddr = ndev->base_addr;
 	mii_address = priv->hw->mii.addr;
@@ -151,8 +153,10 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	ndev = bus->priv;
 	priv = netdev_priv(ndev);
 
-	if (machine_is_spear1310() && mac1_bus)
+#ifdef CONFIG_ARCH_SPEAR13XX
+	if (cpu_is_spear1310_reva() && mac1_bus)
 		ndev = (struct net_device *)mac1_bus;
+#endif
 
 	mii_address = priv->hw->mii.addr;
 	mii_data = priv->hw->mii.data;
@@ -198,7 +202,7 @@ static int stmmac_mdio_reset(struct mii_bus *bus)
 
 	if (priv->phy_reset) {
 		pr_debug("stmmac_mdio_reset: calling phy_reset\n");
-		priv->phy_reset(priv->bsp_priv);
+		priv->phy_reset(bus);
 	}
 
 	/* This is a workaround for problems with the STE101P PHY.
@@ -247,8 +251,10 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->phy_mask = priv->phy_mask;
 	new_bus->parent = priv->device;
 
-	if (machine_is_spear1310() && (priv->bus_id == 0))
+#ifdef CONFIG_ARCH_SPEAR13XX
+	if (cpu_is_spear1310_reva() && (priv->bus_id == 0))
 		mac1_bus = (u32 *)ndev;
+#endif
 
 	err = mdiobus_register(new_bus);
 	if (err != 0) {

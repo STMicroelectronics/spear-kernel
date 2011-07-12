@@ -40,6 +40,7 @@ extern struct platform_device spear3xx_dmac_device;
 extern struct platform_device spear3xx_ehci_device;
 extern struct platform_device spear3xx_eth_device;
 extern struct platform_device spear3xx_i2c_device;
+extern struct platform_device spear3xx_irda_device;
 extern struct platform_device spear3xx_jpeg_device;
 extern struct platform_device spear3xx_ohci0_device;
 extern struct platform_device spear3xx_ohci1_device;
@@ -91,7 +92,7 @@ extern struct pmx_dev spear3xx_pmx_uart0;
 extern struct pmx_dev spear3xx_pmx_timer_3_4;
 extern struct pmx_dev spear3xx_pmx_timer_1_2;
 
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* padmux plgpio devices */
 extern struct pmx_dev spear3xx_pmx_plgpio_0_1;
 extern struct pmx_dev spear3xx_pmx_plgpio_2_3;
@@ -111,7 +112,7 @@ extern struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50;
 #endif
 
 /* spear300 declarations */
-#ifdef CONFIG_MACH_SPEAR300
+#ifdef CONFIG_CPU_SPEAR300
 /* Add spear300 machine device structure declarations here */
 extern struct amba_device spear300_clcd_device;
 extern struct amba_device spear300_gpio1_device;
@@ -170,7 +171,7 @@ extern struct clcd_board clcd_plat_data;
 #endif
 
 /* spear310 declarations */
-#if defined(CONFIG_MACH_SPEAR310)
+#if defined(CONFIG_CPU_SPEAR310)
 /* Add spear310 machine device structure declarations here */
 extern struct amba_device spear310_uart1_device;
 extern struct amba_device spear310_uart2_device;
@@ -205,7 +206,7 @@ void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 #endif
 
 /* spear320 declarations */
-#if defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR320)
 /* Add spear320 machine device structure declarations here */
 extern struct amba_device spear320_clcd_device;
 extern struct amba_device spear320_ssp_device[];
@@ -252,13 +253,10 @@ extern struct pmx_dev spear320_pmx_smii0;
 extern struct pmx_dev spear320_pmx_smii1;
 extern struct pmx_dev spear320_pmx_i2c1;
 
-/* pad multiplexing support */
-#define SPEAR320_PAD_MUX_CONFIG_REG	0xB300000C
-#define SPEAR320_MODE_CONFIG_REG	0xB3000010
-
 /* Add spear320 machine function declarations here */
 void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
+void __init spear320_map_io(void);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;

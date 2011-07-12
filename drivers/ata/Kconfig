@@ -22,6 +22,20 @@ menuconfig ATA
 
 if ATA
 
+config ATA_DEBUG
+        bool "ATA debugging"
+        help
+          This is an option for use by developers; most people should
+          say N here.  This enables ATA core and driver debugging.
+
+config ATA_VDEBUG
+        bool "ATA verbose debugging"
+        depends on ATA_DEBUG != n
+        help
+          This is an option for use by developers; most people should
+          say N here.  This enables deeper (more verbose) debugging of
+          the ATA core and drivers.
+
 config ATA_NONSTANDARD
        bool
        default n

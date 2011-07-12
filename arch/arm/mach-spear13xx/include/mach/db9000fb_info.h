@@ -40,6 +40,7 @@ struct db9000fb_mode_info {
 	u32	cr1;
 	u32	pctr;
 	u32	dear;
+	u32	pwmfr;
 	u_int		cmap_greyscale : 1,
 			depth:8,
 			unused:23;

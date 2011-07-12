@@ -45,7 +45,8 @@ void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 	data.jpeg2mem_slave.dma_dev = dma_dev;
 	data.jpeg2mem_slave.reg_width = JPEG_WIDTH;
 #ifdef CONFIG_ARCH_SPEAR13XX
-	data.mem2jpeg_slave.cfg_hi = DWC_CFGH_DST_PER(DMA_REQ_TO_JPEG);
+	data.mem2jpeg_slave.cfg_hi =
+		DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_TO_JPEG);
 	data.mem2jpeg_slave.cfg_lo = 0;
 	data.mem2jpeg_slave.src_master = MEM_MASTER;
 	data.mem2jpeg_slave.dst_master = JPEG_MASTER;
@@ -53,7 +54,8 @@ void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 	data.mem2jpeg_slave.dst_msize = JPEG_BURST;
 	data.mem2jpeg_slave.fc = DW_DMA_FC_D_M2P;
 
-	data.jpeg2mem_slave.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_FROM_JPEG);
+	data.jpeg2mem_slave.cfg_hi =
+		DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_FROM_JPEG);
 	data.jpeg2mem_slave.cfg_lo = 0;
 	data.jpeg2mem_slave.src_master = JPEG_MASTER;
 	data.jpeg2mem_slave.dst_master = MEM_MASTER;

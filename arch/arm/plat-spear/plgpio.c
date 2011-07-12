@@ -12,6 +12,8 @@
  */
 
 #include <linux/bitops.h>
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/spinlock.h>
 #include <linux/errno.h>
@@ -23,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <asm/mach-types.h>
+#include <mach/hardware.h>
 
 #define MAX_GPIO_PER_REG		32
 #define PIN_OFFSET(pin)			(pin % MAX_GPIO_PER_REG)
@@ -47,6 +50,7 @@
 struct plgpio {
 	spinlock_t		lock;
 	void __iomem		*base;
+	struct clk		*clk;
 	unsigned		irq_base;
 	struct gpio_chip	chip;
 	u32			grp_size;
@@ -188,12 +192,21 @@ static int plgpio_request(struct gpio_chip *chip, unsigned offset)
 	if (offset >= chip->ngpio)
 		return -EINVAL;
 
+	if (plgpio->clk) {
+		ret = clk_enable(plgpio->clk);
+		if (ret)
+			return ret;
+	}
+
 	/*
 	 * put gpio in IN mode before enabling it. This make enabling gpio safe
 	 */
 	ret = plgpio_direction_input(chip, offset);
 	if (ret)
 		return ret;
+
+	if (plgpio->regs.enb == -1)
+		return 0;
 
 	/* get correct offset for "offset" pin */
 	if (plgpio->p2o && (plgpio->p2o_regs & PTO_ENB_REG)) {
@@ -214,6 +227,12 @@ static void plgpio_free(struct gpio_chip *chip, unsigned offset)
 	unsigned long flags;
 
 	if (offset >= chip->ngpio)
+		return;
+
+	if (plgpio->clk)
+		clk_disable(plgpio->clk);
+
+	if (plgpio->regs.enb == -1)
 		return;
 
 	/* get correct offset for "offset" pin */
@@ -286,7 +305,21 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 		return -EINVAL;
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (trigger != IRQ_TYPE_EDGE_RISING)
+	if (cpu_is_spear1310() || cpu_is_spear1340()) {
+		void __iomem *reg_off = REG_OFFSET(plgpio->base,
+				plgpio->regs.eit, offset);
+		u32 val = readl(reg_off);
+
+		offset = PIN_OFFSET(offset);
+		if (trigger == IRQ_TYPE_EDGE_RISING)
+			writel(val | (1 << offset), reg_off);
+		else if (trigger == IRQ_TYPE_EDGE_FALLING)
+			writel(val & ~(1 << offset), reg_off);
+		else
+			return -EINVAL;
+
+		return 0;
+	} else if (trigger != IRQ_TYPE_EDGE_RISING)
 		return -EINVAL;
 #else
 	if (trigger != IRQ_TYPE_LEVEL_HIGH)
@@ -388,6 +421,12 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		goto release_region;
 	}
 
+	plgpio->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(plgpio->clk)) {
+		dev_warn(&pdev->dev, "could not retrieve clock\n");
+		plgpio->clk = NULL;
+	}
+
 	plgpio->base = ioremap(res->start, resource_size(res));
 	if (!plgpio->base) {
 		ret = -ENOMEM;
@@ -420,6 +459,7 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 	plgpio->regs.ie = pdata->regs.ie;
 	plgpio->regs.rdata = pdata->regs.rdata;
 	plgpio->regs.mis = pdata->regs.mis;
+	plgpio->regs.eit = pdata->regs.eit;
 
 	ret = gpiochip_add(&plgpio->chip);
 	if (ret) {
@@ -460,6 +500,8 @@ remove_gpiochip:
 iounmap:
 	iounmap(plgpio->base);
 kfree:
+	if (plgpio->clk)
+		clk_put(plgpio->clk);
 	kfree(plgpio);
 release_region:
 	release_mem_region(res->start, resource_size(res));

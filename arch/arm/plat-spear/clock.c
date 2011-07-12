@@ -357,8 +357,10 @@ void clk_register(struct clk_lookup *cl)
 	 * structure. So if this clk is iterated once, then don't do following
 	 * steps next time.
 	 */
+#ifdef CONFIG_DEBUG_FS
 	if (clk->cl)
 		goto clkdev_add;
+#endif
 
 	spin_lock_irqsave(&clocks_lock, flags);
 

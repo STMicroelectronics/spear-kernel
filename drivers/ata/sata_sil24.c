@@ -1343,11 +1343,6 @@ static int sil24_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 	}
 
-	/* Set max read request size to 4096.  This slightly increases
-	 * write throughput for pci-e variants.
-	 */
-	pcie_set_readrq(pdev, 4096);
-
 	sil24_init_controller(host);
 
 	if (sata_sil24_msi && !pci_enable_msi(pdev)) {

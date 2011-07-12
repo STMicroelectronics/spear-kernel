@@ -39,11 +39,45 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x18),
 	.pctr = 0,
 	.dear = 0,
 };
 struct db9000fb_mach_info sharp_lcd_info = {
 	.modes		= &sharp_LQ043T3DX0A_mode,
+	.num_modes	= 1,
+	.lcd_conn	= LCD_PCLK_EDGE_FALL,
+	.video_mem_size = 0,
+	.cmap_static    = 0,
+	.cmap_inverse   = 0,
+};
+
+static struct db9000fb_mode_info hannstar_hsd07_mode = {
+	.mode = {
+		.name = "Hannstar HSD07",
+		.refresh = 0,
+		.xres = 800,
+		.yres = 480,
+		.pixclock = 33333,
+		.left_margin = 40,
+		.right_margin = 40,
+		.upper_margin = 29,
+		.lower_margin = 13,
+		.hsync_len = 48,
+		.vsync_len = 3,
+		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+	},
+	.bpp = 32,
+	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
+	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x18),
+	.pctr = 0,
+	.dear = 0,
+};
+struct db9000fb_mach_info hannstar_hsd07_info = {
+	.modes		= &hannstar_hsd07_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
 	.video_mem_size = 0,
@@ -70,6 +104,8 @@ static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
+	.pwmfr = DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x8),
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };

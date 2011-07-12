@@ -11,25 +11,33 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/io.h>
 #include <linux/suspend.h>
 #include <linux/sysfs.h>
 #include <linux/module.h>
 #include <asm/cacheflush.h>
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#include <mach/misc_regs.h>
 #include <mach/suspend.h>
 
 static int spear_pm_sleep(suspend_state_t state)
 {
-	void (*spear_sram_sleep)(suspend_state_t state) = NULL;
+	void (*spear_sram_sleep)(suspend_state_t state, int revision) = NULL;
 	void (*spear_sram_wake)(void) = NULL;
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 
 	if (state == PM_SUSPEND_MEM) {
+		u32 pm_cfg;
 		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
 				spear_wakeup_sz);
 		/* Increment destination pointer by the size copied*/
 		sram_dest += roundup(spear_wakeup_sz, 4);
+
+		pm_cfg = readl(VA_PCM_CFG);
+		/* source gpio interrupt through GIC */
+		pm_cfg &= ~(1 << 2);
+		writel(pm_cfg, VA_PCM_CFG);
 	}
 
 	/* Copy the Sleep code on to the SRAM*/
@@ -37,7 +45,10 @@ static int spear_pm_sleep(suspend_state_t state)
 			spear_sleep_mode_sz);
 	flush_cache_all();
 	/* Jump to the suspend routines in sram */
-	spear_sram_sleep(state);
+	if (cpu_is_spear1340() || cpu_is_spear1310())
+		spear_sram_sleep(state, 1);
+	else
+		spear_sram_sleep(state, 0);
 	return 0;
 }
 

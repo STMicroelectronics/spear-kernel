@@ -13,7 +13,7 @@
 
 #include <linux/init.h>
 #include <linux/kernel.h>
-#include <asm/mach-types.h>
+#include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <plat/clock.h>
 
@@ -34,7 +34,7 @@ static struct clk osc_24m_clk = {
 /* rtc clock */
 static struct clk rtc_clk = {
 	.pclk = &osc_32k_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = RTC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -63,8 +63,8 @@ struct vco_rate_tbl vco_rtbl[] = {
 
 /* vco1 configuration structure */
 static struct vco_clk_config vco1_config = {
-	.mode_reg = PLL1_CTR,
-	.cfg_reg = PLL1_FRQ,
+	.mode_reg = VA_PLL1_CTR,
+	.cfg_reg = VA_PLL1_FRQ,
 	.masks = &vco_masks,
 };
 
@@ -72,7 +72,7 @@ static struct vco_clk_config vco1_config = {
 static struct clk vco1_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_24m_clk,
-	.en_reg = PLL1_CTR,
+	.en_reg = VA_PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
@@ -90,8 +90,8 @@ static struct clk pll1_clk = {
 
 /* vco2 configuration structure */
 static struct vco_clk_config vco2_config = {
-	.mode_reg = PLL2_CTR,
-	.cfg_reg = PLL2_FRQ,
+	.mode_reg = VA_PLL2_CTR,
+	.cfg_reg = VA_PLL2_FRQ,
 	.masks = &vco_masks,
 };
 
@@ -99,7 +99,7 @@ static struct vco_clk_config vco2_config = {
 static struct clk vco2_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_24m_clk,
-	.en_reg = PLL2_CTR,
+	.en_reg = VA_PLL2_CTR,
 	.en_reg_bit = PLL_ENABLE,
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
@@ -145,7 +145,7 @@ static struct bus_clk_masks ahb_masks = {
 
 /* ahb configuration structure */
 static struct bus_clk_config ahb_config = {
-	.reg = CORE_CLK_CFG,
+	.reg = VA_CORE_CLK_CFG,
 	.masks = &ahb_masks,
 };
 
@@ -182,7 +182,7 @@ static struct aux_clk_masks aux_masks = {
 
 /* uart synth configurations */
 static struct aux_clk_config uart_synth_config = {
-	.synth_reg = UART_CLK_SYNT,
+	.synth_reg = VA_UART_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
@@ -196,7 +196,7 @@ struct aux_rate_tbl aux_rtbl[] = {
 
 /* uart synth clock */
 static struct clk uart_synth_clk = {
-	.en_reg = UART_CLK_SYNT,
+	.en_reg = VA_UART_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.calc_rate = &aux_calc_rate,
@@ -221,13 +221,13 @@ static struct pclk_info uart_pclk_info[] = {
 static struct pclk_sel uart_pclk_sel = {
 	.pclk_info = uart_pclk_info,
 	.pclk_count = ARRAY_SIZE(uart_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = UART_CLK_MASK,
 };
 
 /* uart clock */
 static struct clk uart_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = UART_CLK_ENB,
 	.pclk_sel = &uart_pclk_sel,
 	.pclk_sel_shift = UART_CLK_SHIFT,
@@ -236,13 +236,13 @@ static struct clk uart_clk = {
 
 /* firda configurations */
 static struct aux_clk_config firda_synth_config = {
-	.synth_reg = FIRDA_CLK_SYNT,
+	.synth_reg = VA_FIRDA_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
 /* firda synth clock */
 static struct clk firda_synth_clk = {
-	.en_reg = FIRDA_CLK_SYNT,
+	.en_reg = VA_FIRDA_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.calc_rate = &aux_calc_rate,
@@ -267,13 +267,13 @@ static struct pclk_info firda_pclk_info[] = {
 static struct pclk_sel firda_pclk_sel = {
 	.pclk_info = firda_pclk_info,
 	.pclk_count = ARRAY_SIZE(firda_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = FIRDA_CLK_MASK,
 };
 
 /* firda clock */
 static struct clk firda_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = FIRDA_CLK_ENB,
 	.pclk_sel = &firda_pclk_sel,
 	.pclk_sel_shift = FIRDA_CLK_SHIFT,
@@ -298,7 +298,7 @@ struct gpt_rate_tbl gpt_rtbl[] = {
 
 /* gpt0 synth clk config*/
 static struct gpt_clk_config gpt0_synth_config = {
-	.synth_reg = PRSC1_CLK_CFG,
+	.synth_reg = VA_PRSC1_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -328,7 +328,7 @@ static struct pclk_info gpt0_pclk_info[] = {
 static struct pclk_sel gpt0_pclk_sel = {
 	.pclk_info = gpt0_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt0_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
@@ -342,7 +342,7 @@ static struct clk gpt0_clk = {
 
 /* gpt1 synth clk configurations */
 static struct gpt_clk_config gpt1_synth_config = {
-	.synth_reg = PRSC2_CLK_CFG,
+	.synth_reg = VA_PRSC2_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -371,13 +371,13 @@ static struct pclk_info gpt1_pclk_info[] = {
 static struct pclk_sel gpt1_pclk_sel = {
 	.pclk_info = gpt1_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt1_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
 /* gpt1 timer clock */
 static struct clk gpt1_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GPT1_CLK_ENB,
 	.pclk_sel = &gpt1_pclk_sel,
 	.pclk_sel_shift = GPT1_CLK_SHIFT,
@@ -386,7 +386,7 @@ static struct clk gpt1_clk = {
 
 /* gpt2 synth clk configurations */
 static struct gpt_clk_config gpt2_synth_config = {
-	.synth_reg = PRSC3_CLK_CFG,
+	.synth_reg = VA_PRSC3_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -415,13 +415,13 @@ static struct pclk_info gpt2_pclk_info[] = {
 static struct pclk_sel gpt2_pclk_sel = {
 	.pclk_info = gpt2_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt2_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
 /* gpt2 timer clock */
 static struct clk gpt2_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GPT2_CLK_ENB,
 	.pclk_sel = &gpt2_pclk_sel,
 	.pclk_sel_shift = GPT2_CLK_SHIFT,
@@ -432,7 +432,7 @@ static struct clk gpt2_clk = {
 /* usbh clock */
 static struct clk usbh_clk = {
 	.pclk = &pll3_48m_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = USBH_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -440,7 +440,7 @@ static struct clk usbh_clk = {
 /* usbd clock */
 static struct clk usbd_clk = {
 	.pclk = &pll3_48m_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = USBD_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -476,7 +476,7 @@ static struct pclk_info ddr_pclk_info[] = {
 static struct pclk_sel ddr_pclk_sel = {
 	.pclk_info = ddr_pclk_info,
 	.pclk_count = ARRAY_SIZE(ddr_pclk_info),
-	.pclk_sel_reg = PLL_CLK_CFG,
+	.pclk_sel_reg = VA_PLL_CLK_CFG,
 	.pclk_sel_mask = MCTR_CLK_MASK,
 };
 
@@ -496,7 +496,7 @@ static struct bus_clk_masks apb_masks = {
 
 /* apb configuration structure */
 static struct bus_clk_config apb_config = {
-	.reg = CORE_CLK_CFG,
+	.reg = VA_CORE_CLK_CFG,
 	.masks = &apb_masks,
 };
 
@@ -514,7 +514,7 @@ static struct clk apb_clk = {
 /* i2c clock */
 static struct clk i2c_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = I2C_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -522,7 +522,7 @@ static struct clk i2c_clk = {
 /* dma clock */
 static struct clk dma_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = DMA_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -530,7 +530,7 @@ static struct clk dma_clk = {
 /* jpeg clock */
 static struct clk jpeg_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = JPEG_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -538,7 +538,7 @@ static struct clk jpeg_clk = {
 /* gmac clock */
 static struct clk gmac_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GMAC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -546,7 +546,7 @@ static struct clk gmac_clk = {
 /* smi clock */
 static struct clk smi_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SMI_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -554,7 +554,7 @@ static struct clk smi_clk = {
 /* c3 clock */
 static struct clk c3_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = C3_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -563,12 +563,12 @@ static struct clk c3_clk = {
 /* adc clock */
 static struct clk adc_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = ADC_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* emi clock */
 static struct clk emi_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -580,7 +580,7 @@ static struct clk emi_clk = {
 /* ssp clock */
 static struct clk ssp0_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SSP_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -588,15 +588,44 @@ static struct clk ssp0_clk = {
 /* gpio clock */
 static struct clk gpio_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GPIO_CLK_ENB,
 	.recalc = &follow_parent,
 };
 
 static struct clk dummy_apb_pclk;
 
-#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR310) || \
-	defined(CONFIG_MACH_SPEAR320)
+#ifdef CONFIG_CPU_SPEAR300
+/* fsmc0 clock */
+static struct clk fsmc0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc1 clock */
+static struct clk fsmc1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc2 clock */
+static struct clk fsmc2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc3 clock */
+static struct clk fsmc3_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* fsmc clock */
 static struct clk fsmc_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -605,25 +634,8 @@ static struct clk fsmc_clk = {
 };
 #endif
 
-/* common clocks to spear310 and spear320 */
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
-/* uart1 clock */
-static struct clk uart1_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
-
-/* uart2 clock */
-static struct clk uart2_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
-#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
-
 /* common clocks to spear300 and spear320 */
-#if defined(CONFIG_MACH_SPEAR300) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR300) || defined(CONFIG_CPU_SPEAR320)
 /* clcd clock */
 static struct clk clcd_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -637,10 +649,10 @@ static struct clk sdhci_clk = {
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
-#endif /* CONFIG_MACH_SPEAR300 || CONFIG_MACH_SPEAR320 */
+#endif /* CONFIG_CPU_SPEAR300 || CONFIG_CPU_SPEAR320 */
 
 /* spear300 machine specific clock structures */
-#ifdef CONFIG_MACH_SPEAR300
+#ifdef CONFIG_CPU_SPEAR300
 /* gpio1 clock */
 static struct clk gpio1_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -658,23 +670,37 @@ static struct clk kbd_clk = {
 #endif
 
 /* spear310 machine specific clock structures */
-#ifdef CONFIG_MACH_SPEAR310
+#ifdef CONFIG_CPU_SPEAR310
+/* uart1 clock */
+static struct clk spear310_uart1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk spear310_uart2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
 /* uart3 clock */
-static struct clk uart3_clk = {
+static struct clk spear310_uart3_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 
 /* uart4 clock */
-static struct clk uart4_clk = {
+static struct clk spear310_uart4_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
 
 /* uart5 clock */
-static struct clk uart5_clk = {
+static struct clk spear310_uart5_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
@@ -682,7 +708,7 @@ static struct clk uart5_clk = {
 #endif
 
 /* spear320 machine specific clock structures */
-#ifdef CONFIG_MACH_SPEAR320
+#ifdef CONFIG_CPU_SPEAR320
 /* can0 clock */
 static struct clk can0_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -724,6 +750,22 @@ static struct clk pwm_clk = {
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
+
+/* uart1 clock */
+static struct clk spear320_uart1_clk = {
+	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
+	.en_reg_bit = UART1_2_PCLK_APB,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+/* uart2 clock */
+static struct clk spear320_uart2_clk = {
+	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
+	.en_reg_bit = UART1_2_PCLK_APB,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
 #endif
 
 /* array of all spear 3xx clock lookups */
@@ -752,7 +794,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "gpt1_synth_clk",	.clk = &gpt1_synth_clk},
 	{ .con_id = "gpt2_synth_clk",	.clk = &gpt2_synth_clk},
 	{ .dev_id = "uart",		.clk = &uart_clk},
-	{ .dev_id = "firda",		.clk = &firda_clk},
+	{ .dev_id = "dice_ir",		.clk = &firda_clk},
 	{ .dev_id = "gpt0",		.clk = &gpt0_clk},
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
 	{ .dev_id = "gpt2",		.clk = &gpt2_clk},
@@ -776,34 +818,37 @@ static struct clk_lookup spear_clk_lookups[] = {
 };
 
 /* array of all spear 300 clock lookups */
-#ifdef CONFIG_MACH_SPEAR300
 static struct clk_lookup spear300_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR300
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand.0",	.clk = &fsmc0_clk},
+	{ .dev_id = "fsmc-nand.1",	.clk = &fsmc1_clk},
+	{ .dev_id = "fsmc-nand.2",	.clk = &fsmc2_clk},
+	{ .dev_id = "fsmc-nand.3",	.clk = &fsmc3_clk},
 	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
 	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
-};
 #endif
+};
 
 /* array of all spear 310 clock lookups */
-#ifdef CONFIG_MACH_SPEAR310
 static struct clk_lookup spear310_clk_lookups[] = {
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+#ifdef CONFIG_CPU_SPEAR310
+	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
-	{ .dev_id = "uart1",		.clk = &uart1_clk},
-	{ .dev_id = "uart2",		.clk = &uart2_clk},
-	{ .dev_id = "uart3",		.clk = &uart3_clk},
-	{ .dev_id = "uart4",		.clk = &uart4_clk},
-	{ .dev_id = "uart5",		.clk = &uart5_clk},
-};
+	{ .dev_id = "uart1",		.clk = &spear310_uart1_clk},
+	{ .dev_id = "uart2",		.clk = &spear310_uart2_clk},
+	{ .dev_id = "uart3",		.clk = &spear310_uart3_clk},
+	{ .dev_id = "uart4",		.clk = &spear310_uart4_clk},
+	{ .dev_id = "uart5",		.clk = &spear310_uart5_clk},
 #endif
+};
 
 /* array of all spear 320 clock lookups */
-#ifdef CONFIG_MACH_SPEAR320
 static struct clk_lookup spear320_clk_lookups[] = {
+#ifdef CONFIG_CPU_SPEAR320
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
@@ -812,10 +857,10 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
-	{ .dev_id = "uart1",		.clk = &uart1_clk},
-	{ .dev_id = "uart2",		.clk = &uart2_clk},
-};
+	{ .dev_id = "uart1",		.clk = &spear320_uart1_clk},
+	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
 #endif
+};
 
 /* machine clk init */
 void __init spear3xx_clk_init(void)
@@ -823,10 +868,10 @@ void __init spear3xx_clk_init(void)
 	int i, cnt;
 	struct clk_lookup *lookups;
 
-	if (machine_is_spear300()) {
+	if (cpu_is_spear300()) {
 		cnt = ARRAY_SIZE(spear300_clk_lookups);
 		lookups = spear300_clk_lookups;
-	} else if (machine_is_spear310()) {
+	} else if (cpu_is_spear310()) {
 		cnt = ARRAY_SIZE(spear310_clk_lookups);
 		lookups = spear310_clk_lookups;
 	} else {

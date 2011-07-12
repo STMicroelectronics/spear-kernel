@@ -245,9 +245,9 @@ static inline void jpeg_reset(struct jpeg_regs *regs)
 	 * jpeg completely.
 	 */
 #ifdef CONFIG_ARCH_SPEAR13XX
-	addr = PERIP1_SW_RST;
+	addr = VA_PERIP1_SW_RST;
 #else
-	addr = PERIP1_SOF_RST;
+	addr = VA_PERIP1_SOF_RST;
 #endif
 	tmp = readl(addr);
 	writel(((1 << JPEG_SOF_RST) | tmp), addr);

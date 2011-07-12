@@ -11,7 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
-#ifdef	CONFIG_MACH_SPEAR320
+#ifdef	CONFIG_CPU_SPEAR320
 
 #ifndef __MACH_SPEAR320_H
 #define __MACH_SPEAR320_H
@@ -40,6 +40,11 @@
 #define SPEAR320_SMII0_BASE		UL(0xAA000000)
 #define SPEAR320_SMII1_BASE		UL(0xAB000000)
 #define SPEAR320_SOC_CONFIG_BASE	UL(0xB3000000)
+#define VA_SPEAR320_SOC_CONFIG_BASE	IO_ADDRESS(SPEAR320_SOC_CONFIG_BASE)
+#define SPEAR320_PAD_MUX_CONFIG_REG	(SPEAR320_SOC_CONFIG_BASE + 0x0C)
+#define SPEAR320_CONTROL_REG		(SPEAR320_SOC_CONFIG_BASE + 0x10)
+	#define UART1_2_PCLK_APB	(6)
+	#define MII_ENB			(5)
 
 /* Interrupt registers offsets and masks */
 #define SPEAR320_INT_STS_MASK_REG		0x04
@@ -70,4 +75,4 @@
 
 #endif /* __MACH_SPEAR320_H */
 
-#endif /* CONFIG_MACH_SPEAR320 */
+#endif /* CONFIG_CPU_SPEAR320 */

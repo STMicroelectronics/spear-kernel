@@ -1,9 +1,9 @@
 /*
  * ALSA PCM interface for ST spear Processor
  *
- * sound/soc/spear/spear13xx-pcm.c
+ * sound/soc/spear/spear13xx_pcm.c
  *
- * Copyright (C) 2010 ST Microelectronics
+ * Copyright (C) 2011 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/designware_i2s.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -21,8 +22,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <mach/dma.h>
-#include "spear13xx-i2s.h"
-#include "spear13xx-pcm.h"
+#include "spear13xx_pcm.h"
 
 static u64 spear13xx_pcm_dmamask = 0xffffffff;
 struct pcm_dma_data data;
@@ -38,10 +38,10 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 			SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
 			SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
 			SNDRV_PCM_RATE_KNOT),
-	.rate_min = 48000,
-	.rate_max = 48000,
+	.rate_min = 8000,
+	.rate_max = 96000,
 	.channels_min = 2,
-	.channels_max = 2,
+	.channels_max = 8,
 	.buffer_bytes_max = 16 * 1024, /* max buffer size */
 	.period_bytes_min = 2 * 1024, /* 1 msec data minimum period size */
 	.period_bytes_max = 2 * 1024, /* maximum period size */
@@ -57,7 +57,7 @@ void pcm_init(struct device *dma_dev)
 	data.i2s2mem_slave.dma_dev = dma_dev;
 	/* doing 16 bit audio transfer */
 	data.mem2i2s_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
-	data.mem2i2s_slave.cfg_hi = DWC_CFGH_DST_PER(DMA_REQ_I2S_TX);
+	data.mem2i2s_slave.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX);
 	data.mem2i2s_slave.cfg_lo = 0;
 	data.mem2i2s_slave.src_master = 1;
 	data.mem2i2s_slave.dst_master = 1;
@@ -67,7 +67,7 @@ void pcm_init(struct device *dma_dev)
 	data.mem2i2s_slave.fc = DW_DMA_FC_D_M2P;
 
 	data.i2s2mem_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
-	data.i2s2mem_slave.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_I2S_RX);
+	data.i2s2mem_slave.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX);
 	data.i2s2mem_slave.src_master = 1;
 	data.i2s2mem_slave.dst_master = 1;
 	data.i2s2mem_slave.src_msize = DW_DMA_MSIZE_16;

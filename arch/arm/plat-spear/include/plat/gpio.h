@@ -41,6 +41,7 @@ struct plgpio_regs {
 	u32 rdata;		/* read data register */
 	u32 ie;			/* interrupt enable register */
 	u32 mis;		/* mask interrupt status register */
+	u32 eit;		/* edge interrupt type */
 };
 
 /* functions for converting pin to correct offset in register and vice versa */

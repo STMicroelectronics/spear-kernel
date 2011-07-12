@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/keyboard.h>
+#include <plat/hardware.h>
 
 /* Keyboard Registers */
 #define MODE_REG	0x00	/* 16 bit reg */
@@ -50,6 +51,7 @@
 #define ROW_MASK	0xF0
 #define COLUMN_MASK	0x0F
 #define ROW_SHIFT	4
+#define KEY_MATRIX_SHIFT	6
 
 struct spear_kbd {
 	struct input_dev *input;
@@ -59,6 +61,7 @@ struct spear_kbd {
 	unsigned int irq;
 	unsigned int irq_wake;
 	unsigned short last_key;
+	unsigned int mode;
 	unsigned short keycodes[256];
 };
 
@@ -107,7 +110,8 @@ static int spear_kbd_open(struct input_dev *dev)
 		return error;
 
 	/* program keyboard */
-	val = SCAN_RATE_80 | MODE_KEYBOARD | PCLK_FREQ_MSK;
+	val = SCAN_RATE_80 | MODE_KEYBOARD | PCLK_FREQ_MSK |
+		(kbd->mode << KEY_MATRIX_SHIFT);
 	writew(val, kbd->io_base + MODE_REG);
 	writeb(1, kbd->io_base + STATUS_REG);
 
@@ -142,7 +146,7 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 	struct input_dev *input_dev;
 	struct resource *res;
 	int irq;
-	int error;
+	int error = -EINVAL;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "Invalid platform data\n");
@@ -177,6 +181,8 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 
 	kbd->input = input_dev;
 	kbd->irq = irq;
+	kbd->mode = pdata->mode;
+
 	kbd->res = request_mem_region(res->start, resource_size(res),
 				      pdev->name);
 	if (!kbd->res) {

@@ -189,6 +189,25 @@ struct platform_device spear3xx_eth_device = {
 	},
 };
 
+/* Fast Irda Controller registration */
+static struct resource irda_resources[] = {
+	{
+		.start = SPEAR3XX_ICM1_IRDA_BASE,
+		.end = SPEAR3XX_ICM1_IRDA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR3XX_IRQ_IRDA,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear3xx_irda_device = {
+	.name = "dice_ir",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(irda_resources),
+	.resource = irda_resources,
+};
+
 /* i2c device registeration */
 static struct resource i2c_resources[] = {
 	{
@@ -763,7 +782,7 @@ struct pmx_dev spear3xx_pmx_timer_1_2 = {
 	.mode_count = ARRAY_SIZE(pmx_timer_1_2_modes),
 };
 
-#if defined(CONFIG_MACH_SPEAR310) || defined(CONFIG_MACH_SPEAR320)
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
 /* Pad multiplexing for plgpio_0_1 devices */
 static struct pmx_mux_reg pmx_plgpio_0_1_mux[] = {
 	{
@@ -1093,7 +1112,7 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 	.modes = pmx_plgpio_45_46_49_50_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
 };
-#endif /* CONFIG_MACH_SPEAR310 || CONFIG_MACH_SPEAR320 */
+#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 static void __init spear3xx_timer_init(void)
 {

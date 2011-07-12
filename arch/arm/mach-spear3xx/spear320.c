@@ -589,7 +589,7 @@ struct pmx_dev spear320_pmx_i2c1 = {
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver = {
-	.mode_reg = {.address = SPEAR320_MODE_CONFIG_REG, .mask = 0x00000007},
+	.mode_reg = {.address = SPEAR320_CONTROL_REG, .mask = 0x00000007},
 };
 
 /* Add spear320 specific devices here */
@@ -953,6 +953,7 @@ static struct spear_shirq shirq_ras1 = {
 	.dev_config = shirq_ras1_config,
 	.dev_count = ARRAY_SIZE(shirq_ras1_config),
 	.regs = {
+		.base = IOMEM(VA_SPEAR320_SOC_CONFIG_BASE),
 		.enb_reg = -1,
 		.status_reg = SPEAR320_INT_STS_MASK_REG,
 		.status_reg_mask = SPEAR320_SHIRQ_RAS1_MASK,
@@ -985,6 +986,7 @@ static struct spear_shirq shirq_ras3 = {
 	.dev_config = shirq_ras3_config,
 	.dev_count = ARRAY_SIZE(shirq_ras3_config),
 	.regs = {
+		.base = IOMEM(VA_SPEAR320_SOC_CONFIG_BASE),
 		.enb_reg = SPEAR320_INT_ENB_MASK_REG,
 		.reset_to_enb = 1,
 		.status_reg = SPEAR320_INT_STS_MASK_REG,
@@ -1047,6 +1049,7 @@ static struct spear_shirq shirq_intrcomm_ras = {
 	.dev_config = shirq_intrcomm_ras_config,
 	.dev_count = ARRAY_SIZE(shirq_intrcomm_ras_config),
 	.regs = {
+		.base = IOMEM(VA_SPEAR320_SOC_CONFIG_BASE),
 		.enb_reg = -1,
 		.status_reg = SPEAR320_INT_STS_MASK_REG,
 		.status_reg_mask = SPEAR320_SHIRQ_INTRCOMM_RAS_MASK,
@@ -1055,37 +1058,45 @@ static struct spear_shirq shirq_intrcomm_ras = {
 	},
 };
 
+/* Following will create 320 specific static virtual/physical mappings */
+struct map_desc spear320_io_desc[] __initdata = {
+	{
+		.virtual	= VA_SPEAR320_SOC_CONFIG_BASE,
+		.pfn		= __phys_to_pfn(SPEAR320_SOC_CONFIG_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+};
+
+/* This will create static memory mapping for selected devices */
+void __init spear320_map_io(void)
+{
+	iotable_init(spear320_io_desc,
+			ARRAY_SIZE(spear320_io_desc));
+	spear3xx_map_io();
+}
+
 /* spear320 routines */
 void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
 {
-	void __iomem *base;
 	int ret = 0;
 
 	/* call spear3xx family common init function */
 	spear3xx_init();
 
 	/* shared irq registration */
-	base = ioremap(SPEAR320_SOC_CONFIG_BASE, SZ_4K);
-	if (base) {
-		/* shirq 1 */
-		shirq_ras1.regs.base = base;
-		ret = spear_shirq_register(&shirq_ras1);
-		if (ret)
-			printk(KERN_ERR "Error registering Shared IRQ 1\n");
+	ret = spear_shirq_register(&shirq_ras1);
+	if (ret)
+		printk(KERN_ERR "Error registering Shared IRQ 1\n");
 
-		/* shirq 3 */
-		shirq_ras3.regs.base = base;
-		ret = spear_shirq_register(&shirq_ras3);
-		if (ret)
-			printk(KERN_ERR "Error registering Shared IRQ 3\n");
+	ret = spear_shirq_register(&shirq_ras3);
+	if (ret)
+		printk(KERN_ERR "Error registering Shared IRQ 3\n");
 
-		/* shirq 4 */
-		shirq_intrcomm_ras.regs.base = base;
-		ret = spear_shirq_register(&shirq_intrcomm_ras);
-		if (ret)
-			printk(KERN_ERR "Error registering Shared IRQ 4\n");
-	}
+	ret = spear_shirq_register(&shirq_intrcomm_ras);
+	if (ret)
+		printk(KERN_ERR "Error registering Shared IRQ 4\n");
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;

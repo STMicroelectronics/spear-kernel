@@ -34,7 +34,7 @@ static struct clk osc_30m_clk = {
 /* rtc clock */
 static struct clk rtc_clk = {
 	.pclk = &osc_32k_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = RTC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -63,8 +63,8 @@ struct vco_rate_tbl vco_rtbl[] = {
 
 /* vco1 configuration structure */
 static struct vco_clk_config vco1_config = {
-	.mode_reg = PLL1_CTR,
-	.cfg_reg = PLL1_FRQ,
+	.mode_reg = VA_PLL1_CTR,
+	.cfg_reg = VA_PLL1_FRQ,
 	.masks = &vco_masks,
 };
 
@@ -72,7 +72,7 @@ static struct vco_clk_config vco1_config = {
 static struct clk vco1_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_30m_clk,
-	.en_reg = PLL1_CTR,
+	.en_reg = VA_PLL1_CTR,
 	.en_reg_bit = PLL_ENABLE,
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
@@ -90,8 +90,8 @@ static struct clk pll1_clk = {
 
 /* vco2 configuration structure */
 static struct vco_clk_config vco2_config = {
-	.mode_reg = PLL2_CTR,
-	.cfg_reg = PLL2_FRQ,
+	.mode_reg = VA_PLL2_CTR,
+	.cfg_reg = VA_PLL2_FRQ,
 	.masks = &vco_masks,
 };
 
@@ -99,7 +99,7 @@ static struct vco_clk_config vco2_config = {
 static struct clk vco2_clk = {
 	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk = &osc_30m_clk,
-	.en_reg = PLL2_CTR,
+	.en_reg = VA_PLL2_CTR,
 	.en_reg_bit = PLL_ENABLE,
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
@@ -145,7 +145,7 @@ static struct bus_clk_masks ahb_masks = {
 
 /* ahb configuration structure */
 static struct bus_clk_config ahb_config = {
-	.reg = CORE_CLK_CFG,
+	.reg = VA_CORE_CLK_CFG,
 	.masks = &ahb_masks,
 };
 
@@ -182,7 +182,7 @@ static struct aux_clk_masks aux_masks = {
 
 /* uart configurations */
 static struct aux_clk_config uart_synth_config = {
-	.synth_reg = UART_CLK_SYNT,
+	.synth_reg = VA_UART_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
@@ -196,7 +196,7 @@ struct aux_rate_tbl aux_rtbl[] = {
 
 /* uart synth clock */
 static struct clk uart_synth_clk = {
-	.en_reg = UART_CLK_SYNT,
+	.en_reg = VA_UART_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.calc_rate = &aux_calc_rate,
@@ -221,13 +221,13 @@ static struct pclk_info uart_pclk_info[] = {
 static struct pclk_sel uart_pclk_sel = {
 	.pclk_info = uart_pclk_info,
 	.pclk_count = ARRAY_SIZE(uart_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = UART_CLK_MASK,
 };
 
 /* uart0 clock */
 static struct clk uart0_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = UART0_CLK_ENB,
 	.pclk_sel = &uart_pclk_sel,
 	.pclk_sel_shift = UART_CLK_SHIFT,
@@ -236,7 +236,7 @@ static struct clk uart0_clk = {
 
 /* uart1 clock */
 static struct clk uart1_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = UART1_CLK_ENB,
 	.pclk_sel = &uart_pclk_sel,
 	.pclk_sel_shift = UART_CLK_SHIFT,
@@ -245,13 +245,13 @@ static struct clk uart1_clk = {
 
 /* firda configurations */
 static struct aux_clk_config firda_synth_config = {
-	.synth_reg = FIRDA_CLK_SYNT,
+	.synth_reg = VA_FIRDA_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
 /* firda synth clock */
 static struct clk firda_synth_clk = {
-	.en_reg = FIRDA_CLK_SYNT,
+	.en_reg = VA_FIRDA_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.calc_rate = &aux_calc_rate,
@@ -276,13 +276,13 @@ static struct pclk_info firda_pclk_info[] = {
 static struct pclk_sel firda_pclk_sel = {
 	.pclk_info = firda_pclk_info,
 	.pclk_count = ARRAY_SIZE(firda_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = FIRDA_CLK_MASK,
 };
 
 /* firda clock */
 static struct clk firda_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = FIRDA_CLK_ENB,
 	.pclk_sel = &firda_pclk_sel,
 	.pclk_sel_shift = FIRDA_CLK_SHIFT,
@@ -291,13 +291,13 @@ static struct clk firda_clk = {
 
 /* clcd configurations */
 static struct aux_clk_config clcd_synth_config = {
-	.synth_reg = CLCD_CLK_SYNT,
+	.synth_reg = VA_CLCD_CLK_SYNT,
 	.masks = &aux_masks,
 };
 
 /* firda synth clock */
 static struct clk clcd_synth_clk = {
-	.en_reg = CLCD_CLK_SYNT,
+	.en_reg = VA_CLCD_CLK_SYNT,
 	.en_reg_bit = AUX_SYNT_ENB,
 	.pclk = &pll1_clk,
 	.calc_rate = &aux_calc_rate,
@@ -322,13 +322,13 @@ static struct pclk_info clcd_pclk_info[] = {
 static struct pclk_sel clcd_pclk_sel = {
 	.pclk_info = clcd_pclk_info,
 	.pclk_count = ARRAY_SIZE(clcd_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = CLCD_CLK_MASK,
 };
 
 /* clcd clock */
 static struct clk clcd_clk = {
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = CLCD_CLK_ENB,
 	.pclk_sel = &clcd_pclk_sel,
 	.pclk_sel_shift = CLCD_CLK_SHIFT,
@@ -353,7 +353,7 @@ struct gpt_rate_tbl gpt_rtbl[] = {
 
 /* gpt0 synth clk config*/
 static struct gpt_clk_config gpt0_synth_config = {
-	.synth_reg = PRSC1_CLK_CFG,
+	.synth_reg = VA_PRSC1_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -383,7 +383,7 @@ static struct pclk_info gpt0_pclk_info[] = {
 static struct pclk_sel gpt0_pclk_sel = {
 	.pclk_info = gpt0_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt0_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
@@ -401,7 +401,7 @@ static struct clk gpt0_clk = {
 static struct pclk_sel gpt1_pclk_sel = {
 	.pclk_info = gpt0_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt0_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
@@ -415,7 +415,7 @@ static struct clk gpt1_clk = {
 
 /* gpt2 synth clk config*/
 static struct gpt_clk_config gpt2_synth_config = {
-	.synth_reg = PRSC2_CLK_CFG,
+	.synth_reg = VA_PRSC2_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -445,7 +445,7 @@ static struct pclk_info gpt2_pclk_info[] = {
 static struct pclk_sel gpt2_pclk_sel = {
 	.pclk_info = gpt2_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt2_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
@@ -459,7 +459,7 @@ static struct clk gpt2_clk = {
 
 /* gpt3 synth clk config*/
 static struct gpt_clk_config gpt3_synth_config = {
-	.synth_reg = PRSC3_CLK_CFG,
+	.synth_reg = VA_PRSC3_CLK_CFG,
 	.masks = &gpt_masks,
 };
 
@@ -489,7 +489,7 @@ static struct pclk_info gpt3_pclk_info[] = {
 static struct pclk_sel gpt3_pclk_sel = {
 	.pclk_info = gpt3_pclk_info,
 	.pclk_count = ARRAY_SIZE(gpt3_pclk_info),
-	.pclk_sel_reg = PERIP_CLK_CFG,
+	.pclk_sel_reg = VA_PERIP_CLK_CFG,
 	.pclk_sel_mask = GPT_CLK_MASK,
 };
 
@@ -505,7 +505,7 @@ static struct clk gpt3_clk = {
 /* usbh0 clock */
 static struct clk usbh0_clk = {
 	.pclk = &pll3_48m_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = USBH0_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -513,7 +513,7 @@ static struct clk usbh0_clk = {
 /* usbh1 clock */
 static struct clk usbh1_clk = {
 	.pclk = &pll3_48m_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = USBH1_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -521,7 +521,7 @@ static struct clk usbh1_clk = {
 /* usbd clock */
 static struct clk usbd_clk = {
 	.pclk = &pll3_48m_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = USBD_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -557,7 +557,7 @@ static struct pclk_info ddr_pclk_info[] = {
 static struct pclk_sel ddr_pclk_sel = {
 	.pclk_info = ddr_pclk_info,
 	.pclk_count = ARRAY_SIZE(ddr_pclk_info),
-	.pclk_sel_reg = PLL_CLK_CFG,
+	.pclk_sel_reg = VA_PLL_CLK_CFG,
 	.pclk_sel_mask = MCTR_CLK_MASK,
 };
 
@@ -577,7 +577,7 @@ static struct bus_clk_masks apb_masks = {
 
 /* apb configuration structure */
 static struct bus_clk_config apb_config = {
-	.reg = CORE_CLK_CFG,
+	.reg = VA_CORE_CLK_CFG,
 	.masks = &apb_masks,
 };
 
@@ -595,7 +595,7 @@ static struct clk apb_clk = {
 /* i2c clock */
 static struct clk i2c_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = I2C_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -603,7 +603,7 @@ static struct clk i2c_clk = {
 /* dma clock */
 static struct clk dma_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = DMA_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -611,7 +611,7 @@ static struct clk dma_clk = {
 /* jpeg clock */
 static struct clk jpeg_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = JPEG_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -619,7 +619,7 @@ static struct clk jpeg_clk = {
 /* gmac clock */
 static struct clk gmac_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GMAC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -627,7 +627,7 @@ static struct clk gmac_clk = {
 /* smi clock */
 static struct clk smi_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SMI_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -635,7 +635,7 @@ static struct clk smi_clk = {
 /* fsmc clock */
 static struct clk fsmc_clk = {
 	.pclk = &ahb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = FSMC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -644,7 +644,7 @@ static struct clk fsmc_clk = {
 /* adc clock */
 static struct clk adc_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = ADC_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -652,7 +652,7 @@ static struct clk adc_clk = {
 /* ssp0 clock */
 static struct clk ssp0_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SSP0_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -660,7 +660,7 @@ static struct clk ssp0_clk = {
 /* ssp1 clock */
 static struct clk ssp1_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SSP1_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -668,7 +668,7 @@ static struct clk ssp1_clk = {
 /* ssp2 clock */
 static struct clk ssp2_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = SSP2_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -683,7 +683,7 @@ static struct clk gpio0_clk = {
 /* gpio1 clock */
 static struct clk gpio1_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GPIO1_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -691,7 +691,7 @@ static struct clk gpio1_clk = {
 /* gpio2 clock */
 static struct clk gpio2_clk = {
 	.pclk = &apb_clk,
-	.en_reg = PERIP1_CLK_ENB,
+	.en_reg = VA_PERIP1_CLK_ENB,
 	.en_reg_bit = GPIO2_CLK_ENB,
 	.recalc = &follow_parent,
 };
@@ -726,7 +726,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "gpt3_synth_clk",	.clk = &gpt3_synth_clk},
 	{ .dev_id = "uart0",		.clk = &uart0_clk},
 	{ .dev_id = "uart1",		.clk = &uart1_clk},
-	{ .dev_id = "firda",		.clk = &firda_clk},
+	{ .dev_id = "dice_irda",	.clk = &firda_clk},
 	{ .dev_id = "clcd",		.clk = &clcd_clk},
 	{ .dev_id = "gpt0",		.clk = &gpt0_clk},
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
@@ -745,7 +745,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "jpeg-designware",	.clk = &jpeg_clk},
 	{ .dev_id = "stmmaceth",	.clk = &gmac_clk},
 	{ .dev_id = "smi",		.clk = &smi_clk},
-	{ .con_id = "fsmc",		.clk = &fsmc_clk},
+	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	/* clock derived from apb clk */
 	{ .dev_id = "adc",		.clk = &adc_clk},
 	{ .dev_id = "ssp-pl022.0",	.clk = &ssp0_clk},

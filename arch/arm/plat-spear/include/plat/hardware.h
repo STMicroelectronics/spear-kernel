@@ -14,10 +14,60 @@
 #ifndef __PLAT_HARDWARE_H
 #define __PLAT_HARDWARE_H
 
+#include <linux/types.h>
+#include <asm/mach-types.h>
+
 #ifndef __ASSEMBLY__
 #define IOMEM(x)	((void __iomem __force *)(x))
 #else
 #define IOMEM(x)	(x)
 #endif
+
+#ifndef __ASSEMBLY__
+static inline bool cpu_is_spear300(void)
+{
+	return machine_is_spear300_evb();
+}
+
+static inline bool cpu_is_spear310(void)
+{
+	return machine_is_spear310_evb();
+}
+
+static inline bool cpu_is_spear320(void)
+{
+	return machine_is_spear320_evb();
+}
+
+static inline bool cpu_is_spear600(void)
+{
+	return machine_is_spear600_evb();
+}
+
+static inline bool cpu_is_spear1300(void)
+{
+	return machine_is_spear1300_evb();
+}
+
+static inline bool cpu_is_spear1310(void)
+{
+	return machine_is_spear1310_evb();
+}
+
+static inline bool cpu_is_spear1310_reva(void)
+{
+	return machine_is_spear1310_reva_evb() || machine_is_r1801e();
+}
+
+static inline bool cpu_is_spear1340(void)
+{
+	return machine_is_spear1340_evb();
+}
+
+static inline bool cpu_is_spear900(void)
+{
+	return machine_is_spear900_evb();
+}
+#endif /* __ASSEMBLY__ */
 
 #endif /* __PLAT_HARDWARE_H */

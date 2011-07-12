@@ -43,7 +43,7 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 	data.slave.dma_dev = dma_dev;
 	data.slave.reg_width = ADC_WIDTH;
 #ifdef CONFIG_ARCH_SPEAR13XX
-	data.slave.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_ADC);
+	data.slave.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_ADC);
 	data.slave.cfg_lo = 0;
 	data.slave.src_master = 1;
 	data.slave.dst_master = 1;

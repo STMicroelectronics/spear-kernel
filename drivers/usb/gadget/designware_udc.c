@@ -602,15 +602,15 @@ static void udc_enable(struct dw_udc_dev *udev)
 
 #ifdef CONFIG_ARCH_SPEAR13XX
 	/* UDC RESET */
-	val = readl(PERIP1_SW_RST);
+	val = readl(VA_PERIP1_SW_RST);
 	val |= (1 << 11);
-	writel(val, PERIP1_SW_RST);
+	writel(val, VA_PERIP1_SW_RST);
 
 	udelay(10);
 
-	val = readl(PERIP1_SW_RST);
+	val = readl(VA_PERIP1_SW_RST);
 	val &= ~(1 << 11);
-	writel(val, PERIP1_SW_RST);
+	writel(val, VA_PERIP1_SW_RST);
 #endif
 	tmp = DEV_CONF_HS_SPEED | DEV_CONF_REMWAKEUP |
 		DEV_CONF_PHYINT_16 | DEV_CONF_CSR_PRG;
@@ -1042,10 +1042,13 @@ static int dw_ep_disable(struct usb_ep *_ep)
 
 		while ((tmp = readl(&(epregs->control))) & ENDP_CNTL_POLL) {
 			/* flush TX FIFO */
-			tmp &= ~ENDP_CNTL_POLL;
 			tmp |= ENDP_CNTL_FLUSH;
 			writel(tmp, &epregs->control);
+			wmb();
 		}
+		tmp |= ENDP_CNTL_FLUSH;
+		writel(tmp, &epregs->control);
+		wmb();
 		/*
 		 * Verify, will this raise an interrupt
 		 * so that we should call intr handler
@@ -2313,7 +2316,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	if (!driver || driver->speed < USB_SPEED_FULL || !bind ||
 			!driver->disconnect || !driver->setup)
 		return -EINVAL;
-	if (!udev)
+	if (!udev || !udev->dev)
 		return -ENODEV;
 	if (udev->driver)
 		return -EBUSY;
