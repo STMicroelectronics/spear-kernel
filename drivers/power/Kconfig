@@ -184,5 +184,12 @@ config CHARGER_TWL4030
 	depends on TWL4030_CORE
 	help
 	  Say Y here to enable support for TWL4030 Battery Charge Interface.
+	  
+config BATTERY_SPEAR
+	tristate "Battery driver for SPEAr platforms"
+	depends on ARCH_SPEAR13XX
+	help
+	  Say Y here to enable the battery driver on SPEAr
+	  platforms.
 
 endif # POWER_SUPPLY
