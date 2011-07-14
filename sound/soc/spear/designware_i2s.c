@@ -207,6 +207,8 @@ void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_write_reg(dev->i2s_base, RER0, 0);
 	i2s_write_reg(dev->i2s_base, RER1, 0);
+	i2s_write_reg(dev->i2s_base, RER2, 0);
+	i2s_write_reg(dev->i2s_base, RER3, 0);
 
 	switch (dev->max_channel) {
 	case EIGHT_CHANNEL_SUPPORT:
