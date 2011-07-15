@@ -594,8 +594,12 @@ extern long vt_compat_ioctl(struct tty_struct *tty, struct file * file,
 /* functions for preparation of BKL removal */
 extern void __lockfunc tty_lock(void) __acquires(tty_lock);
 extern void __lockfunc tty_unlock(void) __releases(tty_lock);
+
+#ifdef CONFIG_ANDROID
+#else
 extern struct task_struct *__big_tty_mutex_owner;
 #define tty_locked()		(current == __big_tty_mutex_owner)
+#endif
 
 /*
  * wait_event_interruptible_tty -- wait for a condition with the tty lock held

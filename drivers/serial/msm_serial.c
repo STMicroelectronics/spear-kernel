@@ -619,8 +619,11 @@ static int __init msm_console_setup(struct console *co, char *options)
 	if (unlikely(!port->membase))
 		return -ENXIO;
 
+#ifdef CONFIG_ANDROID
+#else
 	port->cons = co;
-
+#endif
+	
 	msm_init_clock(port);
 
 	if (options)

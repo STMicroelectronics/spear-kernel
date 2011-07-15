@@ -304,6 +304,8 @@ int set_selection(const struct tiocl_selection __user *sel, struct tty_struct *t
 /* Insert the contents of the selection buffer into the
  * queue of the tty associated with the current console.
  * Invoked by ioctl().
+ *
+ * Locking: always called with BTM from vt_ioctl
  */
 int paste_selection(struct tty_struct *tty)
 {
@@ -313,8 +315,11 @@ int paste_selection(struct tty_struct *tty)
 	struct  tty_ldisc *ld;
 	DECLARE_WAITQUEUE(wait, current);
 
+#ifdef CONFIG_ANDROID
+#else
 	/* always called with BTM from vt_ioctl */
 	WARN_ON(!tty_locked());
+#endif
 
 	acquire_console_sem();
 	poke_blanked_console();

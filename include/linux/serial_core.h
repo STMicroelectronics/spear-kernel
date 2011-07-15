@@ -375,8 +375,10 @@ struct uart_state {
 
 	int			pm_state;
 	struct circ_buf		xmit;
-
+#ifdef CONFIG_ANDROID
+#else
 	struct tasklet_struct	tlet;
+#endif
 	struct uart_port	*uart_port;
 };
 

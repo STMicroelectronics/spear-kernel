@@ -59,7 +59,11 @@ static struct lock_class_key port_lock_key;
 
 static void uart_change_speed(struct tty_struct *tty, struct uart_state *state,
 					struct ktermios *old_termios);
+#ifdef CONFIG_ANDROID
+static void uart_wait_until_sent(struct tty_struct *tty, int timeout);
+#else
 static void __uart_wait_until_sent(struct uart_port *port, int timeout);
+#endif
 static void uart_change_pm(struct uart_state *state, int pm_state);
 
 /*
@@ -74,7 +78,11 @@ void uart_write_wakeup(struct uart_port *port)
 	 * closed.  No cookie for you.
 	 */
 	BUG_ON(!state);
+#ifdef CONFIG_ANDROID
+	tty_wakeup(state->port.tty);
+#else
 	tasklet_schedule(&state->tlet);
+#endif
 }
 
 static void uart_stop(struct tty_struct *tty)
@@ -112,11 +120,14 @@ static void uart_start(struct tty_struct *tty)
 	spin_unlock_irqrestore(&port->lock, flags);
 }
 
+#ifdef CONFIG_ANDROID
+#else
 static void uart_tasklet_action(unsigned long data)
 {
 	struct uart_state *state = (struct uart_state *)data;
 	tty_wakeup(state->port.tty);
 }
+#endif
 
 static inline void
 uart_update_mctrl(struct uart_port *port, unsigned int set, unsigned int clear)
@@ -250,11 +261,14 @@ static void uart_shutdown(struct tty_struct *tty, struct uart_state *state)
 		synchronize_irq(uport->irq);
 	}
 
+#ifdef CONFIG_ANDROID
+#else
 	/*
 	 * kill off our tasklet
 	 */
 	tasklet_kill(&state->tlet);
-
+#endif
+	
 	/*
 	 * Free the transmit buffer page.
 	 */
@@ -1272,7 +1286,10 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 	struct uart_port *uport;
 	unsigned long flags;
 
+#ifdef CONFIG_ANDROID
+#else
 	BUG_ON(!tty_locked());
+#endif
 
 	if (!state)
 		return;
@@ -1320,6 +1337,10 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 	tty->closing = 1;
 	spin_unlock_irqrestore(&port->lock, flags);
 
+#ifdef CONFIG_ANDROID
+	if (port->closing_wait != ASYNC_CLOSING_WAIT_NONE)
+		tty_wait_until_sent(tty, msecs_to_jiffies(port->closing_wait));
+#else
 	if (port->closing_wait != ASYNC_CLOSING_WAIT_NONE) {
 		/*
 		 * hack: open-coded tty_wait_until_sent to avoid
@@ -1330,7 +1351,8 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 				!tty_chars_in_buffer(tty), timeout) >= 0)
 			__uart_wait_until_sent(uport, timeout);
 	}
-
+#endif
+	
 	/*
 	 * At this point, we stop accepting input.  To do this, we
 	 * disable the receive line status interrupts.
@@ -1345,7 +1367,11 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 		 * has completely drained; this is especially
 		 * important if there is a transmit FIFO!
 		 */
+#ifdef CONFIG_ANDROID
+		uart_wait_until_sent(tty, uport->timeout);
+#else
 		__uart_wait_until_sent(uport, uport->timeout);
+#endif
 	}
 
 	uart_shutdown(tty, state);
@@ -1379,8 +1405,16 @@ done:
 	mutex_unlock(&port->mutex);
 }
 
+#ifdef CONFIG_ANDROID
+static void uart_wait_until_sent(struct tty_struct *tty, int timeout)
+#else
 static void __uart_wait_until_sent(struct uart_port *port, int timeout)
+#endif
 {
+#ifdef CONFIG_ANDROID
+	struct uart_state *state = tty->driver_data;
+	struct uart_port *port = state->uart_port;
+#endif
 	unsigned long char_time, expire;
 
 	if (port->type == PORT_UNKNOWN || port->fifosize == 0)
@@ -1433,6 +1467,8 @@ static void __uart_wait_until_sent(struct uart_port *port, int timeout)
 	set_current_state(TASK_RUNNING); /* might not be needed */
 }
 
+#ifdef CONFIG_ANDROID
+#else
 static void uart_wait_until_sent(struct tty_struct *tty, int timeout)
 {
 	struct uart_state *state = tty->driver_data;
@@ -1442,6 +1478,7 @@ static void uart_wait_until_sent(struct tty_struct *tty, int timeout)
 	__uart_wait_until_sent(port, timeout);
 	tty_unlock();
 }
+#endif
 
 /*
  * This is called with the BKL held in
@@ -1455,7 +1492,10 @@ static void uart_hangup(struct tty_struct *tty)
 	struct tty_port *port = &state->port;
 	unsigned long flags;
 
+#ifdef CONFIG_ANDROID
+#else
 	BUG_ON(!tty_locked());
+#endif
 	pr_debug("uart_hangup(%d)\n", state->uart_port->line);
 
 	mutex_lock(&port->mutex);
@@ -1589,7 +1629,10 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	struct tty_port *port;
 	int retval, line = tty->index;
 
+#ifdef CONFIG_ANDROID
+#else
 	BUG_ON(!tty_locked());
+#endif
 	pr_debug("uart_open(%d) called\n", line);
 
 	/*
@@ -2369,8 +2412,11 @@ int uart_register_driver(struct uart_driver *drv)
 		port->ops = &uart_port_ops;
 		port->close_delay     = 500;	/* .5 seconds */
 		port->closing_wait    = 30000;	/* 30 seconds */
+#ifdef CONFIG_ANDROID
+#else
 		tasklet_init(&state->tlet, uart_tasklet_action,
 			     (unsigned long)state);
+#endif
 	}
 
 	retval = tty_register_driver(normal);
@@ -2530,11 +2576,13 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 	 * Indicate that there isn't a port here anymore.
 	 */
 	uport->type = PORT_UNKNOWN;
-
+#ifdef CONFIG_ANDROID
+#else
 	/*
 	 * Kill the tasklet, and free resources.
 	 */
 	tasklet_kill(&state->tlet);
+#endif
 
 	state->uart_port = NULL;
 	mutex_unlock(&port_mutex);
