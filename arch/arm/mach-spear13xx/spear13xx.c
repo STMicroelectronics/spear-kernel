@@ -1174,15 +1174,22 @@ void __init spear13xx_init(void)
 	/*
 	 * 512KB (64KB/way), 8-way associativity, parity supported
 	 *
-	 * TODO: 0x249, picked from nomadik, to be analyzed
-	 * Comment from nomadik:
-	 * At full speed latency must be >=2, so 0x249 in low bits
+	 * FIXME: 9th bit, of Auxillary Controller register must be set
+	 * for some spear13xx devices for stable L2 operation.
+	 *
+	 * Enable Early BRESP, L2 prefetch for Instruction and Data,
+	 * write alloc and 'Full line of zero' options
+	 *
 	 */
+
+	writel_relaxed(0x06, __io_address(SPEAR13XX_L2CC_BASE)
+			+ L2X0_PREFETCH_CTRL);
+
 	if (cpu_is_spear1340() || cpu_is_spear1310()) {
-		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260000,
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60001,
 				0xfe00ffff);
 	} else {
-		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249,
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60201,
 				0xfe00ffff);
 	}
 #endif
