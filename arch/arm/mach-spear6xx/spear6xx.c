@@ -53,24 +53,6 @@ struct amba_device clcd_device = {
 	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
 };
 
-/* touchscreen Device registration */
-static struct spear_touchscreen touchscreen_info = {
-	.adc_channel_x = ADC_CHANNEL5,
-	.adc_channel_y = ADC_CHANNEL6,
-	.gpio_pin = APPL_GPIO_7,
-};
-
-struct platform_device touchscreen_device = {
-	.name = "spear-ts",
-	.id = -1,
-	.dev = {
-		.platform_data = &touchscreen_info,
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = 0,
-	.resource = NULL,
-};
-
 /* ssp device registration */
 static struct pl022_ssp_controller ssp_platform_data[] = {
 	{
@@ -545,6 +527,24 @@ struct platform_device smi_device = {
 	.id = -1,
 	.num_resources = ARRAY_SIZE(smi_resources),
 	.resource = smi_resources,
+};
+
+/* touchscreen Device registration */
+static struct spear_touchscreen touchscreen_info = {
+	.adc_channel_x = ADC_CHANNEL5,
+	.adc_channel_y = ADC_CHANNEL6,
+	.gpio_pin = APPL_GPIO_7,
+};
+
+struct platform_device touchscreen_device = {
+	.name = "spear-ts",
+	.id = -1,
+	.dev = {
+		.platform_data = &touchscreen_info,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = 0,
+	.resource = NULL,
 };
 
 /* usb device registeration */
