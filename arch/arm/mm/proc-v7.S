@@ -61,6 +61,10 @@ ENDPROC(cpu_v7_proc_fin)
  */
 	.align	5
 ENTRY(cpu_v7_reset)
+	mrc	p15, 0, ip, c1, c0, 0
+	bic	ip, ip, #0x0001
+	mcr	p15, 0, ip, c1, c0, 0
+	isb
 	mov	pc, r0
 ENDPROC(cpu_v7_reset)
 
