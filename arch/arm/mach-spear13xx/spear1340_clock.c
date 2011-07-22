@@ -1275,7 +1275,7 @@ static struct clk gen_synth3_clk = {
 
 /* mali clock */
 static struct clk mali_clk = {
-	.en_reg = VA_SPEAR1340_PERIP_CLK_CFG,
+	.en_reg = VA_SPEAR1340_PERIP3_CLK_ENB,
 	.en_reg_bit = SPEAR1340_MALI_CLK_ENB,
 	.pclk = &gen_synth3_clk,
 	.recalc = &follow_parent,
