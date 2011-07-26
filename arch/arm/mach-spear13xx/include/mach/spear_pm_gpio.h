@@ -23,6 +23,12 @@ static struct gpio spear_gpio[] = {
 		.flags	=	GPIOF_OUT_INIT_HIGH, 
 		.label	=	"PowerOFF_GPIO", 
 	},
+	/* PM_UP GPIO */
+	{ 
+		.gpio	= 	PM_UP_GPIO, 
+		.flags	=	GPIOF_OUT_INIT_HIGH, 
+		.label	=	"PM_UP_GPIO", 
+	},
 	/* BATTERY GPIOs */
 	{ 
 		.gpio	= 	BATTERY_SWC_GPIO, 

@@ -60,7 +60,11 @@ static struct pl061_platform_data gpio_plat_data[] = {
 		.irq_base	= SPEAR_GPIO0_INT_BASE,
 	}, {
 		.gpio_base	= 8,
-		.irq_base	= SPEAR_GPIO1_INT_BASE,
+		.irq_base		= SPEAR_GPIO1_INT_BASE,
+#ifdef CONFIG_MACH_SPEAR900_LCAD
+		.directions 	= 6,
+		.values		= 6,
+#endif
 	},
 };
 
