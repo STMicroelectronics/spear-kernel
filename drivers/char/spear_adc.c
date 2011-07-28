@@ -706,7 +706,7 @@ u32 adc_configure(struct adc_config *config)
 		config->avail_clk = clk_get_rate(g_drv_data->clk);
 	}
 
-	if ((config->avail_clk < clk_max) || (config->avail_clk > clk_max))
+	if ((config->avail_clk < clk_min) || (config->avail_clk > clk_max))
 		return -EINVAL;
 
 	adc_reset();
