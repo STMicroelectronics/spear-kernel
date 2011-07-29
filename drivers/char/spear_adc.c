@@ -44,6 +44,7 @@
 
 /* adc declarations */
 #define ADC_CHANNEL_NUM 8
+#define ADC_DMA_WIDTH	4 /* ADC Width for DMA */
 
 #ifndef CONFIG_ARCH_SPEAR6XX
 struct adc_regs {
@@ -280,7 +281,7 @@ static u32 get_sg_count(size_t size)
 	 * calculate the max transfer size supported by src device for a single
 	 * sg
 	 */
-	max_xfer = ADC_DMA_MAX_COUNT << ADC_WIDTH;
+	max_xfer = ADC_DMA_MAX_COUNT * ADC_DMA_WIDTH;
 
 	return (size + max_xfer - 1) / max_xfer;
 }
@@ -295,7 +296,7 @@ static void sg_fill(u32 size, dma_addr_t digital_volt)
 
 	/* Calculate the max transfer size supported by Src Device for a single
 	 ** SG */
-	max_xfer = ADC_DMA_MAX_COUNT << ADC_WIDTH;
+	max_xfer = ADC_DMA_MAX_COUNT * ADC_DMA_WIDTH;
 
 	while (size) {
 		int len = size < max_xfer ? size : max_xfer;
