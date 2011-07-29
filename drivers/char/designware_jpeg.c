@@ -32,6 +32,9 @@
 #include <plat/jpeg.h>
 #include "designware_jpeg.h"
 
+#define DJPEG_BURST	8
+#define DJPEG_WIDTH	4
+
 /* global dev structure for jpeg. as there is no way to pass it from char
  ** interface */
 static struct jpeg_dev *g_drv_data;
@@ -48,17 +51,17 @@ static s32 sg_per_buf(enum jpeg_dev_type dev_type, u32 size)
 
 	/* calculate the max transfer size supported by src device for a
 	 ** single sg */
-	max_xfer = JPEG_DMA_MAX_COUNT << JPEG_WIDTH;
+	max_xfer = JPEG_DMA_MAX_COUNT * DJPEG_WIDTH;
 
 	/* calculate the number of sgs with size max_xfer */
 	num_sg	= size_left/max_xfer;
 	size_left -= num_sg * max_xfer;
 
 	/* calculate the number of sgs with size less than max_xfer but with
-	 ** width as JPEG_WIDTH */
-	if (size_left >> JPEG_WIDTH) {
+	 ** width as DJPEG_WIDTH */
+	if (size_left / DJPEG_WIDTH) {
 		num_sg++;
-		size_left -= (size_left >> JPEG_WIDTH) << JPEG_WIDTH;
+		size_left -= (size_left / DJPEG_WIDTH) * DJPEG_WIDTH;
 	}
 
 	/* calculate the number of sgs with size less than max_xfer and width
@@ -88,7 +91,7 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		/* calculate the max transfer size supported by src device for
 		 ** a single sg */
-		max_xfer = JPEG_DMA_MAX_COUNT << JPEG_WIDTH;
+		max_xfer = JPEG_DMA_MAX_COUNT * DJPEG_WIDTH;
 
 		while (size/max_xfer) {
 			sg_dma_address(sg) = addr;
@@ -99,13 +102,13 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 			sg++;
 		}
 
-		if (size >> JPEG_WIDTH) {
+		if (size / DJPEG_WIDTH) {
 			sg_dma_address(sg) = addr;
 			sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT),
-					(size >> JPEG_WIDTH) << JPEG_WIDTH,
+					(size / DJPEG_WIDTH) * DJPEG_WIDTH,
 					offset_in_page(addr));
-			addr += (size >> JPEG_WIDTH) << JPEG_WIDTH;
-			size -= (size >> JPEG_WIDTH) << JPEG_WIDTH;
+			addr += (size / DJPEG_WIDTH) * DJPEG_WIDTH;
+			size -= (size / DJPEG_WIDTH) * DJPEG_WIDTH;
 			sg++;
 		}
 
@@ -660,21 +663,6 @@ static s32 jpeg_remap(struct vm_area_struct *vma, dma_addr_t dma, void *buf)
 			size);
 }
 
-/*
- * data_per_burst: returns amount of data transferred in one burst
- */
-static s32 data_per_burst(u32 width, u32 burst)
-{
-	switch (burst) {
-	case 0:
-		return 1 << width;
-	default:
-		/* shifting is done because of the type of enum dma_burst. The
-		 ** values are 0,1,2,3,4.. but required values are 1,4,8,16..*/
-		return (2 << burst) << width;
-	}
-}
-
 /* xfer data between jpeg controller and memory */
 static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 {
@@ -846,7 +834,7 @@ s32 jpeg_start(u32 len)
 		 ** interrupt should come after transfer of buf_size amount of
 		 ** data */
 		burst_num = g_drv_data->buf_size[JPEG_READ]/
-			data_per_burst(JPEG_WIDTH, JPEG_BURST);
+			(DJPEG_WIDTH * DJPEG_BURST);
 
 		/*
 		 * start transfer of encoded/decoded image to the allocated
