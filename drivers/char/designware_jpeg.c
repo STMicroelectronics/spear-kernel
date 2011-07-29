@@ -960,6 +960,8 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 {
 	s32 status = 0;
 	enum jpeg_dev_type dev_type;
+	void *dma_filter, *write_data, *read_data;
+	char *wstr = "to_jpeg", *rstr = "from_jpeg";
 
 	/* getting the minor number of the caller */
 	dev_type = (enum jpeg_dev_type)iminor(inode);
@@ -977,15 +979,25 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 			dev_type == JPEG_READ ? JPEG_WRITE : JPEG_READ])
 		return status;
 
+	if (g_drv_data->slaves->dma_filter) {
+		dma_filter = g_drv_data->slaves->dma_filter;
+		write_data = wstr;
+		read_data = rstr;
+	} else {
+		dma_filter = filter;
+		write_data = &g_drv_data->slaves->mem2jpeg_slave;
+		read_data = &g_drv_data->slaves->jpeg2mem_slave;
+	}
+
 	/* request dma channels */
 	if (!g_drv_data->dma_chan[JPEG_READ] ||
 			!g_drv_data->dma_chan[JPEG_WRITE]) {
 		g_drv_data->dma_chan[JPEG_READ] =
-			dma_request_channel(g_drv_data->mask, filter,
-					&g_drv_data->slaves->jpeg2mem_slave);
+			dma_request_channel(g_drv_data->mask, dma_filter,
+					read_data);
 		g_drv_data->dma_chan[JPEG_WRITE] =
-			dma_request_channel(g_drv_data->mask, filter,
-					&g_drv_data->slaves->mem2jpeg_slave);
+			dma_request_channel(g_drv_data->mask, dma_filter,
+					write_data);
 	}
 
 	if (!g_drv_data->dma_chan[JPEG_READ] ||
@@ -997,6 +1009,14 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 
 		g_drv_data->jpeg_busy[dev_type] = 0;
 		return -EBUSY;
+	}
+
+	/* Configure channel parameters if runtime_config is true */
+	if (g_drv_data->slaves->runtime_config) {
+		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_READ],
+				(void *) &g_drv_data->slaves->jpeg2mem_slave);
+		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_WRITE],
+				(void *) &g_drv_data->slaves->mem2jpeg_slave);
 	}
 
 	/* set default operation to jpeg decoding with hdr enable */
