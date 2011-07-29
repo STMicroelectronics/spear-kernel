@@ -361,12 +361,27 @@ static s32 dma_xfer(u32 len, void *digital_volt)
 	dma_cap_mask_t mask;
 	u32 size = len * sizeof(u32), dma_addr;
 	s32 status = 0;
+	void *dma_filter, *filter_data;
+	char *adc_str = "adc";
 
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
-	chan = dma_request_channel(mask, filter, &g_drv_data->data->slave);
+
+	if (g_drv_data->data->dma_filter) {
+		dma_filter = g_drv_data->data->dma_filter;
+		filter_data = adc_str;
+	} else {
+		dma_filter = filter;
+		filter_data = &g_drv_data->data->slave;
+	}
+
+	chan = dma_request_channel(mask, dma_filter, filter_data);
 	if (!chan)
 		return -EAGAIN;
+
+	/* Configure channel parameters if runtime_config is true */
+	if (g_drv_data->data->runtime_config)
+		dmaengine_slave_config(chan, (void *) &g_drv_data->data->slave);
 
 	g_drv_data->dma_chan = chan;
 
