@@ -53,6 +53,7 @@ static struct platform_device phy_device = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
+	&dma_device,
 	&gpio_device[0],
 	&gpio_device[1],
 	&gpio_device[2],

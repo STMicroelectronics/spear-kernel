@@ -126,6 +126,7 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&spear3xx_dma_device,
 	&spear3xx_gpio_device,
 	&spear3xx_ssp0_device,
 	&spear3xx_uart_device,

@@ -31,6 +31,7 @@
 #define SPEAR_GPT0_CHAN1_IRQ	SPEAR3XX_IRQ_CPU_GPT1_2
 
 /* Add spear3xx family device structure declarations here */
+extern struct amba_device spear3xx_dma_device;
 extern struct amba_device spear3xx_gpio_device;
 extern struct amba_device spear3xx_ssp0_device;
 extern struct amba_device spear3xx_uart_device;

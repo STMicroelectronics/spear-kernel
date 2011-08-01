@@ -14,10 +14,12 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/amba/pl08x.h>
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
@@ -29,6 +31,35 @@
 		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
 		SPEAR3XX_IRQ_BASIC_GPIO)
 /* Add spear3xx machines common devices here */
+/* DMAC device registration */
+static struct pl08x_platform_data pl080_plat_data = {
+	.memcpy_channel = {
+		.bus_id = "memcpy",
+		.cctl = (PL080_BSIZE_16 << PL080_CONTROL_SB_SIZE_SHIFT | \
+			PL080_BSIZE_16 << PL080_CONTROL_DB_SIZE_SHIFT | \
+			PL080_WIDTH_32BIT << PL080_CONTROL_SWIDTH_SHIFT | \
+			PL080_WIDTH_32BIT << PL080_CONTROL_DWIDTH_SHIFT | \
+			PL080_CONTROL_PROT_BUFF | PL080_CONTROL_PROT_CACHE | \
+			PL080_CONTROL_PROT_SYS),
+	},
+	.lli_buses = PL08X_AHB1,
+	.mem_buses = PL08X_AHB1,
+};
+
+struct amba_device spear3xx_dma_device = {
+	.dev = {
+		.init_name = "pl080_dmac",
+		.coherent_dma_mask = ~0,
+		.platform_data = &pl080_plat_data,
+	},
+	.res = {
+		.start = SPEAR3XX_ICM3_DMA_BASE,
+		.end = SPEAR3XX_ICM3_DMA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR3XX_IRQ_BASIC_DMA, NO_IRQ},
+};
+
 /* gpio device registration */
 static struct pl061_platform_data gpio_plat_data = {
 	.gpio_base	= 0,

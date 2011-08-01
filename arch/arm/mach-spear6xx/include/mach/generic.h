@@ -30,6 +30,7 @@
 
 /* Add spear6xx family device structure declarations here */
 extern struct amba_device clcd_device;
+extern struct amba_device dma_device;
 extern struct amba_device gpio_device[];
 extern struct amba_device ssp_device[];
 extern struct amba_device uart_device[];
