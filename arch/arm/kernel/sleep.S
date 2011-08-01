@@ -127,7 +127,8 @@ ENTRY(cpu_resume)
 	b	cpu_do_resume
 #endif
 ENDPROC(cpu_resume)
-
+ENTRY(sleep_save_sp)
+ENDPROC(sleep_save_sp)
 sleep_save_sp:
 	.rept	CONFIG_NR_CPUS
 	.long	0				@ preserve stack phys ptr here
