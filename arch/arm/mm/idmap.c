@@ -32,6 +32,11 @@ void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
 		clean_pmd_entry(pmd);
 	}
 }
+#else
+void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
+{
+
+}
 #endif
 
 /*
