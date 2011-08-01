@@ -208,6 +208,11 @@ static struct platform_suspend_ops spear_pm_ops = {
 	.valid		= spear_pm_valid_state,
 };
 
+static void spear_power_off(void)
+{
+	while (1);
+}
+
 static int __init spear_pm_init(void)
 {
 	void * sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
@@ -218,7 +223,7 @@ static int __init spear_pm_init(void)
 		return	-ENOMEM;
 
 	suspend_set_ops(&spear_pm_ops);
-
+	pm_power_off = spear_power_off;
 	return 0;
 }
 arch_initcall(spear_pm_init);
