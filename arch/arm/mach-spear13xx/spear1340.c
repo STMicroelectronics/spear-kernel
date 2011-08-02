@@ -1634,7 +1634,7 @@ struct dw_dma_slave uart1_dma_param[] = {
 	}
 };
 
-struct amba_pl011_data uart1_data = {
+static struct amba_pl011_data uart1_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_tx_param = &uart1_dma_param[0],
 	.dma_rx_param = &uart1_dma_param[1],
