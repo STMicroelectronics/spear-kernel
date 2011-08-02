@@ -24,6 +24,10 @@
  * for more details.
  */
 
+#ifdef CONFIG_ANDROID_POWER 
+#include <linux/android_power.h> 
+#endif
+
 #define to_db9000fb(info)	container_of(info, struct db9000fb_info, fb)
 
 /* DB9000 LCD DMA Frame descriptor */
@@ -141,6 +145,9 @@ struct db9000fb_info {
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	struct backlight_device *backlight;
 	u8 bl_power;
+#endif
+#ifdef CONFIG_ANDROID_POWER 
+	android_early_suspend_t early_suspend; 
 #endif
 };
 

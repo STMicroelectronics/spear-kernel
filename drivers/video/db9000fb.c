@@ -1638,6 +1638,23 @@ static void __devinit db9000fb_check_options(struct device *dev,
 #define db9000fb_check_options(...)	do {} while (0)
 #endif
 
+#ifdef CONFIG_ANDROID_POWER
+static int last_brigtness;
+
+static void db9000fb_early_suspend(android_early_suspend_t *h) 
+{ 
+        struct db9000fb_info *fbi = TO_INF(h, early_suspend);
+	last_brigtness = lcd_readl(fbi, DB9000_PWMDCR);
+        lcd_writel(fbi, DB9000_PWMDCR, brightness);
+} 
+
+static void db9000fb_late_resume(android_early_suspend_t *h) 
+{ 
+	struct db9000fb_info *fbi = TO_INF(h, early_suspend); 
+        lcd_writel(fbi, DB9000_PWMDCR, last_brightness);
+} 
+#endif
+
 static int __devinit db9000fb_probe(struct platform_device *pdev)
 {
 	struct db9000fb_info *fbi;
@@ -1798,6 +1815,13 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
+	
+#ifdef CONFIG_ANDROID_POWER
+	last_brigtness = lcd_readl(fbi, DB9000_PWMDCR);
+        fbi->early_suspend.suspend = db9000fb_early_suspend; 
+        fbi->early_suspend.resume = db9000fb_late_resume; 
+        android_register_early_suspend(&fb->early_suspend); 
+#endif 
 	return 0;
 
 err_clear_plat_data:
@@ -1829,6 +1853,10 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 	if (!fbi)
 		return 0;
+	
+#ifdef CONFIG_ANDROID_POWER 
+        android_unregister_early_suspend(&fbi->early_suspend); 
+#endif 
 
 	info = &fbi->fb;
 
