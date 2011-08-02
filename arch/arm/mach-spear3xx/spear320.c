@@ -13,6 +13,7 @@
 
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl08x.h>
+#include <linux/amba/serial.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
@@ -840,10 +841,24 @@ struct amba_device spear320_ssp_device[] = {
 	}
 };
 
+/* uart devices plat data */
+static struct amba_pl011_data uart_data[] = {
+	{
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart1_tx",
+		.dma_rx_param = "uart1_rx",
+	}, {
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart2_tx",
+		.dma_rx_param = "uart2_rx",
+	},
+};
+
 /* uart1 device registeration */
 struct amba_device spear320_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
+		.platform_data = &uart_data[0],
 	},
 	.res = {
 		.start = SPEAR320_UART1_BASE,
@@ -857,6 +872,7 @@ struct amba_device spear320_uart1_device = {
 struct amba_device spear320_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
+		.platform_data = &uart_data[1],
 	},
 	.res = {
 		.start = SPEAR320_UART2_BASE,

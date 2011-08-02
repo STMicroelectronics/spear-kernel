@@ -15,6 +15,7 @@
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
 #include <linux/amba/pl08x.h>
+#include <linux/amba/serial.h>
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
@@ -150,11 +151,28 @@ struct amba_device ssp_device[] = {
 	}
 };
 
+/* As uart0 is used for console, so disable DMA here */
+/* uart devices plat data */
+#if 0
+static struct amba_pl011_data uart0_data = {
+	.dma_filter = pl08x_filter_id,
+	.dma_tx_param = "uart0_tx",
+	.dma_rx_param = "uart0_rx",
+}
+#endif
+
+static struct amba_pl011_data uart1_data = {
+	.dma_filter = pl08x_filter_id,
+	.dma_tx_param = "uart1_tx",
+	.dma_rx_param = "uart1_rx",
+};
+
 /* uart device registration */
 struct amba_device uart_device[] = {
 	{
 		.dev = {
 			.init_name = "uart0",
+/*			.platform_data = &uart0_data, */
 		},
 		.res = {
 			.start = SPEAR6XX_ICM1_UART0_BASE,
@@ -165,6 +183,7 @@ struct amba_device uart_device[] = {
 	}, {
 		.dev = {
 			.init_name = "uart1",
+			.platform_data = &uart1_data,
 		},
 		.res = {
 			.start = SPEAR6XX_ICM1_UART1_BASE,
