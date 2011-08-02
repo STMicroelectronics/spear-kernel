@@ -20,9 +20,9 @@
 #ifdef CONFIG_ARCH_SPEAR13XX
 #include <linux/dw_dmac.h>
 
-#define ADC_BURST	DW_DMA_MSIZE_1
-#define ADC_WIDTH	DW_DMA_SLAVE_WIDTH_32BIT
-#define DMA_MAX_COUNT	2048
+#define ADC_BURST		DW_DMA_MSIZE_1
+#define ADC_WIDTH		DW_DMA_SLAVE_WIDTH_32BIT
+#define ADC_DMA_MAX_COUNT	2048
 
 struct adc_plat_data {
 	struct adc_config config;
@@ -31,9 +31,9 @@ struct adc_plat_data {
 #else
 #include <linux/pl080_dmac.h>
 
-#define ADC_BURST	BURST_1
-#define ADC_WIDTH	WIDTH_WORD
-#define DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
+#define ADC_BURST		BURST_1
+#define ADC_WIDTH		WIDTH_WORD
+#define ADC_DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
 
 struct adc_plat_data {
 	struct adc_config config;
