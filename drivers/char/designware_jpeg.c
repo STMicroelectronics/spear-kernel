@@ -48,7 +48,7 @@ static s32 sg_per_buf(enum jpeg_dev_type dev_type, u32 size)
 
 	/* calculate the max transfer size supported by src device for a
 	 ** single sg */
-	max_xfer = DMA_MAX_COUNT << JPEG_WIDTH;
+	max_xfer = JPEG_DMA_MAX_COUNT << JPEG_WIDTH;
 
 	/* calculate the number of sgs with size max_xfer */
 	num_sg	= size_left/max_xfer;
@@ -88,7 +88,7 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		/* calculate the max transfer size supported by src device for
 		 ** a single sg */
-		max_xfer = DMA_MAX_COUNT << JPEG_WIDTH;
+		max_xfer = JPEG_DMA_MAX_COUNT << JPEG_WIDTH;
 
 		while (size/max_xfer) {
 			sg_dma_address(sg) = addr;

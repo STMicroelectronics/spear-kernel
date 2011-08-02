@@ -19,11 +19,11 @@
 #ifdef CONFIG_ARCH_SPEAR13XX
 #include <linux/dw_dmac.h>
 
-#define JPEG_BURST	DW_DMA_MSIZE_8
-#define JPEG_WIDTH	DW_DMA_SLAVE_WIDTH_32BIT
-#define DMA_MAX_COUNT	2048
-#define MEM_MASTER	1
-#define JPEG_MASTER	1
+#define JPEG_BURST		DW_DMA_MSIZE_8
+#define JPEG_WIDTH		DW_DMA_SLAVE_WIDTH_32BIT
+#define JPEG_DMA_MAX_COUNT	2048
+#define MEM_MASTER		1
+#define JPEG_MASTER		1
 
 struct jpeg_plat_data {
 	struct dw_dma_slave mem2jpeg_slave;
@@ -32,11 +32,11 @@ struct jpeg_plat_data {
 #else
 #include <linux/pl080_dmac.h>
 
-#define JPEG_BURST	BURST_8
-#define JPEG_WIDTH	WIDTH_WORD
-#define DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
-#define MEM_MASTER	DMA_MASTER_MEMORY
-#define JPEG_MASTER	DMA_MASTER_JPEG
+#define JPEG_BURST		BURST_8
+#define JPEG_WIDTH		WIDTH_WORD
+#define JPEG_DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
+#define MEM_MASTER		DMA_MASTER_MEMORY
+#define JPEG_MASTER		DMA_MASTER_JPEG
 
 struct jpeg_plat_data {
 	struct pl080_dma_slave mem2jpeg_slave;
