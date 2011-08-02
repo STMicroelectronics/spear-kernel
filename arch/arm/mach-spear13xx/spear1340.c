@@ -1644,6 +1644,7 @@ static struct amba_pl011_data uart1_data = {
 struct amba_device spear1340_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
+		.platform_data = &uart1_data,
 	},
 	.res = {
 		.start = SPEAR1340_UART1_BASE,
