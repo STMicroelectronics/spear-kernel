@@ -228,8 +228,7 @@ static void __init spear320_evb_init(void)
 	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
-			&spear3xx_dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
 	macb_init_board_info(&spear320_eth_macb1_mii_device);

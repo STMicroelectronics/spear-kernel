@@ -246,8 +246,7 @@ static void __init spear310_evb_init(void)
 	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
-			&spear3xx_dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));

@@ -129,7 +129,7 @@ static void __init spear600_evb_init(void)
 			FSMC_NAND_BW8);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
+	set_jpeg_dma_configuration(&jpeg_device, NULL);
 
 	/* call spear600 machine init function */
 	spear600_init();
