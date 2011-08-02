@@ -225,7 +225,7 @@ static void __init spear320_evb_init(void)
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
+	set_adc_plat_data(&spear3xx_adc_device, NULL);
 
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);

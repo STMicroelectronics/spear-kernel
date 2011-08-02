@@ -122,7 +122,7 @@ static void __init spear600_evb_init(void)
 	unsigned int i;
 
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device.dev);
+	set_adc_plat_data(&adc_device, NULL);
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
