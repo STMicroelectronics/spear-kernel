@@ -88,7 +88,11 @@ struct amba_device dma_device = {
 static struct pl022_ssp_controller ssp_platform_data[] = {
 	{
 		.bus_id = 0,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp0_tx",
+		.dma_rx_param = "ssp0_rx",
+
 		/*
 		 * This is number of spi devices that can be connected to spi.
 		 * There are two type of chipselects on which slave devices can
@@ -102,11 +106,17 @@ static struct pl022_ssp_controller ssp_platform_data[] = {
 		.num_chipselect = 2,
 	}, {
 		.bus_id = 1,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp1_tx",
+		.dma_rx_param = "ssp1_rx",
 		.num_chipselect = 2,
 	}, {
 		.bus_id = 2,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp2_tx",
+		.dma_rx_param = "ssp2_rx",
 		.num_chipselect = 2,
 	}
 };

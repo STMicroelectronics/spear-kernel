@@ -804,11 +804,17 @@ static struct pl08x_channel_data pl080_slave_channels[] = {
 static struct pl022_ssp_controller ssp_platform_data[] = {
 	{
 		.bus_id = 1,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp1_tx",
+		.dma_rx_param = "ssp1_rx",
 		.num_chipselect = 2,
 	}, {
 		.bus_id = 2,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp2_tx",
+		.dma_rx_param = "ssp2_rx",
 		.num_chipselect = 2,
 	}
 };

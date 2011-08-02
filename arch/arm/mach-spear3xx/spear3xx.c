@@ -83,7 +83,10 @@ struct amba_device spear3xx_gpio_device = {
 /* ssp device registration */
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
-	.enable_dma = 0,
+	.enable_dma = 1,
+	.dma_filter = pl08x_filter_id,
+	.dma_tx_param = "ssp0_tx",
+	.dma_rx_param = "ssp0_rx",
 	/*
 	 * This is number of spi devices that can be connected to spi. There are
 	 * two type of chipselects on which slave devices can work. One is chip
