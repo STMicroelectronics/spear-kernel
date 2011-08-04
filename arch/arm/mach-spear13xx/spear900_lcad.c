@@ -111,6 +111,23 @@ static void spear900_gpio7_fixup(void)
 }
 #endif
 
+#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+
+/* NAND partition table */
+static struct mtd_partition partition_info[] = {
+	PARTITION("X-loader", 0, 4 * 0x20000),
+	PARTITION("U-Boot", 0x80000, 3 * 0x20000),
+	PARTITION("Kernel", 0xe0000, 57 * 0x20000),
+#ifdef CONFIG_ANDROID
+	PARTITION("Root File System", 0x800000, 2000 * 0x20000),
+	PARTITION("System", 0x10200000, 4500 * 0x20000),
+	PARTITION("Data", 0x33480000, 1000 * 0x20000),
+	PARTITION("Cache", 0x3B180000, 628 * 0x20000),
+#else
+	PARTITION("Root File System", 0x800000, 8128 * 0x20000),
+#endif
+};
+
 #ifdef CONFIG_ANDROID_PMEM
 static int __init early_pmem_generic_parse(char *p, struct android_pmem_platform_data * data)
 {
@@ -327,8 +344,9 @@ static void __init spear900_lcad_init(void)
 			&spear13xx_dmac_device[0].dev);
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+	fsmc_nand_set_plat_data(&spear13xx_nand_device, partition_info,
+			ARRAY_SIZE(partition_info), NAND_SKIP_BBTSCAN,
+			FSMC_NAND_BW8);
 	nand_mach_init(FSMC_NAND_BW8);
 
 #ifdef CONFIG_SND_SOC_STA529
