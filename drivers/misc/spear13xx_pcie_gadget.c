@@ -20,8 +20,8 @@
 #include <linux/platform_device.h>
 #include <linux/pci_regs.h>
 #include <linux/configfs.h>
-#include <mach/pcie.h>
 #include <mach/misc_regs.h>
+#include <mach/spear_pcie_rev_341.h>
 
 #define IN0_MEM_SIZE	(200 * 1024 * 1024 - 1)
 /* In current implementation address translation is done using IN0 only.
@@ -196,8 +196,8 @@ static int pci_find_own_cap_start(struct spear_pcie_gadget_config *config,
  * %PCI_CAP_ID_PCIX	PCI-X
  * %PCI_CAP_ID_EXP	PCI Express
  */
-static int pci_find_own_capability(struct spear_pcie_gadget_config *config,
-		int cap)
+static int spear_pci_find_own_capability(
+		struct spear_pcie_gadget_config *config, int cap)
 {
 	u32 pos;
 	u32 hdr_type;
@@ -274,7 +274,7 @@ static ssize_t pcie_gadget_store_int_type(
 			vec++;
 		}
 		spear_dbi_write_reg(config, PCI_INTERRUPT_LINE, 1, 0);
-		cap = pci_find_own_capability(config, PCI_CAP_ID_MSI);
+		cap = spear_pci_find_own_capability(config, PCI_CAP_ID_MSI);
 		spear_dbi_read_reg(config, cap + PCI_MSI_FLAGS, 1, &flags);
 		flags &= ~PCI_MSI_FLAGS_QMASK;
 		flags |= vec << 1;
@@ -299,7 +299,7 @@ static ssize_t pcie_gadget_show_no_of_msi(
 			!= (1 << CFG_MSI_EN_ID))
 		vector = 0;
 	else {
-		cap = pci_find_own_capability(config, PCI_CAP_ID_MSI);
+		cap = spear_pci_find_own_capability(config, PCI_CAP_ID_MSI);
 		spear_dbi_read_reg(config, cap + PCI_MSI_FLAGS, 1, &flags);
 		flags &= ~PCI_MSI_FLAGS_QSIZE;
 		vec = flags >> 4;
