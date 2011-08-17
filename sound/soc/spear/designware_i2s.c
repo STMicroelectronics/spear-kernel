@@ -275,17 +275,6 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
 		return -EINVAL;
 
-	/* unmask i2s interrupt for channel 0 */
-	i2s_write_reg(dev->i2s_base, IMR(0), 0x00);
-
-	/* unmask i2s interrupt for channel 1 */
-	i2s_write_reg(dev->i2s_base, IMR(1), 0x00);
-
-	/* unmask i2s interrupt for channel 2 */
-	i2s_write_reg(dev->i2s_base, IMR(2), 0x00);
-
-	/* unmask i2s interrupt for channel 3 */
-	i2s_write_reg(dev->i2s_base, IMR(3), 0x00);
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dev->dma_params);
 
 	return 0;
