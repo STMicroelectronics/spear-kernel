@@ -141,8 +141,6 @@ void get_dma_start_addr(struct snd_pcm_substream *substream)
 
 	prtd->txdma = dev->res->start + TXDMA;
 	prtd->rxdma = dev->res->start + RXDMA;
-
-	substream->runtime->private_data = prtd;
 }
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)

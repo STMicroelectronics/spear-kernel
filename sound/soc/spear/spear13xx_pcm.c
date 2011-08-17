@@ -278,8 +278,6 @@ static void dma_configure(struct snd_pcm_substream *substream)
 	prtd->slaves->mem2i2s_slave.rx_reg = 0;
 	prtd->slaves->i2s2mem_slave.tx_reg = 0;
 	prtd->slaves->i2s2mem_slave.rx_reg = (dma_addr_t)prtd->rxdma;
-
-	substream->runtime->private_data = prtd;
 }
 
 static bool filter(struct dma_chan *chan, void *slave)
@@ -304,7 +302,6 @@ static int spear13xx_pcm_dma_request(struct snd_pcm_substream *substream)
 			return -EAGAIN;
 	}
 
-	substream->runtime->private_data = prtd;
 	return 0;
 }
 
