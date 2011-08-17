@@ -261,7 +261,7 @@ i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		i2s_write_reg(dev->i2s_base, IMR3, 0x03);
 	}
 
-	if (!dev->active--) {
+	if (!dev->active) {
 		i2s_write_reg(dev->i2s_base, CER, 0);
 		i2s_write_reg(dev->i2s_base, IER, 0);
 	}
@@ -430,6 +430,7 @@ dw_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		dev->active--;
 		i2s_stop(dev, substream);
 		break;
 	default:
