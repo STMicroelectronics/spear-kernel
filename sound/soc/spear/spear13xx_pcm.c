@@ -24,9 +24,10 @@
 #include <mach/dma.h>
 #include "spear13xx_pcm.h"
 
-static u64 spear13xx_pcm_dmamask = 0xffffffff;
-struct pcm_dma_data data;
 #define MAX_DMA_CHAIN		2
+
+static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;
+struct pcm_dma_data data;
 
 struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
@@ -52,9 +53,9 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 
 void pcm_init(struct device *dma_dev)
 {
-
 	data.mem2i2s_slave.dma_dev = dma_dev;
 	data.i2s2mem_slave.dma_dev = dma_dev;
+
 	/* doing 16 bit audio transfer */
 	data.mem2i2s_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
 	data.mem2i2s_slave.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX);
@@ -62,6 +63,7 @@ void pcm_init(struct device *dma_dev)
 	data.mem2i2s_slave.src_master = 1;
 	data.mem2i2s_slave.dst_master = 1;
 	data.mem2i2s_slave.src_msize = DW_DMA_MSIZE_16;
+
 	/* threshold for i2s is 7 */
 	data.mem2i2s_slave.dst_msize = DW_DMA_MSIZE_16;
 	data.mem2i2s_slave.fc = DW_DMA_FC_D_M2P;
@@ -114,8 +116,10 @@ static int spear13xx_pcm_prepare(struct snd_pcm_substream *substream)
 		prtd->frag_bytes = prtd->period_bytes;
 		prtd->frags = prtd->buffer_bytes / prtd->period_bytes;
 	}
+
 	prtd->frag_count = 0;
 	prtd->pos = 0;
+
 	return 0;
 }
 
@@ -147,6 +151,7 @@ spear13xx_dma_submit(struct spear13xx_runtime_data *prtd,
 		chan = prtd->dma_chan[0];
 	else
 		chan = prtd->dma_chan[1];
+
 	sg_init_table(&sg, 1);
 	sg_set_page(&sg, pfn_to_page(PFN_DOWN(buf_dma_addr)),
 			prtd->frag_bytes, buf_dma_addr & (PAGE_SIZE - 1));
@@ -159,9 +164,11 @@ spear13xx_dma_submit(struct spear13xx_runtime_data *prtd,
 		dev_err(&chan->dev->device, "cannot prepare slave dma\n");
 		return NULL;
 	}
+
 	desc->callback = spear13xx_dma_complete;
 	desc->callback_param = prtd;
 	desc->tx_submit(desc);
+
 	return desc;
 }
 
@@ -184,6 +191,7 @@ static void spear13xx_dma_tasklet(unsigned long data)
 
 	if (prtd->frag_count < 0) {
 		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
+
 		/* first time */
 		for (i = 0; i < MAX_DMA_CHAIN; i++) {
 			desc = spear13xx_dma_submit(prtd,
@@ -193,6 +201,7 @@ static void spear13xx_dma_tasklet(unsigned long data)
 				return;
 			}
 		}
+
 		prtd->dmacount = MAX_DMA_CHAIN;
 		chan->device->device_issue_pending(chan);
 		prtd->frag_count = MAX_DMA_CHAIN % prtd->frags;
@@ -219,6 +228,7 @@ static void spear13xx_dma_tasklet(unsigned long data)
 				prtd->period_bytes == 0)
 			snd_pcm_period_elapsed(substream);
 	}
+
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	chan->device->device_issue_pending(chan);
@@ -237,13 +247,13 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
-		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 	case SNDRV_PCM_TRIGGER_RESUME:
 		break;
 	default:
 		ret = -EINVAL;
 	}
+
 	return ret;
 }
 
@@ -254,6 +264,7 @@ spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
 
 	return bytes_to_frames(substream->runtime, prtd->pos);
 }
+
 static void dma_configure(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
@@ -270,6 +281,7 @@ static void dma_configure(struct snd_pcm_substream *substream)
 
 	substream->runtime->private_data = prtd;
 }
+
 static bool filter(struct dma_chan *chan, void *slave)
 {
 	chan->private = slave;
@@ -290,10 +302,9 @@ static int spear13xx_pcm_dma_request(struct snd_pcm_substream *substream)
 				&prtd->slaves->i2s2mem_slave);
 		if (!prtd->dma_chan[1])
 			return -EAGAIN;
-
 	}
-	substream->runtime->private_data = prtd;
 
+	substream->runtime->private_data = prtd;
 	return 0;
 }
 
@@ -305,21 +316,23 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	ret = snd_soc_set_runtime_hwparams(substream, &spear13xx_pcm_hardware);
 	if (ret)
 		return ret;
+
 	/* ensure that buffer size is a multiple of period size */
 	ret = snd_pcm_hw_constraint_integer(substream->runtime,
 			SNDRV_PCM_HW_PARAM_PERIODS);
 	if (ret < 0)
 		return ret;
+
 	prtd = kzalloc(sizeof(*prtd), GFP_KERNEL);
-	if (prtd == NULL)
+	if (!prtd)
 		return -ENOMEM;
 
 	spin_lock_init(&prtd->lock);
-
 	substream->runtime->private_data = prtd;
 
 	get_dma_start_addr(substream);
 	dma_configure(substream);
+
 	ret = spear13xx_pcm_dma_request(substream);
 	if (ret) {
 		dev_err(&prtd->dev, "pcm:Failed to get dma channels\n");
@@ -329,7 +342,6 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 
 	tasklet_init(&prtd->tasklet, spear13xx_dma_tasklet,
 			(unsigned long)prtd);
-
 	return 0;
 }
 
@@ -341,7 +353,6 @@ static void dma_stop(struct snd_pcm_substream *substream)
 		dma_release_channel(prtd->dma_chan[0]);
 	else
 		dma_release_channel(prtd->dma_chan[1]);
-
 }
 
 static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
@@ -360,6 +371,7 @@ static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 	kfree(prtd);
 	return 0;
 }
+
 static int spear13xx_pcm_mmap(struct snd_pcm_substream *substream,
 		struct vm_area_struct *vma)
 {
@@ -392,13 +404,16 @@ spear13xx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream,
 	buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	buf->dev.dev = pcm->card->dev;
 	buf->private_data = NULL;
+
 	buf->area = dma_alloc_writecombine(pcm->card->dev, size,
 			&buf->addr, GFP_KERNEL);
+	if (!buf->area)
+		return -ENOMEM;
+
 	dev_info(buf->dev.dev,
 			" preallocate_dma_buffer: area=%p, addr=%p, size=%d\n",
 			(void *)buf->area, (void *)buf->addr, size);
-	if (!buf->area)
-		return -ENOMEM;
+
 	buf->bytes = size;
 	return 0;
 }
@@ -432,7 +447,7 @@ static int spear13xx_pcm_new(struct snd_card *card,
 	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &spear13xx_pcm_dmamask;
 	if (!card->dev->coherent_dma_mask)
-		card->dev->coherent_dma_mask = 0xffffffff;
+		card->dev->coherent_dma_mask = 0xFFFFFFFF;
 
 	if (dai->driver->playback.channels_min) {
 		ret = spear13xx_pcm_preallocate_dma_buffer(pcm,
@@ -473,8 +488,8 @@ static int __devexit spear13xx_soc_platform_remove(struct platform_device *pdev)
 
 static struct platform_driver spear13xx_pcm_driver = {
 	.driver = {
-			.name = "spear-pcm-audio",
-			.owner = THIS_MODULE,
+		.name = "spear-pcm-audio",
+		.owner = THIS_MODULE,
 	},
 
 	.probe = spear13xx_soc_platform_probe,
@@ -492,6 +507,6 @@ static void __exit snd_spear13xx_pcm_exit(void)
 }
 module_exit(snd_spear13xx_pcm_exit);
 
-MODULE_AUTHOR("Rajeev Kumar");
+MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
 MODULE_DESCRIPTION("spear PCM DMA module");
 MODULE_LICENSE("GPL");
