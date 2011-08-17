@@ -242,7 +242,7 @@ static bool filter(struct dma_chan *chan, void *slave)
 	return true;
 }
 
-static int spear13xx_pcm_dma_request(struct snd_pcm_substream *substream)
+static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
 	dma_cap_mask_t smask;
@@ -285,7 +285,7 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	spin_lock_init(&prtd->lock);
 	substream->runtime->private_data = prtd;
 
-	ret = spear13xx_pcm_dma_request(substream);
+	ret = pcm_alloc_dma_chan(substream);
 	if (ret) {
 		dev_err(&prtd->dev, "pcm:Failed to get dma channels\n");
 		kfree(prtd);
