@@ -186,6 +186,7 @@ static void pcm_dma_complete(void *arg)
 static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct dma_chan *chan;
 	unsigned long flags;
 	int ret = 0;
 
@@ -197,6 +198,13 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		pcm_dma_xfer(prtd, false);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			chan = prtd->dma_chan[0];
+		else
+			chan = prtd->dma_chan[1];
+
+		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
+		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
