@@ -305,29 +305,6 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 static void
 dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
-	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
-
-	if (!(dev->capability & RECORD) &&
-			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
-		return;
-
-	if (!(dev->capability & PLAY) &&
-			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
-		return;
-
-	/* mask i2s interrupt for channel 0 */
-	i2s_write_reg(dev->i2s_base, IMR(0), 0x33);
-
-	/* mask i2s interrupt for channel 1 */
-	i2s_write_reg(dev->i2s_base, IMR(1), 0x33);
-
-	/* mask i2s interrupt for channel 2 */
-	i2s_write_reg(dev->i2s_base, IMR(2), 0x33);
-
-	/* mask i2s interrupt for channel 3 */
-	i2s_write_reg(dev->i2s_base, IMR(3), 0x33);
-
-	i2s_stop(dev, substream);
 }
 
 static int
