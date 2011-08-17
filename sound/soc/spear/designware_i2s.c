@@ -180,14 +180,14 @@ i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 	i2s_clear_irqs(dev, substream->stream);
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		i2s_write_reg(dev->i2s_base, ITER, 0);
-		i2s_write_reg(dev->i2s_base, ITER, 1);
+
 		for (i = 0; i < 4; i++) {
 			irq = i2s_read_reg(dev->i2s_base, IMR(i));
 			i2s_write_reg(dev->i2s_base, IMR(i), irq | 0x30);
 		}
 	} else {
 		i2s_write_reg(dev->i2s_base, IRER, 0);
-		i2s_write_reg(dev->i2s_base, IRER, 1);
+
 		for (i = 0; i < 4; i++) {
 			irq = i2s_read_reg(dev->i2s_base, IMR(i));
 			i2s_write_reg(dev->i2s_base, IMR(i), irq | 0x03);
