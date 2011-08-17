@@ -246,6 +246,12 @@ static void
 i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		/* clear tx data overrun interrupt */
+		i2s_read_reg(dev->i2s_base, TOR0);
+		i2s_read_reg(dev->i2s_base, TOR1);
+		i2s_read_reg(dev->i2s_base, TOR2);
+		i2s_read_reg(dev->i2s_base, TOR3);
+
 		i2s_write_reg(dev->i2s_base, ITER, 0);
 		i2s_write_reg(dev->i2s_base, ITER, 1);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x30);
@@ -253,6 +259,12 @@ i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		i2s_write_reg(dev->i2s_base, IMR2, 0x30);
 		i2s_write_reg(dev->i2s_base, IMR3, 0x30);
 	} else {
+		/* clear rx data overrun interrupt */
+		i2s_read_reg(dev->i2s_base, ROR0);
+		i2s_read_reg(dev->i2s_base, ROR1);
+		i2s_read_reg(dev->i2s_base, ROR2);
+		i2s_read_reg(dev->i2s_base, ROR3);
+
 		i2s_write_reg(dev->i2s_base, IRER, 0);
 		i2s_write_reg(dev->i2s_base, IRER, 1);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x03);
