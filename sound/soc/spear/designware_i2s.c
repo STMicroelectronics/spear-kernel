@@ -308,6 +308,12 @@ static irqreturn_t dw_i2s_play(int irq, void *_dev)
 
 		/* clear tx data overrun interrupt: channel 3 */
 		i2s_read_reg(dev->i2s_base, TOR3);
+
+		/* enable rx block */
+		i2s_write_reg(dev->i2s_base, ITER, 1);
+
+		/* enable i2s block */
+		i2s_write_reg(dev->i2s_base, IER, 1);
 	}
 
 	return IRQ_HANDLED;
