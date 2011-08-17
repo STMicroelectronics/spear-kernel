@@ -506,7 +506,6 @@ void __init nand_mach_init(u32 busw);
 void nand_select_bank(u32 bank, u32 busw);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
-void pcm_init(struct device *dma_dev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */

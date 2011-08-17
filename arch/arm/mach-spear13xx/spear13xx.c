@@ -34,6 +34,7 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/i2s.h>
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
@@ -754,7 +755,11 @@ struct platform_device spear13xx_pcie_host0_device = {
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
+	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+			SPEAR13XX_DMA_REQ_I2S_TX,
+			SPEAR13XX_DMA_REQ_I2S_RX),
 };
+
 /* i2s0 device registeration */
 static struct resource i2s0_resources[] = {
 	{

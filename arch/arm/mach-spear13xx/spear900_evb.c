@@ -320,11 +320,6 @@ static void __init spear900_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 #endif
 
-#ifdef CONFIG_SND_SOC_STA529
-	/* configure i2s configuration for dma xfer */
-	pcm_init(&spear13xx_dmac_device[0].dev);
-#endif
-
 	/* call spear900 machine init function */
 	spear900_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 

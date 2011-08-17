@@ -27,7 +27,6 @@
 #define MAX_DMA_CHAIN		2
 
 static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;
-struct pcm_dma_data data;
 
 struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
@@ -50,34 +49,6 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.periods_max = 8, /* max # of periods */
 	.fifo_size = 0, /* fifo size in bytes */
 };
-
-void pcm_init(struct device *dma_dev)
-{
-	data.mem2i2s_slave.dma_dev = dma_dev;
-	data.i2s2mem_slave.dma_dev = dma_dev;
-
-	/* doing 16 bit audio transfer */
-	data.mem2i2s_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
-	data.mem2i2s_slave.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX);
-	data.mem2i2s_slave.cfg_lo = 0;
-	data.mem2i2s_slave.src_master = 1;
-	data.mem2i2s_slave.dst_master = 1;
-	data.mem2i2s_slave.src_msize = DW_DMA_MSIZE_16;
-
-	/* threshold for i2s is 7 */
-	data.mem2i2s_slave.dst_msize = DW_DMA_MSIZE_16;
-	data.mem2i2s_slave.fc = DW_DMA_FC_D_M2P;
-
-	data.i2s2mem_slave.reg_width = DW_DMA_SLAVE_WIDTH_16BIT;
-	data.i2s2mem_slave.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX);
-	data.i2s2mem_slave.src_master = 1;
-	data.i2s2mem_slave.dst_master = 1;
-	data.i2s2mem_slave.src_msize = DW_DMA_MSIZE_16;
-	data.i2s2mem_slave.dst_msize = DW_DMA_MSIZE_16;
-	data.i2s2mem_slave.fc = DW_DMA_FC_D_P2M;
-	data.i2s2mem_slave.cfg_lo = 0;
-
-}
 
 static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
@@ -265,21 +236,6 @@ spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
 	return bytes_to_frames(substream->runtime, prtd->pos);
 }
 
-static void dma_configure(struct snd_pcm_substream *substream)
-{
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-
-	dma_cap_zero(prtd->mask);
-	dma_cap_set(DMA_SLAVE, prtd->mask);
-
-	prtd->slaves = &data;
-	/* we need to pass physical address here */
-	prtd->slaves->mem2i2s_slave.tx_reg = (dma_addr_t)prtd->txdma;
-	prtd->slaves->mem2i2s_slave.rx_reg = 0;
-	prtd->slaves->i2s2mem_slave.tx_reg = 0;
-	prtd->slaves->i2s2mem_slave.rx_reg = (dma_addr_t)prtd->rxdma;
-}
-
 static bool filter(struct dma_chan *chan, void *slave)
 {
 	chan->private = slave;
@@ -289,15 +245,17 @@ static bool filter(struct dma_chan *chan, void *slave)
 static int spear13xx_pcm_dma_request(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	dma_cap_mask_t smask;
+	struct dma_slaves *ds = substream_to_ds(substream, &smask);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->dma_chan[0] = dma_request_channel(prtd->mask, filter,
-				&prtd->slaves->mem2i2s_slave);
+		prtd->dma_chan[0] = dma_request_channel(smask, filter,
+				&ds->mem2i2s_slave);
 		if (!prtd->dma_chan[0])
 			return -EAGAIN;
 	} else {
-		prtd->dma_chan[1] = dma_request_channel(prtd->mask, filter,
-				&prtd->slaves->i2s2mem_slave);
+		prtd->dma_chan[1] = dma_request_channel(smask, filter,
+				&ds->i2s2mem_slave);
 		if (!prtd->dma_chan[1])
 			return -EAGAIN;
 	}
@@ -326,9 +284,6 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 
 	spin_lock_init(&prtd->lock);
 	substream->runtime->private_data = prtd;
-
-	get_dma_start_addr(substream);
-	dma_configure(substream);
 
 	ret = spear13xx_pcm_dma_request(substream);
 	if (ret) {

@@ -430,11 +430,6 @@ static void __init spear1340_evb_init(void)
 			&chimei_b101aw02_info);
 #endif
 
-#ifdef CONFIG_SND_SOC_STA529
-	/* configure i2s configuration for dma xfer */
-	pcm_init(&spear13xx_dmac_device[0].dev);
-#endif
-
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
 

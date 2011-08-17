@@ -131,16 +131,20 @@ struct dw_i2s_dev {
 	struct device *dev;
 	struct snd_soc_dai_driver *dai_driver;
 	struct dw_pcm_dma_params *dma_params[2];
+
+	/* data related to DMA transfers b/w i2s and DMAC */
+	dma_cap_mask_t smask;
+	struct dma_slaves ds;
 };
 
-void get_dma_start_addr(struct snd_pcm_substream *substream)
+struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
+		dma_cap_mask_t *smask)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
+	struct dw_i2s_dev *i2s_dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
 
-	prtd->txdma = dev->res->start + TXDMA;
-	prtd->rxdma = dev->res->start + RXDMA;
+	*smask = i2s_dev->smask;
+	return &i2s_dev->ds;
 }
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -489,6 +493,13 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->res = res;
 	dev->max_channel = pdata->channel;
 	dev->capability = cap;
+
+	/* Set DMA slaves info */
+	dma_cap_zero(dev->smask);
+	dma_cap_set(DMA_SLAVE, dev->smask);
+	memcpy(&dev->ds, &pdata->ds, sizeof(pdata->ds));
+	dev->ds.mem2i2s_slave.tx_reg = res->start + TXDMA;
+	dev->ds.i2s2mem_slave.rx_reg = res->start + RXDMA;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {

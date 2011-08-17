@@ -21,6 +21,7 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/i2s.h>
 #include <media/soc_camera.h>
 #include <mach/spear1340_misc_regs.h>
 
@@ -1707,9 +1708,15 @@ static struct i2s_platform_data i2s_data[] = {
 	{
 		.cap = PLAY,
 		.channel = 2,
+		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+				SPEAR1340_DMA_REQ_I2S_TX,
+				SPEAR1340_DMA_REQ_I2S_RX),
 	}, {
 		.cap = RECORD,
 		.channel = 2,
+		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+				SPEAR1340_DMA_REQ_I2S_TX,
+				SPEAR1340_DMA_REQ_I2S_RX),
 	},
 };
 
