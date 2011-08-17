@@ -183,18 +183,18 @@ static void spear13xx_dma_tasklet(unsigned long data)
 	spin_lock_irqsave(&prtd->lock, flags);
 
 	if (prtd->frag_count < 0) {
-		spin_unlock_irqrestore(&prtd->lock, flags);
 		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 		/* first time */
 		for (i = 0; i < MAX_DMA_CHAIN; i++) {
 			desc = spear13xx_dma_submit(prtd,
 					prtd->dma_addr + i * prtd->frag_bytes);
-			if (!desc)
+			if (!desc) {
+				spin_unlock_irqrestore(&prtd->lock, flags);
 				return;
+			}
 		}
 		prtd->dmacount = MAX_DMA_CHAIN;
 		chan->device->device_issue_pending(chan);
-		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->frag_count = MAX_DMA_CHAIN % prtd->frags;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		return;
@@ -203,15 +203,14 @@ static void spear13xx_dma_tasklet(unsigned long data)
 	BUG_ON(prtd->dmacount >= MAX_DMA_CHAIN);
 	while (prtd->dmacount < MAX_DMA_CHAIN) {
 		prtd->dmacount++;
-		spin_unlock_irqrestore(&prtd->lock, flags);
 		desc = spear13xx_dma_submit(prtd,
 				prtd->dma_addr +
 				prtd->frag_count * prtd->frag_bytes);
-		if (!desc)
+		if (!desc) {
+			spin_unlock_irqrestore(&prtd->lock, flags);
 			return;
-		chan->device->device_issue_pending(chan);
+		}
 
-		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->frag_count++;
 		prtd->frag_count %= prtd->frags;
 		prtd->pos += prtd->frag_bytes;
@@ -221,6 +220,8 @@ static void spear13xx_dma_tasklet(unsigned long data)
 			snd_pcm_period_elapsed(substream);
 	}
 	spin_unlock_irqrestore(&prtd->lock, flags);
+
+	chan->device->device_issue_pending(chan);
 }
 
 static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
