@@ -35,9 +35,11 @@ struct spear13xx_runtime_data {
 	dma_addr_t dma_addr;
 	unsigned long buffer_bytes;
 	unsigned long period_bytes;
-	unsigned long frag_bytes;
-	int frags;
-	int frag_count;
-	int dmacount;
+
+	/* For Keeping track of buffers */
+	unsigned long xfer_len;	/* Data transfered by one transfer */
+	int xfer_cnt; /* Total number of transfers to be done */
+	int buf_index; /* Current buffer count */
+	int dmacount; /* No. of DMA transfer ongoing */
 };
 #endif /* end of pcm header file */
