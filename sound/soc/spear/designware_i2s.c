@@ -168,26 +168,26 @@ void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 	switch (dev->max_channel) {
 	case EIGHT_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, TCR3, 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR3, 0x07);
+		i2s_write_reg(dev->i2s_base, TFCR3, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR3, 0x00);
 		i2s_write_reg(dev->i2s_base, TER3, 1);
 
 	case SIX_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, TCR2, 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR2, 0x07);
+		i2s_write_reg(dev->i2s_base, TFCR2, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR2, 0x00);
 		i2s_write_reg(dev->i2s_base, TER2, 1);
 
 	case FOUR_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, TCR1, 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR1, 0x07);
+		i2s_write_reg(dev->i2s_base, TFCR1, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR1, 0x00);
 		i2s_write_reg(dev->i2s_base, TER1, 1);
 
 	case TWO_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, CCR, 0x00);
 		i2s_write_reg(dev->i2s_base, TCR0, 0x2);
-		i2s_write_reg(dev->i2s_base, TFCR0, 0x07);
+		i2s_write_reg(dev->i2s_base, TFCR0, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, TER0, 1);
 		break;
@@ -210,26 +210,26 @@ void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 	switch (dev->max_channel) {
 	case EIGHT_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, RCR3, 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR3, 0x07);
+		i2s_write_reg(dev->i2s_base, RFCR3, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR3, 0x00);
 		i2s_write_reg(dev->i2s_base, RER3, 1);
 
 	case SIX_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, RCR2, 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR2, 0x07);
+		i2s_write_reg(dev->i2s_base, RFCR2, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR2, 0x00);
 		i2s_write_reg(dev->i2s_base, RER2, 1);
 
 	case FOUR_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, RCR1, 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR1, 0x07);
+		i2s_write_reg(dev->i2s_base, RFCR1, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR1, 0x00);
 		i2s_write_reg(dev->i2s_base, RER1, 1);
 
 	case TWO_CHANNEL_SUPPORT:
 		i2s_write_reg(dev->i2s_base, CCR, 0x0);
 		i2s_write_reg(dev->i2s_base, RCR0, 0x2);
-		i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
+		i2s_write_reg(dev->i2s_base, RFCR0, 0x02);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, RER0, 1);
 		break;
