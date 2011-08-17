@@ -138,6 +138,11 @@ static void pcm_dma_xfer(struct spear13xx_runtime_data *prtd,
 	int ret;
 
 	spin_lock_irqsave(&prtd->lock, flags);
+	if (!prtd->pcm_running) {
+		spin_unlock_irqrestore(&prtd->lock, flags);
+		return;
+	}
+
 	BUG_ON(prtd->dmacount >= prtd->xfer_cnt);
 
 	while (prtd->dmacount < prtd->xfer_cnt) {
@@ -180,7 +185,8 @@ static void pcm_dma_complete(void *arg)
 	prtd->dmacount--;
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
-	pcm_dma_xfer(prtd, true);
+	if (prtd->pcm_running)
+		pcm_dma_xfer(prtd, true);
 }
 
 static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -193,11 +199,13 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		spin_lock_irqsave(&prtd->lock, flags);
+		prtd->pcm_running = true;
 		prtd->buf_index = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		pcm_dma_xfer(prtd, false);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
+		prtd->pcm_running = false;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			chan = prtd->dma_chan[0];
 		else
