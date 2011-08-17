@@ -109,120 +109,89 @@ static inline u32 i2s_read_reg(void *io_base, int reg)
 	return readl(io_base + reg);
 }
 
-void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
+static inline void
+i2s_config_channel(struct dw_i2s_dev *dev, u32 ch, u32 stream, u32 cr)
 {
-	i2s_write_reg(dev->i2s_base, IER, 1);
-	i2s_write_reg(dev->i2s_base, TER(0), 0);
-	i2s_write_reg(dev->i2s_base, TER(1), 0);
-	i2s_write_reg(dev->i2s_base, TER(2), 0);
-	i2s_write_reg(dev->i2s_base, TER(3), 0);
+	u32 irq;
 
-	switch (dev->max_channel) {
-	case EIGHT_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, TCR(3), 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR(3), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(3), 0x00);
-		i2s_write_reg(dev->i2s_base, TER(3), 1);
-
-	case SIX_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, TCR(2), 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR(2), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(2), 0x00);
-		i2s_write_reg(dev->i2s_base, TER(2), 1);
-
-	case FOUR_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, TCR(1), 0x5);
-		i2s_write_reg(dev->i2s_base, TFCR(1), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(1), 0x00);
-		i2s_write_reg(dev->i2s_base, TER(1), 1);
-
-	case TWO_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, CCR, 0x00);
-		i2s_write_reg(dev->i2s_base, TCR(0), 0x2);
-		i2s_write_reg(dev->i2s_base, TFCR(0), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(0), 0x00);
-		i2s_write_reg(dev->i2s_base, TER(0), 1);
-		break;
-	default:
-		dev_err(dev->dev, "channel not supported\n");
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		i2s_write_reg(dev->i2s_base, TCR(ch), cr);
+		i2s_write_reg(dev->i2s_base, TFCR(ch), 0x02);
+		irq = i2s_read_reg(dev->i2s_base, IMR(ch));
+		i2s_write_reg(dev->i2s_base, IMR(ch), irq & ~0x30);
+		i2s_write_reg(dev->i2s_base, TER(ch), 1);
+	} else {
+		i2s_write_reg(dev->i2s_base, RCR(ch), cr);
+		i2s_write_reg(dev->i2s_base, RFCR(ch), 0x02);
+		irq = i2s_read_reg(dev->i2s_base, IMR(ch));
+		i2s_write_reg(dev->i2s_base, IMR(ch), irq & ~0x03);
+		i2s_write_reg(dev->i2s_base, RER(ch), 1);
 	}
-
-	i2s_write_reg(dev->i2s_base, ITER, 1);
-	i2s_write_reg(dev->i2s_base, CER, 1);
 }
 
-void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
+static inline void
+i2s_clear_irqs(struct dw_i2s_dev *dev, u32 stream)
+{
+	u32 i = 0;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		for (i = 0; i < 4; i++)
+			i2s_write_reg(dev->i2s_base, TER(i), 0);
+	} else {
+		for (i = 0; i < 4; i++)
+			i2s_write_reg(dev->i2s_base, RER(i), 0);
+	}
+}
+
+void i2s_start(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
 	i2s_write_reg(dev->i2s_base, IER, 1);
-	i2s_write_reg(dev->i2s_base, RER(0), 0);
-	i2s_write_reg(dev->i2s_base, RER(1), 0);
-	i2s_write_reg(dev->i2s_base, RER(2), 0);
-	i2s_write_reg(dev->i2s_base, RER(3), 0);
+	i2s_clear_irqs(dev, substream->stream);
 
 	switch (dev->max_channel) {
 	case EIGHT_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, RCR(3), 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR(3), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(3), 0x00);
-		i2s_write_reg(dev->i2s_base, RER(3), 1);
-
+		i2s_config_channel(dev, 3, substream->stream, 0x5);
 	case SIX_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, RCR(2), 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR(2), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(2), 0x00);
-		i2s_write_reg(dev->i2s_base, RER(2), 1);
-
+		i2s_config_channel(dev, 2, substream->stream, 0x5);
 	case FOUR_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, RCR(1), 0x5);
-		i2s_write_reg(dev->i2s_base, RFCR(1), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(1), 0x00);
-		i2s_write_reg(dev->i2s_base, RER(1), 1);
-
+		i2s_config_channel(dev, 1, substream->stream, 0x5);
 	case TWO_CHANNEL_SUPPORT:
-		i2s_write_reg(dev->i2s_base, CCR, 0x0);
-		i2s_write_reg(dev->i2s_base, RCR(0), 0x2);
-		i2s_write_reg(dev->i2s_base, RFCR(0), 0x02);
-		i2s_write_reg(dev->i2s_base, IMR(0), 0x00);
-		i2s_write_reg(dev->i2s_base, RER(0), 1);
+		i2s_config_channel(dev, 0, substream->stream, 0x2);
 		break;
-
 	default:
 		dev_err(dev->dev, "channel not supported\n");
 	}
 
-	i2s_write_reg(dev->i2s_base, IRER, 1);
+	i2s_write_reg(dev->i2s_base, CCR, 0x00);
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		i2s_write_reg(dev->i2s_base, ITER, 1);
+	else
+		i2s_write_reg(dev->i2s_base, IRER, 1);
+
 	i2s_write_reg(dev->i2s_base, CER, 1);
 }
 
 static void
 i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		/* clear tx data overrun interrupt */
-		i2s_read_reg(dev->i2s_base, TOR(0));
-		i2s_read_reg(dev->i2s_base, TOR(1));
-		i2s_read_reg(dev->i2s_base, TOR(2));
-		i2s_read_reg(dev->i2s_base, TOR(3));
+	u32 i = 0, irq;
 
+	i2s_clear_irqs(dev, substream->stream);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		i2s_write_reg(dev->i2s_base, ITER, 0);
 		i2s_write_reg(dev->i2s_base, ITER, 1);
-		i2s_write_reg(dev->i2s_base, IMR(0), 0x30);
-		i2s_write_reg(dev->i2s_base, IMR(1), 0x30);
-		i2s_write_reg(dev->i2s_base, IMR(2), 0x30);
-		i2s_write_reg(dev->i2s_base, IMR(3), 0x30);
+		for (i = 0; i < 4; i++) {
+			irq = i2s_read_reg(dev->i2s_base, IMR(i));
+			i2s_write_reg(dev->i2s_base, IMR(i), irq | 0x30);
+		}
 	} else {
-		/* clear rx data overrun interrupt */
-		i2s_read_reg(dev->i2s_base, ROR(0));
-		i2s_read_reg(dev->i2s_base, ROR(1));
-		i2s_read_reg(dev->i2s_base, ROR(2));
-		i2s_read_reg(dev->i2s_base, ROR(3));
-
 		i2s_write_reg(dev->i2s_base, IRER, 0);
 		i2s_write_reg(dev->i2s_base, IRER, 1);
-		i2s_write_reg(dev->i2s_base, IMR(0), 0x03);
-		i2s_write_reg(dev->i2s_base, IMR(1), 0x03);
-		i2s_write_reg(dev->i2s_base, IMR(2), 0x03);
-		i2s_write_reg(dev->i2s_base, IMR(3), 0x03);
+		for (i = 0; i < 4; i++) {
+			irq = i2s_read_reg(dev->i2s_base, IMR(i));
+			i2s_write_reg(dev->i2s_base, IMR(i), irq | 0x03);
+		}
 	}
 
 	if (!dev->active) {
@@ -249,17 +218,8 @@ static irqreturn_t dw_i2s_play(int irq, void *_dev)
 		/* flush all the tx fifo */
 		i2s_write_reg(dev->i2s_base, TXFFR, 1);
 
-		/* clear tx data overrun interrupt: channel 0 */
-		i2s_read_reg(dev->i2s_base, TOR(0));
-
-		/* clear tx data overrun interrupt: channel 1 */
-		i2s_read_reg(dev->i2s_base, TOR(1));
-
-		/* clear tx data overrun interrupt: channel 2 */
-		i2s_read_reg(dev->i2s_base, TOR(2));
-
-		/* clear tx data overrun interrupt: channel 3 */
-		i2s_read_reg(dev->i2s_base, TOR(3));
+		/* clear tx data overrun interrupt */
+		i2s_clear_irqs(dev, SNDRV_PCM_STREAM_PLAYBACK);
 
 		/* enable rx block */
 		i2s_write_reg(dev->i2s_base, ITER, 1);
@@ -289,17 +249,8 @@ static irqreturn_t dw_i2s_capture(int irq, void *_dev)
 		/* flush all the rx fifo */
 		i2s_write_reg(dev->i2s_base, RXFFR, 1);
 
-		/* clear rx data overrun interrupt: channel 0 */
-		i2s_read_reg(dev->i2s_base, ROR(0));
-
-		/* clear rx data overrun interrupt: channel 1 */
-		i2s_read_reg(dev->i2s_base, ROR(1));
-
-		/* clear rx data overrun interrupt: channel 2 */
-		i2s_read_reg(dev->i2s_base, ROR(2));
-
-		/* clear rx data overrun interrupt: channel 3 */
-		i2s_read_reg(dev->i2s_base, ROR(3));
+		/* clear rx data overrun interrupt */
+		i2s_clear_irqs(dev, SNDRV_PCM_STREAM_CAPTURE);
 
 		/* enable rx block */
 		i2s_write_reg(dev->i2s_base, IRER, 1);
@@ -389,10 +340,7 @@ dw_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 		dev->active++;
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			i2s_start_play(dev, substream);
-		else
-			i2s_start_rec(dev, substream);
+		i2s_start(dev, substream);
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		break;
