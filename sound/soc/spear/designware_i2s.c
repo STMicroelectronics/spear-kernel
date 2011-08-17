@@ -4,7 +4,7 @@
  * sound/soc/spear/designware_i2s.c
  *
  * Copyright (C) 2010 ST Microelectronics
- * Rajeev Kumar<rajeev-dlh.kumar@st.com>
+ * Rajeev Kumar <rajeev-dlh.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -159,7 +159,6 @@ static inline u32 i2s_read_reg(void *io_base, int reg)
 
 void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_write_reg(dev->i2s_base, TER0, 0);
 	i2s_write_reg(dev->i2s_base, TER1, 0);
@@ -191,12 +190,9 @@ void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		i2s_write_reg(dev->i2s_base, TFCR0, 0x07);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, TER0, 1);
-
 		break;
-
 	default:
 		dev_err(dev->dev, "channel not supported\n");
-
 	}
 
 	i2s_write_reg(dev->i2s_base, ITER, 1);
@@ -205,7 +201,6 @@ void i2s_start_play(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 
 void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
-
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_write_reg(dev->i2s_base, RER0, 0);
 	i2s_write_reg(dev->i2s_base, RER1, 0);
@@ -237,13 +232,12 @@ void i2s_start_rec(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		i2s_write_reg(dev->i2s_base, RFCR0, 0x07);
 		i2s_write_reg(dev->i2s_base, IMR0, 0x00);
 		i2s_write_reg(dev->i2s_base, RER0, 1);
-
 		break;
 
 	default:
 		dev_err(dev->dev, "channel not supported\n");
-
 	}
+
 	i2s_write_reg(dev->i2s_base, IRER, 1);
 	i2s_write_reg(dev->i2s_base, CER, 1);
 }
@@ -266,11 +260,11 @@ i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		i2s_write_reg(dev->i2s_base, IMR2, 0x03);
 		i2s_write_reg(dev->i2s_base, IMR3, 0x03);
 	}
+
 	if (!dev->active--) {
 		i2s_write_reg(dev->i2s_base, CER, 0);
 		i2s_write_reg(dev->i2s_base, IER, 0);
 	}
-
 }
 
 static irqreturn_t dw_i2s_play(int irq, void *_dev)
@@ -282,7 +276,6 @@ static irqreturn_t dw_i2s_play(int irq, void *_dev)
 	ch0 = i2s_read_reg(dev->i2s_base, ISR0) & 0x20;
 	ch1 = i2s_read_reg(dev->i2s_base, ISR1) & 0x20;
 	if (ch0 || ch1) {
-
 		/* disable i2s block */
 		i2s_write_reg(dev->i2s_base, IER, 0);
 
@@ -317,7 +310,6 @@ static irqreturn_t dw_i2s_capture(int irq, void *_dev)
 	ch0 = i2s_read_reg(dev->i2s_base, ISR0) & 0x02;
 	ch1 = i2s_read_reg(dev->i2s_base, ISR1) & 0x02;
 	if (ch0 || ch1) {
-
 		/* disable i2s block */
 		i2s_write_reg(dev->i2s_base, IER, 0);
 
@@ -344,7 +336,6 @@ static irqreturn_t dw_i2s_capture(int irq, void *_dev)
 
 		/* enable i2s block */
 		i2s_write_reg(dev->i2s_base, IER, 1);
-
 	}
 
 	return IRQ_HANDLED;
@@ -386,9 +377,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 	u32 channel;
 
 	channel = params_channels(params);
-
 	dev->max_channel = channel;
-
 	return 0;
 }
 
@@ -418,7 +407,6 @@ dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 	i2s_write_reg(dev->i2s_base, IMR3, 0x33);
 
 	i2s_stop(dev, substream);
-
 }
 
 static int
