@@ -263,6 +263,20 @@ static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static void pcm_dma_free_chan(struct snd_pcm_substream *substream)
+{
+	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct dma_chan *chan;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		chan = prtd->dma_chan[0];
+	else
+		chan = prtd->dma_chan[1];
+
+	chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
+	dma_release_channel(chan);
+}
+
 static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd;
@@ -297,29 +311,12 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static void dma_stop(struct snd_pcm_substream *substream)
-{
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		dma_release_channel(prtd->dma_chan[0]);
-	else
-		dma_release_channel(prtd->dma_chan[1]);
-}
-
 static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	struct dma_chan *chan;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		chan = prtd->dma_chan[0];
-	else
-		chan = prtd->dma_chan[1];
 
 	prtd->frag_count = -1;
-	chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
-	dma_stop(substream);
+	pcm_dma_free_chan(substream);
 	kfree(prtd);
 	return 0;
 }
