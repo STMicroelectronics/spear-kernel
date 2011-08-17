@@ -200,7 +200,7 @@ i2s_stop(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 	}
 }
 
-static irqreturn_t dw_i2s_play(int irq, void *_dev)
+static irqreturn_t dw_i2s_play_irq(int irq, void *_dev)
 {
 	struct dw_i2s_dev *dev = (struct dw_i2s_dev *)_dev;
 	u32 ch0, ch1;
@@ -231,7 +231,7 @@ static irqreturn_t dw_i2s_play(int irq, void *_dev)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t dw_i2s_capture(int irq, void *_dev)
+static irqreturn_t dw_i2s_capture_irq(int irq, void *_dev)
 {
 	struct dw_i2s_dev *dev = (struct dw_i2s_dev *)_dev;
 	u32 ch0, ch1;
@@ -442,7 +442,7 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->playback.channels_max = dev->max_channel;
 			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
-			ret = request_irq(dev->play_irq, dw_i2s_play, 0,
+			ret = request_irq(dev->play_irq, dw_i2s_play_irq, 0,
 					"dw-i2s-play", dev);
 			if (ret) {
 				dev_err(&pdev->dev,
@@ -462,8 +462,8 @@ dw_i2s_probe(struct platform_device *pdev)
 			dw_i2s_dai->capture.channels_max = dev->max_channel;
 			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
 			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
-			ret = request_irq(dev->capture_irq, dw_i2s_capture, 0,
-					"dw-i2s-rec", dev);
+			ret = request_irq(dev->capture_irq, dw_i2s_capture_irq,
+					0, "dw-i2s-rec", dev);
 			if (ret) {
 				dev_err(&pdev->dev,
 						"Can't register capture irq\n");
