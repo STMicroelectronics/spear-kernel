@@ -1445,8 +1445,8 @@ static int vs6725_camera_init(struct soc_camera_device *icd,
 	priv->model = V4L2_IDENT_VS6725;
 
 	dev_info(&client->dev,
-		"vs6725 Device ID 0x%02x::0x%02x Firmware Ver 0x%02x"
-		"Patch Ver 0x%02x\n", dev_id_hi, dev_id_lo, fm_ver, patch_ver);
+		"vs6725 Device-ID=0x%02x::0x%02x, Firmware-Ver=0x%02x"
+		" Patch-Ver=0x%02x\n", dev_id_hi, dev_id_lo, fm_ver, patch_ver);
 
 	ret = vs6725_prog_default(client);
 
