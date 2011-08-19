@@ -33,7 +33,13 @@
 #define VS6725_ROW_SKIP			8
 
 /* device parameters */
-#define VS6725_DEVICE_ID_HI		0x02
+/*
+ * FIXME: while the VS6725 user-manual states that the DEVICE_ID_HI
+ * should be 0x02 on the real-board we see that this value is 0x00.
+ * Changing this to be in sync with the board, but confirm later with
+ * PCB designers
+ */
+#define VS6725_DEVICE_ID_HI		0x00
 #define VS6725_DEVICE_ID_LO		0xD5
 #define VS6725_FIRMWARE_VERSION		0x1
 #define VS6725_PATCH_VERSION		0
