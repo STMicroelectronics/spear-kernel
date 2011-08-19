@@ -1027,8 +1027,8 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 	else
 		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
 
-	if (ret < 0)
-		return ret;
+	if (ret != 0)
+		return -EIO;
 
 	return 0;
 }
