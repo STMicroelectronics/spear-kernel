@@ -568,6 +568,9 @@ extern struct platform_device spear1310_otg_device;
 extern struct platform_device spear1310_plgpio_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
+extern struct platform_device spear1310_sata0_device;
+extern struct platform_device spear1310_sata1_device;
+extern struct platform_device spear1310_sata2_device;
 extern struct platform_device spear1310_tdm_hdlc_0_device;
 extern struct platform_device spear1310_tdm_hdlc_1_device;
 
@@ -595,6 +598,7 @@ extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_otg_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
+extern struct platform_device spear1340_sata0_device;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
