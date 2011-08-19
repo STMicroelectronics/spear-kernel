@@ -987,7 +987,7 @@ static int vs6725_get_register(struct v4l2_subdev *sd,
 	if (reg->match.addr != client->addr)
 		return -ENODEV;
 
-	reg->size = 1;
+	reg->size = 2;
 
 	ret = vs6725_reg_read(client, reg->reg, &val);
 	if (!ret)
