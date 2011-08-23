@@ -62,7 +62,7 @@
  * made configurable somehow; preferably, the clients (at least the
  * ones using slave transfers) should be able to give us a hint.
  */
-#define NR_DESCS_PER_CHANNEL	64
+#define NR_DESCS_PER_CHANNEL	2048
 
 /*----------------------------------------------------------------------*/
 
