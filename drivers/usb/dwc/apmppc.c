@@ -299,7 +299,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		}
 		/* configure chargepump interrupt */
 		dwc_dev->hcd->cp_irq = platform_get_irq(ofdev, 1);
-		if (dwc_dev->hcd->cp_irq) {
+		if (dwc_dev->hcd->cp_irq != -ENXIO) {
 			retval = request_irq(dwc_dev->hcd->cp_irq,
 					     dwc_otg_externalchgpump_irq,
 					     IRQF_SHARED,
