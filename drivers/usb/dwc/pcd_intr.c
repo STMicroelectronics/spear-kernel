@@ -456,7 +456,7 @@ static int write_empty_tx_fifo(struct dwc_pcd *pcd, u32 epnum)
 	 */
 	len = ep->dwc_ep.xfer_len - ep->dwc_ep.xfer_count;
 	dwords = count_dwords(ep, len);
-	while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(txstatus) > dwords
+	while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(txstatus) >= dwords
 	       && ep->dwc_ep.xfer_count < ep->dwc_ep.xfer_len
 	       && ep->dwc_ep.xfer_len != 0) {
 		dwc_otg_ep_write_packet(core_if, &ep->dwc_ep, 0);
