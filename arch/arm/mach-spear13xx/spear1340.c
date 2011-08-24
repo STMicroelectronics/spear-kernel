@@ -17,6 +17,7 @@
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
+#include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
@@ -1846,33 +1847,9 @@ struct platform_device spear1340_sata0_device = {
 	},
 };
 
-/* OTG device registration */
-static struct resource otg_resources[] = {
-	{
-		.start = SPEAR1340_UOC_BASE,
-		.end = SPEAR1340_UOC_BASE + SZ_256K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR1340_IRQ_UOC,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_otg_device = {
-	.name = "dwc_otg",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(otg_resources),
-	.resource = otg_resources,
-};
-
-#ifdef CONFIG_USB_DWC_OTG
-int spear1340_otg_phy_init(void)
+static int spear1340_otg_phy_init(void)
 {
 	u32 temp, msec = 1000;
-	void __iomem *grxfsiz;
 
 	/* phy por deassert */
 	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
@@ -1913,19 +1890,60 @@ int spear1340_otg_phy_init(void)
 	temp |= (1 << SPEAR1340_UOC_CLK_ENB);
 	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
 
-	/*
-	 * Temp code: till otg driver is properly modified for
-	 * module parameter selection for different platform.
-	 */
-	grxfsiz = ioremap(SPEAR1340_UOC_BASE + 0x24, 4);
-	if (!grxfsiz)
-		return -ENOMEM;
-	writel(0x400, grxfsiz);
-	iounmap(grxfsiz);
+	return 0;
+}
+
+static int spear1340_otg_param_init(struct core_params *params)
+{
+	int i;
+
+	/* Common Dev RX fifo Size : 0x400 */
+	params->dev_rx_fifo_size = 0x400;
+	/* Dev TX fifo Size for fifo 0: 0x300 */
+	params->dev_nperio_tx_fifo_size = 0x300;
+	/* TX fifo Size for fifo 1-7: 0x200 */
+	params->fifo_number = 7;
+	for (i = 1; i <= 7; i++)
+		params->dev_tx_fifo_size[i - 1] = 0x200;
+
+	/* Common Host RX fifo Size : 0x400 */
+	params->host_rx_fifo_size = 0x400;
+	/* Host TX fifo Size for fifo 0: 0x400 */
+	params->host_nperio_tx_fifo_size = 0x400;
+	/* Host Periodic TX fifo Size for fifo 0: 0x400 */
+	params->host_perio_tx_fifo_size = 0x400;
 
 	return 0;
 }
-#endif
+
+/* OTG device registration */
+static struct resource otg_resources[] = {
+	{
+		.start = SPEAR1340_UOC_BASE,
+		.end = SPEAR1340_UOC_BASE + SZ_256K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_UOC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct dwc_otg_plat_data otg_platform_data = {
+	.phy_init = spear1340_otg_phy_init,
+	.param_init = spear1340_otg_param_init,
+};
+
+struct platform_device spear1340_otg_device = {
+	.name = "dwc_otg",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &otg_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(otg_resources),
+	.resource = otg_resources,
+};
+
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
