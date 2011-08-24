@@ -93,7 +93,7 @@ static int set_valid_perio_tx_fifo_sizes(struct core_if *core_if)
 	for (i = 0; i < dwc_otg_module_params.fifo_number; i++) {
 		if (param_size[i] == -1) {
 			size = dwc_read32(regs + DWC_DPTX_FSIZ_DIPTXF(i));
-			param_size[i] =	DWC_RX_FIFO_DEPTH_RD(size);
+			param_size[i] =	DWC_TX_FIFO_DEPTH_RD(size);
 		}
 	}
 	return 0;
@@ -113,7 +113,7 @@ static int set_valid_tx_fifo_sizes(struct core_if *core_if)
 	for (i = 0; i < dwc_otg_module_params.fifo_number; i++) {
 		if (param_size[i] == -1) {
 			size = dwc_read32(regs + DWC_DPTX_FSIZ_DIPTXF(i));
-			param_size[i] =	DWC_RX_FIFO_DEPTH_RD(size);
+			param_size[i] =	DWC_TX_FIFO_DEPTH_RD(size);
 		}
 	}
 	return 0;
@@ -155,7 +155,7 @@ int __devinit check_parameters(struct core_if *core_if)
 	if (dwc_otg_module_params.dev_nperio_tx_fifo_size == -1) {
 		size = dwc_read32(core_if->core_global_regs + DWC_GNPTXFSIZ);
 		dwc_otg_module_params.dev_nperio_tx_fifo_size =
-		DWC_RX_FIFO_DEPTH_RD(size);
+		DWC_TX_FIFO_DEPTH_RD(size);
 	}
 
 	if (dwc_otg_module_params.en_multiple_tx_fifo)
@@ -170,13 +170,13 @@ int __devinit check_parameters(struct core_if *core_if)
 		size
 		= dwc_read32(core_if->core_global_regs + DWC_GNPTXFSIZ) >> 16;
 		dwc_otg_module_params.host_nperio_tx_fifo_size =
-		DWC_RX_FIFO_DEPTH_RD(size);
+		DWC_TX_FIFO_DEPTH_RD(size);
 	}
 	if (dwc_otg_module_params.host_perio_tx_fifo_size == -1) {
 		size =
 		dwc_read32(core_if->core_global_regs + DWC_HPTXFSIZ) >> 16;
 		dwc_otg_module_params.host_perio_tx_fifo_size =
-		DWC_RX_FIFO_DEPTH_RD(size);
+		DWC_TX_FIFO_DEPTH_RD(size);
 	}
 
 	/*

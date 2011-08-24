@@ -355,11 +355,11 @@
  * GNPTXFSIZ, DPTXFSIZn). Read the register into the u32 element then
  * read out the bits using the bit elements.
  */
-#define DWC_RX_FIFO_DEPTH_RD(reg)	(((reg) & ((u32)0xffff << 16)) >> 16)
-#define DWC_RX_FIFO_DEPTH_WR(reg, x)	\
+#define DWC_TX_FIFO_DEPTH_RD(reg)	(((reg) & ((u32)0xffff << 16)) >> 16)
+#define DWC_TX_FIFO_DEPTH_WR(reg, x)	\
 	(((reg) & (~((u32)0xffff << 16))) | ((x) << 16))
-#define DWC_RX_FIFO_START_ADDR_RD(reg)		((reg) & 0xffff)
-#define DWC_RX_FIFO_START_ADDR_WR(reg, x)	\
+#define DWC_TX_FIFO_START_ADDR_RD(reg)		((reg) & 0xffff)
+#define DWC_TX_FIFO_START_ADDR_WR(reg, x)	\
 	(((reg) & (~((u32)0xffff))) | (x))
 
 /*
