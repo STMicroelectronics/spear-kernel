@@ -422,12 +422,14 @@ static int dwc_otg_pcd_handle_np_tx_fifo_empty_intr(struct dwc_pcd *pcd)
 	}
 
 	/* Clear nptxfempty interrupt */
-	gintsts |= DWC_INTMSK_RXFIFO_NOT_EMPT;
+	gintsts |= DWC_INTMSK_NP_TXFIFO_EMPT;
 	dwc_write32(global_regs + DWC_GINTSTS, gintsts);
 
 	/* Re-enable tx-fifo empty interrupt, if packets are stil pending */
 	if (len)
-		dwc_modify32(global_regs + DWC_GINTSTS, 0, gintsts);
+		dwc_modify32(global_regs + DWC_GINTMSK, gintsts, gintsts);
+	else
+		dwc_modify32(global_regs + DWC_GINTMSK, gintsts, 0);
 	return 1;
 }
 
