@@ -1857,9 +1857,13 @@ static void handle_in_ep_timeout_intr(struct dwc_pcd *pcd, const u32 ep_num)
 static void handle_in_ep_tx_fifo_empty_intr(struct dwc_pcd *pcd,
 					    struct pcd_ep *ep, u32 num)
 {
-	u32 diepint = 0;
+	u32 diepint = 0, deptsiz;
+	struct device_if *dev_if = GET_CORE_IF(pcd)->dev_if;
+	ulong in_regs = dev_if->in_ep_regs[num];
 
-	if (!ep->stopped && num) {
+	deptsiz = dwc_read32(in_regs + DWC_DIEPTSIZ);
+
+	if (!ep->stopped && num && (DWC_DEPTSIZ_PKT_CNT_RD(deptsiz) == 0)) {
 		u32 diepmsk = 0;
 
 		diepmsk = DWC_DIEPMSK_IN_TKN_TX_EMPTY_RW(diepmsk, 1);
