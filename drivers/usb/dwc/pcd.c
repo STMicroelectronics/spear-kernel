@@ -446,7 +446,6 @@ static int dwc_otg_pcd_ep_disable(struct usb_ep *_ep)
 	spin_lock_irqsave(&ep->pcd->lock, flags);
 
 	request_nuke(ep);
-	dwc_otg_ep_deactivate(core_if, &ep->dwc_ep);
 
 	ep->desc = NULL;
 	ep->stopped = 1;
@@ -467,6 +466,8 @@ static int dwc_otg_pcd_ep_disable(struct usb_ep *_ep)
 		release_perio_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
 		release_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
 	}
+
+	dwc_otg_ep_deactivate(core_if, &ep->dwc_ep);
 
 	spin_unlock_irqrestore(&ep->pcd->lock, flags);
 
