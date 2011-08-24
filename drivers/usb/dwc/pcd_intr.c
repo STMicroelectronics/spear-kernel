@@ -1078,8 +1078,7 @@ static void pcd_clear_halt(struct dwc_pcd *pcd, struct pcd_ep *ep)
 			 * set this next_ep number. Otherwise the endpoint
 			 * will not get active again after stalling.
 			 */
-			if (dwc_has_feature(core_if, DWC_LIMITED_XFER))
-				start_next_request(ep);
+			start_next_request(ep);
 		}
 	}
 
