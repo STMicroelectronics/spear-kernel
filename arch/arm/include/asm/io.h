@@ -298,12 +298,12 @@ extern int devmem_is_allowed(unsigned long pfn);
 #endif
 
 /* Big Endian */
-#define out_be32(a, v) __raw_writel(__cpu_to_be32(v), a)
-#define in_be32(a) __be32_to_cpu(__raw_readl(a))
+#define out_be32(a, v) writel(__cpu_to_be32(v), a)
+#define in_be32(a) __be32_to_cpu(readl(a))
 
 /* Little endian */
-#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), a)
-#define in_le32(a) __le32_to_cpu(__raw_readl(a))
+#define out_le32(a, v) writel(__cpu_to_le32(v), a)
+#define in_le32(a) __le32_to_cpu(readl(a))
 
 /*
  * Convert a physical pointer to a virtual kernel pointer for /dev/mem
