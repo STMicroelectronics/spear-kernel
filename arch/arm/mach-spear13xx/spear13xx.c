@@ -754,7 +754,7 @@ struct platform_device spear13xx_pcie_host0_device = {
 
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
-	.channel = 2,
+	.channel = 4,
 	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
 			SPEAR13XX_DMA_REQ_I2S_TX,
 			SPEAR13XX_DMA_REQ_I2S_RX),
