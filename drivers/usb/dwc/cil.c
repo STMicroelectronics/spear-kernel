@@ -608,9 +608,7 @@ static void config_dev_dynamic_fifos(struct core_if *core_if)
 						     (nptxsize) +
 						     DWC_TX_FIFO_DEPTH_RD
 						     (nptxsize)));
-		for (i = 0;
-		     i < DWC_HWCFG4_NUM_DEV_PERIO_IN_EP_RD(core_if->hwcfg4);
-		     i++) {
+		for (i = 0; i < params->fifo_number; i++) {
 			ptxsize =
 			    DWC_TX_FIFO_DEPTH_WR(ptxsize,
 						 params->
@@ -643,13 +641,12 @@ static void config_dev_dynamic_fifos(struct core_if *core_if)
 						    (nptxsize) +
 						    DWC_TX_FIFO_DEPTH_RD
 						    (nptxsize)));
-		for (i = 1;
-		     i < DWC_HWCFG4_NUM_DEV_PERIO_IN_EP_RD(core_if->hwcfg4);
-		     i++) {
+		for (i = 0; i < params->fifo_number; i++) {
+			ptxsize =
 			txsize =
 			    DWC_TX_FIFO_DEPTH_WR(txsize,
 						 params->dev_tx_fifo_size[i]);
-			dwc_write32(regs + DWC_DPTX_FSIZ_DIPTXF(i - 1), txsize);
+			dwc_write32(regs + DWC_DPTX_FSIZ_DIPTXF(i), txsize);
 			txsize = DWC_TX_FIFO_START_ADDR_WR(txsize,
 						   (DWC_TX_FIFO_START_ADDR_RD
 						    (txsize) +
