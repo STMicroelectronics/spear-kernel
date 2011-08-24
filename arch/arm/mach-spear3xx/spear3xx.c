@@ -195,6 +195,7 @@ static struct resource eth_resources[] = {
 	[2] = {
 		.start = SPEAR3XX_IRQ_MAC_1,
 		.flags = IORESOURCE_IRQ,
+		.name = "eth_wake_irq",
 	},
 };
 

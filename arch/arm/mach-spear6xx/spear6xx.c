@@ -316,6 +316,7 @@ static struct resource eth_resources[] = {
 	[2] = {
 		.start = IRQ_GMAC_1,
 		.flags = IORESOURCE_IRQ,
+		.name = "eth_wake_irq",
 	},
 };
 
