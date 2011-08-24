@@ -85,6 +85,7 @@ struct stmmac_priv {
 	spinlock_t lock;
 	int wolopts;
 	int wolenabled;
+	int wol_irq;
 	int shutdown;
 #ifdef CONFIG_STMMAC_TIMER
 	struct stmmac_timer *tm;

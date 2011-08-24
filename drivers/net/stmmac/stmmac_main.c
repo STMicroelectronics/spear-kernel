@@ -1825,6 +1825,17 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 		goto out_clk_dis;
 	pr_debug("registered!\n");
 
+	/*
+	 * On some platforms wake up irq differs from the mac irq.
+	 * The wake up irq can be passed through the platform code
+	 * named as "eth_wake_irq"
+	 * In case the wake up interrupt is not passed from the plat
+	 * code, the driver continues to use the mac irq (ndev->irq)
+	 */
+	priv->wol_irq = platform_get_irq_byname(pdev, "eth_wake_irq");
+	if (priv->wol_irq == -ENXIO)
+		priv->wol_irq = ndev->irq;
+
 out_clk_dis:
 	if (priv->stmmac_clk)
 		clk_disable(priv->stmmac_clk);
