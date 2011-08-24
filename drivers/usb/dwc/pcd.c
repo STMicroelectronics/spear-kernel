@@ -394,6 +394,35 @@ static void dwc_otg_ep_deactivate(struct core_if *core_if, struct dwc_ep *ep)
 }
 
 /**
+ * This function disables EP as per dwc specification. It does only core
+ * related job. Must be called where ever specification says to disable,
+ * like during stall or disable itself
+ */
+static void dwc_otg_ep_disable(struct core_if *core_if, struct dwc_ep *ep)
+{
+	u32 regs, diepctl, diepint;
+
+	regs = core_if->dev_if->in_ep_regs[ep->num];
+
+	/* Disable endpoint */
+	diepctl = dwc_read32(regs + DWC_DIEPCTL);
+	diepctl = DWC_DEPCTL_SET_NAK_RW(diepctl, 1);
+	dwc_write32(regs + DWC_DIEPCTL, diepctl);
+	diepint = dwc_read32(regs + DWC_DIEPINT);
+	while (DWC_DIEPINT_IN_EP_NAK_RD(diepint) == 0)
+		diepint = dwc_read32(regs + DWC_DIEPINT);
+	diepctl = DWC_DEPCTL_EPDIS_RW(diepctl, 1);
+	dwc_write32(regs + DWC_DIEPCTL, diepctl);
+
+	/* Clear epdisabled , NAK effective*/
+	while (DWC_DIEPINT_EP_DISA_RD(diepint) == 0)
+		diepint = dwc_read32(regs + DWC_DIEPINT);
+	diepint = DWC_DIEPINT_EP_DISA_RW(diepint, 1);
+	diepint = DWC_DIEPINT_IN_EP_NAK_RW(diepint, 1);
+	dwc_write32(regs + DWC_DIEPINT, diepint);
+}
+
+/**
  * This function is called when an EP is disabled due to disconnect or
  * change in configuration. Any pending requests will terminate with a
  * status of -ESHUTDOWN.
@@ -406,6 +435,7 @@ static int dwc_otg_pcd_ep_disable(struct usb_ep *_ep)
 	struct pcd_ep *ep;
 	struct core_if *core_if;
 	unsigned long flags;
+	u32 regs, dtxfsts, diepctl, num, sz;
 
 	ep = container_of(_ep, struct pcd_ep, ep);
 	if (!_ep || !ep->desc)
@@ -421,6 +451,19 @@ static int dwc_otg_pcd_ep_disable(struct usb_ep *_ep)
 	ep->desc = NULL;
 	ep->stopped = 1;
 	if (ep->dwc_ep.is_in) {
+		dwc_otg_ep_disable(core_if, &ep->dwc_ep);
+		/* Flush associated TX Fifo */
+		regs = core_if->dev_if->in_ep_regs[ep->dwc_ep.num];
+		diepctl = dwc_read32(regs + DWC_DIEPCTL);
+		num = DWC_DEPCTL_TX_FIFO_NUM_RD(diepctl);
+		if (num == 0)
+			sz = core_if->core_params->dev_nperio_tx_fifo_size;
+		else
+			sz = core_if->core_params->dev_tx_fifo_size[num - 1];
+		do {
+			dwc_otg_flush_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
+			dtxfsts = dwc_read32(regs + DWC_DTXFSTS);
+		} while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(dtxfsts) != sz);
 		release_perio_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
 		release_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
 	}
@@ -920,11 +963,11 @@ void dwc_otg_ep_set_stall(struct core_if *core_if, struct dwc_ep *ep)
 		    (core_if->dev_if->in_ep_regs[ep->num]) + DWC_DIEPCTL;
 		depctl = dwc_read32(depctl_addr);
 
-		/* set the disable and stall bits */
-		if (DWC_DEPCTL_EPENA_RD(depctl))
-			depctl = DWC_DEPCTL_EPDIS_RW(depctl, 1);
+		/* set the stall bit */
 		depctl = DWC_DEPCTL_STALL_HNDSHK_RW(depctl, 1);
 		dwc_write32(depctl_addr, depctl);
+		if (DWC_DEPCTL_EPENA_RD(depctl))
+			dwc_otg_ep_disable(core_if, ep);
 	} else {
 		depctl_addr =
 		    (core_if->dev_if->out_ep_regs[ep->num] + DWC_DOEPCTL);
