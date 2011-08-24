@@ -170,6 +170,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	struct dwc_otg_device *dwc_dev;
 	struct device *dev = &ofdev->dev;
 	struct resource *res;
+	struct dwc_otg_plat_data *pdata;
 	ulong gusbcfg_addr;
 	u32 usbcfg = 0;
 
@@ -218,6 +219,14 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		goto fail_ioremap;
 	}
 	dev_dbg(dev, "mapped base=0x%08x\n", (__force u32)dwc_dev->base);
+
+	pdata = dev_get_platdata(dev);
+	if (pdata) {
+		if (pdata->phy_init)
+			pdata->phy_init();
+		if (pdata->param_init)
+			pdata->param_init(&dwc_otg_module_params);
+	}
 
 	/*
 	 * Initialize driver data to point to the global DWC_otg
