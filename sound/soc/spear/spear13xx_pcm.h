@@ -31,7 +31,6 @@ struct spear13xx_runtime_data {
 	struct spear13xx_pcm_dma_params *params;	/* DMA params */
 	int stream;
 	struct snd_pcm_substream *substream;
-	unsigned long pos;
 	dma_addr_t dma_addr;
 	unsigned long buffer_bytes;
 	unsigned long period_bytes;

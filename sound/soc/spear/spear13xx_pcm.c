@@ -62,7 +62,6 @@ static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	prtd->substream = substream;
-	prtd->pos = 0;
 	return 0;
 }
 
@@ -82,7 +81,6 @@ static int spear13xx_pcm_prepare(struct snd_pcm_substream *substream)
 	prtd->buffer_bytes = snd_pcm_lib_buffer_bytes(substream);
 	prtd->period_bytes = snd_pcm_lib_period_bytes(substream);
 
-	prtd->pos = 0;
 	prtd->buf_index = 0;
 	prtd->dmacount = 0;
 	prtd->xfer_len = prtd->period_bytes;
@@ -155,11 +153,9 @@ static void pcm_dma_xfer(struct spear13xx_runtime_data *prtd,
 
 		prtd->dmacount++;
 		prtd->buf_index++;
-		prtd->pos += prtd->xfer_len;
 
 		/* Set to zero, if crosses buffer size */
 		prtd->buf_index %= prtd->xfer_cnt;
-		prtd->pos %= prtd->buffer_bytes;
 
 		/* Inform framework that a transfer is finished */
 		if (from_callback)
@@ -230,7 +226,8 @@ spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
 
-	return bytes_to_frames(substream->runtime, prtd->pos);
+	return bytes_to_frames(substream->runtime, prtd->buf_index *
+			prtd->xfer_len);
 }
 
 static bool filter(struct dma_chan *chan, void *slave)
