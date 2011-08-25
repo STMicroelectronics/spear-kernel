@@ -29,7 +29,7 @@ static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;
 struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
-		 SNDRV_PCM_INFO_PAUSE),
+		 SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
 	.formats = (SNDRV_PCM_FMTBIT_S16_LE),
 	.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
 			SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 |
@@ -193,14 +193,21 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	int ret = 0;
 
 	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_RESUME:
+		spin_lock_irqsave(&prtd->lock, flags);
+		/* Go to last successfully transferred index + 1 */
+		prtd->buf_index += prtd->xfer_cnt - prtd->dmacount;
+		prtd->buf_index %= prtd->xfer_cnt;
+		prtd->dmacount = 0;
+		spin_unlock_irqrestore(&prtd->lock, flags);
 	case SNDRV_PCM_TRIGGER_START:
 		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->pcm_running = true;
-		prtd->buf_index = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		pcm_dma_xfer(prtd, false);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
 		prtd->pcm_running = false;
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			chan = prtd->dma_chan[0];
@@ -210,9 +217,7 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-	case SNDRV_PCM_TRIGGER_RESUME:
 		break;
 	default:
 		ret = -EINVAL;
