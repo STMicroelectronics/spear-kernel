@@ -282,6 +282,16 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		dwc_dev->common_irq_installed = 1;
 	}
 
+	gusbcfg_addr = (ulong) (dwc_dev->core_if->core_global_regs)
+		+ DWC_GUSBCFG;
+
+	if (dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+		usbcfg = dwc_read32(gusbcfg_addr);
+		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
+		usbcfg |= DWC_USBCFG_FRC_DEV_MODE;
+		dwc_write32(gusbcfg_addr, usbcfg);
+	}
+
 	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
 		/* Initialize the PCD */
 		retval = dwc_otg_pcd_init(dev);
@@ -292,14 +302,15 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		}
 	}
 
-	gusbcfg_addr = (ulong) (dwc_dev->core_if->core_global_regs)
-		+ DWC_GUSBCFG;
-	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+	if (dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
 		/* Initialize the HCD and force_host_mode */
 		usbcfg = dwc_read32(gusbcfg_addr);
 		usbcfg |= DWC_USBCFG_FRC_HST_MODE;
+		usbcfg &= ~DWC_USBCFG_FRC_DEV_MODE;
 		dwc_write32(gusbcfg_addr, usbcfg);
+	}
 
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
 		retval = dwc_otg_hcd_init(dev, dwc_dev);
 		if (retval) {
 			dev_err(dev, "dwc_otg_hcd_init failed\n");
@@ -331,11 +342,6 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	 * handlers are installed.
 	 */
 	dwc_otg_enable_global_interrupts(dwc_dev->core_if);
-
-	usbcfg = dwc_read32(gusbcfg_addr);
-	usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
-	dwc_write32(gusbcfg_addr, usbcfg);
-
 	return 0;
 fail_hcd:
 	free_irq(dwc_dev->irq, dwc_dev);
