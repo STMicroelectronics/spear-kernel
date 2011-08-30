@@ -1933,11 +1933,13 @@ struct dwc_otg_plat_data otg_platform_data = {
 	.param_init = spear1340_otg_param_init,
 };
 
+static u64 otg_dmamask = ~0;
 struct platform_device spear1340_otg_device = {
 	.name = "dwc_otg",
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.dma_mask = &otg_dmamask,
 		.platform_data = &otg_platform_data,
 	},
 	.num_resources = ARRAY_SIZE(otg_resources),
