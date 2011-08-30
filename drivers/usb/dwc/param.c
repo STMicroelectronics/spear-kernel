@@ -202,11 +202,14 @@ int __devinit check_parameters(struct core_if *core_if)
 	set_valid_perio_tx_fifo_sizes(core_if);
 	set_valid_tx_fifo_sizes(core_if);
 
-	dwc_otg_module_params.host_rx_fifo_size =
+	if (dwc_otg_module_params.host_rx_fifo_size == -1)
+		dwc_otg_module_params.host_rx_fifo_size =
 		dwc_read32(core_if->core_global_regs + DWC_GRXFSIZ);
-	dwc_otg_module_params.host_nperio_tx_fifo_size =
+	if (dwc_otg_module_params.host_nperio_tx_fifo_size == -1)
+		dwc_otg_module_params.host_nperio_tx_fifo_size =
 		dwc_read32(core_if->core_global_regs + DWC_GNPTXFSIZ) >> 16;
-	dwc_otg_module_params.host_perio_tx_fifo_size =
+	if (dwc_otg_module_params.host_perio_tx_fifo_size == -1)
+		dwc_otg_module_params.host_perio_tx_fifo_size =
 		dwc_read32(core_if->core_global_regs + DWC_HPTXFSIZ) >> 16;
 
 	return 0;
