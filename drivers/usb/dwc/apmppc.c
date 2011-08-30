@@ -311,6 +311,9 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	}
 
 	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+		/* update transiver state */
+		dwc_dev->core_if->xceiv->state = OTG_STATE_A_HOST;
+
 		retval = dwc_otg_hcd_init(dev, dwc_dev);
 		if (retval) {
 			dev_err(dev, "dwc_otg_hcd_init failed\n");
