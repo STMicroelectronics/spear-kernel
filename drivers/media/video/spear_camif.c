@@ -1047,7 +1047,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct resource *mem;
 	int line_irq, frm_start_end_irq;
-	struct camif_controller *plat;
 
 	/* must have platform data */
 	if (!pdev) {
@@ -1057,7 +1056,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	}
 
 	/* get the platform data */
-	plat = pdev->dev.platform_data;
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	line_irq = platform_get_irq_byname(pdev, "line_end_irq");
 	frm_start_end_irq = platform_get_irq_byname(pdev,
@@ -1104,6 +1102,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->clk = clk;
 	camif->frm_start_end_irq = frm_start_end_irq;
 	camif->line_irq = line_irq;
+	camif->pdata = pdev->dev.platform_data;
 
 	ret = request_irq(camif->line_irq, camif_line_int, 0,
 				"camif_line", camif);
@@ -1132,8 +1131,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	 */
 	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
 
-	camif->pdata = pdev->dev.platform_data;
-
 	/* dma related settings */
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
@@ -1141,7 +1138,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	switch (camif->pdata->config->channel) {
 	case EVEN_CHANNEL:
 		camif->chan = dma_request_channel(mask,
-			plat->dma_filter, plat->dma_even_param);
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
 		if (!camif->chan) {
 			dev_err(&pdev->dev,
 				"unable to get DMA channel for even lines\n");
@@ -1158,7 +1155,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "Interlaced fields are not supported"
 				"defaulting to even line settings\n");
 		camif->chan = dma_request_channel(mask,
-			plat->dma_filter, plat->dma_even_param);
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
 		if (!camif->chan) {
 			dev_err(&pdev->dev,
 				"unable to get DMA channel for even lines\n");
