@@ -43,10 +43,9 @@
 /* common dw_dma filter routine to be used by peripherals */
 bool dw_dma_filter(struct dma_chan *chan, void *slave)
 {
-	struct dw_dma *dw = to_dw_dma(chan->device);
 	struct dw_dma_slave *dws = (struct dw_dma_slave *)slave;
 
-	if (dws->dma_dev == dw->dma.dev) {
+	if (chan->device->dev == dws->dma_dev) {
 		chan->private = slave;
 		return true;
 	} else {
