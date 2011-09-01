@@ -902,8 +902,41 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 static void camif_init_videobuf(struct videobuf_queue *q,
 		struct soc_camera_device *icd)
 {
+	dma_cap_mask_t mask;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif *camif = ici->priv;
+
+	/* dma related settings */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+
+	switch (camif->pdata->config->channel) {
+	case EVEN_CHANNEL:
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->dev.parent,
+				"unable to get DMA channel for even lines\n");
+			return;
+		}
+		break;
+
+	case BOTH_ODD_EVEN_CHANNELS:
+		/*
+		 * not supported as of now, warn and return to default
+		 * 'even line' _only_ settings
+		 */
+		dev_warn(icd->dev.parent, "Interlaced fields are not supported"
+				"defaulting to even line settings\n");
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->dev.parent,
+				"unable to get DMA channel for even lines\n");
+			return;
+		}
+		break;
+	}
 
 	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
 			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -1031,7 +1064,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	int ret;
 	struct camif *camif;
 	void __iomem *addr;
-	dma_cap_mask_t mask;
 	struct clk *clk;
 	struct resource *mem;
 	int line_irq, frm_start_end_irq;
@@ -1119,40 +1151,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	 */
 	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
 
-	/* dma related settings */
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-
-	switch (camif->pdata->config->channel) {
-	case EVEN_CHANNEL:
-		camif->chan = dma_request_channel(mask,
-			camif->pdata->dma_filter, camif->pdata->dma_even_param);
-		if (!camif->chan) {
-			dev_err(&pdev->dev,
-				"unable to get DMA channel for even lines\n");
-			ret = -EINVAL;
-			goto exit_free_frm_start_end_irq;
-		}
-		break;
-
-	case BOTH_ODD_EVEN_CHANNELS:
-		/*
-		 * not supported as of now, warn and return to default
-		 * 'even line' _only_ settings
-		 */
-		dev_warn(&pdev->dev, "Interlaced fields are not supported"
-				"defaulting to even line settings\n");
-		camif->chan = dma_request_channel(mask,
-			camif->pdata->dma_filter, camif->pdata->dma_even_param);
-		if (!camif->chan) {
-			dev_err(&pdev->dev,
-				"unable to get DMA channel for even lines\n");
-			ret = -EINVAL;
-			goto exit_free_frm_start_end_irq;
-		}
-		break;
-	}
-
 	camif->ici.v4l2_dev.dev = &pdev->dev;
 	camif->ici.nr = pdev->id;
 	camif->ici.priv = camif;
@@ -1163,7 +1161,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev,
 			"failed to register camif as SoC camera host\n");
-		goto exit_dma_release;
+		goto exit_free_frm_start_end_irq;
 	}
 
 	/* reset status flags */
@@ -1181,8 +1179,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 
 	return 0;
 
-exit_dma_release:
-	dma_release_channel(camif->chan);
 exit_free_frm_start_end_irq:
 	free_irq(camif->frm_start_end_irq, camif);
 exit_free_line_irq:
