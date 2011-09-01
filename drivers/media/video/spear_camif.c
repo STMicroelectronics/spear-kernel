@@ -1093,7 +1093,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "no clock defined\n");
-		ret = -ENODEV;
+		ret = PTR_ERR(clk);
 		goto exit_iounmap;
 	}
 
