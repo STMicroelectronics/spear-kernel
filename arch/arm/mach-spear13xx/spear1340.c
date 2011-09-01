@@ -23,7 +23,6 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/i2s.h>
-#include <media/soc_camera.h>
 #include <mach/spear1340_misc_regs.h>
 
 /* pmx driver structure */
@@ -1330,6 +1329,17 @@ struct pmx_dev spear1340_pmx_sata = {
 /* Add spear1340 specific devices here */
 
 /* camera interface 0 device registeration */
+struct camif_config_data cam0_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif0_dma_param[] = {
 	{
 		/* odd line */
@@ -1364,6 +1374,7 @@ static struct camif_controller camif0_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif0_dma_param[0],
 	.dma_even_param = &camif0_dma_param[1],
+	.config = &cam0_data,
 };
 
 static struct resource camif0_resources[] = {
@@ -1394,6 +1405,17 @@ struct platform_device spear1340_camif0_device = {
 };
 
 /* camera interface 1 device registeration */
+struct camif_config_data cam1_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif1_dma_param[] = {
 	{
 		/* odd line */
@@ -1428,6 +1450,7 @@ static struct camif_controller camif1_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif1_dma_param[0],
 	.dma_even_param = &camif1_dma_param[1],
+	.config = &cam1_data,
 };
 
 static struct resource camif1_resources[] = {
@@ -1458,6 +1481,17 @@ struct platform_device spear1340_camif1_device = {
 };
 
 /* camera interface 2 device registeration */
+struct camif_config_data cam2_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif2_dma_param[] = {
 	{
 		/* odd line */
@@ -1492,6 +1526,7 @@ static struct camif_controller camif2_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif2_dma_param[0],
 	.dma_even_param = &camif2_dma_param[1],
+	.config = &cam2_data,
 };
 
 static struct resource camif2_resources[] = {
@@ -1522,6 +1557,17 @@ struct platform_device spear1340_camif2_device = {
 };
 
 /* camera interface 3 device registeration */
+struct camif_config_data cam3_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif3_dma_param[] = {
 	{
 		/* odd line */
@@ -1556,6 +1602,7 @@ static struct camif_controller camif3_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif3_dma_param[0],
 	.dma_even_param = &camif3_dma_param[1],
+	.config = &cam3_data,
 };
 
 static struct resource camif3_resources[] = {
@@ -1583,28 +1630,6 @@ struct platform_device spear1340_camif3_device = {
 	},
 	.num_resources = ARRAY_SIZE(camif3_resources),
 	.resource = camif3_resources,
-};
-
-/* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info[] = {
-	{
-		I2C_BOARD_INFO("vs6725", 0x10),
-	},
-};
-
-static struct soc_camera_link __initdata vs6725_cam_sensor_iclink = {
-	.bus_id = 0,	/* SPEAr SoC camera bus */
-	.i2c_adapter_id = 0,
-	.board_info = &vs6725_camera_sensor_info[0],
-	.module_name = "vs6725",
-};
-
-struct platform_device spear1340_cam_sensor0_device = {
-	.name = "soc-camera-pdrv",
-	.id = 0,
-	.dev = {
-		.platform_data = &vs6725_cam_sensor_iclink,
-	},
 };
 
 /* uart device registeration */

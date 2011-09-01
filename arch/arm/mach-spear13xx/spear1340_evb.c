@@ -25,7 +25,6 @@
 #include <linux/stmmac.h>
 #include <linux/stmpe610.h>
 #include <plat/adc.h>
-#include <plat/camif.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
@@ -36,6 +35,7 @@
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
+#include <media/soc_camera.h>
 
 #if 0
 /* fsmc nor partition info */
@@ -134,6 +134,28 @@ struct pmx_dev spear1340_pmx_plgpios = {
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
 };
 
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info[] = {
+	{
+		I2C_BOARD_INFO("vs6725", 0x10),
+	},
+};
+
+static struct soc_camera_link vs6725_cam_sensor_iclink = {
+	.bus_id = 3,	/* sensor is connected to cam3 */
+	.i2c_adapter_id = 0,
+	.board_info = &vs6725_camera_sensor_info[0],
+	.module_name = "vs6725",
+};
+
+struct platform_device spear1340_cam_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = 0,
+	.dev = {
+		.platform_data = &vs6725_cam_sensor_iclink,
+	},
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/*
@@ -151,10 +173,10 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_ssp0_cs1,
 	&spear1340_pmx_pwm2,
 	&spear1340_pmx_pwm3,
+	&spear1340_pmx_video_in_mux_cam0,
 	&spear1340_pmx_video_in_mux_cam1,
 	&spear1340_pmx_video_in_mux_cam2,
-	&spear1340_pmx_video_in_mux_cam3,
-	&spear1340_pmx_cam0,
+	&spear1340_pmx_cam3,
 	&spear1340_pmx_smi,
 	&spear1340_pmx_ssp0,
 	&spear1340_pmx_ssp0_cs2,
@@ -213,11 +235,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
-	&spear1340_camif0_device,
-	&spear1340_camif1_device,
-	&spear1340_camif2_device,
 	&spear1340_camif3_device,
-	&spear1340_cam_sensor0_device,
+	&spear1340_cam_sensor_device,
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
@@ -242,51 +261,6 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_6x6,
-};
-
-/* camif specific platform data */
-struct camif_config_data cam0_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct camif_config_data cam1_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct camif_config_data cam2_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct camif_config_data cam3_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
 };
 
 /* Initializing platform data for spear1340 evb specific I2C devices */
@@ -456,12 +430,6 @@ static void __init spear1340_evb_init(void)
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
 #endif
-
-	/* set camif plat data */
-	camif_set_plat_data(&spear1340_camif0_device, &cam0_data);
-	camif_set_plat_data(&spear1340_camif0_device, &cam1_data);
-	camif_set_plat_data(&spear1340_camif0_device, &cam2_data);
-	camif_set_plat_data(&spear1340_camif0_device, &cam3_data);
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
 	/* Enable PCIE0 clk */

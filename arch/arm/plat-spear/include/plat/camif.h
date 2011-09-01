@@ -122,10 +122,4 @@ struct camif_controller {
 	struct camif_config_data *config;
 };
 
-static inline void camif_set_plat_data(struct platform_device *pdev,
-		struct camif_config_data *pdata)
-{
-	pdev->dev.platform_data = pdata;
-}
-
 #endif /* __PLAT_CAMIF_H */
