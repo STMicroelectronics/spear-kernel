@@ -1188,8 +1188,8 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&camif->capture);
 	spin_lock_init(&camif->lock);
 
-	dev_info(&pdev->dev, "%s registered (base addr=%p, "
-			"lineIRQ=%d, vsyncIRQ=%d\n",
+	dev_info(&pdev->dev, "%s registered, (base-addr=%p, "
+			"lineIRQ=%d, vsyncIRQ=%d)\n",
 			KBUILD_MODNAME, camif->base, camif->line_irq,
 			camif->frm_start_end_irq);
 
