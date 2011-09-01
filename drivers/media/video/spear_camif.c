@@ -742,46 +742,30 @@ static void camif_put_formats(struct soc_camera_device *icd)
 }
 
 /*
- * while performing cropping operation we must check for the cropping
- * bounds. For the same, we need to consider whether cropping can be
- * performed for the user defined cropping params (specified by 'crop'
- * param) and the image rectangle details received from the sensor
- * (specified by 'mbus_framefmt')
- *
- *	mf.width
- *	+-------------------------------+
- *	m|	(rect->left, rect->top)	|
- *	f|	 |			|
- *	.|	 +--------------+	|
- *	h|	r|		|	|
- *	e|	e|		|	|
- *	i|	c|		|	|
- *	g|	t| IMAGE	|	|
- *	h|	|| DATA		|	|
- *	t|	V|		|	|
- *	 |	h|		|	|
- *	 |	e|		|	|
- *	 |	i|		|	|
- *	 |	g|		|	|
- *	 |	h|		|	|
- *	 |	t|		|	|
- *	 |	 +--------------+	|
- *	 |	 rect->width		|
- *	+-------------------------------+
+ * CAMIF can perform cropping, but we don't want to waste bandwidth
+ * and kill the framerate by always requesting the maximum image
+ * from the sub-device (client/sensor). So, first we request exaclty the
+ * user rectangle from the sensor. The sensor will try to preserve its
+ * output frame as far as possible, but it could have changed, so we
+ * retreive it again. After that we invoke the crop functionality of
+ * CAMIF, to ensure that we have a final rectangle which is as close as
+ * possible to what has been requested by the user.
  */
 static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
-
+	int ret;
 	struct v4l2_rect *rect = &crop->c;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif *camif = ici->priv;
 	struct device *dev = icd->dev.parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct v4l2_format f;
 	struct v4l2_mbus_framefmt mf;
-	struct v4l2_pix_format *pix = &f.fmt.pix;
-	int ret;
 
+	/*
+	 * check if the sub-device supports cropping with the
+	 * user-defined cropping params. On success crop contains
+	 * current camera crop.
+	 */
 	ret = v4l2_subdev_call(sd, video, s_crop, crop);
 	if (ret < 0) {
 		dev_warn(dev, "failed to crop to %ux%u@%u:%u\n",
@@ -789,24 +773,21 @@ static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 		return ret;
 	}
 
+	/* retrieve camera output window */
 	ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
 	if (ret < 0) {
-		dev_warn(dev, "%s: failed to fetch current format\n", __func__);
+		dev_warn(dev, "failed to fetch current format\n");
 		return ret;
 	}
 
-	if (rect->width > mf.width || rect->height > mf.height) {
-		dev_warn(dev, "No cropping is desired\n");
-		return -1;
-	}
-
-	if (((rect->left + rect->width) > pix->width)
-		|| ((rect->top + rect->height) > pix->height)) {
-		dev_warn(dev, "Cropping cannot be done\n");
-		return -1;
+	/* check for extreme boundary size (> 1920 * 2560) */
+	if (mf.width > 2560 || mf.height > 1920) {
+		dev_warn(dev, "cam-output window exceeds the max boundary\n");
+		return -EINVAL;
 	}
 
 	/*
+	 * use CAMIF cropping to crop to the new window:
 	 * program the crop start and stop registers to ensure correct cropping
 	 * coordinates
 	 */
