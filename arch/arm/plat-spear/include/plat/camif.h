@@ -108,7 +108,7 @@ struct spear_camif_plat_data {
 };
 
 /**
- * struct caimf_controller - device.platform_data for camif controller devices.
+ * struct camif_controller - device.platform_data for camif controller devices.
  * @enable_dma: if true enables DMA driven transfers.
  * @dma_even_param: parameter to locate an DMA channel for even lines.
  * @dma_odd_param: parameter to locate a DMA channel for odd lines.
