@@ -333,8 +333,11 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 				camif->chan,
 				dma->sglist, dma->sglen, direction,
 				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-	if (!buf->desc)
+	if (!buf->desc) {
+		dev_err(camif->ici.v4l2_dev.dev,
+				"%s: buf->desc is NULL\n", __func__);
 		return -ENOMEM;
+	}
 
 	buf->desc->callback = camif_rx_dma_complete;
 	buf->desc->callback_param = camif;
