@@ -133,6 +133,25 @@ enum dw_dmac_flags {
 	DW_DMA_IS_CYCLIC = 0,
 };
 
+struct dw_dma_chan {
+	struct dma_chan		chan;
+	void __iomem		*ch_regs;
+	u8			mask;
+	u8			priority;
+	bool			paused;
+
+	spinlock_t		lock;
+
+	/* these other elements are all protected by lock */
+	unsigned long		flags;
+	dma_cookie_t		completed;
+	struct list_head	active_list;
+	struct list_head	queue;
+	struct list_head	free_list;
+	struct dw_cyclic_desc	*cdesc;
+
+	unsigned int		descs_allocated;
+};
 
 static inline struct dw_dma_chan_regs __iomem *
 __dwc_regs(struct dw_dma_chan *dwc)
@@ -150,6 +169,22 @@ static inline struct dw_dma_chan *to_dw_dma_chan(struct dma_chan *chan)
 	return container_of(chan, struct dw_dma_chan, chan);
 }
 
+struct dw_dma {
+	struct dma_device	dma;
+	void __iomem		*regs;
+	struct tasklet_struct	tasklet;
+	struct clk		*clk;
+
+	u8			all_chan_mask;
+
+	struct dw_dma_chan	chan[0];
+};
+
+static inline struct dw_dma_regs __iomem *__dw_regs(struct dw_dma *dw)
+{
+	return dw->regs;
+}
+
 #define dma_readl(dw, name) \
 	readl(&(__dw_regs(dw)->name))
 #define dma_writel(dw, name, val) \
@@ -159,6 +194,11 @@ static inline struct dw_dma_chan *to_dw_dma_chan(struct dma_chan *chan)
 	dma_writel(dw, reg, ((mask) << 8) | (mask))
 #define channel_clear_bit(dw, reg, mask) \
 	dma_writel(dw, reg, ((mask) << 8) | 0)
+
+static inline struct dw_dma *to_dw_dma(struct dma_device *ddev)
+{
+	return container_of(ddev, struct dw_dma, dma);
+}
 
 /* LLI == Linked List Item; a.k.a. DMA block descriptor */
 struct dw_lli {
