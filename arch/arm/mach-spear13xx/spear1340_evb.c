@@ -245,7 +245,7 @@ static struct kbd_platform_data kbd_data = {
 };
 
 /* camif specific platform data */
-struct spear_camif_plat_data cam0_data = {
+struct camif_config_data cam0_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -256,7 +256,7 @@ struct spear_camif_plat_data cam0_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct spear_camif_plat_data cam1_data = {
+struct camif_config_data cam1_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -267,7 +267,7 @@ struct spear_camif_plat_data cam1_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct spear_camif_plat_data cam2_data = {
+struct camif_config_data cam2_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -278,7 +278,7 @@ struct spear_camif_plat_data cam2_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct spear_camif_plat_data cam3_data = {
+struct camif_config_data cam3_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,

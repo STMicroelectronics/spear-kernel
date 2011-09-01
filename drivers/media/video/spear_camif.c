@@ -173,8 +173,8 @@ struct camif {
 	bool frame_start;
 	bool first_entry;
 
-	/* platform data */
-	struct spear_camif_plat_data *pdata;
+	/* camif controller data specific to a platform */
+	struct camif_controller *pdata;
 };
 
 /*
@@ -221,21 +221,21 @@ static void start_camif(struct camif *camif)
 	bool emb_synchro = 0;
 	bool eav_sel = 0;
 
-	if (camif->pdata->sync_type == EMBEDDED_SYNC) {
+	if (camif->pdata->config->sync_type == EMBEDDED_SYNC) {
 		emb_synchro = 1;
 		eav_sel = 1;
 		writel(ITU656_EMBED_EVEN_CODE, camif->base + CAMIF_EFEC);
 		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
 	}
 
-	ctrl = (camif->pdata->burst_size << 19) |
+	ctrl = (camif->pdata->config->burst_size << 19) |
 		(eav_sel << 16) | (emb_synchro << 12) |
-		(camif->pdata->transform << 8) |
-		(camif->pdata->vsync_polarity << 7) |
-		(camif->pdata->hsync_polarity << 6) |
-		(camif->pdata->pclk_polarity << 5) |
-		(camif->pdata->sync_type << 4) |
-		camif->pdata->capture_mode;
+		(camif->pdata->config->transform << 8) |
+		(camif->pdata->config->vsync_polarity << 7) |
+		(camif->pdata->config->hsync_polarity << 6) |
+		(camif->pdata->config->pclk_polarity << 5) |
+		(camif->pdata->config->sync_type << 4) |
+		camif->pdata->config->capture_mode;
 
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
@@ -1137,7 +1137,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
-	switch (camif->pdata->channel) {
+	switch (camif->pdata->config->channel) {
 	case EVEN_CHANNEL:
 		camif->chan = dma_request_channel(mask,
 			plat->dma_filter, plat->dma_even_param);
