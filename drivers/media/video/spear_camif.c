@@ -1266,4 +1266,5 @@ module_exit(camif_exit);
 
 MODULE_AUTHOR("Bhupesh Sharma <bhupesh.sharma@st.com>");
 MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("platform:spear_camif");
 MODULE_DESCRIPTION("SoC Camera Driver for SPEAr CAMIF");
