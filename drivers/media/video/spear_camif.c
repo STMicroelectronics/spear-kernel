@@ -1047,7 +1047,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct resource *mem;
 	int line_irq, frm_start_end_irq;
-	struct camif_controller *plat = pdev->dev.platform_data;
+	struct camif_controller *plat;
 
 	/* must have platform data */
 	if (!pdev) {
@@ -1057,6 +1057,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	}
 
 	/* get the platform data */
+	plat = pdev->dev.platform_data;
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	line_irq = platform_get_irq_byname(pdev, "line_end_irq");
 	frm_start_end_irq = platform_get_irq_byname(pdev,
