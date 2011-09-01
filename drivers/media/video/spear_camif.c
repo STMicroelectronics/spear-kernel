@@ -396,17 +396,19 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		 * we should receive a frame-end interrupt only after we have
 		 * received the frame start interrupt first. Check for the same.
 		 */
-		if (!camif->frame_start)
-			return IRQ_HANDLED;
-		else
-			camif->frame_start = 0;
-
 		spin_lock_irqsave(&camif->lock, flags);
+		if (!camif->frame_start) {
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto exit_isr;
+		}
+
+		camif->frame_start = 0;
+
 		/* check if the previous dma is complete */
 		if (!camif->first_entry) {
 			if (!camif->dma_complete) {
 				spin_unlock_irqrestore(&camif->lock, flags);
-				return IRQ_HANDLED;
+				goto exit_isr;
 			}
 		}
 
@@ -420,7 +422,8 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 				dev_err(camif->ici.v4l2_dev.dev,
 					"dma submit error %d\n",
 					camif->cookie);
-				return -EAGAIN;
+				spin_unlock_irqrestore(&camif->lock, flags);
+				goto exit_isr;
 			}
 
 			camif->chan->device->device_issue_pending(camif->chan);
@@ -433,6 +436,7 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
+exit_isr:
 	return IRQ_HANDLED;
 }
 
