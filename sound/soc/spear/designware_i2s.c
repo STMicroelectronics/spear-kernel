@@ -122,7 +122,7 @@ i2s_config_channel(struct dw_i2s_dev *dev, u32 ch, u32 stream, u32 cr)
 		i2s_write_reg(dev->i2s_base, TER(ch), 1);
 	} else {
 		i2s_write_reg(dev->i2s_base, RCR(ch), cr);
-		i2s_write_reg(dev->i2s_base, RFCR(ch), 0x02);
+		i2s_write_reg(dev->i2s_base, RFCR(ch), 0x07);
 		irq = i2s_read_reg(dev->i2s_base, IMR(ch));
 		i2s_write_reg(dev->i2s_base, IMR(ch), irq & ~0x03);
 		i2s_write_reg(dev->i2s_base, RER(ch), 1);
