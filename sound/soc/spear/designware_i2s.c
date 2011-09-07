@@ -130,7 +130,7 @@ i2s_config_channel(struct dw_i2s_dev *dev, u32 ch, u32 stream, u32 cr)
 }
 
 static inline void
-i2s_clear_irqs(struct dw_i2s_dev *dev, u32 stream)
+i2s_disable_channels(struct dw_i2s_dev *dev, u32 stream)
 {
 	u32 i = 0;
 
@@ -143,10 +143,24 @@ i2s_clear_irqs(struct dw_i2s_dev *dev, u32 stream)
 	}
 }
 
+static inline void
+i2s_clear_irqs(struct dw_i2s_dev *dev, u32 stream)
+{
+	u32 i = 0;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		for (i = 0; i < 4; i++)
+			i2s_write_reg(dev->i2s_base, TOR(i), 0);
+	} else {
+		for (i = 0; i < 4; i++)
+			i2s_write_reg(dev->i2s_base, ROR(i), 0);
+	}
+}
+
 void i2s_start(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
 	i2s_write_reg(dev->i2s_base, IER, 1);
-	i2s_clear_irqs(dev, substream->stream);
+	i2s_disable_channels(dev, substream->stream);
 
 	switch (dev->max_channel) {
 	case EIGHT_CHANNEL_SUPPORT:
