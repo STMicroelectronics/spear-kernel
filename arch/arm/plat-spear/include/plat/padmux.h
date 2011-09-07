@@ -98,5 +98,6 @@ struct pmx_driver {
 
 /* pmx functions */
 int pmx_register(struct pmx_driver *driver);
+int pmx_devs_enable(struct pmx_dev **devs, u8 count);
 
 #endif /* __PLAT_PADMUX_H */
