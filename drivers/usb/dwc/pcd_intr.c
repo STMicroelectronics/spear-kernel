@@ -663,8 +663,9 @@ static int dwc_otg_pcd_handle_usb_reset_intr(struct dwc_pcd *pcd)
 	for (i = 0; i <= dev_if->num_out_eps; i++)
 		dwc_write32(out_ep_ctl_reg(pcd, i), doepctl);
 
-	/* Flush the NP Tx FIFO */
+	/* Flush the FIFO */
 	dwc_otg_flush_tx_fifo(core_if, 0);
+	dwc_otg_flush_rx_fifo(core_if);
 
 	/* Flush the Learning Queue */
 	resetctl |= DWC_RSTCTL_TKN_QUE_FLUSH;
