@@ -774,7 +774,6 @@ extern void dwc_otg_core_dev_init(struct core_if *core_if);
 extern const char *op_state_str(enum usb_otg_state state);
 extern void dwc_otg_enable_global_interrupts(struct core_if *core_if);
 extern void dwc_otg_disable_global_interrupts(struct core_if *core_if);
-extern void dwc_otg_enable_common_interrupts(struct core_if *core_if);
 
 /**
  * This function Reads HPRT0 in preparation to modify.  It keeps the WC bits 0

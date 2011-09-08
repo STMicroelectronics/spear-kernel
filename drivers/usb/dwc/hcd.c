@@ -71,14 +71,8 @@ static void dwc_otg_enable_host_interrupts(struct core_if *core_if)
 	ulong global_regs = core_if->core_global_regs;
 	u32 intr_mask = 0;
 
-	/* Disable all interrupts. */
-	dwc_write32(global_regs + DWC_GINTMSK, 0);
-
 	/* Clear any pending interrupts. */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
-
-	/* Enable the common interrupts */
-	dwc_otg_enable_common_interrupts(core_if);
 
 	/*
 	 * Enable host mode interrupts without disturbing common

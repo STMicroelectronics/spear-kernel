@@ -265,13 +265,16 @@ static void dwc_otg_core_reset(struct core_if *core_if)
  * This function initializes the commmon interrupts, used in both
  * device and host modes.
  */
-void dwc_otg_enable_common_interrupts(struct core_if *core_if)
+static void dwc_otg_enable_common_interrupts(struct core_if *core_if)
 {
 	ulong global_regs = core_if->core_global_regs;
 	u32 intr_mask = 0;
 
 	/* Clear any pending OTG Interrupts */
 	dwc_write32(global_regs + DWC_GOTGINT, 0xFFFFFFFF);
+
+	/* Disable all interrupts. */
+	dwc_write32(global_regs + DWC_GINTMSK, 0);
 
 	/* Clear any pending interrupts */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
@@ -537,14 +540,8 @@ static void dwc_otg_enable_device_interrupts(struct core_if *core_if)
 	u32 msk = 0;
 	ulong global_regs = core_if->core_global_regs;
 
-	/* Disable all interrupts. */
-	dwc_write32(global_regs + DWC_GINTMSK, 0);
-
 	/* Clear any pending interrupts */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
-
-	/* Enable the common interrupts */
-	dwc_otg_enable_common_interrupts(core_if);
 
 	/* Enable interrupts */
 	intr_mask |= DWC_INTMSK_USB_RST;
