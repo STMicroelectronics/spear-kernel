@@ -983,6 +983,7 @@ void dwc_otg_ep_set_stall(struct core_if *core_if, struct dwc_ep *ep)
 		dwc_write32(depctl_addr, depctl);
 		if (DWC_DEPCTL_EPENA_RD(depctl))
 			dwc_otg_ep_disable(core_if, ep);
+		dwc_otg_flush_tx_fifo_complete(core_if, ep);
 	} else {
 		depctl_addr =
 		    (core_if->dev_if->out_ep_regs[ep->num] + DWC_DOEPCTL);
