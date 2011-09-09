@@ -131,6 +131,8 @@ extern void dwc_otg_pcd_stop(struct dwc_pcd *pcd);
 extern void request_nuke(struct pcd_ep *ep);
 extern void dwc_otg_pcd_update_otg(struct dwc_pcd *pcd, const unsigned reset);
 extern void dwc_otg_ep0_start_transfer(struct core_if *_if, struct dwc_ep *ep);
+extern void dwc_otg_flush_tx_fifo_complete(struct core_if *core_if,
+		struct dwc_ep *ep);
 
 extern void request_done(struct pcd_ep *ep, struct pcd_request *req,
 			 int _status);
