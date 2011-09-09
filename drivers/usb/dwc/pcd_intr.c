@@ -1790,7 +1790,7 @@ static void handle_in_ep_disable_intr(struct dwc_pcd *pcd, const u32 ep_num)
 
 	if (ep->stopped) {
 		/* Flush the Tx FIFO */
-		dwc_otg_flush_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+		dwc_otg_flush_tx_fifo_complete(core_if, dwc_ep);
 
 		/* Clear the Global IN NP NAK */
 		dctl = 0;
