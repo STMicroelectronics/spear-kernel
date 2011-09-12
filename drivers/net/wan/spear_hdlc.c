@@ -1131,18 +1131,6 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 		goto free_mem;
 	}
 
-	ret = clk_set_rate(clk, 250000000);	/* for 250 MHz */
-	if (ret < 0) {
-		pr_err("Failed to set proper clk rate\n");
-		goto free_clk;
-	}
-
-	ret = clk_enable(clk);
-	if (ret < 0) {
-		pr_err("Failed to enable TDM clk\n");
-		goto free_clk;
-	}
-
 	port->clk		= clk;
 	port->pdev		= pdev;
 	port->has_tsa		= 1;
@@ -1157,6 +1145,12 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 	switch (plat_data->ip_type) {
 	case SPEAR1310_REVA_TDM_HDLC:
 	case SPEAR1310_TDM_HDLC:
+		ret = clk_set_rate(clk, 250000000);	/* for 250 MHz */
+		if (ret) {
+			pr_err("Failed to set proper clk rate\n");
+			goto free_clk;
+		}
+
 		port->max_timeslot	= 512;
 		port->hdlc_int_type_bit = SPEAR1310_HDLC_INT_TYPE_BIT;
 		port->hdlc_int_chan_shift = SPEAR1310_HDLC_INT_CHAN_SHIFT;
@@ -1181,7 +1175,13 @@ static int tdm_hdlc_drv_probe(struct platform_device *pdev)
 		port->tsa_val_shift	= SPEAR310_HDLC_TSA_VAL_SHIFT;
 		break;
 	default:
-		return -EINVAL;
+		goto free_clk;
+	}
+
+	ret = clk_enable(clk);
+	if (ret) {
+		pr_err("Failed to enable TDM clk\n");
+		goto free_clk;
 	}
 
 	/* call command probe */
