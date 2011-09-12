@@ -671,6 +671,13 @@ static struct clk kbd_clk = {
 
 /* spear310 machine specific clock structures */
 #ifdef CONFIG_CPU_SPEAR310
+/* tdm clock */
+static struct clk spear310_tdm_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
 /* uart1 clock */
 static struct clk spear310_uart1_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -836,6 +843,7 @@ static struct clk_lookup spear310_clk_lookups[] = {
 #ifdef CONFIG_CPU_SPEAR310
 	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
+	{ .con_id = "tdm_hdlc",		.clk = &spear310_tdm_clk},
 	{ .dev_id = "uart1",		.clk = &spear310_uart1_clk},
 	{ .dev_id = "uart2",		.clk = &spear310_uart2_clk},
 	{ .dev_id = "uart3",		.clk = &spear310_uart3_clk},
