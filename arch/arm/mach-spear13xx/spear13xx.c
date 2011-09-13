@@ -91,6 +91,7 @@ struct amba_device spear13xx_gpio_device[] = {
 };
 
 /* ssp device registeration */
+#if 0
 #define SSP_DR(base)		(base + 0x008)
 struct dw_dma_slave ssp_dma_param[] = {
 	{
@@ -119,13 +120,16 @@ struct dw_dma_slave ssp_dma_param[] = {
 		.fc = DW_DMA_FC_D_P2M,
 	}
 };
+#endif
 
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
-	.enable_dma = 1,
+	.enable_dma = 0,
+#if 0
 	.dma_filter = dw_dma_filter,
 	.dma_rx_param = &ssp_dma_param[1],
 	.dma_tx_param = &ssp_dma_param[0],
+#endif
 	/*
 	 * Following is the number of chip selects from spi controller
 	 * to which spi devices can be connected.
