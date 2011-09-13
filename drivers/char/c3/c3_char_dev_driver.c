@@ -211,6 +211,10 @@ static unsigned int _c3_user2kernel(c3_buffer_t *buffer,
 {
 	int copy = 0;
 
+	if (!buffer->size) {
+		printk(C3_KERN_ERR "ZERO LEN DATA/KEY NOT SUPPORTED\n");
+		return C3_SKIP;
+	}
 #ifdef DEBUG
 	printk(C3_KERN_DEBUG "[CDD] User ->Kernel process\n");
 
