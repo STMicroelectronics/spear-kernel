@@ -184,6 +184,21 @@
 	} while (0)
 
 #endif
+#define C3_UNMAP_ALL() do {						\
+	struct list_head *pos, *l, *q;					\
+	struct c3_dma_t *tmp;						\
+	l = &((program->c3_dma_list).list);				\
+	if (!list_empty(l)) {						\
+		list_for_each_safe(pos, q, l) {				\
+			tmp = list_entry(pos, struct c3_dma_t, list);	\
+			dma_unmap_single(NULL, tmp->dma_addr, tmp->size \
+					, tmp->direction);		\
+			list_del(pos);					\
+			kfree(tmp);					\
+									\
+		}							\
+	}								\
+} while (0)
 
 /* ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
 /* ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
@@ -192,6 +207,11 @@
  * Also add it to a linked list of mapped buffers for the current request */
 #define C3_PREPARE_DMA(dma_c3_t, addr_cpu, len, dir)			\
 	do {								\
+		if ((addr_cpu) == NULL) {				\
+			C3_UNMAP_ALL();					\
+			return C3_ERR;					\
+		}							\
+									\
 		dma_c3_t = kmalloc(sizeof(struct c3_dma_t), GFP_ATOMIC);\
 		if (!dma_c3_t) {					\
 			C3_ERROR("Cannot alloc mem");			\
