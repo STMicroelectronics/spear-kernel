@@ -124,8 +124,8 @@ static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
 	.enable_dma = 1,
 	.dma_filter = dw_dma_filter,
-	.dma_rx_param = &ssp_dma_param[0],
-	.dma_tx_param = &ssp_dma_param[1],
+	.dma_rx_param = &ssp_dma_param[1],
+	.dma_tx_param = &ssp_dma_param[0],
 	/*
 	 * Following is the number of chip selects from spi controller
 	 * to which spi devices can be connected.
