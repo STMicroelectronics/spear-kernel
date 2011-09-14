@@ -22,6 +22,7 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 {
 	struct adc_plat_data data = {
 		/* default configuration */
+		.slave = {0, },
 		.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500,
 			INTERNAL_SCAN,
 #ifndef CONFIG_ARCH_SPEAR6XX
