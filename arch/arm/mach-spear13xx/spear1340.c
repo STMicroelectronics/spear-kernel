@@ -1327,7 +1327,57 @@ struct pmx_dev spear1340_pmx_sata = {
 };
 
 /* Add spear1340 specific devices here */
+/* Add Amba Devices */
+/* uart device registeration */
+static struct dw_dma_slave uart1_dma_param[] = {
+	{
+		/* Tx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_UART1_TX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR1340_DMA_MASTER_UART1,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Rx */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
+		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_UART1_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_UART1,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_8,
+		.dst_msize = DW_DMA_MSIZE_8,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
 
+static struct amba_pl011_data uart1_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_tx_param = &uart1_dma_param[0],
+	.dma_rx_param = &uart1_dma_param[1],
+};
+
+/* uart1 device registeration */
+struct amba_device spear1340_uart1_device = {
+	.dev = {
+		.init_name = "uart1",
+		.platform_data = &uart1_data,
+	},
+	.res = {
+		.start = SPEAR1340_UART1_BASE,
+		.end = SPEAR1340_UART1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR1340_IRQ_UART1, NO_IRQ},
+};
+
+/* Add Platform Devices */
 /* camera interface 0 device registeration */
 static struct camif_config_data cam0_data = {
 	.sync_type = EXTERNAL_SYNC,
@@ -1630,55 +1680,6 @@ struct platform_device spear1340_camif3_device = {
 	},
 	.num_resources = ARRAY_SIZE(camif3_resources),
 	.resource = camif3_resources,
-};
-
-/* uart device registeration */
-static struct dw_dma_slave uart1_dma_param[] = {
-	{
-		/* Tx */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
-		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_UART1_TX),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.dst_master = SPEAR1340_DMA_MASTER_UART1,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_M2P,
-	}, {
-		/* Rx */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_UART1_RX),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_UART1,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_P2M,
-	}
-};
-
-static struct amba_pl011_data uart1_data = {
-	.dma_filter = dw_dma_filter,
-	.dma_tx_param = &uart1_dma_param[0],
-	.dma_rx_param = &uart1_dma_param[1],
-};
-
-/* uart1 device registeration */
-struct amba_device spear1340_uart1_device = {
-	.dev = {
-		.init_name = "uart1",
-		.platform_data = &uart1_data,
-	},
-	.res = {
-		.start = SPEAR1340_UART1_BASE,
-		.end = SPEAR1340_UART1_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	.irq = {SPEAR1340_IRQ_UART1, NO_IRQ},
 };
 
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {

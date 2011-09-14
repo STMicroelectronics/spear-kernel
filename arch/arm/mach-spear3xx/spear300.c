@@ -733,24 +733,6 @@ static struct pl08x_channel_data pl080_slave_channels[] = {
 	},
 };
 
-/* touchscreen device registration */
-static struct spear_touchscreen touchscreen_info = {
-	.adc_channel_x = ADC_CHANNEL5,
-	.adc_channel_y = ADC_CHANNEL6,
-	.gpio_pin = RAS_GPIO_7,
-};
-
-struct platform_device spear300_touchscreen_device = {
-	.name = "spear-ts",
-	.id = -1,
-	.dev = {
-		.platform_data = &touchscreen_info,
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = 0,
-	.resource = NULL,
-};
-
 /* arm gpio1 device registration */
 static struct pl061_platform_data gpio1_plat_data = {
 	.gpio_base	= 8,
@@ -906,6 +888,24 @@ struct platform_device spear300_sdhci_device = {
 	.id = -1,
 	.num_resources = ARRAY_SIZE(sdhci_resources),
 	.resource = sdhci_resources,
+};
+
+/* touchscreen device registration */
+static struct spear_touchscreen touchscreen_info = {
+	.adc_channel_x = ADC_CHANNEL5,
+	.adc_channel_y = ADC_CHANNEL6,
+	.gpio_pin = RAS_GPIO_7,
+};
+
+struct platform_device spear300_touchscreen_device = {
+	.name = "spear-ts",
+	.id = -1,
+	.dev = {
+		.platform_data = &touchscreen_info,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = 0,
+	.resource = NULL,
 };
 
 /* spear3xx shared irq */
