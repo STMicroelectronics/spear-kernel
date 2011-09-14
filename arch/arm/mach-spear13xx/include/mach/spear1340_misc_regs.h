@@ -29,6 +29,22 @@
 
 /* Clock Configuration Registers */
 #define VA_SPEAR1340_SYS_CLK_CTRL		(VA_MISC_BASE + 0x200)
+	#define SPEAR1340_HCLK_SRC_SEL_SHIFT	27
+	#define SPEAR1340_HCLK_SRC_SEL_MASK	1
+	#define SPEAR1340_HCLK_SRC_CPU		0
+	#define SPEAR1340_HCLK_SRC_SYNT		1
+
+	#define SPEAR1340_SCLK_SRC_SEL_SHIFT	23
+	#define SPEAR1340_SCLK_SRC_SEL_MASK	7
+	/*
+	 * Following is actualy 0xxb but defined as 001b, as BootROM
+	 * initializes these bits as 001b
+	 */
+	#define SPEAR1340_SCLK_SRC_PLL1		1
+	#define SPEAR1340_SCLK_SRC_SYNT		4
+	#define SPEAR1340_SCLK_SRC_PLL2		6
+	#define SPEAR1340_SCLK_SRC_PLL3		7
+
 #define VA_SPEAR1340_SYS_SW_RES			(VA_MISC_BASE + 0x204)
 #define VA_SPEAR1340_SYS_CLK_PLLTIMER		(VA_MISC_BASE + 0x208)
 #define VA_SPEAR1340_SYS_CLK_OSCITIMER		(VA_MISC_BASE + 0x20C)
