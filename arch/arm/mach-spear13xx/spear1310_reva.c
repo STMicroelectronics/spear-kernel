@@ -965,7 +965,7 @@ fail_get_phy_clk:
 }
 
 /* Following will create 1310 specific static virtual/physical mappings */
-struct map_desc spear1310_reva_io_desc[] __initdata = {
+static struct map_desc spear1310_reva_io_desc[] __initdata = {
 	{
 		.virtual	= IO_ADDRESS(SPEAR1310_REVA_RAS_BASE),
 		.pfn		= __phys_to_pfn(SPEAR1310_REVA_RAS_BASE),

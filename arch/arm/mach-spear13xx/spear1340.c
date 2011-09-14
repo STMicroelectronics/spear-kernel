@@ -1329,7 +1329,7 @@ struct pmx_dev spear1340_pmx_sata = {
 /* Add spear1340 specific devices here */
 
 /* camera interface 0 device registeration */
-struct camif_config_data cam0_data = {
+static struct camif_config_data cam0_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -1340,7 +1340,7 @@ struct camif_config_data cam0_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct dw_dma_slave camif0_dma_param[] = {
+static struct dw_dma_slave camif0_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1405,7 +1405,7 @@ struct platform_device spear1340_camif0_device = {
 };
 
 /* camera interface 1 device registeration */
-struct camif_config_data cam1_data = {
+static struct camif_config_data cam1_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -1416,7 +1416,7 @@ struct camif_config_data cam1_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct dw_dma_slave camif1_dma_param[] = {
+static struct dw_dma_slave camif1_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1481,7 +1481,7 @@ struct platform_device spear1340_camif1_device = {
 };
 
 /* camera interface 2 device registeration */
-struct camif_config_data cam2_data = {
+static struct camif_config_data cam2_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -1492,7 +1492,7 @@ struct camif_config_data cam2_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct dw_dma_slave camif2_dma_param[] = {
+static struct dw_dma_slave camif2_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1557,7 +1557,7 @@ struct platform_device spear1340_camif2_device = {
 };
 
 /* camera interface 3 device registeration */
-struct camif_config_data cam3_data = {
+static struct camif_config_data cam3_data = {
 	.sync_type = EXTERNAL_SYNC,
 	.vsync_polarity = ACTIVE_LOW,
 	.hsync_polarity = ACTIVE_LOW,
@@ -1568,7 +1568,7 @@ struct camif_config_data cam3_data = {
 	.channel = EVEN_CHANNEL,
 };
 
-struct dw_dma_slave camif3_dma_param[] = {
+static struct dw_dma_slave camif3_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1633,7 +1633,7 @@ struct platform_device spear1340_camif3_device = {
 };
 
 /* uart device registeration */
-struct dw_dma_slave uart1_dma_param[] = {
+static struct dw_dma_slave uart1_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1953,7 +1953,7 @@ static struct resource otg_resources[] = {
 	},
 };
 
-struct dwc_otg_plat_data otg_platform_data = {
+static struct dwc_otg_plat_data otg_platform_data = {
 	.phy_init = spear1340_otg_phy_init,
 	.param_init = spear1340_otg_param_init,
 };

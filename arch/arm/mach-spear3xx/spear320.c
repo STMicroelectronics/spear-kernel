@@ -1271,7 +1271,7 @@ static struct spear_shirq shirq_intrcomm_ras = {
 };
 
 /* Following will create 320 specific static virtual/physical mappings */
-struct map_desc spear320_io_desc[] __initdata = {
+static struct map_desc spear320_io_desc[] __initdata = {
 	{
 		.virtual	= VA_SPEAR320_SOC_CONFIG_BASE,
 		.pfn		= __phys_to_pfn(SPEAR320_SOC_CONFIG_BASE),

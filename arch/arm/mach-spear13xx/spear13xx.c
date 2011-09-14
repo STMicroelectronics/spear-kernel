@@ -93,7 +93,7 @@ struct amba_device spear13xx_gpio_device[] = {
 /* ssp device registeration */
 #if 0
 #define SSP_DR(base)		(base + 0x008)
-struct dw_dma_slave ssp_dma_param[] = {
+static struct dw_dma_slave ssp_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -157,7 +157,7 @@ struct amba_device spear13xx_ssp_device = {
 /* uart device registeration */
 /* As uart0 is used for console, so disable DMA here */
 #if 0
-struct dw_dma_slave uart_dma_param[] = {
+static struct dw_dma_slave uart_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -260,7 +260,7 @@ struct platform_device spear13xx_cf_device = {
 };
 
 /* dmac device registeration */
-struct dw_dma_platform_data dmac_plat_data = {
+static struct dw_dma_platform_data dmac_plat_data = {
 	.nr_channels = 8,
 	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
 	.chan_priority = CHAN_PRIORITY_DESCENDING,
@@ -1237,7 +1237,7 @@ unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
 }
 
 /* Following will create static virtual/physical mappings */
-struct map_desc spear13xx_io_desc[] __initdata = {
+static struct map_desc spear13xx_io_desc[] __initdata = {
 	{
 		.virtual	= IO_ADDRESS(SPEAR13XX_UART_BASE),
 		.pfn		= __phys_to_pfn(SPEAR13XX_UART_BASE),

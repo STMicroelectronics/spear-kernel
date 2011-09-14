@@ -64,7 +64,7 @@ static struct resource phy0_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1340_phy0_device = {
+struct platform_device spear1340_phy0_device = {
 	.name		= "stmmacphy",
 	.id		= 0,
 	.num_resources	= 1,
@@ -128,7 +128,7 @@ static struct pmx_dev_mode pmx_plgpios_modes[] = {
 	},
 };
 
-struct pmx_dev spear1340_pmx_plgpios = {
+static struct pmx_dev spear1340_pmx_plgpios = {
 	.name = "plgpios",
 	.modes = pmx_plgpios_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
