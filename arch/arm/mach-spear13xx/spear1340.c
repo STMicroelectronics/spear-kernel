@@ -1972,6 +1972,112 @@ struct platform_device spear1340_otg_device = {
 	.resource = otg_resources,
 };
 
+static int spear1340_sys_clk_init(void)
+{
+	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;
+	int ret = 0;
+	const char *sys_clk_src[] = {
+		"sys_synth_clk",
+		"pll1_clk",
+		"pll2_clk",
+		"pll3_clk",
+	};
+	const char *ahb_clk_src[] = {
+		"amba_synth_clk",
+		"cpu_clk_div3",
+	};
+
+	/*
+	 * If we need to run cpu at 600 MHz we need to have an alternate
+	 * pll (other than pll1)
+	 * So,
+	 * pll1 - would be used to feed all synthesizers and AHB
+	 * (through AHB synthesizer)
+	 * pll2 - would be used to feed cpu
+	 * pll3 - is being used as as source clock for audio
+	 */
+	sys_pclk = clk_get(NULL, sys_clk_src[2]);
+	if (IS_ERR(sys_pclk)) {
+		ret = PTR_ERR(sys_pclk);
+		goto fail_get_sys_pclk;
+	}
+
+	/* Get the amba synthesizer as the clock source for ahb clock */
+	ahb_pclk = clk_get(NULL, ahb_clk_src[0]);
+	if (IS_ERR(ahb_pclk)) {
+		ret = PTR_ERR(ahb_pclk);
+		goto fail_get_ahb_pclk;
+	}
+
+	/* Get the system clock */
+	sys_clk = clk_get(NULL, "sys_clk");
+	if (IS_ERR(sys_clk)) {
+		ret = PTR_ERR(sys_clk);
+		goto fail_get_sysclk;
+	}
+
+	/* Get the ahb clock */
+	ahb_clk = clk_get(NULL, "ahb_clk");
+	if (IS_ERR(ahb_clk)) {
+		ret = PTR_ERR(ahb_clk);
+		goto fail_get_ahb_clk;
+	}
+
+	if (clk_set_rate(sys_pclk, 1200000000)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set system clock rate\n");
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_set_rate(ahb_pclk, 166000000)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB rate\n");
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_enable(sys_pclk)) {
+		ret = -ENODEV;
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_enable(ahb_pclk)) {
+		ret = -ENODEV;
+		goto fail_en_sys_clk;
+	}
+
+	/* Set the amba synth as parent for ahb clk */
+	if (clk_set_parent(ahb_clk, ahb_pclk)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB parent\n");
+		goto fail_ahb_set_parent;
+	}
+
+	/* Set the sys synth as parent for sys clk */
+	if (clk_set_parent(sys_clk, sys_pclk)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set sys clk parent\n");
+		goto fail_sys_set_parent;
+	}
+
+	/* put back all the clocks */
+	goto fail_sys_set_rate;
+
+fail_sys_set_parent:
+fail_ahb_set_parent:
+	clk_disable(ahb_pclk);
+fail_en_sys_clk:
+	clk_disable(sys_pclk);
+fail_sys_set_rate:
+	clk_put(ahb_clk);
+fail_get_ahb_clk:
+	clk_put(sys_clk);
+fail_get_sysclk:
+	clk_put(ahb_pclk);
+fail_get_ahb_pclk:
+	clk_put(sys_pclk);
+fail_get_sys_pclk:
+	return ret;
+}
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
@@ -1980,6 +2086,11 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 
 	/* call spear13xx family common init function */
 	spear13xx_init();
+
+	/* call spear1340 system clock init function */
+	ret = spear1340_sys_clk_init();
+	if (ret)
+		pr_err("SPEAr1340: sysclock init failed, err no: %d\n", ret);
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
