@@ -22,7 +22,7 @@
 void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 		struct device *dma_dev)
 {
-	struct jpeg_plat_data data;
+	struct jpeg_plat_data data = {0, };
 
 #ifdef CONFIG_ARCH_SPEAR13XX
 	data.mem2jpeg_slave.dma_dev = dma_dev;
