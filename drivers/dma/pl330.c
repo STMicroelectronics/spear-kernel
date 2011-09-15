@@ -739,11 +739,9 @@ pl330_probe(struct amba_device *adev, const struct amba_id *id)
 		pch->pl330_chid = NULL;
 		pch->chan.private = peri;
 		pch->chan.device = pd;
-		pch->chan.chan_id = i;
 		pch->dmac = pdmac;
 
 		/* Add the channel to the DMAC list */
-		pd->chancnt++;
 		list_add_tail(&pch->chan.device_node, &pd->channels);
 	}
 
