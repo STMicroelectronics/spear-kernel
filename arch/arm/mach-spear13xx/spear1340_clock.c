@@ -146,7 +146,7 @@ static struct vco_clk_config vco2_config = {
 
 /* vco2 clock */
 static struct clk vco2_clk = {
-	.flags = SYSTEM_CLK,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = SPEAR1340_PLL2_CLK_SHIFT,
 	.en_reg = VA_SPEAR1340_PLL2_CTR,
@@ -183,7 +183,7 @@ static struct vco_clk_config vco3_config = {
 
 /* vco3 clock */
 static struct clk vco3_clk = {
-	.flags = SYSTEM_CLK,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = SPEAR1340_PLL3_CLK_SHIFT,
 	.en_reg = VA_SPEAR1340_PLL3_CTR,
