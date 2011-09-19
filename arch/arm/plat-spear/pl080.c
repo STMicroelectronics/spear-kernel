@@ -45,8 +45,14 @@ int pl080_get_signal(struct pl08x_dma_chan *ch)
 	/* If acquiring for the first time, configure it */
 	if (!signals[signal].busy) {
 		val = readl(VA_DMA_CHN_CFG);
-		val &= ~(0x3 << signal);
-		val |= cd->muxval << signal;
+
+		/*
+		 * Each request line has two bits in DMA_CHN_CFG register. To
+		 * goto the bits of current request line, do left shift of
+		 * value by 2 * signal number.
+		 */
+		val &= ~(0x3 << (signal * 2));
+		val |= cd->muxval << (signal * 2);
 		writel(val, VA_DMA_CHN_CFG);
 	}
 
