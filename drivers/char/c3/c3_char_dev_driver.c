@@ -68,6 +68,11 @@ static const struct file_operations _c3_device_ops_;
 
 extern c3_instr_params_t c3_instr_params[];
 
+/* --------------------------------------------------------------------
+ * MACROS
+ * ---------------------------------------------------------------- */
+
+#define MAX_BUFFER_SIZE 0x10000
 
 /* --------------------------------------------------------------------
  * FUNCTIONS
@@ -210,6 +215,11 @@ static unsigned int _c3_user2kernel(c3_buffer_t *buffer,
 	unsigned int scatter_gather_enable)
 {
 	int copy = 0;
+
+	if (buffer->size >= MAX_BUFFER_SIZE) {
+		printk(C3_KERN_ERR "size is greater than boundary condit\n");
+		return C3_ERR;
+	}
 
 #ifdef DEBUG
 	printk(C3_KERN_DEBUG "[CDD] User ->Kernel process\n");
