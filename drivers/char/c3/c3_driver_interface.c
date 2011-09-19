@@ -3685,26 +3685,32 @@ unsigned int c3_SHA384_HMAC_init(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!key_len) {
+		printk(C3_KERN_ERR "zero len key not supported\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_FROM_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_FROM_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	SHA384_HMAC_INIT(
-		key_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		SHA384_HMAC_INIT(
+				key_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		STOP(prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
