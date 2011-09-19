@@ -670,15 +670,16 @@ static struct clk gmac_phy0_clk = {
 	.recalc = &follow_parent,
 };
 
-/* clcd fractional synthesizers masks */
-static struct frac_synth_masks clcd_masks = {
+/* common fractional synthesizer masks */
+static struct frac_synth_masks frac_synth_masks = {
 	.div_factor_mask = SPEAR1340_FRAC_SYNT_DIV_FACTOR_MASK,
 	.div_factor_shift = SPEAR1340_FRAC_SYNT_DIV_FACTOR_SHIFT,
 };
 
+/* clcd fractional synthesizers definition */
 static struct frac_synth_clk_config clcd_synth_config = {
 	.synth_reg = VA_SPEAR1340_CLCD_CLK_SYNT,
-	.masks = &clcd_masks,
+	.masks = &frac_synth_masks,
 };
 
 /* clcd fractional synthesizer parents */
@@ -1143,30 +1144,25 @@ static struct clk kbd_clk = {
 	.recalc = &follow_parent,
 };
 
-/* GEN fractional synthesizers masks */
-static struct frac_synth_masks gen_synth_masks = {
-	.div_factor_mask = SPEAR1340_FRAC_SYNT_DIV_FACTOR_MASK,
-	.div_factor_shift = SPEAR1340_FRAC_SYNT_DIV_FACTOR_SHIFT,
-};
-
+/* general fractional synthesizers definitions */
 static struct frac_synth_clk_config gen_synth0_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT0,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth1_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT1,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth2_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT2,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth3_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT3,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 /* GEN Fractional Synthesizer parents */
