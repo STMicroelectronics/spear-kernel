@@ -2796,32 +2796,40 @@ unsigned int c3_SHA1_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SHA1_HMAC_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	C3_UH_PATCH();
+		SHA1_HMAC_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		C3_UH_PATCH();
 
-	STOP(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	C3_END(prgmem);
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 
 #else
 
