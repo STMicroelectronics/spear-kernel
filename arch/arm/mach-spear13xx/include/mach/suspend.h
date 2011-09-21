@@ -25,6 +25,9 @@ extern unsigned int spear_wakeup_sz;
 extern int spear_cpu_suspend(suspend_state_t, long);
 extern void spear_clocksource_resume(void);
 extern void spear_clocksource_suspend(void);
+extern int spear_pcie_suspend(void);
+extern int spear_pcie_resume(void);
+
 #endif
 
 /* SRAM related defines*/

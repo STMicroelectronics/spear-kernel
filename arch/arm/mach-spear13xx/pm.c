@@ -51,6 +51,8 @@ static int spear_pm_sleep(suspend_state_t state)
 	if (state == PM_SUSPEND_MEM) {
 		gic_cpu_exit(0);
 		gic_dist_save(0);
+		/* Suspend PCIE bus */
+		spear_pcie_suspend();
 	}
 
 	/* Suspend the event timer */
@@ -66,8 +68,11 @@ static int spear_pm_sleep(suspend_state_t state)
 	writel(twd_load, twd_base + TWD_TIMER_LOAD);
 
 	/* Do the GIC restoration for suspend mode */
-	if (state == PM_SUSPEND_MEM)
+	if (state == PM_SUSPEND_MEM) {
 		gic_dist_restore(0);
+		/* Resume PCIE bus */
+		spear_pcie_resume();
+	}
 
 	/* Resume the event timer */
 	spear_clocksource_resume();
@@ -131,9 +136,9 @@ void spear_sys_suspend(suspend_state_t state)
 	outer_sync();
 	/* Jump to the suspend routines in sram */
 	if (cpu_is_spear1340() || cpu_is_spear1310())
-		spear_sram_sleep(state, (unsigned long*)cpu_resume, 1);
+		spear_sram_sleep(state, (unsigned long *)cpu_resume, 1);
 	else
-		spear_sram_sleep(state, (unsigned long*)cpu_resume, 0);
+		spear_sram_sleep(state, (unsigned long *)cpu_resume, 0);
 }
 
 /*
