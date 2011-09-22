@@ -1421,6 +1421,7 @@ static int __init dw_probe(struct platform_device *pdev)
 	tasklet_init(&dw->tasklet, dw_dma_tasklet, (unsigned long)dw);
 
 	dw->all_chan_mask = (1 << pdata->nr_channels) - 1;
+	dw->dma.chan_ids_set = true;
 
 	INIT_LIST_HEAD(&dw->dma.channels);
 	for (i = 0; i < pdata->nr_channels; i++) {
@@ -1428,6 +1429,7 @@ static int __init dw_probe(struct platform_device *pdev)
 
 		dwc->chan.device = &dw->dma;
 		dwc->chan.cookie = dwc->completed = 1;
+		dwc->chan.chan_id = i;
 		if (pdata->chan_allocation_order == CHAN_ALLOCATION_ASCENDING)
 			list_add_tail(&dwc->chan.device_node,
 					&dw->dma.channels);
