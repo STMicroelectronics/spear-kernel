@@ -1136,6 +1136,11 @@ unsigned int c3_AES_ECB_encrypt(
 		return C3_SKIP;
 	}
 
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
 	{
 #ifdef AES_CHANNEL_INFO
 		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
