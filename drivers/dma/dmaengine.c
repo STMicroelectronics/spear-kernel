@@ -735,7 +735,12 @@ int dma_async_device_register(struct dma_device *device)
 			goto err_out;
 		}
 
-		chan->chan_id = chancnt++;
+		/* channel ids are set by controller drivers, don't update it */
+		if (!device->chan_ids_set)
+			chan->chan_id = chancnt;
+
+		chancnt++;
+
 		chan->dev->device.class = &dma_devclass;
 		chan->dev->device.parent = device->dev;
 		chan->dev->chan = chan;

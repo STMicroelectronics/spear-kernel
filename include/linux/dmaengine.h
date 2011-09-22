@@ -414,6 +414,8 @@ struct dma_tx_state {
  * @xor_align: alignment shift for xor operations
  * @pq_align: alignment shift for pq operations
  * @fill_align: alignment shift for memset operations
+ * @chan_ids_set: channel id's are already set by driver and must not be
+ * reinitialized by dmaengine.
  * @dev_id: unique device ID
  * @dev: struct device reference for dma mapping api
  * @device_alloc_chan_resources: allocate resources and return the
@@ -452,6 +454,9 @@ struct dma_device {
 	u8 pq_align;
 	u8 fill_align;
 	#define DMA_HAS_PQ_CONTINUE (1 << 15)
+
+	/* sysfs */
+	bool chan_ids_set;
 
 	int dev_id;
 	struct device *dev;
