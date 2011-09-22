@@ -1495,6 +1495,11 @@ unsigned int c3_AES_CTR_decrypt(
 		return C3_SKIP;
 	}
 
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
 	{
 
 #ifdef AES_CHANNEL_INFO
@@ -2035,43 +2040,54 @@ unsigned int c3_DES_CBC_encrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
-	C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
-
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE, DMA_TO_DEVICE);
-
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
+	if ((key_len <= MIN_DES_KEY_LEN) || (key_len > MAX_DES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
 	}
 
-	DES_ENCRYPT_CBC_START(
-		key_len,
-		c3_dma_1->dma_addr,
-		c3_dma_2->dma_addr,
-		prgmem);
+	{
+		C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	if (input == output) {
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
-		DES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		DES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
+
+		DES_ENCRYPT_CBC_START(
+				key_len,
+				c3_dma_1->dma_addr,
+				c3_dma_2->dma_addr,
+				prgmem);
+
+		if (input == output) {
+
+			DES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			DES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
+
+		STOP(prgmem);
+
+		C3_END(prgmem);
 	}
-
-	STOP(prgmem);
-
-	C3_END(prgmem);
-
 #else
 
 	return C3_ERR;
