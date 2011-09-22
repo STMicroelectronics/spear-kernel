@@ -32,6 +32,9 @@
 #include <plat/jpeg.h>
 #include "designware_jpeg.h"
 
+#define DJPEG_BURST	8
+#define DJPEG_WIDTH	4
+
 /* global dev structure for jpeg. as there is no way to pass it from char
  ** interface */
 static struct jpeg_dev *g_drv_data;
@@ -48,17 +51,17 @@ static s32 sg_per_buf(enum jpeg_dev_type dev_type, u32 size)
 
 	/* calculate the max transfer size supported by src device for a
 	 ** single sg */
-	max_xfer = DMA_MAX_COUNT << JPEG_WIDTH;
+	max_xfer = JPEG_DMA_MAX_COUNT * DJPEG_WIDTH;
 
 	/* calculate the number of sgs with size max_xfer */
 	num_sg	= size_left/max_xfer;
 	size_left -= num_sg * max_xfer;
 
 	/* calculate the number of sgs with size less than max_xfer but with
-	 ** width as JPEG_WIDTH */
-	if (size_left >> JPEG_WIDTH) {
+	 ** width as DJPEG_WIDTH */
+	if (size_left / DJPEG_WIDTH) {
 		num_sg++;
-		size_left -= (size_left >> JPEG_WIDTH) << JPEG_WIDTH;
+		size_left -= (size_left / DJPEG_WIDTH) * DJPEG_WIDTH;
 	}
 
 	/* calculate the number of sgs with size less than max_xfer and width
@@ -88,7 +91,7 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 
 		/* calculate the max transfer size supported by src device for
 		 ** a single sg */
-		max_xfer = DMA_MAX_COUNT << JPEG_WIDTH;
+		max_xfer = JPEG_DMA_MAX_COUNT * DJPEG_WIDTH;
 
 		while (size/max_xfer) {
 			sg_dma_address(sg) = addr;
@@ -99,13 +102,13 @@ void fill_sg(enum jpeg_dev_type dev_type, size_t size)
 			sg++;
 		}
 
-		if (size >> JPEG_WIDTH) {
+		if (size / DJPEG_WIDTH) {
 			sg_dma_address(sg) = addr;
 			sg_set_page(sg, pfn_to_page(addr >> PAGE_SHIFT),
-					(size >> JPEG_WIDTH) << JPEG_WIDTH,
+					(size / DJPEG_WIDTH) * DJPEG_WIDTH,
 					offset_in_page(addr));
-			addr += (size >> JPEG_WIDTH) << JPEG_WIDTH;
-			size -= (size >> JPEG_WIDTH) << JPEG_WIDTH;
+			addr += (size / DJPEG_WIDTH) * DJPEG_WIDTH;
+			size -= (size / DJPEG_WIDTH) * DJPEG_WIDTH;
 			sg++;
 		}
 
@@ -660,21 +663,6 @@ static s32 jpeg_remap(struct vm_area_struct *vma, dma_addr_t dma, void *buf)
 			size);
 }
 
-/*
- * data_per_burst: returns amount of data transferred in one burst
- */
-static s32 data_per_burst(u32 width, u32 burst)
-{
-	switch (burst) {
-	case 0:
-		return 1 << width;
-	default:
-		/* shifting is done because of the type of enum dma_burst. The
-		 ** values are 0,1,2,3,4.. but required values are 1,4,8,16..*/
-		return (2 << burst) << width;
-	}
-}
-
 /* xfer data between jpeg controller and memory */
 static s32 dma_xfer(enum jpeg_dev_type dev_type, size_t size)
 {
@@ -846,7 +834,7 @@ s32 jpeg_start(u32 len)
 		 ** interrupt should come after transfer of buf_size amount of
 		 ** data */
 		burst_num = g_drv_data->buf_size[JPEG_READ]/
-			data_per_burst(JPEG_WIDTH, JPEG_BURST);
+			(DJPEG_WIDTH * DJPEG_BURST);
 
 		/*
 		 * start transfer of encoded/decoded image to the allocated
@@ -961,17 +949,19 @@ static bool filter(struct dma_chan *chan, void *slave)
 }
 
 /**
- * desigware_jpeg_open - opens jpeg read or write node.
+ * designware_jpeg_open - opens jpeg read or write node.
  * @inode: used by the kernel internally to represent files.
  * @file: represents a open file in kernel.
  *
  * If jpeg read/write node is already opened then it returns EBUSY error
  * otherwise return 0.
  */
-static s32 desigware_jpeg_open(struct inode *inode, struct file *file)
+static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 {
 	s32 status = 0;
 	enum jpeg_dev_type dev_type;
+	void *dma_filter, *write_data, *read_data;
+	char *wstr = "to_jpeg", *rstr = "from_jpeg";
 
 	/* getting the minor number of the caller */
 	dev_type = (enum jpeg_dev_type)iminor(inode);
@@ -989,15 +979,25 @@ static s32 desigware_jpeg_open(struct inode *inode, struct file *file)
 			dev_type == JPEG_READ ? JPEG_WRITE : JPEG_READ])
 		return status;
 
+	if (g_drv_data->slaves->dma_filter) {
+		dma_filter = g_drv_data->slaves->dma_filter;
+		write_data = wstr;
+		read_data = rstr;
+	} else {
+		dma_filter = filter;
+		write_data = &g_drv_data->slaves->mem2jpeg_slave;
+		read_data = &g_drv_data->slaves->jpeg2mem_slave;
+	}
+
 	/* request dma channels */
 	if (!g_drv_data->dma_chan[JPEG_READ] ||
 			!g_drv_data->dma_chan[JPEG_WRITE]) {
 		g_drv_data->dma_chan[JPEG_READ] =
-			dma_request_channel(g_drv_data->mask, filter,
-					&g_drv_data->slaves->jpeg2mem_slave);
+			dma_request_channel(g_drv_data->mask, dma_filter,
+					read_data);
 		g_drv_data->dma_chan[JPEG_WRITE] =
-			dma_request_channel(g_drv_data->mask, filter,
-					&g_drv_data->slaves->mem2jpeg_slave);
+			dma_request_channel(g_drv_data->mask, dma_filter,
+					write_data);
 	}
 
 	if (!g_drv_data->dma_chan[JPEG_READ] ||
@@ -1011,6 +1011,14 @@ static s32 desigware_jpeg_open(struct inode *inode, struct file *file)
 		return -EBUSY;
 	}
 
+	/* Configure channel parameters if runtime_config is true */
+	if (g_drv_data->slaves->runtime_config) {
+		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_READ],
+				(void *) &g_drv_data->slaves->jpeg2mem_slave);
+		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_WRITE],
+				(void *) &g_drv_data->slaves->mem2jpeg_slave);
+	}
+
 	/* set default operation to jpeg decoding with hdr enable */
 	g_drv_data->operation = JPEG_DECODE;
 	g_drv_data->hdr_enable = 1;
@@ -1022,13 +1030,13 @@ static s32 desigware_jpeg_open(struct inode *inode, struct file *file)
 }
 
 /**
- * desigware_jpeg_release - closes jpeg read or write node.
+ * designware_jpeg_release - closes jpeg read or write node.
  * @inode: used by the kernel internally to represent files.
  * @file: represents a open file in kernel.
  *
  * It marks state of jpeg as free or not busy.
  */
-static s32 desigware_jpeg_release(struct inode *inode, struct file *file)
+static s32 designware_jpeg_release(struct inode *inode, struct file *file)
 {
 	enum jpeg_dev_type dev_type;
 
@@ -1070,12 +1078,12 @@ static s32 desigware_jpeg_release(struct inode *inode, struct file *file)
 }
 
 /**
- * desigware_jpeg_ioctl - IOCTL for performing different types of RW operations.
+ * designware_jpeg_ioctl - IOCTL for performing different types of RW operation.
  * @file: represents a open file in kernel.
  * @cmd: ioctl command representing particular operation.
  * @buf: buffer for IO.
  */
-static long desigware_jpeg_ioctl(struct file *file, u32 cmd, unsigned long buf)
+static long designware_jpeg_ioctl(struct file *file, u32 cmd, unsigned long buf)
 {
 	enum jpeg_dev_type dev_type;
 	s32 status = 0;
@@ -1149,7 +1157,7 @@ static long desigware_jpeg_ioctl(struct file *file, u32 cmd, unsigned long buf)
 }
 
 /**
- * desigware_jpeg_rmmap - maps allocated memory from driver to user level for
+ * designware_jpeg_rmmap - maps allocated memory from driver to user level for
  * read buffer.
  * @file: represents a open file in kernel.
  * @vma: object having info of requested virtual memory region.
@@ -1157,7 +1165,7 @@ static long desigware_jpeg_ioctl(struct file *file, u32 cmd, unsigned long buf)
  * It allocates memory required for storing the encoded/decoded image data. Then
  * it maps that to virtual space.
  */
-static s32 desigware_jpeg_rmmap(struct file *file, struct vm_area_struct *vma)
+static s32 designware_jpeg_rmmap(struct file *file, struct vm_area_struct *vma)
 {
 	size_t size = vma->vm_end - vma->vm_start;
 	s32 status = 0;
@@ -1173,7 +1181,7 @@ static s32 desigware_jpeg_rmmap(struct file *file, struct vm_area_struct *vma)
 }
 
 /**
- * desigware_jpeg_wmmap - maps allocated memory from driver to user level for
+ * designware_jpeg_wmmap - maps allocated memory from driver to user level for
  * write buffer.
  * @file: represents a open file in kernel.
  * @vma: object having info of requested virtual memory region.
@@ -1181,7 +1189,7 @@ static s32 desigware_jpeg_rmmap(struct file *file, struct vm_area_struct *vma)
  * It allocates memory required for passing the src image to jpeg, and then it
  * maps that to virtual space.
  */
-static s32 desigware_jpeg_wmmap(struct file *file, struct vm_area_struct *vma)
+static s32 designware_jpeg_wmmap(struct file *file, struct vm_area_struct *vma)
 {
 	size_t size = vma->vm_end - vma->vm_start;
 	s32 status = 0;
@@ -1197,28 +1205,28 @@ static s32 desigware_jpeg_wmmap(struct file *file, struct vm_area_struct *vma)
 }
 
 /* this structure is used to show interface to user level */
-static const struct file_operations desigware_jpeg_fops[MAX_DEV] = {
+static const struct file_operations designware_jpeg_fops[MAX_DEV] = {
 	{
 		.owner	= THIS_MODULE,
-		.open = desigware_jpeg_open,
-		.release = desigware_jpeg_release,
-		.unlocked_ioctl = desigware_jpeg_ioctl,
-		.mmap	= desigware_jpeg_rmmap
+		.open = designware_jpeg_open,
+		.release = designware_jpeg_release,
+		.unlocked_ioctl = designware_jpeg_ioctl,
+		.mmap	= designware_jpeg_rmmap
 	}, {
 		.owner	= THIS_MODULE,
-		.open = desigware_jpeg_open,
-		.release = desigware_jpeg_release,
-		.unlocked_ioctl = desigware_jpeg_ioctl,
-		.mmap	= desigware_jpeg_wmmap
+		.open = designware_jpeg_open,
+		.release = designware_jpeg_release,
+		.unlocked_ioctl = designware_jpeg_ioctl,
+		.mmap	= designware_jpeg_wmmap
 	}
 };
 
 /*
- * desigware_jpeg_irq - jpeg interrput handler. it reads the status of the
+ * designware_jpeg_irq - jpeg interrput handler. it reads the status of the
  * encoding/decoding and then clears relevant interrupts. then it wakes the
  * sleeping process if both the dma and jpeg interrupts have occured.
  */
-static irqreturn_t desigware_jpeg_irq(s32 irq, void *dev_id)
+static irqreturn_t designware_jpeg_irq(s32 irq, void *dev_id)
 {
 	unsigned long flags;
 	u32 status_reg;
@@ -1263,7 +1271,7 @@ static irqreturn_t desigware_jpeg_irq(s32 irq, void *dev_id)
 }
 
 static s32
-desigware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
+designware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	unsigned long flags;
 	/* aborting all jpeg operations */
@@ -1291,15 +1299,15 @@ desigware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 }
 
 #ifdef CONFIG_PM
-static s32 desigware_jpeg_resume(struct platform_device *pdev)
+static s32 designware_jpeg_resume(struct platform_device *pdev)
 {
 	return 0;
 }
 #else
-#define desigware_jpeg_resume NULL
+#define designware_jpeg_resume NULL
 #endif /* CONFIG_PM */
 
-static s32 desigware_jpeg_probe(struct platform_device *pdev)
+static s32 designware_jpeg_probe(struct platform_device *pdev)
 {
 	enum jpeg_dev_type dev_type;
 	struct resource	*res;
@@ -1350,7 +1358,7 @@ static s32 desigware_jpeg_probe(struct platform_device *pdev)
 		goto err_ioremap;
 	}
 
-	status = request_irq(irq, desigware_jpeg_irq, 0, "jpeg-designware",
+	status = request_irq(irq, designware_jpeg_irq, 0, "jpeg-designware",
 			g_drv_data);
 	if (status < 0) {
 		dev_err(&pdev->dev, "can not get IRQ\n");
@@ -1377,7 +1385,7 @@ static s32 desigware_jpeg_probe(struct platform_device *pdev)
 	for (dev_type = JPEG_READ; dev_type < MAX_DEV; dev_type += JPEG_WRITE) {
 		g_drv_data->char_dev[dev_type].owner = THIS_MODULE;
 		cdev_init(&g_drv_data->char_dev[dev_type],
-				&desigware_jpeg_fops[dev_type]);
+				&designware_jpeg_fops[dev_type]);
 		status = cdev_add(&g_drv_data->char_dev[dev_type],
 				g_drv_data->char_dev_num[dev_type], 1);
 		if (status)
@@ -1397,10 +1405,7 @@ static s32 desigware_jpeg_probe(struct platform_device *pdev)
 	tx_reg = (dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_IN;
 	rx_reg = (dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_OUT;
 
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310) || \
-			defined(CONFIG_CPU_SPEAR900)
 	set_jpeg_tx_rx_reg(g_drv_data->slaves, tx_reg, rx_reg);
-#endif
 
 	return status;
 
@@ -1428,7 +1433,7 @@ err_mem_region:
 	return status;
 }
 
-static s32 desigware_jpeg_remove(struct platform_device *pdev)
+static s32 designware_jpeg_remove(struct platform_device *pdev)
 {
 	enum jpeg_dev_type dev_type;
 	s32 irq;
@@ -1441,7 +1446,7 @@ static s32 desigware_jpeg_remove(struct platform_device *pdev)
 	/* prevent double remove */
 	platform_set_drvdata(pdev, NULL);
 
-	desigware_jpeg_suspend(pdev, state);
+	designware_jpeg_suspend(pdev, state);
 
 	/*unregister char driver */
 	for (dev_type = JPEG_READ; dev_type < MAX_DEV; dev_type += JPEG_WRITE)
@@ -1472,31 +1477,31 @@ static s32 desigware_jpeg_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver desigware_jpeg_driver = {
+static struct platform_driver designware_jpeg_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
 	},
-	.probe = desigware_jpeg_probe,
-	.remove = __devexit_p(desigware_jpeg_remove),
-	.suspend = desigware_jpeg_suspend,
-	.resume = desigware_jpeg_resume,
+	.probe = designware_jpeg_probe,
+	.remove = __devexit_p(designware_jpeg_remove),
+	.suspend = designware_jpeg_suspend,
+	.resume = designware_jpeg_resume,
 };
 
-static s32 __init desigware_jpeg_init(void)
+static s32 __init designware_jpeg_init(void)
 {
-	platform_driver_register(&desigware_jpeg_driver);
+	platform_driver_register(&designware_jpeg_driver);
 
 	return 0;
 }
-module_init(desigware_jpeg_init);
+module_init(designware_jpeg_init);
 
-static void __exit desigware_jpeg_exit(void)
+static void __exit designware_jpeg_exit(void)
 {
-	platform_driver_unregister(&desigware_jpeg_driver);
+	platform_driver_unregister(&designware_jpeg_driver);
 }
-module_exit(desigware_jpeg_exit);
+module_exit(designware_jpeg_exit);
 
 MODULE_AUTHOR("viresh kumar");
 MODULE_DESCRIPTION("Synopsys Designware JPEG Encoder/Decoder");

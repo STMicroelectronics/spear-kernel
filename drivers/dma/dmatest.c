@@ -290,7 +290,12 @@ static int dmatest_func(void *data)
 
 	set_user_nice(current, 10);
 
-	flags = DMA_CTRL_ACK | DMA_COMPL_SKIP_DEST_UNMAP | DMA_PREP_INTERRUPT;
+	/*
+	 * src buffers are freed by the DMAEngine code with dma_unmap_single()
+	 * dst buffers are freed by ourselves below
+	 */
+	flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT
+	      | DMA_COMPL_SKIP_DEST_UNMAP | DMA_COMPL_SRC_UNMAP_SINGLE;
 
 	while (!kthread_should_stop()
 	       && !(iterations && total_tests >= iterations)) {
@@ -471,6 +476,8 @@ err_srcs:
 	pr_notice("%s: terminating after %u tests, %u failures (status %d)\n",
 			thread_name, total_tests, failed_tests, ret);
 
+	/* terminate all transfers on specified channels */
+	chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 	if (iterations > 0)
 		while (!kthread_should_stop()) {
 			DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wait_dmatest_exit);
@@ -493,6 +500,10 @@ static void dmatest_cleanup_channel(struct dmatest_chan *dtc)
 		list_del(&thread->node);
 		kfree(thread);
 	}
+
+	/* terminate all transfers on specified channels */
+	dtc->chan->device->device_control(dtc->chan, DMA_TERMINATE_ALL, 0);
+
 	kfree(dtc);
 }
 

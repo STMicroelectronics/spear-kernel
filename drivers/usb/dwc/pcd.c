@@ -394,6 +394,63 @@ static void dwc_otg_ep_deactivate(struct core_if *core_if, struct dwc_ep *ep)
 }
 
 /**
+ * This function disables EP as per dwc specification. It does only core
+ * related job. Must be called where ever specification says to disable,
+ * like during stall or disable itself
+ */
+static void dwc_otg_ep_disable(struct core_if *core_if, struct dwc_ep *ep)
+{
+	u32 regs, diepctl, diepint;
+
+	regs = core_if->dev_if->in_ep_regs[ep->num];
+
+	/* Disable endpoint */
+	diepctl = dwc_read32(regs + DWC_DIEPCTL);
+	diepctl = DWC_DEPCTL_SET_NAK_RW(diepctl, 1);
+	dwc_write32(regs + DWC_DIEPCTL, diepctl);
+	diepint = dwc_read32(regs + DWC_DIEPINT);
+	while (DWC_DIEPINT_IN_EP_NAK_RD(diepint) == 0)
+		diepint = dwc_read32(regs + DWC_DIEPINT);
+	diepctl = DWC_DEPCTL_EPDIS_RW(diepctl, 1);
+	dwc_write32(regs + DWC_DIEPCTL, diepctl);
+
+	/* Clear epdisabled , NAK effective*/
+	while (DWC_DIEPINT_EP_DISA_RD(diepint) == 0)
+		diepint = dwc_read32(regs + DWC_DIEPINT);
+	diepint = DWC_DIEPINT_EP_DISA_RW(diepint, 1);
+	diepint = DWC_DIEPINT_IN_EP_NAK_RW(diepint, 1);
+	dwc_write32(regs + DWC_DIEPINT, diepint);
+}
+
+/*
+ * This function flushes the txfifo till empty fifo size does not become
+ * same as that of fifo size. It would be useful if a DMA mode is used.
+ * In DMA mode, it may happen that a fifo is flushed and DMA again
+ * transfers data in FIFO, since it was enabled. So flush till it
+ * finishes.
+ * It does not have any side effect in slave mode too.
+ */
+void dwc_otg_flush_tx_fifo_complete(struct core_if *core_if,
+		struct dwc_ep *dwc_ep)
+{
+	u32 regs, dtxfsts, diepctl, num, sz;
+
+	regs = core_if->dev_if->in_ep_regs[dwc_ep->num];
+	diepctl = dwc_read32(regs + DWC_DIEPCTL);
+	num = DWC_DEPCTL_TX_FIFO_NUM_RD(diepctl);
+	if (num == 0)
+		sz = core_if->core_params->dev_nperio_tx_fifo_size;
+	else
+		sz = core_if->core_params->dev_tx_fifo_size[num - 1];
+	do {
+		dwc_otg_flush_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+		dtxfsts = dwc_read32(regs + DWC_DTXFSTS);
+	} while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(dtxfsts) != sz);
+	release_perio_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+	release_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+}
+
+/**
  * This function is called when an EP is disabled due to disconnect or
  * change in configuration. Any pending requests will terminate with a
  * status of -ESHUTDOWN.
@@ -416,14 +473,15 @@ static int dwc_otg_pcd_ep_disable(struct usb_ep *_ep)
 	spin_lock_irqsave(&ep->pcd->lock, flags);
 
 	request_nuke(ep);
-	dwc_otg_ep_deactivate(core_if, &ep->dwc_ep);
 
 	ep->desc = NULL;
 	ep->stopped = 1;
 	if (ep->dwc_ep.is_in) {
-		release_perio_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
-		release_tx_fifo(core_if, ep->dwc_ep.tx_fifo_num);
+		dwc_otg_ep_disable(core_if, &ep->dwc_ep);
+		dwc_otg_flush_tx_fifo_complete(core_if, &ep->dwc_ep);
 	}
+
+	dwc_otg_ep_deactivate(core_if, &ep->dwc_ep);
 
 	spin_unlock_irqrestore(&ep->pcd->lock, flags);
 
@@ -920,11 +978,12 @@ void dwc_otg_ep_set_stall(struct core_if *core_if, struct dwc_ep *ep)
 		    (core_if->dev_if->in_ep_regs[ep->num]) + DWC_DIEPCTL;
 		depctl = dwc_read32(depctl_addr);
 
-		/* set the disable and stall bits */
-		if (DWC_DEPCTL_EPENA_RD(depctl))
-			depctl = DWC_DEPCTL_EPDIS_RW(depctl, 1);
+		/* set the stall bit */
 		depctl = DWC_DEPCTL_STALL_HNDSHK_RW(depctl, 1);
 		dwc_write32(depctl_addr, depctl);
+		if (DWC_DEPCTL_EPENA_RD(depctl))
+			dwc_otg_ep_disable(core_if, ep);
+		dwc_otg_flush_tx_fifo_complete(core_if, ep);
 	} else {
 		depctl_addr =
 		    (core_if->dev_if->out_ep_regs[ep->num] + DWC_DOEPCTL);
@@ -1592,9 +1651,7 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	struct dwc_pcd *pcd;
 	struct dwc_otg_device *otg_dev = dev_get_drvdata(dev);
 	struct core_if *core_if = otg_dev->core_if;
-	struct device_if *dev_if = core_if->dev_if;
 	int retval;
-	u32 dctl;
 
 	/* Allocate PCD structure */
 	pcd = kzalloc(sizeof(*pcd), GFP_KERNEL);
@@ -1653,11 +1710,6 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	/* Initialize tasklet */
 	start_xfer_tasklet.data = (unsigned long)pcd;
 	pcd->start_xfer_tasklet = &start_xfer_tasklet;
-
-	/* Remove Soft Disconnect */
-	dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
-	dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
-	dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
 
 	return 0;
 
@@ -1719,6 +1771,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 			    int (*bind) (struct usb_gadget *))
 {
 	int retval;
+	u32 dctl;
+	struct device_if *dev_if = (GET_CORE_IF(s_pcd))->dev_if;
 
 	if (!driver || driver->speed == USB_SPEED_UNKNOWN || !bind ||
 	    !driver->unbind || !driver->disconnect || !driver->setup)
@@ -1746,6 +1800,12 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		s_pcd->gadget.dev.driver = NULL;
 		return retval;
 	}
+
+	/* Remove Soft Disconnect */
+	dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+	dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
+	dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+
 	return 0;
 }
 EXPORT_SYMBOL(usb_gadget_probe_driver);

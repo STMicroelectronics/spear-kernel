@@ -11,11 +11,14 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/amba/pl08x.h>
+#include <linux/amba/serial.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
+#include <plat/pl080.h>
 #include <plat/shirq.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
@@ -196,10 +199,224 @@ struct pmx_dev spear310_pmx_tdm0 = {
 static struct pmx_driver pmx_driver;
 
 /* Add spear310 specific devices here */
+/* DMAC platform data's slave info */
+static struct pl08x_channel_data pl080_slave_channels[] = {
+	{
+		.bus_id = "uart0_rx",
+		.min_signal = 2,
+		.max_signal = 2,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "uart0_tx",
+		.min_signal = 3,
+		.max_signal = 3,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ssp0_rx",
+		.min_signal = 8,
+		.max_signal = 8,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ssp0_tx",
+		.min_signal = 9,
+		.max_signal = 9,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "i2c_rx",
+		.min_signal = 10,
+		.max_signal = 10,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "i2c_tx",
+		.min_signal = 11,
+		.max_signal = 11,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "irda",
+		.min_signal = 12,
+		.max_signal = 12,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "adc",
+		.min_signal = 13,
+		.max_signal = 13,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "to_jpeg",
+		.min_signal = 14,
+		.max_signal = 14,
+		.muxval = 0,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "from_jpeg",
+		.min_signal = 15,
+		.max_signal = 15,
+		.muxval = 0,
+		.cctl = 0,
+		.device_fc = true,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras0_rx",
+		.min_signal = 0,
+		.max_signal = 0,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras0_tx",
+		.min_signal = 1,
+		.max_signal = 1,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras1_rx",
+		.min_signal = 2,
+		.max_signal = 2,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras1_tx",
+		.min_signal = 3,
+		.max_signal = 3,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras2_rx",
+		.min_signal = 4,
+		.max_signal = 4,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras2_tx",
+		.min_signal = 5,
+		.max_signal = 5,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras3_rx",
+		.min_signal = 6,
+		.max_signal = 6,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras3_tx",
+		.min_signal = 7,
+		.max_signal = 7,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras4_rx",
+		.min_signal = 8,
+		.max_signal = 8,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras4_tx",
+		.min_signal = 9,
+		.max_signal = 9,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras5_rx",
+		.min_signal = 10,
+		.max_signal = 10,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras5_tx",
+		.min_signal = 11,
+		.max_signal = 11,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras6_rx",
+		.min_signal = 12,
+		.max_signal = 12,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras6_tx",
+		.min_signal = 13,
+		.max_signal = 13,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras7_rx",
+		.min_signal = 14,
+		.max_signal = 14,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	}, {
+		.bus_id = "ras7_tx",
+		.min_signal = 15,
+		.max_signal = 15,
+		.muxval = 1,
+		.cctl = 0,
+		.periph_buses = PL08X_AHB1,
+	},
+};
+
+/* uart devices plat data */
+static struct amba_pl011_data uart_data[] = {
+	{
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart1_tx",
+		.dma_rx_param = "uart1_rx",
+	}, {
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart2_tx",
+		.dma_rx_param = "uart2_rx",
+	}, {
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart3_tx",
+		.dma_rx_param = "uart3_rx",
+	}, {
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart4_tx",
+		.dma_rx_param = "uart4_rx",
+	}, {
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "uart5_tx",
+		.dma_rx_param = "uart5_rx",
+	},
+};
+
 /* uart1 device registeration */
 struct amba_device spear310_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
+		.platform_data = &uart_data[0],
 	},
 	.res = {
 		.start = SPEAR310_UART1_BASE,
@@ -213,6 +430,7 @@ struct amba_device spear310_uart1_device = {
 struct amba_device spear310_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
+		.platform_data = &uart_data[1],
 	},
 	.res = {
 		.start = SPEAR310_UART2_BASE,
@@ -226,6 +444,7 @@ struct amba_device spear310_uart2_device = {
 struct amba_device spear310_uart3_device = {
 	.dev = {
 		.init_name = "uart3",
+		.platform_data = &uart_data[2],
 	},
 	.res = {
 		.start = SPEAR310_UART3_BASE,
@@ -239,6 +458,7 @@ struct amba_device spear310_uart3_device = {
 struct amba_device spear310_uart4_device = {
 	.dev = {
 		.init_name = "uart4",
+		.platform_data = &uart_data[3],
 	},
 	.res = {
 		.start = SPEAR310_UART4_BASE,
@@ -252,6 +472,7 @@ struct amba_device spear310_uart4_device = {
 struct amba_device spear310_uart5_device = {
 	.dev = {
 		.init_name = "uart5",
+		.platform_data = &uart_data[4],
 	},
 	.res = {
 		.start = SPEAR310_UART5_BASE,
@@ -713,4 +934,8 @@ void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+
+	/* Set DMAC platform data's slave info */
+	pl080_set_slaveinfo(&spear3xx_dma_device, pl080_slave_channels,
+			ARRAY_SIZE(pl080_slave_channels));
 }

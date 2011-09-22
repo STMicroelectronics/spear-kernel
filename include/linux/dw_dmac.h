@@ -12,7 +12,6 @@
 #define DW_DMAC_H
 
 #include <linux/dmaengine.h>
-#include <linux/interrupt.h>
 
 /**
  * struct dw_dma_platform_data - Controller configuration parameters
@@ -98,37 +97,6 @@ struct dw_dma_slave {
 	u8			fc;
 };
 
-struct dw_dma_chan {
-	struct dma_chan		chan;
-	void __iomem		*ch_regs;
-	u8			mask;
-	u8			priority;
-	bool			paused;
-
-	spinlock_t		lock;
-
-	/* these other elements are all protected by lock */
-	unsigned long		flags;
-	dma_cookie_t		completed;
-	struct list_head	active_list;
-	struct list_head	queue;
-	struct list_head	free_list;
-	struct dw_cyclic_desc	*cdesc;
-
-	unsigned int		descs_allocated;
-};
-
-struct dw_dma {
-	struct dma_device	dma;
-	void __iomem		*regs;
-	struct tasklet_struct	tasklet;
-	struct clk		*clk;
-
-	u8			all_chan_mask;
-
-	struct dw_dma_chan	chan[0];
-};
-
 /* Platform-configurable bits in CFG_HI */
 #define DWC_CFGH_FCMODE		(1 << 0)
 #define DWC_CFGH_FIFO_MODE	(1 << 1)
@@ -155,16 +123,6 @@ struct dw_cyclic_desc {
 	void		(*period_callback)(void *param);
 	void		*period_callback_param;
 };
-
-static inline struct dw_dma_regs __iomem *__dw_regs(struct dw_dma *dw)
-{
-	return dw->regs;
-}
-
-static inline struct dw_dma *to_dw_dma(struct dma_device *ddev)
-{
-	return container_of(ddev, struct dw_dma, dma);
-}
 
 struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 		dma_addr_t buf_addr, size_t buf_len, size_t period_len,

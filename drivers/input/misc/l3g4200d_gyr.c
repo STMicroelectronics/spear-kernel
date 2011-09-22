@@ -52,7 +52,11 @@
 #define FUZZ		0
 #define FLAT		0
 #define AUTO_INCREMENT	0x80
-#define FS_RANGE_MASK	0x00CF
+#define FS_RANGE_MASK	0xCF
+
+/* Minimum polling interval in ms */
+#define MIN_POLL_INTERVAL	2
+#define MIN_FS_RANGE		250
 
 /** Registers Contents */
 #define WHOAMI_L3G4200D	0x00D3	/* Expected content for WAI register*/
@@ -79,10 +83,26 @@ struct output_rate {
 	u8 mask;
 };
 
+/**
+ * L3G4200D gyroscope parameters' current settings
+ * @poll_rate_ms: current polling rate
+ * @fs_range: current full scale range
+ */
+struct gyro_parameters {
+	int poll_rate_ms;
+	int fs_range;
+};
+
+struct full_scale_range {
+	int range;
+	int reg_val;
+};
+
 struct l3g4200d_data {
 	struct i2c_client *client;
 	struct l3g4200d_gyr_platform_data *pdata;
 	struct mutex lock;
+	struct gyro_parameters params;
 	struct input_polled_dev *input_poll_dev;
 	int hw_initialized;
 	atomic_t enabled;
@@ -95,6 +115,12 @@ static const struct output_rate odr_table[] = {
 	{3,	ODR400|BW01},
 	{5,	ODR200|BW00},
 	{10,	ODR100|BW00},
+};
+
+static const struct full_scale_range fs_range_table[] = {
+	{250,	0x00},
+	{500,	0x10},
+	{2000,	0x20},
 };
 
 static int l3g4200d_i2c_read(struct l3g4200d_data *gyro, u8 *buf, int len)
@@ -146,18 +172,21 @@ static int l3g4200d_i2c_write(struct l3g4200d_data *gyro, u8 *buf, u8 len)
 	return 0;
 }
 
-static int l3g4200d_update_fs_range(struct l3g4200d_data *gyro, u8 new_fs)
+static int l3g4200d_update_fs_range(struct l3g4200d_data *gyro, u32 new_fs)
 {
 	int err = -EIO, res = 0;
+	int idx = 0;
+	int reg_val = 0;
 	u8 buf[2];
 
-	if (new_fs & FS_RANGE_MASK) {
-		dev_err(&gyro->client->dev,
-			"%s: Invalid range entered (0x%x).\n \
-			Valid values are 0x00, 0x10, 0x20, 0x30\n",
-			__func__, new_fs);
-		return -EINVAL;
-	}
+	if (new_fs < MIN_FS_RANGE)
+		idx = 0;
+	else
+		for (idx = ARRAY_SIZE(fs_range_table) - 1; idx >= 0; idx--)
+			if (fs_range_table[idx].range <= new_fs)
+				break;
+
+	reg_val = fs_range_table[idx].reg_val;
 
 	if (atomic_read(&gyro->enabled)) {
 		buf[0] = CTRL_REG4;
@@ -167,13 +196,15 @@ static int l3g4200d_update_fs_range(struct l3g4200d_data *gyro, u8 new_fs)
 		else
 			return res;
 
-		buf[1] = new_fs|buf[0];
+		buf[1] = reg_val|buf[0];
 		buf[0] = CTRL_REG4;
 		err = l3g4200d_i2c_write(gyro, buf, 1);
 		if (err < 0)
 			return err;
 	}
-	gyro->register_state[3] = new_fs;
+	gyro->register_state[3] = buf[1];
+	gyro->params.fs_range = fs_range_table[idx].range;
+
 	return err;
 }
 
@@ -182,10 +213,12 @@ static int l3g4200d_update_odr(struct l3g4200d_data *gyro, int poll_interval)
 	int err = -EIO, index;
 	u8 config[2];
 
-	for (index = ARRAY_SIZE(odr_table) - 1; index >= 0; index--) {
-		if (odr_table[index].poll_rate_ms <= poll_interval)
-			break;
-	}
+	if (poll_interval < MIN_POLL_INTERVAL)
+		index = 0;
+	else
+		for (index = ARRAY_SIZE(odr_table) - 1; index >= 0; index--)
+			if (odr_table[index].poll_rate_ms <= poll_interval)
+				break;
 
 	config[1] = odr_table[index].mask;
 	config[1] |= ENABLE_ALL_AXES + PM_NORMAL;
@@ -202,6 +235,8 @@ static int l3g4200d_update_odr(struct l3g4200d_data *gyro, int poll_interval)
 	}
 
 	gyro->register_state[0] = config[1];
+	gyro->params.poll_rate_ms = odr_table[index].poll_rate_ms;
+
 	return 0;
 }
 
@@ -330,7 +365,7 @@ attr_get_polling_rate(struct device *dev, struct device_attribute *attr,
 	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
 
 	mutex_lock(&gyro->lock);
-	val = gyro->pdata->poll_interval;
+	val = gyro->params.poll_rate_ms;
 	mutex_unlock(&gyro->lock);
 
 	return sprintf(buf, "%d\n", val);
@@ -351,8 +386,6 @@ attr_set_polling_rate(struct device *dev, struct device_attribute *attr,
 
 	mutex_lock(&gyro->lock);
 	err = l3g4200d_update_odr(gyro, interval_ms);
-	if (err == 0)
-		gyro->pdata->poll_interval = interval_ms;
 	mutex_unlock(&gyro->lock);
 
 	if (err < 0)
@@ -366,27 +399,9 @@ attr_get_range(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
 	int range = 0;
-	char val;
 
 	mutex_lock(&gyro->lock);
-	val = gyro->pdata->fs_range;
-	switch (val) {
-	case L3G4200D_FS_250DPS:
-		range = L3G4200D_RANGE_250DPS;
-		break;
-	case L3G4200D_FS_500DPS:
-		range = L3G4200D_RANGE_500DPS;
-		break;
-	case L3G4200D_FS_2000DPS:
-		/*
-		 * Intentional fall through - 0x20, 0x30 corresponds to 2000 dps
-		 */
-	case L3G4200D_FS_2000DPS2:
-		range = L3G4200D_RANGE_2000DPS;
-		break;
-	default:
-		return -EINVAL;
-	}
+	range = gyro->params.fs_range;
 	mutex_unlock(&gyro->lock);
 
 	return sprintf(buf, "%d\n", range);
@@ -405,8 +420,6 @@ attr_set_range(struct device *dev, struct device_attribute *attr,
 
 	mutex_lock(&gyro->lock);
 	err = l3g4200d_update_fs_range(gyro, val);
-	if (err == 0)
-		gyro->pdata->fs_range = val;
 	mutex_unlock(&gyro->lock);
 
 	if (err < 0)

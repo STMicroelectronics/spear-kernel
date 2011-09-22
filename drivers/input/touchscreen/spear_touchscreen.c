@@ -26,7 +26,7 @@
 #include <linux/freezer.h>
 #include <linux/slab.h>
 #include <plat/touchscreen.h>
-#include "../../char/spear_adc.h"
+#include <linux/spear_adc.h>
 
 #define DEBUG 0
 /* Values to provide to Input layer, right now just arbit*/

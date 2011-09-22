@@ -1317,6 +1317,10 @@ static void handle_hc_chhltd_intr_dma(struct dwc_hcd *hcd, struct dwc_hc *hc,
 			       __func__, hc->hc_num, hcint,
 			       dwc_read32(gintsts_reg(hcd)));
 		}
+		/* clear ChHltd interrupt */
+		hcint = 0;
+		hcint = DWC_HCINT_CHAN_HALTED_RW(hcint, 1);
+		dwc_write32(regs + DWC_HCINT, hcint);
 	}
 }
 

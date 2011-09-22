@@ -11,40 +11,24 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/kernel.h>
-#include <mach/dma.h>
-#include <plat/jpeg.h>
-
 #ifndef CONFIG_ARCH_SPEAR13XX
-/* macros for configuring dma */
-#define READ_DMA_CTL	(PL080_CHAN_CTL_USER_MODE | \
-		PL080_CHAN_CTL_NON_BUFFERABLE | PL080_CHAN_CTL_NON_CACHEABLE | \
-		PL080_CHAN_CTL_DEST_ADDR_INC | \
-		PL080_CHAN_CTL_DEST_BURST(JPEG_BURST) | \
-		PL080_CHAN_CTL_SRC_BURST(JPEG_BURST))
+#include <linux/amba/pl08x.h>
+#endif
 
-#define WRITE_DMA_CTL	(PL080_CHAN_CTL_USER_MODE | \
-		PL080_CHAN_CTL_NON_BUFFERABLE | PL080_CHAN_CTL_NON_CACHEABLE | \
-		PL080_CHAN_CTL_SRC_ADDR_INC | \
-		PL080_CHAN_CTL_DEST_BURST(JPEG_BURST) | \
-		PL080_CHAN_CTL_SRC_BURST(JPEG_BURST))
-
-#define READ_DMA_CFG	((PL080_CHAN_CFG_FLOW_CTRL(SRC_PERIPHERAL_TO_MEMORY) |\
-			PL080_CHAN_CFG_SRC_RQID(DMA_REQ_FROM_JPEG)))
-#define WRITE_DMA_CFG	((PL080_CHAN_CFG_FLOW_CTRL(DMA_MEMORY_TO_PERIPHERAL) |\
-			PL080_CHAN_CFG_DEST_RQID(DMA_REQ_TO_JPEG)))
-#endif /* !CONFIG_ARCH_SPEAR13XX */
+#include <linux/kernel.h>
+#include <plat/jpeg.h>
+#include <mach/dma.h>
 
 void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 		struct device *dma_dev)
 {
-	struct jpeg_plat_data data;
+	struct jpeg_plat_data data = {0, };
 
+#ifdef CONFIG_ARCH_SPEAR13XX
 	data.mem2jpeg_slave.dma_dev = dma_dev;
 	data.mem2jpeg_slave.reg_width = JPEG_WIDTH;
 	data.jpeg2mem_slave.dma_dev = dma_dev;
 	data.jpeg2mem_slave.reg_width = JPEG_WIDTH;
-#ifdef CONFIG_ARCH_SPEAR13XX
 	data.mem2jpeg_slave.cfg_hi =
 		DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_TO_JPEG);
 	data.mem2jpeg_slave.cfg_lo = 0;
@@ -63,17 +47,15 @@ void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 	data.jpeg2mem_slave.dst_msize = JPEG_BURST;
 	data.jpeg2mem_slave.fc = DW_DMA_FC_P_P2M;
 #else
-	data.mem2jpeg_slave.ctl = WRITE_DMA_CTL |
-			PL080_CHAN_CTL_SRC_WIDTH(JPEG_WIDTH);
-	data.mem2jpeg_slave.cfg = WRITE_DMA_CFG;
-	data.mem2jpeg_slave.src_master = MEM_MASTER;
-	data.mem2jpeg_slave.dest_master = JPEG_MASTER;
+	data.runtime_config = true;
+	data.dma_filter = pl08x_filter_id;
+	data.mem2jpeg_slave.direction = DMA_TO_DEVICE;
+	data.mem2jpeg_slave.dst_addr_width = JPEG_WIDTH;
+	data.mem2jpeg_slave.dst_maxburst = JPEG_BURST;
 
-	data.jpeg2mem_slave.ctl = READ_DMA_CTL +
-		PL080_CHAN_CTL_DEST_WIDTH(JPEG_WIDTH);
-	data.jpeg2mem_slave.cfg = READ_DMA_CFG;
-	data.jpeg2mem_slave.src_master = JPEG_MASTER;
-	data.jpeg2mem_slave.dest_master = MEM_MASTER;
+	data.jpeg2mem_slave.direction = DMA_FROM_DEVICE;
+	data.jpeg2mem_slave.src_addr_width = JPEG_WIDTH;
+	data.jpeg2mem_slave.src_maxburst = JPEG_BURST;
 #endif /* !CONFIG_ARCH_SPEAR13XX */
 
 	/* set jpeg plat data */
@@ -84,8 +66,13 @@ void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 void set_jpeg_tx_rx_reg(struct jpeg_plat_data *data, dma_addr_t tx_reg,
 		dma_addr_t rx_reg)
 {
+#ifdef CONFIG_ARCH_SPEAR13XX
 	data->mem2jpeg_slave.tx_reg = tx_reg;
 	data->mem2jpeg_slave.rx_reg = 0;
 	data->jpeg2mem_slave.tx_reg = 0;
 	data->jpeg2mem_slave.rx_reg = rx_reg;
+#else
+	data->mem2jpeg_slave.dst_addr = tx_reg;
+	data->jpeg2mem_slave.src_addr = rx_reg;
+#endif
 }

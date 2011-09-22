@@ -22,13 +22,21 @@
 #ifndef DESIGNWARE_I2S_H
 #define DESIGNWARE_I2S_H
 
+#include <linux/platform_device.h>
+#include <linux/dw_dmac.h>
 #include <sound/pcm.h>
+
+struct dma_slaves {
+	struct dw_dma_slave mem2i2s_slave;
+	struct dw_dma_slave i2s2mem_slave;
+};
 
 struct i2s_platform_data {
 	#define PLAY	(1 << 0)
 	#define RECORD	(1 << 1)
 	unsigned int cap;
 	int channel;
+	struct dma_slaves ds;
 };
 
 #define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
@@ -36,6 +44,7 @@ struct i2s_platform_data {
 #define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
 #define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
 
-void get_dma_start_addr(struct snd_pcm_substream *substream);
+struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
+		dma_cap_mask_t *smask);
 
 #endif /* DESIGNWARE_I2S_H */

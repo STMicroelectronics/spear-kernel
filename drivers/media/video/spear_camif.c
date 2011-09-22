@@ -40,8 +40,8 @@
 #include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
-#include <linux/kernel.h>
 #include <linux/io.h>
+#include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
@@ -173,8 +173,8 @@ struct camif {
 	bool frame_start;
 	bool first_entry;
 
-	/* platform data */
-	struct spear_camif_plat_data *pdata;
+	/* camif controller data specific to a platform */
+	struct camif_controller *pdata;
 };
 
 /*
@@ -221,21 +221,21 @@ static void start_camif(struct camif *camif)
 	bool emb_synchro = 0;
 	bool eav_sel = 0;
 
-	if (camif->pdata->sync_type == EMBEDDED_SYNC) {
+	if (camif->pdata->config->sync_type == EMBEDDED_SYNC) {
 		emb_synchro = 1;
 		eav_sel = 1;
 		writel(ITU656_EMBED_EVEN_CODE, camif->base + CAMIF_EFEC);
 		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
 	}
 
-	ctrl = (camif->pdata->burst_size << 19) |
+	ctrl = (camif->pdata->config->burst_size << 19) |
 		(eav_sel << 16) | (emb_synchro << 12) |
-		(camif->pdata->transform << 8) |
-		(camif->pdata->vsync_polarity << 7) |
-		(camif->pdata->hsync_polarity << 6) |
-		(camif->pdata->pclk_polarity << 5) |
-		(camif->pdata->sync_type << 4) |
-		camif->pdata->capture_mode;
+		(camif->pdata->config->transform << 8) |
+		(camif->pdata->config->vsync_polarity << 7) |
+		(camif->pdata->config->hsync_polarity << 6) |
+		(camif->pdata->config->pclk_polarity << 5) |
+		(camif->pdata->config->sync_type << 4) |
+		camif->pdata->config->capture_mode;
 
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
@@ -333,8 +333,11 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 				camif->chan,
 				dma->sglist, dma->sglen, direction,
 				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-	if (!buf->desc)
+	if (!buf->desc) {
+		dev_err(camif->ici.v4l2_dev.dev,
+				"%s: buf->desc is NULL\n", __func__);
 		return -ENOMEM;
+	}
 
 	buf->desc->callback = camif_rx_dma_complete;
 	buf->desc->callback_param = camif;
@@ -393,17 +396,19 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		 * we should receive a frame-end interrupt only after we have
 		 * received the frame start interrupt first. Check for the same.
 		 */
-		if (!camif->frame_start)
-			return IRQ_HANDLED;
-		else
-			camif->frame_start = 0;
-
 		spin_lock_irqsave(&camif->lock, flags);
+		if (!camif->frame_start) {
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto exit_isr;
+		}
+
+		camif->frame_start = 0;
+
 		/* check if the previous dma is complete */
 		if (!camif->first_entry) {
 			if (!camif->dma_complete) {
 				spin_unlock_irqrestore(&camif->lock, flags);
-				return IRQ_HANDLED;
+				goto exit_isr;
 			}
 		}
 
@@ -417,7 +422,8 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 				dev_err(camif->ici.v4l2_dev.dev,
 					"dma submit error %d\n",
 					camif->cookie);
-				return -EAGAIN;
+				spin_unlock_irqrestore(&camif->lock, flags);
+				goto exit_isr;
 			}
 
 			camif->chan->device->device_issue_pending(camif->chan);
@@ -430,6 +436,7 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
+exit_isr:
 	return IRQ_HANDLED;
 }
 
@@ -735,46 +742,30 @@ static void camif_put_formats(struct soc_camera_device *icd)
 }
 
 /*
- * while performing cropping operation we must check for the cropping
- * bounds. For the same, we need to consider whether cropping can be
- * performed for the user defined cropping params (specified by 'crop'
- * param) and the image rectangle details received from the sensor
- * (specified by 'mbus_framefmt')
- *
- *	mf.width
- *	+-------------------------------+
- *	m|	(rect->left, rect->top)	|
- *	f|	 |			|
- *	.|	 +--------------+	|
- *	h|	r|		|	|
- *	e|	e|		|	|
- *	i|	c|		|	|
- *	g|	t| IMAGE	|	|
- *	h|	|| DATA		|	|
- *	t|	V|		|	|
- *	 |	h|		|	|
- *	 |	e|		|	|
- *	 |	i|		|	|
- *	 |	g|		|	|
- *	 |	h|		|	|
- *	 |	t|		|	|
- *	 |	 +--------------+	|
- *	 |	 rect->width		|
- *	+-------------------------------+
+ * CAMIF can perform cropping, but we don't want to waste bandwidth
+ * and kill the framerate by always requesting the maximum image
+ * from the sub-device (client/sensor). So, first we request exaclty the
+ * user rectangle from the sensor. The sensor will try to preserve its
+ * output frame as far as possible, but it could have changed, so we
+ * retreive it again. After that we invoke the crop functionality of
+ * CAMIF, to ensure that we have a final rectangle which is as close as
+ * possible to what has been requested by the user.
  */
 static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
-
+	int ret;
 	struct v4l2_rect *rect = &crop->c;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif *camif = ici->priv;
 	struct device *dev = icd->dev.parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct v4l2_format f;
 	struct v4l2_mbus_framefmt mf;
-	struct v4l2_pix_format *pix = &f.fmt.pix;
-	int ret;
 
+	/*
+	 * check if the sub-device supports cropping with the
+	 * user-defined cropping params. On success crop contains
+	 * current camera crop.
+	 */
 	ret = v4l2_subdev_call(sd, video, s_crop, crop);
 	if (ret < 0) {
 		dev_warn(dev, "failed to crop to %ux%u@%u:%u\n",
@@ -782,24 +773,21 @@ static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 		return ret;
 	}
 
+	/* retrieve camera output window */
 	ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
 	if (ret < 0) {
-		dev_warn(dev, "%s: failed to fetch current format\n", __func__);
+		dev_warn(dev, "failed to fetch current format\n");
 		return ret;
 	}
 
-	if (rect->width > mf.width || rect->height > mf.height) {
-		dev_warn(dev, "No cropping is desired\n");
-		return -1;
-	}
-
-	if (((rect->left + rect->width) > pix->width)
-		|| ((rect->top + rect->height) > pix->height)) {
-		dev_warn(dev, "Cropping cannot be done\n");
-		return -1;
+	/* check for extreme boundary size (> 1920 * 2560) */
+	if (mf.width > 2560 || mf.height > 1920) {
+		dev_warn(dev, "cam-output window exceeds the max boundary\n");
+		return -EINVAL;
 	}
 
 	/*
+	 * use CAMIF cropping to crop to the new window:
 	 * program the crop start and stop registers to ensure correct cropping
 	 * coordinates
 	 */
@@ -914,8 +902,41 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 static void camif_init_videobuf(struct videobuf_queue *q,
 		struct soc_camera_device *icd)
 {
+	dma_cap_mask_t mask;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif *camif = ici->priv;
+
+	/* dma related settings */
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+
+	switch (camif->pdata->config->channel) {
+	case EVEN_CHANNEL:
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->dev.parent,
+				"unable to get DMA channel for even lines\n");
+			return;
+		}
+		break;
+
+	case BOTH_ODD_EVEN_CHANNELS:
+		/*
+		 * not supported as of now, warn and return to default
+		 * 'even line' _only_ settings
+		 */
+		dev_warn(icd->dev.parent, "Interlaced fields are not supported"
+				"defaulting to even line settings\n");
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->dev.parent,
+				"unable to get DMA channel for even lines\n");
+			return;
+		}
+		break;
+	}
 
 	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
 			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -1043,11 +1064,9 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	int ret;
 	struct camif *camif;
 	void __iomem *addr;
-	dma_cap_mask_t mask;
 	struct clk *clk;
 	struct resource *mem;
 	int line_irq, frm_start_end_irq;
-	struct camif_controller *plat = pdev->dev.platform_data;
 
 	/* must have platform data */
 	if (!pdev) {
@@ -1092,7 +1111,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "no clock defined\n");
-		ret = -ENODEV;
+		ret = PTR_ERR(clk);
 		goto exit_iounmap;
 	}
 
@@ -1103,6 +1122,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->clk = clk;
 	camif->frm_start_end_irq = frm_start_end_irq;
 	camif->line_irq = line_irq;
+	camif->pdata = pdev->dev.platform_data;
 
 	ret = request_irq(camif->line_irq, camif_line_int, 0,
 				"camif_line", camif);
@@ -1131,42 +1151,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	 */
 	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
 
-	camif->pdata = pdev->dev.platform_data;
-
-	/* dma related settings */
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-
-	switch (camif->pdata->channel) {
-	case EVEN_CHANNEL:
-		camif->chan = dma_request_channel(mask,
-			plat->dma_filter, plat->dma_even_param);
-		if (!camif->chan) {
-			dev_err(&pdev->dev,
-				"unable to get DMA channel for even lines\n");
-			ret = -EINVAL;
-			goto exit_free_frm_start_end_irq;
-		}
-		break;
-
-	case BOTH_ODD_EVEN_CHANNELS:
-		/*
-		 * not supported as of now, warn and return to default
-		 * 'even line' _only_ settings
-		 */
-		dev_warn(&pdev->dev, "Interlaced fields are not supported"
-				"defaulting to even line settings\n");
-		camif->chan = dma_request_channel(mask,
-			plat->dma_filter, plat->dma_even_param);
-		if (!camif->chan) {
-			dev_err(&pdev->dev,
-				"unable to get DMA channel for even lines\n");
-			ret = -EINVAL;
-			goto exit_free_frm_start_end_irq;
-		}
-		break;
-	}
-
 	camif->ici.v4l2_dev.dev = &pdev->dev;
 	camif->ici.nr = pdev->id;
 	camif->ici.priv = camif;
@@ -1177,7 +1161,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev,
 			"failed to register camif as SoC camera host\n");
-		goto exit_dma_release;
+		goto exit_free_frm_start_end_irq;
 	}
 
 	/* reset status flags */
@@ -1188,15 +1172,13 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&camif->capture);
 	spin_lock_init(&camif->lock);
 
-	dev_info(&pdev->dev, "%s registered (base addr=%p, "
-			"lineIRQ=%d, vsyncIRQ=%d\n",
+	dev_info(&pdev->dev, "%s registered, (base-addr=%p, "
+			"lineIRQ=%d, vsyncIRQ=%d)\n",
 			KBUILD_MODNAME, camif->base, camif->line_irq,
 			camif->frm_start_end_irq);
 
 	return 0;
 
-exit_dma_release:
-	dma_release_channel(camif->chan);
 exit_free_frm_start_end_irq:
 	free_irq(camif->frm_start_end_irq, camif);
 exit_free_line_irq:
@@ -1266,4 +1248,5 @@ module_exit(camif_exit);
 
 MODULE_AUTHOR("Bhupesh Sharma <bhupesh.sharma@st.com>");
 MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("platform:spear_camif");
 MODULE_DESCRIPTION("SoC Camera Driver for SPEAr CAMIF");

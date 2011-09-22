@@ -457,11 +457,6 @@ static void __init spear1310_reva_evb_init(void)
 	nand_mach_init(FSMC_NAND_BW8);
 #endif
 
-#ifdef CONFIG_SND_SOC_STA529
-	/* configure i2s configuration for dma xfer */
-	pcm_init(&spear13xx_dmac_device[0].dev);
-#endif
-
 	/* call spear1310_reva machine init function */
 	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 

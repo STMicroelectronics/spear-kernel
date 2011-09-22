@@ -38,12 +38,13 @@
 #include <linux/wait.h>
 #include <plat/adc.h>
 #include <plat/hardware.h>
-#include "spear_adc.h"
+#include <linux/spear_adc.h>
 
 #define DRIVER_NAME "spear-adc"
 
 /* adc declarations */
 #define ADC_CHANNEL_NUM 8
+#define ADC_DMA_WIDTH	4 /* ADC Width for DMA */
 
 #ifndef CONFIG_ARCH_SPEAR6XX
 struct adc_regs {
@@ -280,7 +281,7 @@ static u32 get_sg_count(size_t size)
 	 * calculate the max transfer size supported by src device for a single
 	 * sg
 	 */
-	max_xfer = DMA_MAX_COUNT << ADC_WIDTH;
+	max_xfer = ADC_DMA_MAX_COUNT * ADC_DMA_WIDTH;
 
 	return (size + max_xfer - 1) / max_xfer;
 }
@@ -295,7 +296,7 @@ static void sg_fill(u32 size, dma_addr_t digital_volt)
 
 	/* Calculate the max transfer size supported by Src Device for a single
 	 ** SG */
-	max_xfer = DMA_MAX_COUNT << ADC_WIDTH;
+	max_xfer = ADC_DMA_MAX_COUNT * ADC_DMA_WIDTH;
 
 	while (size) {
 		int len = size < max_xfer ? size : max_xfer;
@@ -360,12 +361,27 @@ static s32 dma_xfer(u32 len, void *digital_volt)
 	dma_cap_mask_t mask;
 	u32 size = len * sizeof(u32), dma_addr;
 	s32 status = 0;
+	void *dma_filter, *filter_data;
+	char *adc_str = "adc";
 
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
-	chan = dma_request_channel(mask, filter, &g_drv_data->data->slave);
+
+	if (g_drv_data->data->dma_filter) {
+		dma_filter = g_drv_data->data->dma_filter;
+		filter_data = adc_str;
+	} else {
+		dma_filter = filter;
+		filter_data = &g_drv_data->data->slave;
+	}
+
+	chan = dma_request_channel(mask, dma_filter, filter_data);
 	if (!chan)
 		return -EAGAIN;
+
+	/* Configure channel parameters if runtime_config is true */
+	if (g_drv_data->data->runtime_config)
+		dmaengine_slave_config(chan, (void *) &g_drv_data->data->slave);
 
 	g_drv_data->dma_chan = chan;
 
@@ -706,7 +722,7 @@ u32 adc_configure(struct adc_config *config)
 		config->avail_clk = clk_get_rate(g_drv_data->clk);
 	}
 
-	if ((config->avail_clk < clk_max) || (config->avail_clk > clk_max))
+	if ((config->avail_clk < clk_min) || (config->avail_clk > clk_max))
 		return -EINVAL;
 
 	adc_reset();

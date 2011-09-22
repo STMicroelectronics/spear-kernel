@@ -10,19 +10,11 @@
  */
 
 #include <linux/kernel.h>
-#include <mach/dma.h>
 #include <plat/adc.h>
+#include <mach/dma.h>
 
 #ifndef CONFIG_ARCH_SPEAR13XX
-/* macros for configuring dma */
-#define DMA_CTL	(PL080_CHAN_CTL_USER_MODE | PL080_CHAN_CTL_NON_BUFFERABLE |\
-		PL080_CHAN_CTL_NON_CACHEABLE | PL080_CHAN_CTL_DEST_ADDR_INC |\
-		PL080_CHAN_CTL_DEST_BURST(ADC_BURST) | \
-		PL080_CHAN_CTL_SRC_BURST(ADC_BURST) | \
-		PL080_CHAN_CTL_DEST_WIDTH(ADC_WIDTH))
-
-#define DMA_CFG	((PL080_CHAN_CFG_FLOW_CTRL(DMA_PERIPHERAL_TO_MEMORY) |\
-			PL080_CHAN_CFG_SRC_RQID(DMA_REQ_ADC)))
+#include <linux/amba/pl08x.h>
 #endif /* !CONFIG_ARCH_SPEAR13XX */
 
 void set_adc_plat_data(struct platform_device *adc_pdev,
@@ -30,6 +22,7 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 {
 	struct adc_plat_data data = {
 		/* default configuration */
+		.slave = {0, },
 		.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500,
 			INTERNAL_SCAN,
 #ifndef CONFIG_ARCH_SPEAR6XX
@@ -39,10 +32,9 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 	};
 
 #ifdef CONFIG_SPEAR_ADC_DMA_IF
-
+#ifdef CONFIG_ARCH_SPEAR13XX
 	data.slave.dma_dev = dma_dev;
 	data.slave.reg_width = ADC_WIDTH;
-#ifdef CONFIG_ARCH_SPEAR13XX
 	data.slave.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_ADC);
 	data.slave.cfg_lo = 0;
 	data.slave.src_master = 1;
@@ -51,11 +43,11 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 	data.slave.dst_msize = ADC_BURST;
 	data.slave.fc = DW_DMA_FC_D_P2M;
 #else
-	data.slave.ctl = DMA_CTL |
-			PL080_CHAN_CTL_SRC_WIDTH(ADC_WIDTH);
-	data.slave.cfg = DMA_CFG;
-	data.slave.src_master = DMA_MASTER_ADC;
-	data.slave.dest_master = DMA_MASTER_MEMORY;
+	data.runtime_config = true;
+	data.dma_filter = pl08x_filter_id;
+	data.slave.direction = DMA_FROM_DEVICE;
+	data.slave.src_addr_width = ADC_WIDTH;
+	data.slave.src_maxburst = ADC_BURST;
 #endif /* !CONFIG_ARCH_SPEAR13XX */
 #endif /* CONFIG_SPEAR_ADC_DMA_IF */
 
@@ -67,6 +59,10 @@ void set_adc_plat_data(struct platform_device *adc_pdev,
 #ifdef CONFIG_SPEAR_ADC_DMA_IF
 void set_adc_rx_reg(struct adc_plat_data *data, dma_addr_t rx_reg)
 {
+#ifdef CONFIG_ARCH_SPEAR13XX
 	data->slave.rx_reg = rx_reg;
+#else
+	data->slave.src_addr = rx_reg;
+#endif
 }
 #endif /* CONFIG_SPEAR_ADC_DMA_IF */

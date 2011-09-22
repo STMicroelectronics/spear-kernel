@@ -104,6 +104,7 @@ static struct pmx_dev *pmx_devs[] = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
+	&spear3xx_dma_device,
 	&spear3xx_gpio_device,
 	&spear3xx_ssp0_device,
 	&spear3xx_uart_device,
@@ -120,7 +121,6 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_adc_device,
-	&spear3xx_dmac_device,
 	&spear3xx_ehci_device,
 	&spear3xx_eth_device,
 	&spear3xx_i2c_device,
@@ -178,7 +178,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 12000000,
+		.max_speed_hz = 22000000, /* Actual 20.75 */
 		.bus_num = 0,
 		.chip_select = 1,
 		.mode = SPI_MODE_3,
@@ -225,11 +225,10 @@ static void __init spear320_evb_init(void)
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
 
 	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, &spear3xx_dmac_device.dev);
+	set_adc_plat_data(&spear3xx_adc_device, NULL);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device,
-			&spear3xx_dmac_device.dev);
+	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
 	macb_init_board_info(&spear320_eth_macb1_mii_device);

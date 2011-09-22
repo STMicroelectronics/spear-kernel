@@ -16,6 +16,20 @@
 
 #include <linux/mtd/physmap.h>
 #include <linux/mtd/fsmc.h>
+#include <plat/hardware.h>
+
+/*
+ * The placement of the Command Latch Enable (CLE) and
+ * Address Latch Enable (ALE) is twised around in the
+ * SPEAR310 implementation.
+ */
+#if defined(CONFIG_CPU_SPEAR310)
+#define SPEAR310_PLAT_NAND_CLE	(1 << 17)
+#define SPEAR310_PLAT_NAND_ALE	(1 << 16)
+#endif
+
+#define PLAT_NAND_CLE		(1 << 16)
+#define PLAT_NAND_ALE		(1 << 17)
 
 /* This function is used to set platform data field of pdev->dev */
 static inline void fsmc_nand_set_plat_data(struct platform_device *pdev,
@@ -28,6 +42,16 @@ static inline void fsmc_nand_set_plat_data(struct platform_device *pdev,
 	if (partitions) {
 		plat_data->partitions = partitions;
 		plat_data->nr_partitions = nr_partitions;
+	}
+
+	if (cpu_is_spear310()) {
+#ifdef CONFIG_CPU_SPEAR310
+		plat_data->ale_off = SPEAR310_PLAT_NAND_ALE;
+		plat_data->cle_off = SPEAR310_PLAT_NAND_CLE;
+#endif
+	} else {
+		plat_data->ale_off = PLAT_NAND_ALE;
+		plat_data->cle_off = PLAT_NAND_CLE;
 	}
 
 	plat_data->options = options;

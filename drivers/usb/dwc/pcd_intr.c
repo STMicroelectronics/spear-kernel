@@ -422,12 +422,14 @@ static int dwc_otg_pcd_handle_np_tx_fifo_empty_intr(struct dwc_pcd *pcd)
 	}
 
 	/* Clear nptxfempty interrupt */
-	gintsts |= DWC_INTMSK_RXFIFO_NOT_EMPT;
+	gintsts |= DWC_INTMSK_NP_TXFIFO_EMPT;
 	dwc_write32(global_regs + DWC_GINTSTS, gintsts);
 
 	/* Re-enable tx-fifo empty interrupt, if packets are stil pending */
 	if (len)
-		dwc_modify32(global_regs + DWC_GINTSTS, 0, gintsts);
+		dwc_modify32(global_regs + DWC_GINTMSK, gintsts, gintsts);
+	else
+		dwc_modify32(global_regs + DWC_GINTMSK, gintsts, 0);
 	return 1;
 }
 
@@ -456,7 +458,7 @@ static int write_empty_tx_fifo(struct dwc_pcd *pcd, u32 epnum)
 	 */
 	len = ep->dwc_ep.xfer_len - ep->dwc_ep.xfer_count;
 	dwords = count_dwords(ep, len);
-	while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(txstatus) > dwords
+	while (DWC_DTXFSTS_TXFSSPC_AVAI_RD(txstatus) >= dwords
 	       && ep->dwc_ep.xfer_count < ep->dwc_ep.xfer_len
 	       && ep->dwc_ep.xfer_len != 0) {
 		dwc_otg_ep_write_packet(core_if, &ep->dwc_ep, 0);
@@ -661,8 +663,9 @@ static int dwc_otg_pcd_handle_usb_reset_intr(struct dwc_pcd *pcd)
 	for (i = 0; i <= dev_if->num_out_eps; i++)
 		dwc_write32(out_ep_ctl_reg(pcd, i), doepctl);
 
-	/* Flush the NP Tx FIFO */
+	/* Flush the FIFO */
 	dwc_otg_flush_tx_fifo(core_if, 0);
+	dwc_otg_flush_rx_fifo(core_if);
 
 	/* Flush the Learning Queue */
 	resetctl |= DWC_RSTCTL_TKN_QUE_FLUSH;
@@ -1076,8 +1079,7 @@ static void pcd_clear_halt(struct dwc_pcd *pcd, struct pcd_ep *ep)
 			 * set this next_ep number. Otherwise the endpoint
 			 * will not get active again after stalling.
 			 */
-			if (dwc_has_feature(core_if, DWC_LIMITED_XFER))
-				start_next_request(ep);
+			start_next_request(ep);
 		}
 	}
 
@@ -1788,7 +1790,7 @@ static void handle_in_ep_disable_intr(struct dwc_pcd *pcd, const u32 ep_num)
 
 	if (ep->stopped) {
 		/* Flush the Tx FIFO */
-		dwc_otg_flush_tx_fifo(core_if, dwc_ep->tx_fifo_num);
+		dwc_otg_flush_tx_fifo_complete(core_if, dwc_ep);
 
 		/* Clear the Global IN NP NAK */
 		dctl = 0;
@@ -1857,9 +1859,13 @@ static void handle_in_ep_timeout_intr(struct dwc_pcd *pcd, const u32 ep_num)
 static void handle_in_ep_tx_fifo_empty_intr(struct dwc_pcd *pcd,
 					    struct pcd_ep *ep, u32 num)
 {
-	u32 diepint = 0;
+	u32 diepint = 0, deptsiz;
+	struct device_if *dev_if = GET_CORE_IF(pcd)->dev_if;
+	ulong in_regs = dev_if->in_ep_regs[num];
 
-	if (!ep->stopped && num) {
+	deptsiz = dwc_read32(in_regs + DWC_DIEPTSIZ);
+
+	if (!ep->stopped && num && (DWC_DEPTSIZ_PKT_CNT_RD(deptsiz) == 0)) {
 		u32 diepmsk = 0;
 
 		diepmsk = DWC_DIEPMSK_IN_TKN_TX_EMPTY_RW(diepmsk, 1);

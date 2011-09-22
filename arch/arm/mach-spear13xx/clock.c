@@ -109,7 +109,7 @@ static struct clk vco1_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 6},
 	.private_data = &vco1_config,
 };
 
@@ -154,7 +154,7 @@ static struct clk vco2_clk = {
 	.calc_rate = &vco_calc_rate,
 	.recalc = &vco_clk_recalc,
 	.set_rate = &vco_clk_set_rate,
-	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 5},
+	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 6},
 	.private_data = &vco2_config,
 };
 

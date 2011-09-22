@@ -20,14 +20,13 @@
 #include <mach/suspend.h>
 
 static void (*saved_idle)(void);
-static void __iomem *spear_sram_base;
 
 static int spear_pm_sleep(suspend_state_t state)
 {
 	void (*spear_sram_sleep)(suspend_state_t state) = NULL;
 
 	/* Copy the Sleep code on to the SRAM*/
-	spear_sram_sleep = memcpy((void *)spear_sram_base,
+	spear_sram_sleep = memcpy((void *)IO_ADDRESS(SPEAR_START_SRAM),
 			(void *)spear_sleep_mode, spear_sleep_mode_sz);
 	flush_cache_all();
 	/* Jump to the suspend routines in sram */
@@ -88,11 +87,6 @@ static struct platform_suspend_ops spear_pm_ops = {
 
 static int __init spear_pm_init(void)
 {
-
-	spear_sram_base = ioremap(SPEAR_START_SRAM, SPEAR_SRAM_SIZE);
-
-	if (!spear_sram_base)
-		return -ENOMEM;
 
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (SPEAR_SRAM_SIZE))

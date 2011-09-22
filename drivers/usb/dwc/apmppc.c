@@ -170,6 +170,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	struct dwc_otg_device *dwc_dev;
 	struct device *dev = &ofdev->dev;
 	struct resource *res;
+	struct dwc_otg_plat_data *pdata;
 	ulong gusbcfg_addr;
 	u32 usbcfg = 0;
 
@@ -218,6 +219,14 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		goto fail_ioremap;
 	}
 	dev_dbg(dev, "mapped base=0x%08x\n", (__force u32)dwc_dev->base);
+
+	pdata = dev_get_platdata(dev);
+	if (pdata) {
+		if (pdata->phy_init)
+			pdata->phy_init();
+		if (pdata->param_init)
+			pdata->param_init(&dwc_otg_module_params);
+	}
 
 	/*
 	 * Initialize driver data to point to the global DWC_otg
@@ -273,6 +282,16 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		dwc_dev->common_irq_installed = 1;
 	}
 
+	gusbcfg_addr = (ulong) (dwc_dev->core_if->core_global_regs)
+		+ DWC_GUSBCFG;
+
+	if (dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+		usbcfg = dwc_read32(gusbcfg_addr);
+		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
+		usbcfg |= DWC_USBCFG_FRC_DEV_MODE;
+		dwc_write32(gusbcfg_addr, usbcfg);
+	}
+
 	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
 		/* Initialize the PCD */
 		retval = dwc_otg_pcd_init(dev);
@@ -283,13 +302,17 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		}
 	}
 
-	gusbcfg_addr = (ulong) (dwc_dev->core_if->core_global_regs)
-		+ DWC_GUSBCFG;
-	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+	if (dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
 		/* Initialize the HCD and force_host_mode */
 		usbcfg = dwc_read32(gusbcfg_addr);
 		usbcfg |= DWC_USBCFG_FRC_HST_MODE;
+		usbcfg &= ~DWC_USBCFG_FRC_DEV_MODE;
 		dwc_write32(gusbcfg_addr, usbcfg);
+	}
+
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
+		/* update transiver state */
+		dwc_dev->core_if->xceiv->state = OTG_STATE_A_HOST;
 
 		retval = dwc_otg_hcd_init(dev, dwc_dev);
 		if (retval) {
@@ -299,7 +322,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		}
 		/* configure chargepump interrupt */
 		dwc_dev->hcd->cp_irq = platform_get_irq(ofdev, 1);
-		if (dwc_dev->hcd->cp_irq) {
+		if (dwc_dev->hcd->cp_irq != -ENXIO) {
 			retval = request_irq(dwc_dev->hcd->cp_irq,
 					     dwc_otg_externalchgpump_irq,
 					     IRQF_SHARED,
@@ -322,11 +345,6 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	 * handlers are installed.
 	 */
 	dwc_otg_enable_global_interrupts(dwc_dev->core_if);
-
-	usbcfg = dwc_read32(gusbcfg_addr);
-	usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
-	dwc_write32(gusbcfg_addr, usbcfg);
-
 	return 0;
 fail_hcd:
 	free_irq(dwc_dev->irq, dwc_dev);

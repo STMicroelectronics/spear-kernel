@@ -53,6 +53,7 @@ static struct platform_device phy_device = {
 
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
+	&dma_device,
 	&gpio_device[0],
 	&gpio_device[1],
 	&gpio_device[2],
@@ -66,7 +67,6 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	&adc_device,
-	&dmac_device,
 	&ehci0_device,
 	&ehci1_device,
 	&eth_device,
@@ -109,7 +109,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}, {
 		.modalias = "m25p80",
 		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 12000000,
+		.max_speed_hz = 22000000, /* Actual 20.75 */
 		.bus_num = 0,
 		.chip_select = 1,
 		.mode = SPI_MODE_3,
@@ -122,14 +122,14 @@ static void __init spear600_evb_init(void)
 	unsigned int i;
 
 	/* set adc platform data */
-	set_adc_plat_data(&adc_device, &dmac_device.dev);
+	set_adc_plat_data(&adc_device, NULL);
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			FSMC_NAND_BW8);
 
 	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, &dmac_device.dev);
+	set_jpeg_dma_configuration(&jpeg_device, NULL);
 
 	/* call spear600 machine init function */
 	spear600_init();

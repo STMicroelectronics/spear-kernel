@@ -715,7 +715,7 @@ unsigned int c3_AES_CBC_encrypt(
 #else
 
 	if (flags & C3_FVE) {
-		unsigned int lba_size_swap = C3_CONV_INT_32(lba_size);
+		unsigned int lba_size_swap = cpu_to_be32(lba_size);
 		struct c3_dma_t *c3_dma_lba;
 		void *p_lba_size_swap = &lba_size_swap;
 		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);
@@ -839,7 +839,7 @@ unsigned int c3_AES_CBC_decrypt(
 
 	if (flags & C3_FVE) {
 		struct c3_dma_t *c3_dma_lba;
-		unsigned int lba_size_swap = C3_CONV_INT_32(lba_size);
+		unsigned int lba_size_swap = cpu_to_be32(lba_size);
 		void *p_lba_size_swap = &lba_size_swap;
 		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);
 
@@ -1749,7 +1749,7 @@ unsigned int c3_AES_XTS_encrypt(
 
 	if (flags & C3_FVE) {
 		struct c3_dma_t *c3_dma_lba;
-		unsigned int lba_size_swap = C3_CONV_INT_32(lba_size);
+		unsigned int lba_size_swap = cpu_to_be32(lba_size);
 		void *p_lba_size_swap = &lba_size_swap;
 		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);
 
@@ -1867,7 +1867,7 @@ unsigned int c3_AES_XTS_decrypt(
 #else
 
 	if (flags & C3_FVE) {
-		unsigned int lba_size_swap = C3_CONV_INT_32(lba_size);
+		unsigned int lba_size_swap = cpu_to_be32(lba_size);
 		struct c3_dma_t *c3_dma_lba;
 		void *p_lba_size_swap = &lba_size_swap;
 		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);

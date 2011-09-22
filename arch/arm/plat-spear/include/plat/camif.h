@@ -83,20 +83,20 @@ enum camif_channel_type {
 };
 
 /**
- * struct spear_camif_plat_data - platform structure for configuring
- * camera
+ * struct camif_config_data - configuration specific params for
+ * camif
  *
- * sync_type: embedded or external sync
- * vsync_polarity: ploarity of vsync signal
- * hsync_polarity: polarity of hsync signal
- * pclk_polarity: polarity of pixel clock signal
- * transform: swapping supported while storing
- * capture_mode: photo or video mode
- * burst_size: DMA burst size
+ * @sync_type: embedded or external sync
+ * @vsync_polarity: ploarity of vsync signal
+ * @hsync_polarity: polarity of hsync signal
+ * @pclk_polarity: polarity of pixel clock signal
+ * @transform: swapping supported while storing
+ * @capture_mode: photo or video mode
+ * @burst_size: DMA burst size
  * (should be programmed consistently with the DMA IP burst size used)
- * channel: DMA channel type to use
+ * @channel: DMA channel type to use
  */
-struct spear_camif_plat_data {
+struct camif_config_data {
 	enum camif_synhcro sync_type;
 	enum camif_polarity vsync_polarity;
 	enum camif_polarity hsync_polarity;
@@ -108,21 +108,18 @@ struct spear_camif_plat_data {
 };
 
 /**
- * struct caimf_controller - device.platform_data for camif controller devices.
- * @enable_dma: if true enables DMA driven transfers.
- * @dma_even_param: parameter to locate an DMA channel for even lines.
- * @dma_odd_param: parameter to locate a DMA channel for odd lines.
+ * struct camif_controller - platform_data for camif controller devices
+ *
+ * @enable_dma: if true enables DMA driven transfers
+ * @dma_even_param: parameter to locate an DMA channel for even lines
+ * @dma_odd_param: parameter to locate a DMA channel for odd lines
+ * @config: configuration parameter for this camif instance
  */
 struct camif_controller {
 	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
 	void *dma_even_param;
 	void *dma_odd_param;
+	struct camif_config_data *config;
 };
-
-static inline void camif_set_plat_data(struct platform_device *pdev,
-		struct spear_camif_plat_data *pdata)
-{
-	pdev->dev.platform_data = pdata;
-}
 
 #endif /* __PLAT_CAMIF_H */

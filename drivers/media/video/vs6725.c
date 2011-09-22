@@ -33,7 +33,13 @@
 #define VS6725_ROW_SKIP			8
 
 /* device parameters */
-#define VS6725_DEVICE_ID_HI		0x02
+/*
+ * FIXME: while the VS6725 user-manual states that the DEVICE_ID_HI
+ * should be 0x02 on the real-board we see that this value is 0x00.
+ * Changing this to be in sync with the board, but confirm later with
+ * PCB designers
+ */
+#define VS6725_DEVICE_ID_HI		0x00
 #define VS6725_DEVICE_ID_LO		0xD5
 #define VS6725_FIRMWARE_VERSION		0x1
 #define VS6725_PATCH_VERSION		0
@@ -987,7 +993,7 @@ static int vs6725_get_register(struct v4l2_subdev *sd,
 	if (reg->match.addr != client->addr)
 		return -ENODEV;
 
-	reg->size = 1;
+	reg->size = 2;
 
 	ret = vs6725_reg_read(client, reg->reg, &val);
 	if (!ret)
@@ -1027,8 +1033,8 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 	else
 		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
 
-	if (ret < 0)
-		return ret;
+	if (ret != 0)
+		return -EIO;
 
 	return 0;
 }
@@ -1445,8 +1451,8 @@ static int vs6725_camera_init(struct soc_camera_device *icd,
 	priv->model = V4L2_IDENT_VS6725;
 
 	dev_info(&client->dev,
-		"vs6725 Device ID 0x%02x::0x%02x Firmware Ver 0x%02x"
-		"Patch Ver 0x%02x\n", dev_id_hi, dev_id_lo, fm_ver, patch_ver);
+		"vs6725 Device-ID=0x%02x::0x%02x, Firmware-Ver=0x%02x"
+		" Patch-Ver=0x%02x\n", dev_id_hi, dev_id_lo, fm_ver, patch_ver);
 
 	ret = vs6725_prog_default(client);
 

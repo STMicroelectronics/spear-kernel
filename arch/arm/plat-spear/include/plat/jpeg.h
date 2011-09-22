@@ -15,32 +15,36 @@
 #define __PLAT_JPEG_H
 
 #include <linux/platform_device.h>
+#include <linux/types.h>
 
 #ifdef CONFIG_ARCH_SPEAR13XX
 #include <linux/dw_dmac.h>
 
-#define JPEG_BURST	DW_DMA_MSIZE_8
-#define JPEG_WIDTH	DW_DMA_SLAVE_WIDTH_32BIT
-#define DMA_MAX_COUNT	2048
-#define MEM_MASTER	1
-#define JPEG_MASTER	1
+#define JPEG_BURST		DW_DMA_MSIZE_8
+#define JPEG_WIDTH		DW_DMA_SLAVE_WIDTH_32BIT
+#define JPEG_DMA_MAX_COUNT	2048
+#define MEM_MASTER		1
+#define JPEG_MASTER		1
 
 struct jpeg_plat_data {
+	bool runtime_config;
+	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
 	struct dw_dma_slave mem2jpeg_slave;
 	struct dw_dma_slave jpeg2mem_slave;
 };
 #else
-#include <linux/pl080_dmac.h>
+#include <linux/dmaengine.h>
+#include <asm/hardware/pl080.h>
 
-#define JPEG_BURST	BURST_8
-#define JPEG_WIDTH	WIDTH_WORD
-#define DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
-#define MEM_MASTER	DMA_MASTER_MEMORY
-#define JPEG_MASTER	DMA_MASTER_JPEG
+#define JPEG_BURST		8
+#define JPEG_WIDTH		DMA_SLAVE_BUSWIDTH_4_BYTES
+#define JPEG_DMA_MAX_COUNT	PL080_CONTROL_TRANSFER_SIZE_MASK
 
 struct jpeg_plat_data {
-	struct pl080_dma_slave mem2jpeg_slave;
-	struct pl080_dma_slave jpeg2mem_slave;
+	bool runtime_config;
+	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
+	struct dma_slave_config mem2jpeg_slave;
+	struct dma_slave_config jpeg2mem_slave;
 };
 #endif
 

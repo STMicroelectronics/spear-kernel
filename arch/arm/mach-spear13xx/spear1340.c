@@ -17,11 +17,12 @@
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
+#include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <media/soc_camera.h>
+#include <mach/i2s.h>
 #include <mach/spear1340_misc_regs.h>
 
 /* pmx driver structure */
@@ -1328,6 +1329,17 @@ struct pmx_dev spear1340_pmx_sata = {
 /* Add spear1340 specific devices here */
 
 /* camera interface 0 device registeration */
+struct camif_config_data cam0_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif0_dma_param[] = {
 	{
 		/* odd line */
@@ -1362,6 +1374,7 @@ static struct camif_controller camif0_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif0_dma_param[0],
 	.dma_even_param = &camif0_dma_param[1],
+	.config = &cam0_data,
 };
 
 static struct resource camif0_resources[] = {
@@ -1392,6 +1405,17 @@ struct platform_device spear1340_camif0_device = {
 };
 
 /* camera interface 1 device registeration */
+struct camif_config_data cam1_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif1_dma_param[] = {
 	{
 		/* odd line */
@@ -1426,6 +1450,7 @@ static struct camif_controller camif1_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif1_dma_param[0],
 	.dma_even_param = &camif1_dma_param[1],
+	.config = &cam1_data,
 };
 
 static struct resource camif1_resources[] = {
@@ -1456,6 +1481,17 @@ struct platform_device spear1340_camif1_device = {
 };
 
 /* camera interface 2 device registeration */
+struct camif_config_data cam2_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif2_dma_param[] = {
 	{
 		/* odd line */
@@ -1490,6 +1526,7 @@ static struct camif_controller camif2_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif2_dma_param[0],
 	.dma_even_param = &camif2_dma_param[1],
+	.config = &cam2_data,
 };
 
 static struct resource camif2_resources[] = {
@@ -1520,6 +1557,17 @@ struct platform_device spear1340_camif2_device = {
 };
 
 /* camera interface 3 device registeration */
+struct camif_config_data cam3_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_LOW,
+	.hsync_polarity = ACTIVE_LOW,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_256,
+	.channel = EVEN_CHANNEL,
+};
+
 struct dw_dma_slave camif3_dma_param[] = {
 	{
 		/* odd line */
@@ -1554,6 +1602,7 @@ static struct camif_controller camif3_platform_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif3_dma_param[0],
 	.dma_even_param = &camif3_dma_param[1],
+	.config = &cam3_data,
 };
 
 static struct resource camif3_resources[] = {
@@ -1581,28 +1630,6 @@ struct platform_device spear1340_camif3_device = {
 	},
 	.num_resources = ARRAY_SIZE(camif3_resources),
 	.resource = camif3_resources,
-};
-
-/* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info[] = {
-	{
-		I2C_BOARD_INFO("vs6725", 0x10),
-	},
-};
-
-static struct soc_camera_link __initdata vs6725_cam_sensor_iclink = {
-	.bus_id = 0,	/* SPEAr SoC camera bus */
-	.i2c_adapter_id = 0,
-	.board_info = &vs6725_camera_sensor_info[0],
-	.module_name = "vs6725",
-};
-
-struct platform_device spear1340_cam_sensor0_device = {
-	.name = "soc-camera-pdrv",
-	.id = 0,
-	.dev = {
-		.platform_data = &vs6725_cam_sensor_iclink,
-	},
 };
 
 /* uart device registeration */
@@ -1634,7 +1661,7 @@ struct dw_dma_slave uart1_dma_param[] = {
 	}
 };
 
-struct amba_pl011_data uart1_data = {
+static struct amba_pl011_data uart1_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_tx_param = &uart1_dma_param[0],
 	.dma_rx_param = &uart1_dma_param[1],
@@ -1644,6 +1671,7 @@ struct amba_pl011_data uart1_data = {
 struct amba_device spear1340_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
+		.platform_data = &uart1_data,
 	},
 	.res = {
 		.start = SPEAR1340_UART1_BASE,
@@ -1705,10 +1733,16 @@ struct platform_device spear1340_i2c1_device = {
 static struct i2s_platform_data i2s_data[] = {
 	{
 		.cap = PLAY,
-		.channel = 2,
+		.channel = 8,
+		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+				SPEAR1340_DMA_REQ_I2S_TX,
+				SPEAR1340_DMA_REQ_I2S_RX),
 	}, {
 		.cap = RECORD,
-		.channel = 2,
+		.channel = 8,
+		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+				SPEAR1340_DMA_REQ_I2S_TX,
+				SPEAR1340_DMA_REQ_I2S_RX),
 	},
 };
 
@@ -1838,33 +1872,9 @@ struct platform_device spear1340_sata0_device = {
 	},
 };
 
-/* OTG device registration */
-static struct resource otg_resources[] = {
-	{
-		.start = SPEAR1340_UOC_BASE,
-		.end = SPEAR1340_UOC_BASE + SZ_256K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR1340_IRQ_UOC,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_otg_device = {
-	.name = "dwc_otg",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(otg_resources),
-	.resource = otg_resources,
-};
-
-#ifdef CONFIG_USB_DWC_OTG
-int spear1340_otg_phy_init(void)
+static int spear1340_otg_phy_init(void)
 {
 	u32 temp, msec = 1000;
-	void __iomem *grxfsiz;
 
 	/* phy por deassert */
 	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
@@ -1905,19 +1915,62 @@ int spear1340_otg_phy_init(void)
 	temp |= (1 << SPEAR1340_UOC_CLK_ENB);
 	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
 
-	/*
-	 * Temp code: till otg driver is properly modified for
-	 * module parameter selection for different platform.
-	 */
-	grxfsiz = ioremap(SPEAR1340_UOC_BASE + 0x24, 4);
-	if (!grxfsiz)
-		return -ENOMEM;
-	writel(0x400, grxfsiz);
-	iounmap(grxfsiz);
+	return 0;
+}
+
+static int spear1340_otg_param_init(struct core_params *params)
+{
+	int i;
+
+	/* Common Dev RX fifo Size : 0x400 */
+	params->dev_rx_fifo_size = 0x400;
+	/* Dev TX fifo Size for fifo 0: 0x300 */
+	params->dev_nperio_tx_fifo_size = 0x300;
+	/* TX fifo Size for fifo 1-7: 0x200 */
+	params->fifo_number = 7;
+	for (i = 1; i <= 7; i++)
+		params->dev_tx_fifo_size[i - 1] = 0x200;
+
+	/* Common Host RX fifo Size : 0x400 */
+	params->host_rx_fifo_size = 0x400;
+	/* Host TX fifo Size for fifo 0: 0x400 */
+	params->host_nperio_tx_fifo_size = 0x400;
+	/* Host Periodic TX fifo Size for fifo 0: 0x400 */
+	params->host_perio_tx_fifo_size = 0x400;
 
 	return 0;
 }
-#endif
+
+/* OTG device registration */
+static struct resource otg_resources[] = {
+	{
+		.start = SPEAR1340_UOC_BASE,
+		.end = SPEAR1340_UOC_BASE + SZ_256K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_UOC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct dwc_otg_plat_data otg_platform_data = {
+	.phy_init = spear1340_otg_phy_init,
+	.param_init = spear1340_otg_param_init,
+};
+
+static u64 otg_dmamask = ~0;
+struct platform_device spear1340_otg_device = {
+	.name = "dwc_otg",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &otg_dmamask,
+		.platform_data = &otg_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(otg_resources),
+	.resource = otg_resources,
+};
+
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)

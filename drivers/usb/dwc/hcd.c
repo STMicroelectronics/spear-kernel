@@ -71,14 +71,8 @@ static void dwc_otg_enable_host_interrupts(struct core_if *core_if)
 	ulong global_regs = core_if->core_global_regs;
 	u32 intr_mask = 0;
 
-	/* Disable all interrupts. */
-	dwc_write32(global_regs + DWC_GINTMSK, 0);
-
 	/* Clear any pending interrupts. */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
-
-	/* Enable the common interrupts */
-	dwc_otg_enable_common_interrupts(core_if);
 
 	/*
 	 * Enable host mode interrupts without disturbing common
@@ -132,23 +126,23 @@ static void dwc_otg_core_host_init(struct core_if *core_if)
 			    params->host_rx_fifo_size);
 
 		/* Non-periodic Tx FIFO */
-		nptxfifosize = DWC_RX_FIFO_DEPTH_WR(nptxfifosize,
+		nptxfifosize = DWC_TX_FIFO_DEPTH_WR(nptxfifosize,
 						    params->
 						    host_nperio_tx_fifo_size);
 		nptxfifosize =
-		    DWC_RX_FIFO_START_ADDR_WR(nptxfifosize,
+		    DWC_TX_FIFO_START_ADDR_WR(nptxfifosize,
 					      params->host_rx_fifo_size);
 		dwc_write32(global_regs + DWC_GNPTXFSIZ, nptxfifosize);
 
 		/* Periodic Tx FIFO */
-		ptxfifosize = DWC_RX_FIFO_DEPTH_WR(ptxfifosize,
+		ptxfifosize = DWC_TX_FIFO_DEPTH_WR(ptxfifosize,
 						   params->
 						   host_perio_tx_fifo_size);
 		ptxfifosize =
-		    DWC_RX_FIFO_START_ADDR_WR(ptxfifosize,
-					      (DWC_RX_FIFO_START_ADDR_RD
+		    DWC_TX_FIFO_START_ADDR_WR(ptxfifosize,
+					      (DWC_TX_FIFO_START_ADDR_RD
 					       (nptxfifosize) +
-					       DWC_RX_FIFO_DEPTH_RD
+					       DWC_TX_FIFO_DEPTH_RD
 					       (nptxfifosize)));
 		dwc_write32(global_regs + DWC_HPTXFSIZ, ptxfifosize);
 	}

@@ -578,7 +578,8 @@ static void free_dma_desc_resources(struct stmmac_priv *priv)
  */
 static void stmmac_dma_operation_mode(struct stmmac_priv *priv)
 {
-	if (likely((priv->tx_coe) && (!priv->no_csum_insertion))) {
+
+	if (priv->tx_coe && (priv->dev->mtu <= ETH_DATA_LEN)) {
 		/* In case of GMAC, SF mode has to be enabled
 		 * to perform the TX COE. This depends on:
 		 * 1) TX COE if actually supported
@@ -587,9 +588,17 @@ static void stmmac_dma_operation_mode(struct stmmac_priv *priv)
 		 */
 		priv->hw->dma->dma_mode(priv->ioaddr,
 					SF_DMA_MODE, SF_DMA_MODE);
-		tc = SF_DMA_MODE;
-	} else
-		priv->hw->dma->dma_mode(priv->ioaddr, tc, SF_DMA_MODE);
+		priv->no_csum_insertion = 0;
+	} else if ((priv->bugged_jumbo && (priv->dev->mtu > ETH_DATA_LEN)) ||
+			(!priv->tx_coe)) {
+		/* Some GMAC devices have a bugged Jumbo frame support that
+		 * needs to have the Tx COE disabled for oversized frames
+		 * (due to limited buffer sizes). In this case we disable
+		 * the TX csum insertionin the TDES and not use SF. */
+		priv->no_csum_insertion = 1;
+		priv->hw->dma->dma_mode(priv->ioaddr, tc, 0);
+
+	}
 }
 
 /**
@@ -1090,7 +1099,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		return stmmac_sw_tso(priv, skb);
 
 	if (likely((skb->ip_summed == CHECKSUM_PARTIAL))) {
-		if (unlikely((!priv->tx_coe) || (priv->no_csum_insertion)))
+		if (priv->no_csum_insertion)
 			skb_checksum_help(skb);
 		else
 			csum_insertion = 1;
@@ -1422,15 +1431,6 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 		pr_err("%s: invalid MTU, max MTU is: %d\n", dev->name, max_mtu);
 		return -EINVAL;
 	}
-
-	/* Some GMAC devices have a bugged Jumbo frame support that
-	 * needs to have the Tx COE disabled for oversized frames
-	 * (due to limited buffer sizes). In this case we disable
-	 * the TX csum insertionin the TDES and not use SF. */
-	if ((priv->bugged_jumbo) && (priv->dev->mtu > ETH_DATA_LEN))
-		priv->no_csum_insertion = 1;
-	else
-		priv->no_csum_insertion = 0;
 
 	dev->mtu = new_mtu;
 
@@ -1824,6 +1824,17 @@ static int stmmac_dvr_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto out_clk_dis;
 	pr_debug("registered!\n");
+
+	/*
+	 * On some platforms wake up irq differs from the mac irq.
+	 * The wake up irq can be passed through the platform code
+	 * named as "eth_wake_irq"
+	 * In case the wake up interrupt is not passed from the plat
+	 * code, the driver continues to use the mac irq (ndev->irq)
+	 */
+	priv->wol_irq = platform_get_irq_byname(pdev, "eth_wake_irq");
+	if (priv->wol_irq == -ENXIO)
+		priv->wol_irq = ndev->irq;
 
 out_clk_dis:
 	if (priv->stmmac_clk)

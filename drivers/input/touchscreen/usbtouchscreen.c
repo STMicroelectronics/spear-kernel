@@ -101,14 +101,6 @@ struct usbtouch_device_info {
 	void (*exit)	    (struct usbtouch_usb *usbtouch);
 };
 
-#define MAX_NUM_OF_CONTACTS 10
-/* MT contact info */
-static struct mt_contact_info {
-	int x, y;
-	int touch;
-	int contact_id;
-} mt_contact[MAX_NUM_OF_CONTACTS];
-
 /* a usbtouch device */
 struct usbtouch_usb {
 	unsigned char *data;
@@ -143,12 +135,11 @@ enum {
 	DEVTYPE_GENERAL_TOUCH,
 	DEVTYPE_GOTOP,
 	DEVTYPE_JASTEC,
-	DEVTYPE_ETOUCH_DUAL,
-	DEVTYPE_ETOUCH_MULTI,
 	DEVTYPE_E2I,
 	DEVTYPE_ZYTRONIC,
 	DEVTYPE_TC45USB,
 	DEVTYPE_NEXIO,
+	DEVTYPE_ETOUCH,
 };
 
 #define USB_DEVICE_HID_CLASS(vend, prod) \
@@ -227,11 +218,6 @@ static const struct usb_device_id usbtouch_devices[] = {
 	{USB_DEVICE(0x0f92, 0x0001), .driver_info = DEVTYPE_JASTEC},
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
-	{USB_DEVICE(0x7374, 0x0001), .driver_info = DEVTYPE_ETOUCH_DUAL},
-	{USB_DEVICE(0x03eb, 0x6ab8), .driver_info = DEVTYPE_ETOUCH_MULTI},
-#endif
-
 #ifdef CONFIG_TOUCHSCREEN_USB_E2I
 	{USB_DEVICE(0x1ac7, 0x0001), .driver_info = DEVTYPE_E2I},
 #endif
@@ -253,6 +239,10 @@ static const struct usb_device_id usbtouch_devices[] = {
 		.driver_info = DEVTYPE_NEXIO},
 	{USB_DEVICE_AND_INTERFACE_INFO(0x1870, 0x0001, 0x0a, 0x00, 0x00),
 		.driver_info = DEVTYPE_NEXIO},
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
+	{USB_DEVICE(0x7374, 0x0001), .driver_info = DEVTYPE_ETOUCH},
 #endif
 
 	{}
@@ -376,159 +366,7 @@ static int etouch_get_pkt_len(unsigned char *buf, int len)
 
 	return 0;
 }
-
-static void etouch_process_pkt(struct usbtouch_usb *usbtouch,
-				unsigned char *pkt, int len)
-{
-	struct usbtouch_device_info *type = usbtouch->type;
-	int pkt_len, pos;
-
-	/* loop over the received packet, process */
-	pos = 0;
-	do {
-		/* get packet len */
-		pkt_len = type->get_pkt_len(pkt + pos, len - pos);
-
-		/* unknown packet: skip one byte */
-		if (unlikely(!pkt_len)) {
-			pos++;
-			continue;
-		}
-
-		/* full packet: process */
-		if (likely((pkt_len > 0) && (pkt_len <= len - pos))) {
-			if (!type->read_data(usbtouch, pkt + pos))
-				goto sync_and_ret;
-
-			/* multi-touch */
-			if (usbtouch->touch) {
-				input_report_abs(usbtouch->input,
-					ABS_MT_POSITION_X, usbtouch->x);
-				input_report_abs(usbtouch->input,
-					ABS_MT_POSITION_Y, usbtouch->y);
-			}
-
-			input_mt_sync(usbtouch->input);
-		}
-		pos += pkt_len;
-	} while (pos < len);
-
-sync_and_ret:
-	input_sync(usbtouch->input);
-	return;
-}
-
-static int etouch_init(struct usbtouch_usb *usbtouch)
-{
-	/* Enable ABS params for MT events */
-	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_X,
-							0, 0xffff, 0, 0);
-	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_Y,
-							0, 0xffff, 0, 0);
-
-	return 0;
-}
-
-/*
- * Packet Format:
- *
- * 1) each USB paket has 7 bytes
- * 2) first byte is always 0x01
- * 3) second byte indicates which touch number is reported in upper nibble,
- *    first touch is reported as 2, second as 3 a.s.o.
- * 4) second byte lower nibble is 0x07 for touch down and 0x06 for touch up
- * 5) third byte is always 0xF0 in the upper nibble plus the total number of
- *    currently detected touches in the lower nibble
- * 6) fourth and fifth byte are the X_LSB and X_MSB value for the touch
- * 7) sixth and seventh byte are the Y_LSB and Y_MSB value for the touch
- */
-#define ETOUCH_MULTI_PKT_LEN		0x07
-
-static int etouch_multi_read_data(struct usbtouch_usb *dev, unsigned char *pkt)
-{
-	unsigned char type;
-	unsigned char cnum;
-
-	if (pkt[0] != 0x1)
-		return 0;
-
-	cnum  = ((pkt[1] >> 0x4) & 0x0F) - 2;
-	if (cnum > MAX_NUM_OF_CONTACTS - 1)
-		return 0;
-
-	mt_contact[cnum].contact_id  = cnum + 2;
-	type = (pkt[1] & 0xF);
-	switch (type) {
-	case 0x7:
-		mt_contact[cnum].touch = 1;
-		break;
-	case 0x6:
-		mt_contact[cnum].touch = 0;
-		break;
-	default:
-		return 0;
-	}
-
-	mt_contact[cnum].x = ((pkt[4] & 0x0F) << 8) | (pkt[3] & 0xFF);
-	mt_contact[cnum].y = ((pkt[6] & 0x0F) << 8) | (pkt[5] & 0xFF);
-
-	return 1;
-}
-
-static int etouch_multi_get_pkt_len(unsigned char *buf, int len)
-{
-	return ETOUCH_MULTI_PKT_LEN;
-}
-
-static void etouch_multi_process_pkt(struct usbtouch_usb *usbtouch,
-				unsigned char *pkt, int len)
-{
-	struct usbtouch_device_info *type = usbtouch->type;
-	int pkt_len, i;
-
-	/* get packet len */
-	pkt_len = type->get_pkt_len(pkt, len);
-
-	/* full packet: process */
-	if (unlikely(len != ETOUCH_MULTI_PKT_LEN))
-		return;
-
-	if (!type->read_data(usbtouch, pkt))
-		goto sync_and_ret;
-
-	/* Generate evdev events */
-	for (i = 0; i < MAX_NUM_OF_CONTACTS; i++) {
-		if (mt_contact[i].contact_id > 0) {
-			if (mt_contact[i].touch) {
-				input_report_abs(usbtouch->input,
-					ABS_MT_POSITION_X, mt_contact[i].x);
-				input_report_abs(usbtouch->input,
-					ABS_MT_POSITION_Y, mt_contact[i].y);
-			} else {
-				mt_contact[i].contact_id = 0;
-			}
-
-			input_mt_sync(usbtouch->input);
-		}
-	}
-
-sync_and_ret:
-	input_sync(usbtouch->input);
-	return;
-}
-
-static int etouch_multi_init(struct usbtouch_usb *usbtouch)
-{
-	/* Enable ABS params for MT events */
-	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_X,
-							0, 0xffff, 0, 0);
-	input_set_abs_params(usbtouch->input, ABS_MT_POSITION_Y,
-							0, 0xffff, 0, 0);
-
-	return 0;
-}
 #endif
-
 
 /*****************************************************************************
  * PanJit Part
@@ -1303,32 +1141,6 @@ static struct usbtouch_device_info usbtouch_dev_info[] = {
 	},
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
-	[DEVTYPE_ETOUCH_DUAL] = {
-		.min_xc		= 0x0,
-		.max_xc		= 0x07ff,
-		.min_yc		= 0x0,
-		.max_yc		= 0x07ff,
-		.rept_size	= 16,
-		.process_pkt	= etouch_process_pkt,
-		.get_pkt_len	= etouch_get_pkt_len,
-		.read_data	= etouch_read_data,
-		.init		= etouch_init,
-	},
-
-	[DEVTYPE_ETOUCH_MULTI] = {
-		.min_xc		= 0x0,
-		.max_xc		= 0x07ff,
-		.min_yc		= 0x0,
-		.max_yc		= 0x07ff,
-		.rept_size	= 16,
-		.process_pkt	= etouch_multi_process_pkt,
-		.get_pkt_len	= etouch_multi_get_pkt_len,
-		.read_data	= etouch_multi_read_data,
-		.init		= etouch_multi_init,
-	},
-#endif
-
 #ifdef CONFIG_TOUCHSCREEN_USB_E2I
 	[DEVTYPE_E2I] = {
 		.min_xc		= 0x0,
@@ -1372,6 +1184,18 @@ static struct usbtouch_device_info usbtouch_dev_info[] = {
 		.alloc		= nexio_alloc,
 		.init		= nexio_init,
 		.exit		= nexio_exit,
+	},
+#endif
+#ifdef CONFIG_TOUCHSCREEN_USB_EASYTOUCH
+	[DEVTYPE_ETOUCH] = {
+		.min_xc		= 0x0,
+		.max_xc		= 0x07ff,
+		.min_yc		= 0x0,
+		.max_yc		= 0x07ff,
+		.rept_size	= 16,
+		.process_pkt	= usbtouch_process_multi,
+		.get_pkt_len	= etouch_get_pkt_len,
+		.read_data	= etouch_read_data,
 	},
 #endif
 };

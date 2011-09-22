@@ -265,13 +265,16 @@ static void dwc_otg_core_reset(struct core_if *core_if)
  * This function initializes the commmon interrupts, used in both
  * device and host modes.
  */
-void dwc_otg_enable_common_interrupts(struct core_if *core_if)
+static void dwc_otg_enable_common_interrupts(struct core_if *core_if)
 {
 	ulong global_regs = core_if->core_global_regs;
 	u32 intr_mask = 0;
 
 	/* Clear any pending OTG Interrupts */
 	dwc_write32(global_regs + DWC_GOTGINT, 0xFFFFFFFF);
+
+	/* Disable all interrupts. */
+	dwc_write32(global_regs + DWC_GINTMSK, 0);
 
 	/* Clear any pending interrupts */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
@@ -537,14 +540,8 @@ static void dwc_otg_enable_device_interrupts(struct core_if *core_if)
 	u32 msk = 0;
 	ulong global_regs = core_if->core_global_regs;
 
-	/* Disable all interrupts. */
-	dwc_write32(global_regs + DWC_GINTMSK, 0);
-
 	/* Clear any pending interrupts */
 	dwc_write32(global_regs + DWC_GINTSTS, 0xFFFFFFFF);
-
-	/* Enable the common interrupts */
-	dwc_otg_enable_common_interrupts(core_if);
 
 	/* Enable interrupts */
 	intr_mask |= DWC_INTMSK_USB_RST;
@@ -589,11 +586,11 @@ static void config_dev_dynamic_fifos(struct core_if *core_if)
 
 	if (core_if->en_multiple_tx_fifo == 0) {
 		/* Non-periodic Tx FIFO */
-		nptxsize = DWC_RX_FIFO_DEPTH_WR(nptxsize,
+		nptxsize = DWC_TX_FIFO_DEPTH_WR(nptxsize,
 						params->
 						dev_nperio_tx_fifo_size);
 		nptxsize =
-		    DWC_RX_FIFO_START_ADDR_WR(nptxsize,
+		    DWC_TX_FIFO_START_ADDR_WR(nptxsize,
 					      params->dev_rx_fifo_size);
 		dwc_write32(regs + DWC_GNPTXFSIZ, nptxsize);
 
@@ -603,23 +600,21 @@ static void config_dev_dynamic_fifos(struct core_if *core_if)
 		 * dev_perio_tx_fifo_size array and the FIFO size
 		 * registers in the dptxfsiz array run from 0 to 14.
 		 */
-		ptxsize = DWC_RX_FIFO_START_ADDR_WR(ptxsize,
-						    (DWC_RX_FIFO_START_ADDR_RD
+		ptxsize = DWC_TX_FIFO_START_ADDR_WR(ptxsize,
+						    (DWC_TX_FIFO_START_ADDR_RD
 						     (nptxsize) +
-						     DWC_RX_FIFO_DEPTH_RD
+						     DWC_TX_FIFO_DEPTH_RD
 						     (nptxsize)));
-		for (i = 0;
-		     i < DWC_HWCFG4_NUM_DEV_PERIO_IN_EP_RD(core_if->hwcfg4);
-		     i++) {
+		for (i = 0; i < params->fifo_number; i++) {
 			ptxsize =
-			    DWC_RX_FIFO_DEPTH_WR(ptxsize,
+			    DWC_TX_FIFO_DEPTH_WR(ptxsize,
 						 params->
 						 dev_perio_tx_fifo_size[i]);
 			dwc_write32(regs + DWC_DPTX_FSIZ_DIPTXF(i), ptxsize);
-			ptxsize = DWC_RX_FIFO_START_ADDR_WR(ptxsize,
-						   (DWC_RX_FIFO_START_ADDR_RD
+			ptxsize = DWC_TX_FIFO_START_ADDR_WR(ptxsize,
+						   (DWC_TX_FIFO_START_ADDR_RD
 						    (ptxsize) +
-						    DWC_RX_FIFO_DEPTH_RD
+						    DWC_TX_FIFO_DEPTH_RD
 						    (ptxsize)));
 		}
 	} else {
@@ -630,30 +625,29 @@ static void config_dev_dynamic_fifos(struct core_if *core_if)
 		 * registers in the dptxfsiz_dieptxf array run from 0 to
 		 * 14.
 		 */
-		nptxsize = DWC_RX_FIFO_DEPTH_WR(nptxsize,
+		nptxsize = DWC_TX_FIFO_DEPTH_WR(nptxsize,
 						params->
 						dev_nperio_tx_fifo_size);
 		nptxsize =
-		    DWC_RX_FIFO_START_ADDR_WR(nptxsize,
+		    DWC_TX_FIFO_START_ADDR_WR(nptxsize,
 					      params->dev_rx_fifo_size);
 		dwc_write32(regs + DWC_GNPTXFSIZ, nptxsize);
 
-		txsize = DWC_RX_FIFO_START_ADDR_WR(txsize,
-						   (DWC_RX_FIFO_START_ADDR_RD
+		txsize = DWC_TX_FIFO_START_ADDR_WR(txsize,
+						   (DWC_TX_FIFO_START_ADDR_RD
 						    (nptxsize) +
-						    DWC_RX_FIFO_DEPTH_RD
+						    DWC_TX_FIFO_DEPTH_RD
 						    (nptxsize)));
-		for (i = 1;
-		     i < DWC_HWCFG4_NUM_DEV_PERIO_IN_EP_RD(core_if->hwcfg4);
-		     i++) {
+		for (i = 0; i < params->fifo_number; i++) {
+			ptxsize =
 			txsize =
-			    DWC_RX_FIFO_DEPTH_WR(txsize,
+			    DWC_TX_FIFO_DEPTH_WR(txsize,
 						 params->dev_tx_fifo_size[i]);
-			dwc_write32(regs + DWC_DPTX_FSIZ_DIPTXF(i - 1), txsize);
-			txsize = DWC_RX_FIFO_START_ADDR_WR(txsize,
-						   (DWC_RX_FIFO_START_ADDR_RD
+			dwc_write32(regs + DWC_DPTX_FSIZ_DIPTXF(i), txsize);
+			txsize = DWC_TX_FIFO_START_ADDR_WR(txsize,
+						   (DWC_TX_FIFO_START_ADDR_RD
 						    (txsize) +
-						    DWC_RX_FIFO_DEPTH_RD
+						    DWC_TX_FIFO_DEPTH_RD
 						    (txsize)));
 		}
 	}

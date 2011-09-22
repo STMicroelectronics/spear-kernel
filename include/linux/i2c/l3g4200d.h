@@ -22,11 +22,6 @@
 
 #define L3G4200D_DEV_NAME	"l3g4200d_gyr"
 
-#define L3G4200D_FS_250DPS	0x00
-#define L3G4200D_FS_500DPS	0x10
-#define L3G4200D_FS_2000DPS	0x20
-#define L3G4200D_FS_2000DPS2	0x30
-
 #define L3G4200D_RANGE_250DPS	250
 #define L3G4200D_RANGE_500DPS	500
 #define L3G4200D_RANGE_2000DPS	2000
@@ -52,7 +47,7 @@ struct l3g4200d_gyr_platform_data {
 	int poll_interval;
 	int min_interval;
 
-	u8 fs_range;
+	int fs_range;
 
 	u8 axis_map_x;
 	u8 axis_map_y;

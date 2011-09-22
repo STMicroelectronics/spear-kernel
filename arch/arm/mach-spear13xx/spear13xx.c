@@ -34,6 +34,7 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/i2s.h>
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
@@ -42,10 +43,9 @@
 /* common dw_dma filter routine to be used by peripherals */
 bool dw_dma_filter(struct dma_chan *chan, void *slave)
 {
-	struct dw_dma *dw = to_dw_dma(chan->device);
 	struct dw_dma_slave *dws = (struct dw_dma_slave *)slave;
 
-	if (dws->dma_dev == dw->dma.dev) {
+	if (chan->device->dev == dws->dma_dev) {
 		chan->private = slave;
 		return true;
 	} else {
@@ -91,6 +91,7 @@ struct amba_device spear13xx_gpio_device[] = {
 };
 
 /* ssp device registeration */
+#if 0
 #define SSP_DR(base)		(base + 0x008)
 struct dw_dma_slave ssp_dma_param[] = {
 	{
@@ -119,13 +120,16 @@ struct dw_dma_slave ssp_dma_param[] = {
 		.fc = DW_DMA_FC_D_P2M,
 	}
 };
+#endif
 
 static struct pl022_ssp_controller ssp_platform_data = {
 	.bus_id = 0,
-	.enable_dma = 1,
+	.enable_dma = 0,
+#if 0
 	.dma_filter = dw_dma_filter,
-	.dma_rx_param = &ssp_dma_param[0],
-	.dma_tx_param = &ssp_dma_param[1],
+	.dma_rx_param = &ssp_dma_param[1],
+	.dma_tx_param = &ssp_dma_param[0],
+#endif
 	/*
 	 * Following is the number of chip selects from spi controller
 	 * to which spi devices can be connected.
@@ -181,7 +185,7 @@ struct dw_dma_slave uart_dma_param[] = {
 	}
 };
 
-struct amba_pl011_data uart_data = {
+static struct amba_pl011_data uart_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_tx_param = &uart_dma_param[0],
 	.dma_rx_param = &uart_dma_param[1],
@@ -335,6 +339,7 @@ static struct resource eth_resources[] = {
 	[2] = {
 		.start = SPEAR13XX_IRQ_GETH_PMT,
 		.flags = IORESOURCE_IRQ,
+		.name = "eth_wake_irq",
 	},
 };
 
@@ -753,8 +758,12 @@ struct platform_device spear13xx_pcie_host0_device = {
 
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
-	.channel = 2,
+	.channel = 4,
+	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
+			SPEAR13XX_DMA_REQ_I2S_TX,
+			SPEAR13XX_DMA_REQ_I2S_RX),
 };
+
 /* i2s0 device registeration */
 static struct resource i2s0_resources[] = {
 	{
@@ -1174,15 +1183,22 @@ void __init spear13xx_init(void)
 	/*
 	 * 512KB (64KB/way), 8-way associativity, parity supported
 	 *
-	 * TODO: 0x249, picked from nomadik, to be analyzed
-	 * Comment from nomadik:
-	 * At full speed latency must be >=2, so 0x249 in low bits
+	 * FIXME: 9th bit, of Auxillary Controller register must be set
+	 * for some spear13xx devices for stable L2 operation.
+	 *
+	 * Enable Early BRESP, L2 prefetch for Instruction and Data,
+	 * write alloc and 'Full line of zero' options
+	 *
 	 */
+
+	writel_relaxed(0x06, __io_address(SPEAR13XX_L2CC_BASE)
+			+ L2X0_PREFETCH_CTRL);
+
 	if (cpu_is_spear1340() || cpu_is_spear1310()) {
-		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260000,
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60001,
 				0xfe00ffff);
 	} else {
-		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249,
+		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60201,
 				0xfe00ffff);
 	}
 #endif

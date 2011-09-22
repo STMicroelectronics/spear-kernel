@@ -15,29 +15,35 @@
 #define __PLAT_ADC_H
 
 #include <linux/platform_device.h>
+#include <linux/types.h>
 #include <linux/spear_adc_usr.h>
 
 #ifdef CONFIG_ARCH_SPEAR13XX
 #include <linux/dw_dmac.h>
 
-#define ADC_BURST	DW_DMA_MSIZE_1
-#define ADC_WIDTH	DW_DMA_SLAVE_WIDTH_32BIT
-#define DMA_MAX_COUNT	2048
+#define ADC_BURST		DW_DMA_MSIZE_1
+#define ADC_WIDTH		DW_DMA_SLAVE_WIDTH_32BIT
+#define ADC_DMA_MAX_COUNT	2048
 
 struct adc_plat_data {
 	struct adc_config config;
 	struct dw_dma_slave slave;
+	bool runtime_config;
+	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
 };
 #else
-#include <linux/pl080_dmac.h>
+#include <linux/dmaengine.h>
+#include <asm/hardware/pl080.h>
 
-#define ADC_BURST	BURST_1
-#define ADC_WIDTH	WIDTH_WORD
-#define DMA_MAX_COUNT	PL080_CHAN_MAX_COUNT
+#define ADC_BURST		1
+#define ADC_WIDTH		DMA_SLAVE_BUSWIDTH_4_BYTES
+#define ADC_DMA_MAX_COUNT	PL080_CONTROL_TRANSFER_SIZE_MASK
 
 struct adc_plat_data {
 	struct adc_config config;
-	struct pl080_dma_slave slave;
+	struct dma_slave_config slave;
+	bool runtime_config;
+	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
 };
 #endif
 

@@ -14,12 +14,15 @@
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl061.h>
+#include <linux/amba/pl08x.h>
+#include <linux/amba/serial.h>
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/spear_adc_usr.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
@@ -53,29 +56,43 @@ struct amba_device clcd_device = {
 	.irq = {IRQ_BASIC_CLCD, NO_IRQ},
 };
 
-/* touchscreen Device registration */
-static struct spear_touchscreen touchscreen_info = {
-	.adc_channel_x = ADC_CHANNEL5,
-	.adc_channel_y = ADC_CHANNEL6,
-	.gpio_pin = APPL_GPIO_7,
+static struct pl08x_platform_data pl080_plat_data = {
+	.memcpy_channel = {
+		.bus_id = "memcpy",
+		.cctl = (PL080_BSIZE_16 << PL080_CONTROL_SB_SIZE_SHIFT | \
+			PL080_BSIZE_16 << PL080_CONTROL_DB_SIZE_SHIFT | \
+			PL080_WIDTH_32BIT << PL080_CONTROL_SWIDTH_SHIFT | \
+			PL080_WIDTH_32BIT << PL080_CONTROL_DWIDTH_SHIFT | \
+			PL080_CONTROL_PROT_BUFF | PL080_CONTROL_PROT_CACHE | \
+			PL080_CONTROL_PROT_SYS),
+	},
+	.lli_buses = PL08X_AHB1,
+	.mem_buses = PL08X_AHB1,
 };
 
-struct platform_device touchscreen_device = {
-	.name = "spear-ts",
-	.id = -1,
+struct amba_device dma_device = {
 	.dev = {
-		.platform_data = &touchscreen_info,
+		.init_name = "pl080_dmac",
 		.coherent_dma_mask = ~0,
+		.platform_data = &pl080_plat_data,
 	},
-	.num_resources = 0,
-	.resource = NULL,
+	.res = {
+		.start = SPEAR6XX_ICM3_DMA_BASE,
+		.end = SPEAR6XX_ICM3_DMA_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {IRQ_BASIC_DMA, NO_IRQ},
 };
 
 /* ssp device registration */
 static struct pl022_ssp_controller ssp_platform_data[] = {
 	{
 		.bus_id = 0,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp0_tx",
+		.dma_rx_param = "ssp0_rx",
+
 		/*
 		 * This is number of spi devices that can be connected to spi.
 		 * There are two type of chipselects on which slave devices can
@@ -89,11 +106,17 @@ static struct pl022_ssp_controller ssp_platform_data[] = {
 		.num_chipselect = 2,
 	}, {
 		.bus_id = 1,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp1_tx",
+		.dma_rx_param = "ssp1_rx",
 		.num_chipselect = 2,
 	}, {
 		.bus_id = 2,
-		.enable_dma = 0,
+		.enable_dma = 1,
+		.dma_filter = pl08x_filter_id,
+		.dma_tx_param = "ssp2_tx",
+		.dma_rx_param = "ssp2_rx",
 		.num_chipselect = 2,
 	}
 };
@@ -138,11 +161,28 @@ struct amba_device ssp_device[] = {
 	}
 };
 
+/* As uart0 is used for console, so disable DMA here */
+/* uart devices plat data */
+#if 0
+static struct amba_pl011_data uart0_data = {
+	.dma_filter = pl08x_filter_id,
+	.dma_tx_param = "uart0_tx",
+	.dma_rx_param = "uart0_rx",
+}
+#endif
+
+static struct amba_pl011_data uart1_data = {
+	.dma_filter = pl08x_filter_id,
+	.dma_tx_param = "uart1_tx",
+	.dma_rx_param = "uart1_rx",
+};
+
 /* uart device registration */
 struct amba_device uart_device[] = {
 	{
 		.dev = {
 			.init_name = "uart0",
+/*			.platform_data = &uart0_data, */
 		},
 		.res = {
 			.start = SPEAR6XX_ICM1_UART0_BASE,
@@ -153,6 +193,7 @@ struct amba_device uart_device[] = {
 	}, {
 		.dev = {
 			.init_name = "uart1",
+			.platform_data = &uart1_data,
 		},
 		.res = {
 			.start = SPEAR6XX_ICM1_UART1_BASE,
@@ -248,28 +289,6 @@ struct platform_device adc_device = {
 	.resource = adc_resources,
 };
 
-/* dmac device registeration */
-static struct resource dmac_resources[] = {
-	{
-		.start = SPEAR6XX_ICM3_DMA_BASE,
-		.end = SPEAR6XX_ICM3_DMA_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = IRQ_BASIC_DMA,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device dmac_device = {
-	.name = "pl080_dmac",
-	.id = -1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(dmac_resources),
-	.resource = dmac_resources,
-};
-
 /* stmmac device registeration */
 static struct plat_stmmacenet_data eth_platform_data = {
 	.bus_id = 0,
@@ -297,6 +316,7 @@ static struct resource eth_resources[] = {
 	[2] = {
 		.start = IRQ_GMAC_1,
 		.flags = IORESOURCE_IRQ,
+		.name = "eth_wake_irq",
 	},
 };
 
@@ -547,6 +567,24 @@ struct platform_device smi_device = {
 	.resource = smi_resources,
 };
 
+/* touchscreen Device registration */
+static struct spear_touchscreen touchscreen_info = {
+	.adc_channel_x = ADC_CHANNEL5,
+	.adc_channel_y = ADC_CHANNEL6,
+	.gpio_pin = APPL_GPIO_7,
+};
+
+struct platform_device touchscreen_device = {
+	.name = "spear-ts",
+	.id = -1,
+	.dev = {
+		.platform_data = &touchscreen_info,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = 0,
+	.resource = NULL,
+};
+
 /* usb device registeration */
 static struct resource udc_resources[] = {
 	[0] = {
@@ -621,6 +659,11 @@ static struct map_desc spear6xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR6XX_ICM3_SDRAM_CTRL_BASE),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= IO_ADDRESS(SPEAR6XX_ICM1_SRAM_BASE),
+		.pfn		= __phys_to_pfn(SPEAR6XX_ICM1_SRAM_BASE),
+		.length		= SZ_4K,
+		.type		= MT_MEMORY_NONCACHED
 	},
 };
 

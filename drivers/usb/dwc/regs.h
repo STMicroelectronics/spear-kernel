@@ -39,6 +39,7 @@
 #define __DWC_OTG_REGS_H__
 
 #include <linux/types.h>
+#include <linux/usb/dwc_otg.h>
 /*Bit fields in the Device EP Transfer Size Register is 11 bits */
 #undef DWC_LIMITED_XFER_SIZE
 /*
@@ -354,11 +355,11 @@
  * GNPTXFSIZ, DPTXFSIZn). Read the register into the u32 element then
  * read out the bits using the bit elements.
  */
-#define DWC_RX_FIFO_DEPTH_RD(reg)	(((reg) & ((u32)0xffff << 16)) >> 16)
-#define DWC_RX_FIFO_DEPTH_WR(reg, x)	\
+#define DWC_TX_FIFO_DEPTH_RD(reg)	(((reg) & ((u32)0xffff << 16)) >> 16)
+#define DWC_TX_FIFO_DEPTH_WR(reg, x)	\
 	(((reg) & (~((u32)0xffff << 16))) | ((x) << 16))
-#define DWC_RX_FIFO_START_ADDR_RD(reg)		((reg) & 0xffff)
-#define DWC_RX_FIFO_START_ADDR_WR(reg, x)	\
+#define DWC_TX_FIFO_START_ADDR_RD(reg)		((reg) & 0xffff)
+#define DWC_TX_FIFO_START_ADDR_WR(reg, x)	\
 	(((reg) & (~((u32)0xffff))) | (x))
 
 /*
@@ -864,9 +865,6 @@
 #define DWC_DEPTSIZ0_XFER_SIZ_RW(reg, x)	\
 	(((reg) & (~((u32)0x07f << 00))) | ((x) << 00))
 
-#define MAX_PERIO_FIFOS			15	/* Max periodic FIFOs */
-#define MAX_TX_FIFOS			15	/* Max non-periodic FIFOs */
-
 /* Maximum number of Endpoints/HostChannels */
 #define MAX_EPS_CHANNELS 16	/* This come from device tree or defconfig */
 
@@ -898,7 +896,7 @@ struct device_if {
 	u8 num_out_eps;
 
 	/* Size of periodic FIFOs (Bytes) */
-	u16 perio_tx_fifo_size[MAX_PERIO_FIFOS];
+	u16 perio_tx_fifo_size[MAX_TX_FIFOS];
 
 	/* Size of Tx FIFOs (Bytes) */
 	u16 tx_fifo_size[MAX_TX_FIFOS];

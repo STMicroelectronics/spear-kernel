@@ -46,7 +46,7 @@ static int dwmac1000_dma_init(void __iomem *ioaddr, int pbl, u32 dma_tx,
 	if (limit < 0)
 		return -EBUSY;
 
-	value = /* DMA_BUS_MODE_FB | */ DMA_BUS_MODE_4PBL |
+	value = DMA_BUS_MODE_FB | /* DMA_BUS_MODE_4PBL |*/
 	    ((pbl << DMA_BUS_MODE_PBL_SHIFT) |
 	     (pbl << DMA_BUS_MODE_RPBL_SHIFT));
 

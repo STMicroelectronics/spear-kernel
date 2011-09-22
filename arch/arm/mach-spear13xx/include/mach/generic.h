@@ -506,7 +506,6 @@ void __init nand_mach_init(u32 busw);
 void nand_select_bank(u32 bank, u32 busw);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
-void pcm_init(struct device *dma_dev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */
@@ -532,8 +531,8 @@ extern struct platform_device spear1310_reva_eth2_device;
 extern struct platform_device spear1310_reva_eth3_device;
 extern struct platform_device spear1310_reva_eth4_device;
 extern struct platform_device spear1310_reva_i2c1_device;
-extern struct platform_device spear1310_reva_ras_fsmc_nor_device;
 extern struct platform_device spear1310_reva_plgpio_device;
+extern struct platform_device spear1310_reva_ras_fsmc_nor_device;
 extern struct platform_device spear1310_reva_rs485_0_device;
 extern struct platform_device spear1310_reva_rs485_1_device;
 extern struct platform_device spear1310_reva_tdm_hdlc_0_device;
@@ -550,12 +549,12 @@ int spear1310_reva_eth_phy_clk_cfg(void *);
 /* spear1310 declarations */
 #ifdef CONFIG_CPU_SPEAR1310
 /* Add spear1310 machine device structure declarations here */
+extern struct amba_device spear1310_ssp1_device;
 extern struct amba_device spear1310_uart1_device;
 extern struct amba_device spear1310_uart2_device;
 extern struct amba_device spear1310_uart3_device;
 extern struct amba_device spear1310_uart4_device;
 extern struct amba_device spear1310_uart5_device;
-extern struct amba_device spear1310_ssp1_device;
 extern struct platform_device spear1310_can0_device;
 extern struct platform_device spear1310_can1_device;
 extern struct platform_device spear1310_i2c1_device;
@@ -565,12 +564,15 @@ extern struct platform_device spear1310_i2c4_device;
 extern struct platform_device spear1310_i2c5_device;
 extern struct platform_device spear1310_i2c6_device;
 extern struct platform_device spear1310_i2c7_device;
+extern struct platform_device spear1310_otg_device;
 extern struct platform_device spear1310_plgpio_device;
-extern struct platform_device spear1310_tdm_hdlc_0_device;
-extern struct platform_device spear1310_tdm_hdlc_1_device;
 extern struct platform_device spear1310_rs485_0_device;
 extern struct platform_device spear1310_rs485_1_device;
-extern struct platform_device spear1310_otg_device;
+extern struct platform_device spear1310_sata0_device;
+extern struct platform_device spear1310_sata1_device;
+extern struct platform_device spear1310_sata2_device;
+extern struct platform_device spear1310_tdm_hdlc_0_device;
+extern struct platform_device spear1310_tdm_hdlc_1_device;
 
 /* Add spear1310 machine function declarations here */
 void __init spear1310_clk_init(void);
@@ -590,19 +592,19 @@ extern struct platform_device spear1340_camif2_device;
 extern struct platform_device spear1340_camif3_device;
 extern struct platform_device spear1340_cam_sensor0_device;
 extern struct platform_device spear1340_i2c1_device;
-extern struct platform_device spear1340_nand_device;
-extern struct platform_device spear1340_plgpio_device;
-extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;
+extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_otg_device;
+extern struct platform_device spear1340_plgpio_device;
+extern struct platform_device spear1340_pwm_device;
+extern struct platform_device spear1340_sata0_device;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
-int spear1340_otg_phy_init(void);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
 

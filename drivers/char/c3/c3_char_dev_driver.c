@@ -211,6 +211,10 @@ static unsigned int _c3_user2kernel(c3_buffer_t *buffer,
 {
 	int copy = 0;
 
+	if (!buffer->size) {
+		printk(C3_KERN_ERR "ZERO LEN DATA/KEY NOT SUPPORTED\n");
+		return C3_SKIP;
+	}
 #ifdef DEBUG
 	printk(C3_KERN_DEBUG "[CDD] User ->Kernel process\n");
 
@@ -305,7 +309,7 @@ static unsigned int _c3_user2kernel(c3_buffer_t *buffer,
 		for (cnt = 0; cnt < buffer->size / 4; cnt++)
 			printk(
 				C3_KERN_DEBUG "\t[@%d] %08x\n", cnt,
-				C3_CONV_INT_32((unsigned int)(((unsigned int *)
+				cpu_to_be32((unsigned int)(((unsigned int *)
 				buffer->kernel_ptr)[cnt])));*/
 	}
 #endif  /* DEBUG */
@@ -1115,12 +1119,12 @@ static ssize_t _c3_cdd_write_(struct file *file_ptr, const char *buff_ptr,
 	cb_param->c3_stop = 0;
 
 	c3_status = execute_program(&k_param_list, callback, (void *) cb_param);
-
-	if (c3_status != C3_OK) {
+	if (c3_status == C3_ERR) {
 		printk(C3_KERN_ERR "[CDD] Cannot execute program\n");
 		err = -EIO;
 		goto quit_write;
-	}
+	} else if (c3_status == C3_SKIP)
+		goto skip;
 
 	/* Wait the execution of the C3 program */
 	if (down_interruptible(&cb_param->sem)) {
@@ -1155,6 +1159,7 @@ static ssize_t _c3_cdd_write_(struct file *file_ptr, const char *buff_ptr,
 	}
 
 	/* Copy back buffers to user space and free kernel buffers */
+skip:
 	for (i = 0; i < k_param_list.buffer_list.buffers_number; i++) {
 		if (_c3_kernel2user(&k_param_list.buffer_list.buffers[i])
 			!= C3_OK) {
