@@ -1129,8 +1129,10 @@ static ssize_t _c3_cdd_write_(struct file *file_ptr, const char *buff_ptr,
 		printk(C3_KERN_ERR "[CDD] Cannot execute program\n");
 		err = -EIO;
 		goto quit_write;
-	} else if (c3_status == C3_SKIP)
-		goto skip;
+	} else if (c3_status == C3_SKIP) {
+		err = -ENOTSUPP;
+		goto quit_write;
+	}
 
 	/* Wait the execution of the C3 program */
 	if (down_interruptible(&cb_param->sem)) {
@@ -1165,7 +1167,6 @@ static ssize_t _c3_cdd_write_(struct file *file_ptr, const char *buff_ptr,
 	}
 
 	/* Copy back buffers to user space and free kernel buffers */
-skip:
 	for (i = 0; i < k_param_list.buffer_list.buffers_number; i++) {
 		if (_c3_kernel2user(&k_param_list.buffer_list.buffers[i])
 			!= C3_OK) {
