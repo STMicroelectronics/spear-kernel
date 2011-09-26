@@ -54,7 +54,9 @@
 #include <linux/bug.h>
 #include <linux/init.h>
 #include <linux/list.h>
+#include <linux/phy.h>
 #include <linux/slab.h>
+#include <linux/stmmac.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
@@ -109,6 +111,7 @@ char spear1340_plug_board[50] = {'\0', };
 /* Definitions specific to GMII plug board */
 /* padmux devices to enable */
 static struct pmx_dev *gmii_pb_pmx_devs[] = {
+	&spear1340_pmx_gmii,
 };
 
 /* Amba and platform devices to be removed, added previously by evb board */
@@ -127,12 +130,18 @@ static struct platform_device *gmii_pb_add_pdevs[] __initdata = {
 
 static void __init gmii_pb_init(void)
 {
+	/* Enable GMII */
+	struct plat_stmmacphy_data *phy_data;
+
+	phy_data = spear1340_phy0_device.dev.platform_data;
+	phy_data->interface = PHY_INTERFACE_MODE_GMII;
 }
 
 
 /* Definitions specific to RGMII plug board */
 /* padmux devices to enable */
 static struct pmx_dev *rgmii_pb_pmx_devs[] = {
+	&spear1340_pmx_rgmii,
 };
 
 /* Amba and platform devices to be removed, added previously by evb board */
@@ -151,6 +160,11 @@ static struct platform_device *rgmii_pb_add_pdevs[] __initdata = {
 
 static void __init rgmii_pb_init(void)
 {
+	/* Enable RGMII */
+	struct plat_stmmacphy_data *phy_data;
+
+	phy_data = spear1340_phy0_device.dev.platform_data;
+	phy_data->interface = PHY_INTERFACE_MODE_RGMII;
 }
 
 

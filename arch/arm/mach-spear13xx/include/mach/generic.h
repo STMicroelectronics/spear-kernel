@@ -596,6 +596,7 @@ extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;
 extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_otg_device;
+extern struct platform_device spear1340_phy0_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
