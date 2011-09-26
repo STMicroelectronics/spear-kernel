@@ -73,7 +73,7 @@
 ENTRY(spear_wakeup)
 	mrc	p15, 0, r0, c0, c0, 5
 	and	r0, r0, #0xf
-	cmp	r0, #0
+	cmp	r0, #0x0
 	bne	cpux_sleep
 back:
 //;	b	back
@@ -304,15 +304,49 @@ mmu_off:
 
 	/* This is Rev-1 */
 	/* Program MPMC Control Status register in Misc Space */
-	ldr	r0, [r6, #0x438]
-	/* Set srefresh_enter bit(2) */
-	orr	r0, r0, #0x4
-	str	r0, [r6, #0x438]
+#ifdef MPMC_RESET
+	ldr	r7, =MPMC_BASE_PA
+	/* Set the MPMC controller in Self-Refresh */
+	ldr	r0, [r7, #0x2c]
+	orr	r0, r0, #0x10000
+	str	r0, [r7, #0x2c]
 wait_till_srefresh_on_r1:
 	ldr	r0, [r6, #0x438]
 	/* check for cke_status bit(13) */
 	tst	r0, #0x2000
 	bne	wait_till_srefresh_on_r1
+
+#ifdef GPIO_DDR_ISOLATE
+	/* Enable XGPIO clk */
+	ldr	r0, [r6, #0x314]
+	ldr	r2, =0x40000
+	orr	r0, r0, r2
+	str	r0, [r6, #0x314]
+
+	ldr	r6, =GPIO_START_UPD
+	/* Set xgpio[88-89] driven for cke & reset patch enable */
+	ldr	r0, [r6, #0x048]
+	ldr	r2, =0x03000000
+	orr	r0, r0, r2
+	str	r0, [r6, #0x048]
+#endif
+
+	ldr	r6, =MISC_BASE_PA
+	/* Stop the MPMC controller */
+	ldr	r0, [r7, #0x2c]
+	bic	r0, r0, #0x1000000
+	str	r0, [r7, #0x2c]
+
+	/* reset the MPMC controller */
+	ldr	r1, [r6, #0x31C]
+	orr	r1, r1, #0x3
+	str	r1, [r6, #0x31C]
+
+	/* Stop the MPMC clock */
+	ldr	r1, [r6, #0x310]
+	bic	r1, r1, #0x3
+	str	r1, [r6, #0x310]
+#endif
 	b	srefresh_on
 
 	/* This is Rev-0 */
@@ -327,8 +361,6 @@ wait_till_srefresh_on_r0:
 	/* check for cke_status bit(13) */
 	tst	r0, #0x2000
 	beq	wait_till_srefresh_on_r0
-
-srefresh_on:
 #ifdef MPMC_RESET
 	ldr	r7, =MPMC_BASE_PA
 	/* Stop the MPMC controller */
@@ -346,6 +378,8 @@ srefresh_on:
 	bic	r1, r1, #0x3
 	str	r1, [r6, #0x278]
 #endif
+
+srefresh_on:
 	/* Put the system in slow mode */
 	ldr	r0, [r6, #0x200]
 	bic	r0, r0, #0x4
@@ -373,7 +407,7 @@ wait_till_slow_mode:
 swoff_pll:
 	ldr	r0, [r6, r1]
 	/* Clear pll_enable bit(1) of PLL1_CTR register in Misc registers */
-	bic	r0, r0, #0x02
+	bic	r0, r0, #0x04
 	str	r0, [r6, r1]
 	add	r1, #0xc
 	add	r2, #0x1
@@ -391,6 +425,13 @@ swoff_pll:
 	bic	r0, r0, #0x0400
 	str	r0, [r6, #0x244]
 #endif
+
+	/* Check for the SPEAr revision */
+	cmp	r12, #1
+	bne	gpio_ddr_isolate_rev_0
+	b	pwrdomains_on
+
+gpio_ddr_isolate_rev_0:
 #ifdef GPIO_DDR_ISOLATE
 	/* enable gpio clock */
 	ldr	r0, [r6, #0x274]
@@ -407,19 +448,31 @@ swoff_pll:
 	ldr	r0, [r6, #0x3fc]
 	orr	r0, r0, #0x4
 	str	r0, [r6, #0x3fc]
-
 #endif
+
+pwrdomains_on:
 #ifdef PWRDOMAINS_ON
 	cmp	r11, #0x1
 	beq	standby_mode
 	/* Switch on certan sections as suggested by HW team */
 	/* Let the USB Host clock be on */
 	ldr	r6, =MISC_BASE_PA
+
+	/* Check for the SPEAr revision */
+	cmp	r12, #1
+	bne	usbclock_on_r0
+	/* Enable BootRom and Always On Ram Clock */
+	ldr	r0, [r6, #0x30c]
+	orr	r0, r0, #0x6
+	str	r0, [r6, #0x30c]
+	b	usbclock_on_end
+
+usbclock_on_r0:
 	ldr	r0, [r6, #0x274]
 	orr	r0, r0, #0xE00
 	str	r0, [r6, #0x274]
+usbclock_on_end:
 	ldr	r0, [r6, #0x100]
-
 	/*
 	 * Switch off the power domains.
 	 * Clear the ack bit
@@ -427,7 +480,7 @@ swoff_pll:
 	bic	r0, r0, #0xc000
 	str	r0, [r6, #0x100]
 
-	bic	r0, r0, #0x1000
+	bic	r0, r0, #0x800
 	str	r0, [r6, #0x100]
 
 wait_ack1:
@@ -439,7 +492,7 @@ wait_ack1:
 	bic	r0, r0, #0xc000
 	str	r0, [r6, #0x100]
 
-	bic	r0, r0, #0x0800
+	bic	r0, r0, #0x1000
 	str	r0, [r6, #0x100]
 wait_ack2:
 	ldr	r0, [r6, #0x100]
@@ -450,12 +503,17 @@ wait_ack2:
 	bic	r0, r0, #0xc000
 	str	r0, [r6, #0x100]
 
+	bic	r0, r0, #0x03e0
 	bic	r0, r0, #0x2400
 	str	r0, [r6, #0x100]
 wait_ack3:
 	ldr	r0, [r6, #0x100]
 	tst	r0, #0x4000
 	beq	wait_ack3
+	nop
+	nop
+	nop
+	nop
 #endif
 
 standby_mode:
@@ -495,7 +553,7 @@ pll_lock_4:
 swon_pll_1_3:
 	/* Switch on Pll-1/2/3 */
 	ldr	r0, [r6, r1]
-	orr	r0, r0, #0x2
+	orr	r0, r0, #0x6
 	str	r0, [r6, r1]
 pll_lock_1_3:
 	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
@@ -516,7 +574,7 @@ pll_lock_1_3:
 	bic	r0, r0, #0x7
 	/* Set the apt mode bits(2:0) in SCCTRL register */
 	orr	r0, r0, #0x4
-	str	r0, [r6, #0x200]	/* System is now in slow mode */
+	str	r0, [r6, #0x200]	/* System is now in normal mode */
 wait_till_normal_mode:
 	ldr	r0, [r6, #0x200]
 	/* Wait for the mode to be updated */
@@ -531,6 +589,31 @@ wait_till_normal_mode:
 	 */
 	mov	r1, #0
 	mcr	p15, 0, r1, c7, c5, 0
+
+	ldr	r8, =SPEAR_SRAM_STACK_PA
+	/* fetch the SOC revision version from stack */
+	ldmia	r8!, {r12}
+
+	/* Check for the SPEAr revision */
+	cmp	r12, #1
+	bne	mpmc_restore_r0
+#ifdef MPMC_RESET
+	ldr	r7, =MISC_BASE_PA
+	/* Enable the MPMC clock */
+	ldr	r1, [r7, #0x310]
+	orr	r1, r1, #0x3
+	str	r1, [r7, #0x310]
+	/* Provide Software Reset to MPMC */
+	ldr	r1, [r7, #0x31C]
+	orr	r1, r1, #0x3
+	str	r1, [r7, #0x31C]
+	/* Enable MPMC back */
+	bic	r1, r1, #0x3
+	str	r1, [r7, #0x31C]
+#endif
+	b	mpmc_restore_init
+
+mpmc_restore_r0:
 	ldr	r6, =SPEAR_SRAM_START_PA
 #ifdef MPMC_RESET
 	ldr	r7, =MISC_BASE_PA
@@ -546,10 +629,14 @@ wait_till_normal_mode:
 	bic	r1, r1, #0x3
 	str	r1, [r7, #0x280]
 #endif
+
+mpmc_restore_init:
+//;	b	mpmc_restore_init
 	/* Restore the MPMC registers */
 	ldr	r7, =MPMC_BASE_PA
 	mov	r0, #0
 	ldr	r3, =MPMC_REG_END
+	ldr	r6, =SPEAR_SRAM_START_PA
 mpmc_restore_regs:
 	ldr	r1, [r6, r3]
 	cmp	r0, #0x2c
@@ -561,8 +648,23 @@ ddf:
 	str	r1, [r7, r0]
 	sub	r3, r3, #4
 	add	r0, r0, #4
-	cmp	r0, #0x320
+	cmp	r0, #0x3fc
 	bne	mpmc_restore_regs
+
+	/* Check for the SPEAr revision */
+	cmp	r12, #1
+	bne	gpio_restore_r0
+#ifdef GPIO_DDR_ISOLATE
+	ldr	r7, =GPIO_START_UPD
+	/* Setx gpio88 driven low for cke patch disable */
+	ldr	r0, [r7, #0x048]
+	ldr	r2, =0x02000000
+	and	r0, r0, r2
+	str	r0, [r7, #0x048]
+#endif
+	b	ddr_out_srefresh
+
+gpio_restore_r0:
 	/* Enable MPMC */
 	ldr	r1, [r7, #0x2c]
 	orr	r1, r1, #0x1000000
@@ -593,7 +695,42 @@ ddf:
 	ldr	r8, =SPEAR_SRAM_STACK_PA
 	/* fetch the SOC revision version from stack */
 	ldmia	r8!, {r12}
+	b	finalize_exit
 
+ddr_out_srefresh:
+	/* Move the DDR out of self refresh mode */
+	ldr	r6, =MISC_BASE_PA
+	ldr	r7, =MPMC_BASE_PA
+
+	/* Exit from SR (bit 8) */
+	ldr	r1, [r7, #0x18]
+	orr	r1, r1, #0x100
+	str	r1, [r7, #0x18]
+
+	/* Set the MPMC controller to exit from Self-Refresh */
+	ldr	r0, [r7, #0x2c]
+	orr	r0, r0, #0x100
+	str	r0, [r7, #0x2c]
+
+	/* Set the MPMC controller to exit from Self-Refresh */
+	ldr	r0, [r7, #0x2c]
+	orr	r0, r0, #0x1
+	str	r0, [r7, #0x2c]
+
+	/* Enable MPMC */
+	ldr	r1, [r7, #0x2c]
+	orr	r1, r1, #0x1000000
+	str	r1, [r7, #0x2c]
+	dsb
+	isb
+	mov	r0, #0x0
+	mcr	p15, 0, r0, c7, c5, 4	@ Flush prefetch buffer
+	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
+	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
+	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
+
+
+finalize_exit:
 	/* Clearance is required in the mpmc space */
 	ldr	r1, [r7, #0x2c]
 	/*
@@ -684,6 +821,18 @@ srefresh_off:
 	ldmia	r8!, {r0, r13, r14}
 	msr	spsr_cxsf, r0
 
+	/* Check for the SPEAr revision */
+	cmp	r12, #1
+	bne	srefresh_end_rev_0
+#ifdef GPIO_DDR_ISOLATE
+	ldr	r7, =GPIO_START_UPD
+	/* Setx gpio88 driven low for cke patch disable */
+	ldr	r0, [r7, #0x048]
+	and	r0, r0, #0x0
+	str	r0, [r7, #0x048]
+#endif
+
+srefresh_end_rev_0:
 	msr	cpsr, r4
 	ldmia	r8!, {r0}
 	mov	pc, r0

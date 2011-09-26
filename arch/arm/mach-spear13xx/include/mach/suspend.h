@@ -31,7 +31,7 @@ extern int spear_pcie_resume(void);
 #endif
 
 /* SRAM related defines*/
-#define SRAM_STACK_STRT_OFF	0x650
+#define SRAM_STACK_STRT_OFF	0x800
 #define SRAM_STACK_SCR_OFFS	0x900
 #define SPEAR_START_SRAM	SPEAR13XX_SYSRAM1_BASE
 #define SPEAR_LIMIT_SRAM	(SPEAR_START_SRAM + SZ_4K - 4)
@@ -44,5 +44,6 @@ extern int spear_pcie_resume(void);
 #define MPMC_BASE_PA		SPEAR13XX_MPMC_BASE
 #define MISC_BASE_PA		SPEAR13XX_MISC_BASE
 #define GPIO_START_PA		SPEAR13XX_GPIO0_BASE
+#define GPIO_START_UPD		SPEAR13XX_UPD_BASE
 
 #endif /* __MACH_SUSPEND_H */

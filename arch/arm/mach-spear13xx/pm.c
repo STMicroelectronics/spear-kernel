@@ -26,7 +26,8 @@
 
 #define PLAT_PHYS_OFFSET	0x00000000
 #define PCM_SET_WAKEUP_CFG	0xfffff
-#define PCM_SET_CFG	0x3c1f
+#define PCM_SET_CFG	0x3c04
+#define SWITCH_CTR_CFG	0xff
 
 static void __iomem *mpmc_regs_base;
 
@@ -112,6 +113,8 @@ void spear_sys_suspend(suspend_state_t state)
 		pm_cfg = readl(VA_PCM_WKUP_CFG);
 		/* Set the states for all power island on */
 		writel(pm_cfg | PCM_SET_WAKEUP_CFG, VA_PCM_WKUP_CFG);
+		/* Set the  VA_SWITCH_CTR to Max Restart Current */
+		writel(SWITCH_CTR_CFG, VA_SWITCH_CTR);
 	} else {
 		/* source gpio interrupt through GIC */
 		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
@@ -122,7 +125,10 @@ void spear_sys_suspend(suspend_state_t state)
 	 * Ensure that the backup of these registers does not
 	 * overlap the code being copied.
 	 */
-	memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 200);
+	if (cpu_is_spear1340())
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
+	else
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
 
 	/* Copy the Sleep code on to the SRAM*/
 	spear_sram_sleep = memcpy(sram_dest, (void *)spear_sleep_mode,
