@@ -198,6 +198,38 @@ static const struct of_device_id dw_i2c_of_match[] = {
 MODULE_DEVICE_TABLE(of, dw_i2c_of_match);
 #endif
 
+#ifdef CONFIG_PM
+static int dw_i2c_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
+
+	clk_disable(i_dev->clk);
+
+	return 0;
+}
+
+static int dw_i2c_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
+
+	clk_enable(i_dev->clk);
+	i2c_dw_init(i_dev);
+
+	return 0;
+}
+
+static const struct dev_pm_ops dw_i2c_dev_pm_ops = {
+	.suspend = dw_i2c_suspend,
+	.resume = dw_i2c_resume,
+};
+
+#define I2C_DW_DEV_PM_OPS (&dw_i2c_dev_pm_ops)
+#else
+#define I2C_DW_DEV_PM_OPS NULL
+#endif
+
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:i2c_designware");
 
@@ -207,6 +239,7 @@ static struct platform_driver dw_i2c_driver = {
 		.name	= "i2c_designware",
 		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(dw_i2c_of_match),
+		.pm	= I2C_DW_DEV_PM_OPS,
 	},
 };
 
