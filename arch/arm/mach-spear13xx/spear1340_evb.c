@@ -146,18 +146,18 @@ static struct i2c_board_info vs6725_camera_sensor_info[] = {
 	},
 };
 
-static struct soc_camera_link vs6725_cam_sensor_iclink = {
+static struct soc_camera_link vs6725_cam3_sensor_iclink = {
 	.bus_id = 3,	/* sensor is connected to cam3 */
 	.i2c_adapter_id = 0,
 	.board_info = &vs6725_camera_sensor_info[0],
 	.module_name = "vs6725",
 };
 
-struct platform_device spear1340_cam_sensor_device = {
+struct platform_device spear1340_cam3_sensor_device = {
 	.name = "soc-camera-pdrv",
-	.id = 0,
+	.id = -1,
 	.dev = {
-		.platform_data = &vs6725_cam_sensor_iclink,
+		.platform_data = &vs6725_cam3_sensor_iclink,
 	},
 };
 
@@ -241,7 +241,7 @@ static struct platform_device *plat_devs[] __initdata = {
 
 	/* spear1340 specific devices */
 	&spear1340_camif3_device,
-	&spear1340_cam_sensor_device,
+	&spear1340_cam3_sensor_device,
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
