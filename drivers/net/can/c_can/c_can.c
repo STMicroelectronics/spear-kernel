@@ -1142,6 +1142,8 @@ struct net_device *alloc_c_can_dev(void)
 					CAN_CTRLMODE_LOOPBACK |
 					CAN_CTRLMODE_LISTENONLY |
 					CAN_CTRLMODE_BERR_REPORTING;
+	priv->can_start = c_can_start;
+	priv->can_stop = c_can_stop;
 
 	return dev;
 }

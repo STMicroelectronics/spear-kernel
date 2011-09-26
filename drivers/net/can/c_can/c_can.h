@@ -79,6 +79,8 @@ struct c_can_priv {
 	bool tx_ok_odd;		/* Tx ODD OK flag */
 	bool tx_ok_even;	/* Tx EVEN OK flag */
 	u32 count;
+	void (*can_stop)(struct net_device *dev);
+	void (*can_start)(struct net_device *dev);
 };
 
 struct net_device *alloc_c_can_dev(void);
