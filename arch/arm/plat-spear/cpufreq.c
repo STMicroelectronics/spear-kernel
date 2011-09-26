@@ -103,6 +103,19 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int spear_cpufreq_suspend(struct cpufreq_policy *policy,
+				   pm_message_t pmsg)
+{
+	return 0;
+}
+
+static int spear_cpufreq_resume(struct cpufreq_policy *policy)
+{
+	return 0;
+}
+#endif
+
 static int spear_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int i = 0;
@@ -154,6 +167,10 @@ static struct cpufreq_driver spear_driver = {
 	.exit		= spear_cpufreq_exit,
 	.name		= "spear_cpufreq",
 	.attr		= spear_cpufreq_attr,
+#ifdef CONFIG_PM
+	.suspend	= spear_cpufreq_suspend,
+	.resume		= spear_cpufreq_resume,
+#endif
 };
 
 static int __init spear_cpufreq_register(void)
