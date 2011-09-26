@@ -605,6 +605,8 @@ void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
+int __init spear1340_pb_init(struct platform_device **pdevs, u8 pcnt,
+		struct amba_device **adevs, u8 acnt);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
 
