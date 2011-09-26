@@ -57,6 +57,7 @@
 #include <linux/phy.h>
 #include <linux/slab.h>
 #include <linux/stmmac.h>
+#include <media/soc_camera.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
@@ -243,6 +244,9 @@ static void __init hdmi_tx_pb_init(void)
 /* Definitions specific to CAM plug board */
 /* padmux devices to enable */
 static struct pmx_dev *cam_pb_pmx_devs[] = {
+	&spear1340_pmx_cam0,
+	&spear1340_pmx_cam1,
+	&spear1340_pmx_cam2,
 };
 
 /* Amba and platform devices to be removed, added previously by evb board */
@@ -256,11 +260,70 @@ static struct platform_device *cam_pb_rm_pdevs[] __initdata = {
 static struct amba_device *cam_pb_add_adevs[] __initdata = {
 };
 
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info[] = {
+	{
+		I2C_BOARD_INFO("vs6725", 0x10),
+	},
+};
+
+static struct soc_camera_link vs6725_cam0_sensor_iclink = {
+	.bus_id = 0,
+	.i2c_adapter_id = 0,
+	.board_info = &vs6725_camera_sensor_info[0],
+	.module_name = "vs6725",
+};
+
+static struct platform_device spear1340_cam0_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = 0,
+	.dev = {
+		.platform_data = &vs6725_cam0_sensor_iclink,
+	},
+};
+
+static struct soc_camera_link vs6725_cam1_sensor_iclink = {
+	.bus_id = 1,
+	.i2c_adapter_id = 0,
+	.board_info = &vs6725_camera_sensor_info[0],
+	.module_name = "vs6725",
+};
+
+static struct platform_device spear1340_cam1_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = 1,
+	.dev = {
+		.platform_data = &vs6725_cam1_sensor_iclink,
+	},
+};
+
+static struct soc_camera_link vs6725_cam2_sensor_iclink = {
+	.bus_id = 2,
+	.i2c_adapter_id = 0,
+	.board_info = &vs6725_camera_sensor_info[0],
+	.module_name = "vs6725",
+};
+
+static struct platform_device spear1340_cam2_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = 2,
+	.dev = {
+		.platform_data = &vs6725_cam2_sensor_iclink,
+	},
+};
+
 static struct platform_device *cam_pb_add_pdevs[] __initdata = {
+	&spear1340_camif0_device,
+	&spear1340_camif1_device,
+	&spear1340_camif2_device,
+	&spear1340_cam0_sensor_device,
+	&spear1340_cam1_sensor_device,
+	&spear1340_cam2_sensor_device,
 };
 
 static void __init cam_pb_init(void)
 {
+	spear1340_cam3_sensor_device.id = 3;
 }
 
 
