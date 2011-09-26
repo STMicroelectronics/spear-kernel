@@ -345,6 +345,36 @@ static struct snd_soc_dai_ops dw_i2s_dai_ops = {
 	.trigger	= dw_i2s_trigger,
 };
 
+#ifdef CONFIG_PM
+
+static int dw_i2s_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2s_dev *i2s_dev = dev_get_drvdata(&pdev->dev);
+
+	clk_disable(i2s_dev->clk);
+	return 0;
+}
+
+static int dw_i2s_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2s_dev *i2s_dev = dev_get_drvdata(&pdev->dev);
+
+	clk_enable(i2s_dev->clk);
+	return 0;
+}
+
+static const struct dev_pm_ops dw_i2s_dev_pm_ops = {
+	.suspend = dw_i2s_suspend,
+	.resume = dw_i2s_resume,
+};
+
+#define I2S_DW_DEV_PM_OPS (&dw_i2s_dev_pm_ops)
+#else
+#define I2S_DW_DEV_PM_OPS NULL
+#endif
+
 static int
 dw_i2s_probe(struct platform_device *pdev)
 {
@@ -514,6 +544,7 @@ static struct platform_driver dw_i2s_driver = {
 	.driver		= {
 		.name	= "designware-i2s",
 		.owner	= THIS_MODULE,
+		.pm	= I2S_DW_DEV_PM_OPS,
 	},
 };
 
