@@ -37,7 +37,7 @@ static inline bool cpu_is_spear310(void)
 
 static inline bool cpu_is_spear320(void)
 {
-	return machine_is_spear320_evb();
+	return machine_is_spear320_evb() || machine_is_spear320_hmi();
 }
 
 static inline bool cpu_is_spear600(void)
