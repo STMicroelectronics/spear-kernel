@@ -67,6 +67,31 @@ static struct clcd_panel samsung_LMS700_in = {
 };
 #endif
 
+#ifdef CONFIG_FB_ARMCLCD_ET057010_640x480
+static struct clcd_panel et057010_640x480_in = {
+	.mode = {
+		.name = "ET057010 640x480",
+		.refresh = 0,
+		.xres = 640,
+		.yres = 480,
+		.pixclock = 48000,
+		.left_margin = 144,
+		.right_margin = 16,
+		.upper_margin = 33,
+		.lower_margin = 10,
+		.hsync_len = 30,
+		.vsync_len = 3,
+		.sync = 0,
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+	.width = -1,
+	.height = -1,
+	.tim2 = TIM2_CLKSEL | TIM2_IPC,	/* This display requires 24MHz */
+	.cntl = CNTL_LCDTFT | CNTL_BGR,
+	.bpp = 32,
+};
+#endif
+
 static int clcd_setup(struct clcd_fb *fb)
 {
 	dma_addr_t dma;
@@ -77,6 +102,9 @@ static int clcd_setup(struct clcd_fb *fb)
 #endif
 #ifdef CONFIG_FB_ARMCLCD_SAMSUNG_LMS700
 	fb->panel = &samsung_LMS700_in;
+#endif
+#ifdef CONFIG_FB_ARMCLCD_ET057010_640x480
+	fb->panel = &et057010_640x480_in;
 #endif
 	fb->fb.screen_base = dma_alloc_writecombine(&fb->dev->dev, FRAMESIZE,
 			&dma, GFP_KERNEL);

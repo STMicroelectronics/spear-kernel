@@ -325,6 +325,12 @@ config FB_ARMCLCD_SAMSUNG_LMS700
 	  This is an implementation of the Samsung LMS700, a 7"
 	  color TFT panel. The native resolution is 800x480.
 
+config FB_ARMCLCD_ET057010_640x480
+	bool "Emerging Display CLCD 5.7\" TFT(640x480)"
+	help
+	  This is an implementation of the ET57010, a 5.7" color TFT panel on
+	  Spear320HMI board. The native resolution is 640x480.
+
 config FB_ARMCLCD_SHARP_LQ035Q7DB02_HRTFT
 	bool "LogicPD LCD 3.5\" QVGA w/HRTFT IC"
 	help
