@@ -11,12 +11,14 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
+#include <mach/misc_regs.h>
 #include <mach/spear_pcie_rev_341.h>
 
 static void enable_dbi_access(struct pcie_app_reg __iomem *app_reg)
@@ -311,7 +313,7 @@ static void pcie_int_init(struct pcie_port *pp)
 			| INTD_CTRL_INT, &app_reg->int_mask);
 }
 
-static void spear13xx_pcie_host_init(struct pcie_port *pp)
+static void pcie_host_init(struct pcie_port *pp)
 {
 	struct pcie_app_reg __iomem *app_reg = pp->va_app_base;
 	struct pcie_port_info *config = &pp->config;
@@ -414,6 +416,14 @@ static void spear13xx_pcie_host_init(struct pcie_port *pp)
 	pcie_int_init(pp);
 }
 
+static void pcie_host_exit(struct pcie_port *pp)
+{
+	struct pcie_app_reg __iomem *app_reg = pp->va_app_base;
+
+	/* Remove link up */
+	writel(0, &app_reg->app_ctrl_0);
+}
+
 static int pcie_link_up(void __iomem *va_app_base)
 {
 	struct pcie_app_reg __iomem *app_reg = va_app_base;
@@ -484,7 +494,7 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 		dev_info(&pdev->dev, "link up\n");
 	} else {
 		dev_info(&pdev->dev, "link down\n");
-		spear13xx_pcie_host_init(pp);
+		pcie_host_init(pp);
 		app_reg = pp->va_app_base;
 		pp->va_cfg0_base =
 			ioremap(readl(&app_reg->in_cfg0_addr_start),
@@ -517,6 +527,41 @@ free_app_res:
 	return err;
 }
 
+static int pcie_clk_init(struct pcie_port *pp)
+{
+	/*
+	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
+
+	if (pp->clk == NULL) {
+		pp->clk = clk_get_sys("dw_pcie.0", NULL);
+
+		if (IS_ERR(pp->clk)) {
+			pr_err("%s:couldn't get clk for pcie0\n", __func__);
+			return -ENODEV;
+		}
+	}
+
+	if (clk_enable(pp->clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+
+static int pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_PCIE_CFG);
+	if (pp->clk)
+		clk_disable(pp->clk);
+
+	return 0;
+}
+
 void spear_pcie_341_add_ops(struct pcie_port *pp)
 {
 	struct pcie_private_ops	*ops = &pp->ops;
@@ -527,4 +572,8 @@ void spear_pcie_341_add_ops(struct pcie_port *pp)
 	ops->wr_other = pcie_wr_other_conf;
 	ops->add_port = add_pcie_port;
 	ops->link_up = pcie_link_up;
+	ops->host_init = pcie_host_init;
+	ops->host_exit = pcie_host_exit;
+	ops->clk_init = pcie_clk_init;
+	ops->clk_exit = pcie_clk_exit;
 }

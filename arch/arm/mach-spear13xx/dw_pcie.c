@@ -697,18 +697,6 @@ static int __init pcie_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(clk)) {
-		dev_err(&pdev->dev, "couldn't get clk for pcie\n");
-		err = -EINVAL;
-		goto free_mem;
-	}
-	if (clk_enable(clk)) {
-		dev_err(&pdev->dev, "couldn't enable clk for pcie\n");
-		err = -EINVAL;
-		goto clk_put;
-	}
-
 	memcpy(&pp->config, pdev->dev.platform_data, (sizeof(pp->config)));
 
 	switch (pp->config.vendor) {
@@ -725,7 +713,25 @@ static int __init pcie_probe(struct platform_device *pdev)
 	default:
 		dev_err(&pdev->dev, "ops not defined for this vendor\n");
 		err = -EINVAL;
-		goto clk_disable;
+		goto free_mem;
+	}
+
+	if (pp->ops.clk_init(pp)) {
+		err = -EINVAL;
+		goto free_mem;
+	}
+
+	clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(clk)) {
+		dev_err(&pdev->dev, "couldn't get clk for pcie\n");
+		err = PTR_ERR(clk);;
+		goto free_mem;
+	}
+
+	if (clk_enable(clk)) {
+		dev_err(&pdev->dev, "couldn't enable clk for pcie\n");
+		err = -EINVAL;
+		goto clk_put;
 	}
 
 	if (!pp->ops.add_port(pp, pdev)) {
@@ -734,8 +740,6 @@ static int __init pcie_probe(struct platform_device *pdev)
 		list_add_tail(&pp->next, &pcie_port_list);
 		return 0;
 	}
-clk_disable:
-	clk_disable(clk);
 clk_put:
 	clk_put(clk);
 free_mem:
