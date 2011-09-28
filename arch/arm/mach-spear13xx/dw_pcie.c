@@ -679,6 +679,39 @@ static struct hw_pci pci = {
 	.map_irq	= pcie_map_irq,
 };
 
+#ifdef CONFIG_PM
+int spear_pcie_suspend(void)
+{
+	struct pcie_port *pp;
+	int i;
+
+	for (i = 0; i < pci.nr_controllers; i++) {
+		pp = controller_to_port(i);
+		if (pp->ops.link_up(pp->va_app_base)) {
+			pp->ops.host_exit(pp);
+			pp->ops.clk_exit(pp);
+		}
+	}
+
+	return 0;
+}
+
+int spear_pcie_resume(void)
+{
+	struct pcie_port *pp;
+	int i;
+
+	for (i = 0; i < pci.nr_controllers; i++) {
+		pp = controller_to_port(i);
+		pp->ops.clk_init(pp);
+		if (!pp->ops.link_up(pp->va_app_base))
+			pp->ops.host_init(pp);
+	}
+
+	return 0;
+}
+#endif
+
 static int __init pcie_probe(struct platform_device *pdev)
 {
 	int err;
