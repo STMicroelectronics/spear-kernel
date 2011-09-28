@@ -1025,7 +1025,7 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 	};
 	const char *input_clk_src[] = {
 		"pll2_clk",
-		"gmii_125m_pad",
+		"gmii_125m_pad_clk",
 		"osc3_25m_clk",
 	};
 
