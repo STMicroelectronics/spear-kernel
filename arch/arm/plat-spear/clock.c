@@ -31,7 +31,7 @@ static LIST_HEAD(clocks);
 
 static void propagate_rate(struct clk *, int on_init);
 #ifdef CONFIG_DEBUG_FS
-static int clk_debugfs_reparent(struct clk *);
+static int clk_debugfs_reparent(struct clk *c, struct clk *old_pclk);
 #endif
 
 static int generic_clk_enable(struct clk *clk)
@@ -100,6 +100,7 @@ static struct pclk_info *pclk_info_get(struct clk *clk)
 static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 {
 	unsigned long flags;
+	struct clk *old_pclk = clk->pclk;
 
 	spin_lock_irqsave(&clocks_lock, flags);
 	list_del(&clk->sibling);
@@ -109,7 +110,7 @@ static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 	spin_unlock_irqrestore(&clocks_lock, flags);
 
 #ifdef CONFIG_DEBUG_FS
-	clk_debugfs_reparent(clk);
+	clk_debugfs_reparent(clk, old_pclk);
 #endif
 }
 
@@ -1155,9 +1156,12 @@ err_out:
 }
 late_initcall(clk_debugfs_init);
 
-static int clk_debugfs_reparent(struct clk *c)
+static int clk_debugfs_reparent(struct clk *c, struct clk *old_pclk)
 {
-	debugfs_remove(c->dent);
-	return clk_debugfs_register_one(c);
+	if (c->dent)
+		debugfs_rename(old_pclk->dent, c->dent, c->pclk->dent,
+				c->dent->d_iname);
+
+	return 0;
 }
 #endif /* CONFIG_DEBUG_FS */
