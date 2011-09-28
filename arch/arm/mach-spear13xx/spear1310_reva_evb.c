@@ -487,8 +487,6 @@ static void __init spear1310_reva_evb_init(void)
 			SPEAR1310_REVA_FSMC1_BASE, 3, FSMC_FLASH_WIDTH16);
 
 #ifdef CONFIG_SPEAR_PCIE_REV341
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	spear1310_reva_pcie_board_init();
 #endif
 

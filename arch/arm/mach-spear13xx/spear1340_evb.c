@@ -459,11 +459,7 @@ static void __init spear1340_evb_init(void)
 #endif
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	spear1340_pcie_board_init();
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
 #endif
 
 	/* call spear1340 machine init function */

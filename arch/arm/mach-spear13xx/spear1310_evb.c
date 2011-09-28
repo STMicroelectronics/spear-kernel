@@ -383,11 +383,7 @@ static void __init spear1310_evb_init(void)
 	i2c_register_default_devices();
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	spear1310_pcie_board_init();
-	writel(SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
 #endif
 
 	/* Miphy configuration for SATA */

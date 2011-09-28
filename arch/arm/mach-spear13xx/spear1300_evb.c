@@ -304,8 +304,6 @@ static void __init spear1300_evb_init(void)
 	i2c_register_default_devices();
 
 #ifdef CONFIG_SPEAR_PCIE_REV341
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	spear1300_pcie_board_init();
 #endif
 
