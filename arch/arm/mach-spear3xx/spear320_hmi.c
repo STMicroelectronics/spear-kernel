@@ -12,6 +12,9 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/i2c.h>
+#include <linux/irq.h>
+#include <linux/mfd/stmpe.h>
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
@@ -59,6 +62,37 @@ static struct macb_base_data hmi_macb_data = {
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
 };
 
+static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
+	.sample_time = 4, /* 80 clocks */
+	.mod_12b = 1, /* 12 bit */
+	.ref_sel = 0, /* Internal */
+	.adc_freq = 1, /* 3.25 MHz */
+	.ave_ctrl = 2, /* 2 samples */
+	.touch_det_delay = 3, /* 500 us */
+	.settling = 4, /* 500 us */
+	.fraction_z = 7,
+	.i_drive = 1, /* 50 to 80 mA */
+};
+
+static struct stmpe_platform_data stmpe610_pdata = {
+	.id = 0,
+	.blocks = STMPE_BLOCK_TOUCHSCREEN | STMPE_BLOCK_GPIO,
+	.irq_base = SPEAR320_STMPE_INT_BASE,
+	.irq_trigger = IRQ_TYPE_LEVEL_HIGH,
+	.irq_invert_polarity = false,
+	.autosleep = false,
+	.irq_over_gpio = true,
+	.irq_gpio = PLGPIO_40,
+	.ts = &stmpe610_ts_pdata,
+};
+
+static struct i2c_board_info __initdata i2c_board_info[] = {
+	{
+		I2C_BOARD_INFO("stmpe610", 0x41),
+		.platform_data = &stmpe610_pdata,
+	},
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear3xx specific devices */
@@ -78,6 +112,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear320_pmx_pwm1,
 	&spear320_pmx_pwm2,
 	&spear320_pmx_mii1,
+	&spear3xx_pmx_plgpio_37_42,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -185,6 +220,8 @@ static void __init spear320_hmi_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
+
+	i2c_register_board_info(0, i2c_board_info, ARRAY_SIZE(i2c_board_info));
 }
 
 MACHINE_START(SPEAR320_HMI, "ST-SPEAR320-HMI")
