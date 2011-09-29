@@ -240,6 +240,22 @@ unsigned long clk_get_rate(struct clk *clk)
 EXPORT_SYMBOL(clk_get_rate);
 
 /**
+ * clk_get_parent - get the parent clock source for this clock
+ * @clk: clock source
+ *
+ * Returns struct clk corresponding to parent clock source, or
+ * valid IS_ERR() condition containing errno.
+ */
+struct clk *clk_get_parent(struct clk *clk)
+{
+	if (!clk || !clk->pclk)
+		return ERR_PTR(-ENOENT);
+
+	return clk->pclk;
+}
+EXPORT_SYMBOL(clk_get_parent);
+
+/**
  * clk_set_parent - set the parent clock source for this clock
  * @clk: clock source
  * @parent: parent clock source
