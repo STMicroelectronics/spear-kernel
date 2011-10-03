@@ -172,12 +172,16 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_pads_as_gpio,
 	&spear1340_pmx_fsmc_8bit,
 	&spear1340_pmx_keyboard_row_col,
+#if !defined(CONFIG_PM)
 	&spear1340_pmx_keyboard_col5,
+#endif
 	&spear1340_pmx_uart0_enh,
 	&spear1340_pmx_i2c1,
 	&spear1340_pmx_spdif_in,
 	&spear1340_pmx_ssp0_cs1,
+#if !defined(CONFIG_PM)
 	&spear1340_pmx_pwm2,
+#endif
 	&spear1340_pmx_pwm3,
 	&spear1340_pmx_video_in_mux_cam0,
 	&spear1340_pmx_video_in_mux_cam1,
@@ -243,6 +247,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear1340_device_gpiokeys,
+#endif
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
