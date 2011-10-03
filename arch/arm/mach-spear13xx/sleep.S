@@ -20,6 +20,7 @@
 #define MPMC_RESET
 #define PWRDOMAINS_ON
 #define GPIO_DDR_ISOLATE
+#define RESET_UART_REGISTERS
 
 #define DISABLE_I_C_M_V	0x1805
 #define MISC_PLL_OFFS	0x214
@@ -323,7 +324,7 @@ wait_till_srefresh_on_r1:
 	orr	r0, r0, r2
 	str	r0, [r6, #0x314]
 
-	ldr	r6, =GPIO_START_UPD
+	ldr	r6, =GPIO_START_UPD_PA
 	/* Set xgpio[88-89] driven for cke & reset patch enable */
 	ldr	r0, [r6, #0x048]
 	ldr	r2, =0x03000000
@@ -655,7 +656,7 @@ ddf:
 	cmp	r12, #1
 	bne	gpio_restore_r0
 #ifdef GPIO_DDR_ISOLATE
-	ldr	r7, =GPIO_START_UPD
+	ldr	r7, =GPIO_START_UPD_PA
 	/* Setx gpio88 driven low for cke patch disable */
 	ldr	r0, [r7, #0x048]
 	ldr	r2, =0x02000000
@@ -825,14 +826,44 @@ srefresh_off:
 	cmp	r12, #1
 	bne	srefresh_end_rev_0
 #ifdef GPIO_DDR_ISOLATE
-	ldr	r7, =GPIO_START_UPD
-	/* Setx gpio88 driven low for cke patch disable */
+	ldr	r7, =GPIO_START_UPD_PA
+	/* Set xgpio88 driven low for cke patch disable */
 	ldr	r0, [r7, #0x048]
 	and	r0, r0, #0x0
 	str	r0, [r7, #0x048]
 #endif
 
 srefresh_end_rev_0:
+#ifdef RESET_UART_REGISTERS
+	/* Reprogram UART0 before wakeup */
+	ldr	r7, =UART_BASE_PA
+
+	ldr	r0, [r7, #0x024]
+	orr	r0, r0, #0x1A
+	str	r0, [r7, #0x024]
+
+	ldr	r0, [r7, #0x028]
+	orr	r0, r0, #0x3
+	str	r0, [r7, #0x028]
+
+	ldr	r0, [r7, #0x02C]
+	orr	r0, r0, #0x70
+	str	r0, [r7, #0x02C]
+
+	ldr	r0, [r7, #0x030]
+	ldr	r2, =0xF01
+	orr	r0, r0, r2
+	str	r0, [r7, #0x030]
+
+	ldr	r0, [r7, #0x034]
+	orr	r0, r0, #0x12
+	str	r0, [r7, #0x034]
+
+	ldr	r0, [r7, #0x038]
+	orr	r0, r0, #0x50
+	str	r0, [r7, #0x038]
+#endif
+
 	msr	cpsr, r4
 	ldmia	r8!, {r0}
 	mov	pc, r0
