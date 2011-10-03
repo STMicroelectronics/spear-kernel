@@ -452,6 +452,9 @@ extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_adc_device;
 extern struct platform_device spear13xx_cf_device;
 extern struct platform_device spear13xx_db9000_clcd_device;
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+extern struct platform_device spear13xx_device_gpiokeys;
+#endif
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;

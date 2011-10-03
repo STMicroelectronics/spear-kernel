@@ -41,6 +41,39 @@
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
 
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN7	7
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0,
+		.gpio = SPEAR_GPIO_BTN7,
+		.active_low = 0,
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons = spear_gpio_keys_table,
+	.nbuttons = ARRAY_SIZE(spear_gpio_keys_table),
+};
+
+struct platform_device spear13xx_device_gpiokeys = {
+	.name = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+#endif
+
 /* Add spear13xx machines common devices here */
 /* common dw_dma filter routine to be used by peripherals */
 bool dw_dma_filter(struct dma_chan *chan, void *slave)
