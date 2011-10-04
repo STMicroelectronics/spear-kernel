@@ -97,6 +97,9 @@
 	#define PLL_MODE_SHIFT		3
 	#define PLL_ENABLE		1
 
+	#define PLL_LOCK_SHIFT		0
+	#define PLL_LOCK_MASK		1
+
 #define VA_PLL4_FRQ			(VA_MISC_BASE + 0x23C)
 	/* PLL FRQ register masks */
 	#define PLL_NORM_FDBK_M_MASK	0xFF

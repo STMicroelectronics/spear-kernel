@@ -79,6 +79,8 @@ static struct vco_clk_masks vco_masks = {
 	.div_p_shift = PLL_DIV_P_SHIFT,
 	.div_n_mask = PLL_DIV_N_MASK,
 	.div_n_shift = PLL_DIV_N_SHIFT,
+	.pll_lock_mask = PLL_LOCK_MASK,
+	.pll_lock_shift = PLL_LOCK_SHIFT,
 };
 /* vco1 configuration structure */
 static struct vco_clk_config vco1_config = {

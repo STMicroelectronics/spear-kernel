@@ -136,6 +136,8 @@ struct vco_clk_masks {
 	u32 div_p_shift;
 	u32 div_n_mask;
 	u32 div_n_shift;
+	u32 pll_lock_mask;
+	u32 pll_lock_shift;
 };
 
 struct vco_clk_config {
