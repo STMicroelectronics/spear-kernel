@@ -23,6 +23,7 @@
 #include <linux/io.h>
 #include <asm/system.h>
 #include <mach/hardware.h>
+#include <mach/system.h>
 
 #define CPU_CLK_MAX_STEP	10
 
@@ -149,11 +150,38 @@ static int spear1340_set_cpu_rate(struct clk *cpu_clk, struct clk *sys_pclk,
 	return 0;
 }
 
+static bool slow_mode_required(struct clk *clk)
+{
+	struct clk *sys_pclk;
+
+	if (cpu_is_spear1340()) {
+		sys_pclk = clk_get(NULL, "sys_synth_clk");
+		if (IS_ERR(sys_pclk))
+			WARN(1, "couldn't get system synthesizer clk");
+		else
+			clk_put(sys_pclk);
+		/*
+		 * slow mode not required if cpu is on synth.
+		 * Also to be on safe side let system change to slow
+		 * mode if sys_pclk has error
+		 */
+		return (clk == sys_pclk) ? false: true;
+	} else if (arch_is_spear13xx()) {
+		return true;
+	} else {
+		/*
+		 * case of spear3xx/6xx is separatly handled as we need
+		 * to put ddr into self refresh before changing pll rate
+		 */
+		return false;
+	}
+}
+
 static int spear_cpufreq_target(struct cpufreq_policy *policy,
 		unsigned int target_freq, unsigned int relation)
 {
 	struct cpufreq_freqs freqs;
-	int index, ret;
+	int index, ret, slow_mode;
 	unsigned long newfreq, srcfreq;
 	struct clk *srcclk;
 
@@ -214,6 +242,15 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	freqs.new /= cpu_is_spear1340() ? 2 : 1;
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
+	slow_mode = slow_mode_required(srcclk);
+	if (slow_mode) {
+		ret = arch_change_mode(SYS_MODE_SLOW);
+		if (ret) {
+			pr_err("couldn't cange system to slow mode\n");
+			return ret;
+		}
+	}
+
 	if (cpu_is_spear1340())
 		ret = spear1340_set_cpu_rate(cpu_clk, srcclk, srcfreq);
 	else
@@ -223,6 +260,15 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	if (ret) {
 		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
 		freqs.new = clk_get_rate(cpu_clk) / 1000;
+	}
+
+	/* Now switch back to normal mode */
+	if (slow_mode) {
+		ret = arch_change_mode(SYS_MODE_NORMAL);
+		if (ret) {
+			pr_err("Couldnot change back to normal mode\n");
+			BUG();
+		}
 	}
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
