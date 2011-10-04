@@ -15,6 +15,7 @@
 #define __MACH_SYSTEM_H
 
 #include <linux/io.h>
+#include <asm/proc-fns.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 
