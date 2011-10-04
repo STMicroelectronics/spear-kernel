@@ -16,10 +16,13 @@
 #include <linux/debugfs.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/jiffies.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
+#include <linux/delay.h>
 #include <plat/clock.h>
+#include <mach/misc_regs.h>
 
 /* pointer to ddr clock structure */
 static struct clk *ddr_clk;
@@ -648,8 +651,9 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 {
 	struct vco_rate_tbl *tbls = clk->rate_config.tbls;
 	struct vco_clk_config *config = clk->private_data;
+	struct vco_clk_masks *masks = config->masks;
 	struct clk *pll_clk, *_tmp;
-	unsigned long val, rate;
+	unsigned long val, rate, finish;
 	int i;
 
 	i = round_rate_index(clk, desired_rate, &rate);
@@ -682,30 +686,44 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 		return 0;
 	}
 
-	val = readl(config->mode_reg) &
-		~(config->masks->mode_mask << config->masks->mode_shift);
-	val |= (tbls[i].mode & config->masks->mode_mask) <<
-		config->masks->mode_shift;
+	/* disable PLL */
+	generic_clk_disable(clk);
+
+	val = readl(config->mode_reg);
+	val &= ~(masks->mode_mask << masks->mode_shift);
+	val |= (tbls[i].mode & masks->mode_mask) << masks->mode_shift;
 	writel(val, config->mode_reg);
 
-	val = readl(config->cfg_reg) &
-		~(config->masks->div_p_mask << config->masks->div_p_shift);
-	val |= (tbls[i].p & config->masks->div_p_mask) <<
-		config->masks->div_p_shift;
-	val &= ~(config->masks->div_n_mask << config->masks->div_n_shift);
-	val |= (tbls[i].n & config->masks->div_n_mask) <<
-		config->masks->div_n_shift;
-	val &= ~(config->masks->dith_fdbk_m_mask <<
-			config->masks->dith_fdbk_m_shift);
+	val = readl(config->cfg_reg);
+	val &= ~(masks->div_p_mask << masks->div_p_shift);
+	val |= (tbls[i].p & masks->div_p_mask) << masks->div_p_shift;
+	val &= ~(masks->div_n_mask << masks->div_n_shift);
+	val |= (tbls[i].n & masks->div_n_mask) << masks->div_n_shift;
+	val &= ~(masks->dith_fdbk_m_mask << masks->dith_fdbk_m_shift);
 	if (tbls[i].mode)
-		val |= (tbls[i].m & config->masks->dith_fdbk_m_mask) <<
-			config->masks->dith_fdbk_m_shift;
+		val |= (tbls[i].m & masks->dith_fdbk_m_mask) <<
+			masks->dith_fdbk_m_shift;
 	else
-		val |= (tbls[i].m & config->masks->norm_fdbk_m_mask) <<
-			config->masks->norm_fdbk_m_shift;
+		val |= (tbls[i].m & masks->norm_fdbk_m_mask) <<
+			masks->norm_fdbk_m_shift;
 
 	writel(val, config->cfg_reg);
 	clk->rate = rate * (1 << tbls[i].p);
+
+	/* enable PLL1 */
+	generic_clk_enable(clk);
+
+	/* wait for PLL lock */
+	finish = jiffies + HZ;
+	do {
+		val = readl(config->mode_reg);
+		val &= masks->pll_lock_mask << masks->pll_lock_shift;
+		if (val)
+			break;
+		udelay(1000);
+	} while (!time_after_eq(jiffies, finish));
+
+	BUG_ON(!val);
 
 	return 0;
 }
