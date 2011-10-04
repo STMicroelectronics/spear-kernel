@@ -28,6 +28,10 @@
 #define VA_SPEAR1340_SWITCH_CTR			(VA_MISC_BASE + 0x108)
 
 /* Clock Configuration Registers */
+/*
+ * Some of the individual defines (mode related) for this register is
+ * present in generic misc_regs.h as it is common across 13xx variants
+ */
 #define VA_SPEAR1340_SYS_CLK_CTRL		(VA_MISC_BASE + 0x200)
 	#define SPEAR1340_HCLK_SRC_SEL_SHIFT	27
 	#define SPEAR1340_HCLK_SRC_SEL_MASK	1

@@ -40,6 +40,16 @@
 
 /* Clock Configuration Registers */
 #define VA_SYS_CLK_CTRL			(VA_MISC_BASE + 0x200)
+	#define SYS_MODE_MASK			(0x7 << 0)
+	#define SYS_MODE_DOZE			(0x1 << 0)
+	#define SYS_MODE_SLOW			(0x2 << 0)
+	#define SYS_MODE_NORMAL			(0x4 << 0)
+
+	#define SYS_MODE_STS_MASK		(0xF << 16)
+	#define SYS_MODE_STS_DOZE		(0x0 << 16)
+	#define SYS_MODE_STS_SLOW		(0xA << 16)
+	#define SYS_MODE_STS_NORMAL		(0xF << 16)
+
 #define VA_SYS_SW_RES			(VA_MISC_BASE + 0x204)
 #define VA_SYS_CLK_PLLTIMER		(VA_MISC_BASE + 0x208)
 #define VA_SYS_CLK_OSCITIMER		(VA_MISC_BASE + 0x20C)
