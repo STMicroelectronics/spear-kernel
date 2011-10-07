@@ -1,5 +1,5 @@
 /*
- * ASoC machine driver for spear platform
+ * ASoC machine driver for SPEAr13xx evaluation boards
  *
  * sound/soc/spear/spear13xx_evb.c
  *
@@ -21,8 +21,7 @@
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 
-static int
-sta529_evb_hw_params(struct snd_pcm_substream *substream,
+static int sta529_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -79,7 +78,7 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 		writel(val, VA_SPEAR1340_PERIP_CFG);
 	} else if (cpu_is_spear1300() || cpu_is_spear1310_reva() ||
 			cpu_is_spear900() || cpu_is_spear1310()) {
-		/*setting mode 0 in conf regiter: 32c offset*/
+		/* setting mode 0 in conf register: 32c offset */
 		val = readl(VA_PERIP_CFG);
 		val &= ~I2S_MODE_MASK;
 		val |= I2S_MODE_I2S2_ONE_PORT;
@@ -89,21 +88,34 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static struct snd_soc_ops sta529_evb_ops = {
-	.hw_params	= sta529_evb_hw_params,
+/* Audio machine driver for SPEAr13xx evb */
+static struct snd_soc_ops sta529_ops = {
+	.hw_params	= sta529_hw_params,
 };
 
-/* synopsys digital audio interface glue - connects codec <--> CPU */
-static struct snd_soc_dai_link spear13xx_evb_dai = {
-	.name		= "sta529-pcm",
-	.stream_name	= "pcm",
-	.cpu_dai_name	= "designware-i2s.0",
-	.platform_name	= "spear-pcm-audio",
-	.codec_dai_name	= "sta529-audio",
-	.codec_name	= "sta529-codec.0-001a",
-	.ops		= &sta529_evb_ops,
+/* SPEAr13xx audio interface glue - connects codec <--> CPU <--> platform */
+static struct snd_soc_dai_link spear13xx_evb_dai[] = {
+	{
+		.name		= "sta529-pcm",
+		.stream_name	= "pcm",
+		.cpu_dai_name	= "designware-i2s.0",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_ops,
+	},
 };
 
+/* SPEAr13xx audio machine driver */
+static struct snd_soc_card spear13xx_snd_card = {
+	.name		= "spear13xx-evb",
+	.dai_link	= spear13xx_evb_dai,
+	.num_links	= ARRAY_SIZE(spear13xx_evb_dai),
+};
+
+/* Audio machine driver for SPEAr1340 evb */
+
+/* SPEAr1340 audio interface glue - connects codec <--> CPU <--> platform */
 static struct snd_soc_dai_link spear1340_evb_dai[] = {
 	{
 		.name		= "sta529-pcm0",
@@ -112,7 +124,7 @@ static struct snd_soc_dai_link spear1340_evb_dai[] = {
 		.platform_name	= "spear-pcm-audio",
 		.codec_dai_name	= "sta529-audio",
 		.codec_name	= "sta529-codec.0-001a",
-		.ops		= &sta529_evb_ops,
+		.ops		= &sta529_ops,
 	}, {
 		.name		= "sta529-pcm1",
 		.stream_name	= "pcm",
@@ -120,34 +132,27 @@ static struct snd_soc_dai_link spear1340_evb_dai[] = {
 		.platform_name	= "spear-pcm-audio",
 		.codec_dai_name	= "sta529-audio",
 		.codec_name	= "sta529-codec.0-001a",
-		.ops		= &sta529_evb_ops,
+		.ops		= &sta529_ops,
 	},
 };
 
-/* synopsys audio machine driver */
-static struct snd_soc_card spear13xx_sta529 = {
-	.name		= "spear_sta529",
-	.dai_link	= &spear13xx_evb_dai,
-	.num_links	= 1,
-};
-
-static struct snd_soc_card spear1340_sta529 = {
-	.name		= "spear_sta529",
+static struct snd_soc_card spear1340_snd_card = {
+	.name		= "spear1340-evb",
 	.dai_link	= spear1340_evb_dai,
 	.num_links	= ARRAY_SIZE(spear1340_evb_dai),
 };
 
 static struct platform_device *evb_snd_device;
 
-static int __init dw_init(void)
+static int __init spear13xx_audio_init(void)
 {
 	int ret;
 	struct snd_soc_card *spear_soc_card;
 
 	if (cpu_is_spear1340())
-		spear_soc_card = &spear1340_sta529;
+		spear_soc_card = &spear1340_snd_card;
 	else
-		spear_soc_card = &spear13xx_sta529;
+		spear_soc_card = &spear13xx_snd_card;
 
 	/* Create and register platform device */
 	evb_snd_device = platform_device_alloc("soc-audio", 0);
@@ -164,14 +169,14 @@ static int __init dw_init(void)
 
 	return ret;
 }
-module_init(dw_init);
+module_init(spear13xx_audio_init);
 
-static void __exit dw_exit(void)
+static void __exit spear13xx_audio_exit(void)
 {
 	platform_device_unregister(evb_snd_device);
 }
-module_exit(dw_exit);
+module_exit(spear13xx_audio_exit);
 
-MODULE_AUTHOR("Rajeev Kumar");
-MODULE_DESCRIPTION("ST SYNOPSYS EVB ASoC driver");
+MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
+MODULE_DESCRIPTION("ST SPEAr13XX EVB ASoC driver");
 MODULE_LICENSE("GPL");
