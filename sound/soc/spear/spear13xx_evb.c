@@ -11,27 +11,15 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/interrupt.h>
-#include <linux/i2c.h>
 #include <linux/designware_i2s.h>
-#include <linux/module.h>
-#include <linux/moduleparam.h>
 #include <linux/platform_device.h>
-#include <linux/timer.h>
+#include <linux/module.h>
 
-#include <mach/generic.h>
-#include <mach/hardware.h>
-#include <mach/misc_regs.h>
-#include "mach/spear1340_misc_regs.h"
-
-#include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <sound/soc-dapm.h>
-
-#include "../codecs/sta529.h"
-#include "spear13xx_pcm.h"
+#include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 #define CHANNEL_MASK_M	0x00000030
 #define CHANNEL_MASK_S	0x000000C0
