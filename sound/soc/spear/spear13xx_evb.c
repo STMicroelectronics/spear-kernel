@@ -28,8 +28,7 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int ret = 0;
 	u32 freq, format, rate, channel;
-	u32 ref_clock, val;
-	u32 mode = 0;
+	u32 ref_clock;
 
 	/* set codec DAI configuration */
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
@@ -50,7 +49,9 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	if (cpu_is_spear1340()) {
-		val = readl(VA_SPEAR1340_PERIP_CFG);
+#ifdef CONFIG_CPU_SPEAR1340
+		u32 mode = 0;
+		u32 val = readl(VA_SPEAR1340_PERIP_CFG);
 
 		switch (channel) {
 		case 8:
@@ -76,13 +77,17 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 			val = (val & ~SPEAR1340_I2S_CHNL_REC_MASK) | mode;
 		}
 		writel(val, VA_SPEAR1340_PERIP_CFG);
+#endif
 	} else if (cpu_is_spear1300() || cpu_is_spear1310_reva() ||
 			cpu_is_spear900() || cpu_is_spear1310()) {
+#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
+	defined(CONFIG_CPU_SPEAR900) || defined(CONFIG_CPU_SPEAR1310)
 		/* setting mode 0 in conf register: 32c offset */
-		val = readl(VA_PERIP_CFG);
+		u32 val = readl(VA_PERIP_CFG);
 		val &= ~I2S_MODE_MASK;
 		val |= I2S_MODE_I2S2_ONE_PORT;
 		writel(val, VA_PERIP_CFG);
+#endif
 	}
 
 	return 0;
