@@ -53,9 +53,8 @@ static void pcm_dma_complete(void *arg);
 static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
-	int ret;
-
-	ret = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
+	int ret = snd_pcm_lib_malloc_pages(substream,
+					params_buffer_bytes(params));
 	if (ret < 0)
 		return ret;
 
@@ -300,8 +299,8 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	if (ret) {
 		dev_err(&prtd->dev, "pcm:Failed to get dma channels\n");
 		kfree(prtd);
-
 	}
+
 	return 0;
 }
 
@@ -311,6 +310,7 @@ static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 
 	pcm_dma_free_chan(substream);
 	kfree(prtd);
+
 	return 0;
 }
 
