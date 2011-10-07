@@ -53,15 +53,12 @@ static void pcm_dma_complete(void *arg);
 static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct spear13xx_runtime_data *prtd = runtime->private_data;
 	int ret;
 
 	ret = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
 	if (ret < 0)
 		return ret;
 
-	prtd->substream = substream;
 	return 0;
 }
 
@@ -297,6 +294,7 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 
 	spin_lock_init(&prtd->lock);
 	substream->runtime->private_data = prtd;
+	prtd->substream = substream;
 
 	ret = pcm_alloc_dma_chan(substream);
 	if (ret) {
