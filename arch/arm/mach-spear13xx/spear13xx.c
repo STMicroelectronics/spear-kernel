@@ -1182,11 +1182,8 @@ put_src_clk:
 }
 #endif
 
-/* Do spear13xx familiy common initialization part here */
-void spear13xx_init(void)
+void spear13xx_l2x0_init(void)
 {
-	int ret;
-
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * 512KB (64KB/way), 8-way associativity, parity supported
@@ -1210,6 +1207,14 @@ void spear13xx_init(void)
 				0xfe00ffff);
 	}
 #endif
+}
+
+/* Do spear13xx familiy common initialization part here */
+void spear13xx_init(void)
+{
+	int ret;
+
+	spear13xx_l2x0_init();
 
 #ifdef CONFIG_SND_SOC_STA529
 	i2s_clk_init();
