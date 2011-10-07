@@ -11,7 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/designware_i2s.h>
+#include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
 
@@ -20,9 +20,6 @@
 #include <sound/soc.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
-
-#define CHANNEL_MASK_M	0x00000030
-#define CHANNEL_MASK_S	0x000000C0
 
 static int
 sta529_evb_hw_params(struct snd_pcm_substream *substream,
@@ -54,35 +51,38 @@ sta529_evb_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	if (cpu_is_spear1340()) {
-		switch (channel) {
-		case EIGHT_CHANNEL_SUPPORT:
-			mode = 3;
-			break;
-		case SIX_CHANNEL_SUPPORT:
-			mode = 2;
-			break;
-		case FOUR_CHANNEL_SUPPORT:
-			mode = 1;
-			break;
-		case TWO_CHANNEL_SUPPORT:
-			mode = 0;
-			break;
-		}
-
 		val = readl(VA_SPEAR1340_PERIP_CFG);
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			val = (val & ~CHANNEL_MASK_M) | (mode << 4);
-			writel(val, VA_SPEAR1340_PERIP_CFG);
-		} else {
-			val = (val & ~CHANNEL_MASK_S) | (mode << 6);
-			writel(val, VA_SPEAR1340_PERIP_CFG);
+
+		switch (channel) {
+		case 8:
+			mode = SPEAR1340_I2S_CHNL_7_1;
+			break;
+		case 6:
+			mode = SPEAR1340_I2S_CHNL_5_1;
+			break;
+		case 4:
+			mode = SPEAR1340_I2S_CHNL_3_1;
+			break;
+		case 2:
+		default:
+			mode = SPEAR1340_I2S_CHNL_2_0;
+			break;
 		}
 
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+			mode = mode << SPEAR1340_I2S_CHNL_PLAY_SHIFT;
+			val = (val & ~SPEAR1340_I2S_CHNL_PLAY_MASK) | mode;
+		} else {
+			mode = mode << SPEAR1340_I2S_CHNL_REC_SHIFT;
+			val = (val & ~SPEAR1340_I2S_CHNL_REC_MASK) | mode;
+		}
+		writel(val, VA_SPEAR1340_PERIP_CFG);
 	} else if (cpu_is_spear1300() || cpu_is_spear1310_reva() ||
 			cpu_is_spear900() || cpu_is_spear1310()) {
 		/*setting mode 0 in conf regiter: 32c offset*/
 		val = readl(VA_PERIP_CFG);
-		val &= ~0x7;
+		val &= ~I2S_MODE_MASK;
+		val |= I2S_MODE_I2S2_ONE_PORT;
 		writel(val, VA_PERIP_CFG);
 	}
 

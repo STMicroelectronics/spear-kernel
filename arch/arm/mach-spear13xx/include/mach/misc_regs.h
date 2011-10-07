@@ -312,6 +312,14 @@
 	#define MCIF_SEL_XD	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_MASK	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_SHIFT	3
+
+	#define I2S_MODE_I2S2_ONE_PORT	(0 << 0)
+	#define I2S_MODE_I2S1_ONE_PORT	(1 << 0)
+	#define I2S_MODE_I2S2_TWO_PORT	(2 << 0)
+	#define I2S_MODE_I2S1_TWO_PORT	(3 << 0)
+	#define I2S_MODE_BOTH_ONE_PORT	(4 << 0)
+	#define I2S_MODE_MASK		(7 << 0)
+
 #define VA_FSMC_CFG			(VA_MISC_BASE + 0x330)
 	/* FSMC_CFG register masks */
 	#define NAND_DEV_WIDTH16	4
