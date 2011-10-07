@@ -1224,6 +1224,14 @@ void spear13xx_l2x0_init(void)
 			+ L2X0_PREFETCH_CTRL);
 
 	if (cpu_is_spear1340() || cpu_is_spear1310()) {
+		/*
+		 * Program following latencies in order to make
+		 * SPEAr1340 work at 600 MHz
+		 */
+		writel_relaxed(0x221, __io_address(SPEAR13XX_L2CC_BASE)
+				+ L2X0_TAG_LATENCY_CTRL);
+		writel_relaxed(0x441, __io_address(SPEAR13XX_L2CC_BASE)
+				+ L2X0_DATA_LATENCY_CTRL);
 		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60001,
 				0xfe00ffff);
 	} else {
