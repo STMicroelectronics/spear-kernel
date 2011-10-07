@@ -30,16 +30,6 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
-	.formats = (SNDRV_PCM_FMTBIT_S16_LE),
-	.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
-			SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 |
-			SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-			SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
-			SNDRV_PCM_RATE_KNOT),
-	.rate_min = 8000,
-	.rate_max = 96000,
-	.channels_min = 2,
-	.channels_max = 8,
 	.buffer_bytes_max = 16 * 1024, /* max buffer size */
 	.period_bytes_min = 2 * 1024, /* 1 msec data minimum period size */
 	.period_bytes_max = 2 * 1024, /* maximum period size */
