@@ -382,7 +382,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable CLCD */
 #define SPEAR1340_PMX_ARM_TRACE_MASK		(1 << 12)
 
-/* Write 0 to enable I2S, SSP0_CS3, CEC0, 1, SPDIFF out, CLCD */
+/* Write 0 to enable I2S, SSP0_CS2, CEC0, 1, SPDIF out, CLCD */
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
 extern struct pmx_dev spear1340_pmx_pads_as_gpio;

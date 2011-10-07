@@ -1142,7 +1142,7 @@ struct pmx_dev spear1340_pmx_arm_trace = {
 	.mode_count = ARRAY_SIZE(pmx_arm_trace_modes),
 };
 
-/* pad multiplexing for device group: I2S, SSP0_CS3, CEC0-1, SPDIFF out, CLCD */
+/* pad multiplexing for device group: I2S, SSP0_CS2, CEC0-1, SPDIF out, CLCD */
 static struct pmx_mux_reg pmx_devs_grp_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
