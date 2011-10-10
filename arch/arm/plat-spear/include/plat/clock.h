@@ -243,6 +243,7 @@ struct ddr_rate_tbl {
  */
 void clk_init(struct clk *dclk);
 void clk_register(struct clk_lookup *cl);
+int clk_set_rate_sys(char *dev_id, char *con_id, unsigned long rate);
 void recalc_root_clocks(void);
 
 /* clock recalc & set rate functions */

@@ -359,6 +359,22 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 }
 EXPORT_SYMBOL(clk_set_rate);
 
+int clk_set_rate_sys(char *dev_id, char *con_id, unsigned long rate)
+{
+	struct clk *clk;
+	int ret = 0;
+
+	clk = clk_get_sys(dev_id, con_id);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	ret = clk_set_rate(clk, rate);
+	clk_put(clk);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_set_rate_sys);
+
 /* registers clock in platform clock framework */
 void clk_register(struct clk_lookup *cl)
 {
