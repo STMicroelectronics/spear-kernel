@@ -2184,6 +2184,9 @@ and is between 256 and 4096 characters. It is defined in the file
 			in <PAGE_SIZE> units (needed only for swap files).
 			See  Documentation/power/swsusp-and-swap-files.txt
 
+	resumedelay=	[HIBERNATION] Delay (in seconds) to pause before attempting to
+			read the resume files
+
 	resumewait	[HIBERNATION] Wait (indefinitely) for resume device to show up.
 			Useful for devices that are detected asynchronously
 			(e.g. USB and MMC devices).
