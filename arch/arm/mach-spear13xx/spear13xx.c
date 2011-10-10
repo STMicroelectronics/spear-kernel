@@ -10,6 +10,7 @@
  * License version 2. This program is licensed "as is" without any
  * warranty of any kind, whether express or implied.
  */
+#define pr_fmt(fmt) "spear13xx: " fmt
 
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
@@ -30,6 +31,7 @@
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <plat/clock.h>
 #include <plat/udc.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
@@ -1179,6 +1181,8 @@ put_src_clk:
 /* Do spear13xx familiy common initialization part here */
 void __init spear13xx_init(void)
 {
+	int ret;
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * 512KB (64KB/way), 8-way associativity, parity supported
@@ -1213,6 +1217,10 @@ void __init spear13xx_init(void)
 	if (!cpu_is_spear1340() && !cpu_is_spear1310())
 		set_udc_plat_data(&spear13xx_udc_device);
 #endif
+
+	ret = clk_set_rate_sys("sdhci", NULL, 50000000);
+	if (ret)
+		pr_err("clk_set_rate failed for sdhci: %d\n", ret);
 }
 
 /* This will initialize vic */
