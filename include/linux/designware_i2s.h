@@ -45,7 +45,4 @@ struct i2s_platform_data {
 #define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
 #define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
 
-struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
-		dma_cap_mask_t *smask);
-
 #endif /* DESIGNWARE_I2S_H */

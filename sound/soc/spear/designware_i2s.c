@@ -85,20 +85,9 @@ struct dw_i2s_dev {
 	struct dw_pcm_dma_params *dma_params[2];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
-	dma_cap_mask_t smask;
 	struct dma_slaves ds;
 	u8 swidth;
 };
-
-struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
-		dma_cap_mask_t *smask)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct dw_i2s_dev *i2s_dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
-
-	*smask = i2s_dev->smask;
-	return &i2s_dev->ds;
-}
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
 {
@@ -288,6 +277,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
+	void *dma_data;
 
 	if (!(dev->capability & RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -297,7 +287,12 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
 		return -EINVAL;
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, dev->dma_params);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dma_data = &dev->ds.mem2i2s_slave;
+	else
+		dma_data = &dev->ds.i2s2mem_slave;
+
+	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
 
 	return 0;
 }
@@ -316,6 +311,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 static void
 dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
 
 static int
@@ -421,8 +417,6 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
-	dma_cap_zero(dev->smask);
-	dma_cap_set(DMA_SLAVE, dev->smask);
 	memcpy(&dev->ds, &pdata->ds, sizeof(pdata->ds));
 	dev->ds.mem2i2s_slave.tx_reg = res->start + TXDMA;
 	dev->ds.i2s2mem_slave.rx_reg = res->start + RXDMA;

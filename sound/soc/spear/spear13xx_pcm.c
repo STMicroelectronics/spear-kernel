@@ -229,21 +229,16 @@ static bool filter(struct dma_chan *chan, void *slave)
 
 static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	dma_cap_mask_t smask;
-	struct dma_slaves *ds = substream_to_ds(substream, &smask);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->dma_chan[0] = dma_request_channel(smask, filter,
-				&ds->mem2i2s_slave);
-		if (!prtd->dma_chan[0])
-			return -EAGAIN;
-	} else {
-		prtd->dma_chan[1] = dma_request_channel(smask, filter,
-				&ds->i2s2mem_slave);
-		if (!prtd->dma_chan[1])
-			return -EAGAIN;
-	}
+	int stream = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 0 : 1;
+	void *dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	prtd->dma_chan[stream] = dma_request_channel(prtd->smask, filter,
+				dma_data);
+	if (!prtd->dma_chan[stream])
+		return -EAGAIN;
 
 	return 0;
 }
@@ -284,6 +279,8 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	spin_lock_init(&prtd->lock);
 	substream->runtime->private_data = prtd;
 	prtd->substream = substream;
+	dma_cap_zero(prtd->smask);
+	dma_cap_set(DMA_SLAVE, prtd->smask);
 
 	ret = pcm_alloc_dma_chan(substream);
 	if (ret) {

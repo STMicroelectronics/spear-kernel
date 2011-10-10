@@ -35,6 +35,9 @@ struct spear13xx_runtime_data {
 	unsigned long buffer_bytes;
 	unsigned long period_bytes;
 
+	/* DMA related mask */
+	dma_cap_mask_t smask;
+
 	/* For Keeping track of buffers */
 	unsigned long xfer_len;	/* Data transfered by one transfer */
 	int xfer_cnt; /* Total number of transfers to be done */
