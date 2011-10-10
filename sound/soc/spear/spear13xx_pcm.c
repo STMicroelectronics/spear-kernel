@@ -11,17 +11,16 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/designware_i2s.h>
 #include <linux/module.h>
+#include <linux/dmaengine.h>
+#include <linux/dma-mapping.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
-#include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <mach/dma.h>
 #include "spear13xx_pcm.h"
 
 static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;

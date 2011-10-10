@@ -16,18 +16,13 @@
 #include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
-#include <linux/designware_i2s.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <mach/misc_regs.h>
 #include <sound/pcm.h>
-#include <sound/pcm_params.h>
-#include <sound/core.h>
-#include <sound/initval.h>
 #include <sound/soc.h>
-#include "spear13xx_pcm.h"
 
 /* common register for all channel */
 #define IER		0x000
