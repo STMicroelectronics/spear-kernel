@@ -19,6 +19,7 @@
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/netdevice.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
@@ -268,6 +269,19 @@ static struct kbd_platform_data kbd_data = {
 	.mode = KEYPAD_6x6,
 };
 
+/* Ethernet specific plat data */
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.pbl = 16,
+	.csum_off_engine = STMAC_TYPE_2,
+	.bugged_jumbo = 1,
+	.features = NETIF_F_HW_CSUM,
+	.pmt = 1,
+};
+
 /* Initializing platform data for spear1340 evb specific I2C devices */
 /* Gyroscope platform data */
 static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
@@ -411,6 +425,12 @@ static void __init spear1340_evb_init(void)
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+
+	/*
+	 * SPEAr1340 has gmac configured differently. Hence set its plat
+	 * data separately.
+	 */
+	spear13xx_eth_device.dev.platform_data = &eth_data;
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
