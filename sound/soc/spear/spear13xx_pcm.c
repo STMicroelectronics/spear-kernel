@@ -23,8 +23,6 @@
 #include <sound/soc.h>
 #include "spear13xx_pcm.h"
 
-static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;
-
 struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
@@ -367,6 +365,8 @@ static void spear13xx_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
+static u64 spear13xx_pcm_dmamask = DMA_BIT_MASK(32);
+
 static int spear13xx_pcm_new(struct snd_card *card,
 		struct snd_soc_dai *dai, struct snd_pcm *pcm)
 {
@@ -375,7 +375,7 @@ static int spear13xx_pcm_new(struct snd_card *card,
 	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &spear13xx_pcm_dmamask;
 	if (!card->dev->coherent_dma_mask)
-		card->dev->coherent_dma_mask = 0xFFFFFFFF;
+		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
 	if (dai->driver->playback.channels_min) {
 		ret = spear13xx_pcm_preallocate_dma_buffer(pcm,
