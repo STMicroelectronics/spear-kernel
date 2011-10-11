@@ -356,7 +356,7 @@ static void spear13xx_pcm_free(struct snd_pcm *pcm)
 			continue;
 
 		buf = &substream->dma_buffer;
-		if (!buf->area)
+		if (!buf && !buf->area)
 			continue;
 
 		dma_free_writecombine(pcm->card->dev, buf->bytes,
