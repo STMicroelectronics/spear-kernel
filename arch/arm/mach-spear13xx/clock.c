@@ -113,6 +113,15 @@ static struct clk vco1_clk = {
 	.private_data = &vco1_config,
 };
 
+/* thermal clock */
+static struct clk thermal_clk = {
+	.en_reg = VA_PERIP2_CLK_ENB,
+	.en_reg_bit = THSENS_CLK_ENB,
+	.pclk = &osc1_24m_clk,
+	.div_factor = 128,
+	.recalc = &follow_parent,
+};
+
 /* clock derived from vco1 clock */
 /* pll1 clock */
 static struct clk pll1_clk = {
@@ -1602,6 +1611,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
 	{.dev_id = "cortexa9-wdt",	.clk = &wdt_clk},
+	{.dev_id = "spear_thermal",	.clk = &thermal_clk},
 };
 
 /* array of all spear 1300 clock lookups */

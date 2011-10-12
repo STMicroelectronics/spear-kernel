@@ -113,6 +113,15 @@ static struct clk vco1_clk = {
 	.private_data = &vco1_config,
 };
 
+/* thermal clock */
+static struct clk thermal_clk = {
+	.en_reg = VA_SPEAR1310_PERIP2_CLK_ENB,
+	.en_reg_bit = SPEAR1310_THSENS_CLK_ENB,
+	.pclk = &osc1_24m_clk,
+	.div_factor = 128,
+	.recalc = &follow_parent,
+};
+
 /* clock derived from vco1 clock */
 /* pll1 clock */
 static struct clk pll1_clk = {
@@ -1851,6 +1860,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "i2c_designware.6",		.clk = &i2c6_clk},
 	{.dev_id = "i2c_designware.7",		.clk = &i2c7_clk},
 	{.dev_id = "pci",			.clk = &pci_clk},
+	{.dev_id = "spear_thermal",		.clk = &thermal_clk},
 	{.dev_id = "ssp-pl022.1",		.clk = &ssp1_clk},
 	{.con_id = "tdm_hdlc.0",		.clk = &tdm1_clk},
 	{.con_id = "tdm_hdlc.1",		.clk = &tdm2_clk},
