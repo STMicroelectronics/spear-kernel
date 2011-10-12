@@ -23,7 +23,6 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/i2s.h>
 #include <mach/spear1340_misc_regs.h>
 
 /* SPEAr GPIO Buttons Info */
@@ -1803,22 +1802,25 @@ struct platform_device spear1340_i2c1_device = {
 };
 
 /* i2s:play device registration */
-static struct i2s_platform_data i2s_data[] = {
-	{
-		.cap = PLAY,
-		.channel = 8,
-		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-				SPEAR1340_DMA_REQ_I2S_TX,
-				SPEAR1340_DMA_REQ_I2S_RX),
-		.swidth = 16,
-	}, {
-		.cap = RECORD,
-		.channel = 8,
-		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-				SPEAR1340_DMA_REQ_I2S_TX,
-				SPEAR1340_DMA_REQ_I2S_RX),
-		.swidth = 16,
-	},
+static struct dw_dma_slave i2s_play_dma_data = {
+	/* Play */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.tx_reg = SPEAR1340_I2S_PLAY_BASE + I2S_TXDMA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_I2S_TX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_I2S_PLAY,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_M2P,
+};
+
+static struct i2s_platform_data i2s_play_data = {
+	.cap = PLAY,
+	.channel = 8,
+	.play_dma_data = &i2s_play_dma_data,
+	.swidth = 16,
 };
 
 static struct resource i2s_play_resources[] = {
@@ -1839,13 +1841,34 @@ struct platform_device spear1340_i2s_play_device = {
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data[0],
+		.platform_data = &i2s_play_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s_play_resources),
 	.resource = i2s_play_resources,
 };
 
 /* i2s:record device registeration */
+static struct dw_dma_slave i2s_capture_dma_data = {
+	/* Record */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.rx_reg = SPEAR1340_I2S_REC_BASE + I2S_RXDMA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_I2S_RX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_I2S_REC,
+	.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_P2M,
+};
+
+static struct i2s_platform_data i2s_capture_data = {
+	.cap = RECORD,
+	.channel = 8,
+	.capture_dma_data = &i2s_capture_dma_data,
+	.swidth = 16,
+};
+
 static struct resource i2s_record_resources[] = {
 	{
 		.start	= SPEAR1340_I2S_REC_BASE,
@@ -1863,7 +1886,7 @@ struct platform_device spear1340_i2s_record_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data[1],
+		.platform_data = &i2s_capture_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s_record_resources),
 	.resource = i2s_record_resources,

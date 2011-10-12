@@ -80,8 +80,9 @@ struct dw_i2s_dev {
 	struct dw_pcm_dma_params *dma_params[2];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
-	struct dma_slaves ds;
 	u8 swidth;
+	void *play_dma_data;
+	void *capture_dma_data;
 };
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -272,7 +273,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
-	void *dma_data;
+	void *dma_data = NULL;
 
 	if (!(dev->capability & RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -283,9 +284,9 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 		return -EINVAL;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		dma_data = &dev->ds.mem2i2s_slave;
-	else
-		dma_data = &dev->ds.i2s2mem_slave;
+		dma_data = dev->play_dma_data;
+	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		dma_data = dev->capture_dma_data;
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
 
@@ -412,9 +413,8 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
-	memcpy(&dev->ds, &pdata->ds, sizeof(pdata->ds));
-	dev->ds.mem2i2s_slave.tx_reg = res->start + TXDMA;
-	dev->ds.i2s2mem_slave.rx_reg = res->start + RXDMA;
+	dev->play_dma_data = pdata->play_dma_data;
+	dev->capture_dma_data = pdata->capture_dma_data;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {

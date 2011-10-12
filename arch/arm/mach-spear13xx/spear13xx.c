@@ -37,7 +37,6 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/i2s.h>
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
@@ -814,17 +813,43 @@ struct platform_device spear13xx_pcie_host0_device = {
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
-
-static struct i2s_platform_data i2s_data = {
-	.cap = PLAY | RECORD,
-	.channel = 4,
-	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-			SPEAR13XX_DMA_REQ_I2S_TX,
-			SPEAR13XX_DMA_REQ_I2S_RX),
-	.swidth = 16,
+/* i2s0 device registeration */
+static struct dw_dma_slave i2s0_dma_data[] = {
+	{
+		/* Play */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR13XX_I2S0_BASE + I2S_TXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = 0,
+		.dst_master = 1,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Record */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR13XX_I2S0_BASE + I2S_RXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = 1,
+		.dst_master = 0,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_P2M,
+	}
 };
 
-/* i2s0 device registeration */
+static struct i2s_platform_data i2s0_data = {
+	.cap = PLAY | RECORD,
+	.channel = 4,
+	.swidth = 16,
+	.play_dma_data = &i2s0_dma_data[0],
+	.capture_dma_data = &i2s0_dma_data[1],
+};
+
 static struct resource i2s0_resources[] = {
 	{
 		.start	= SPEAR13XX_I2S0_BASE,
@@ -847,13 +872,48 @@ struct platform_device spear13xx_i2s0_device = {
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data,
+		.platform_data = &i2s0_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s0_resources),
 	.resource = i2s0_resources,
 };
 
 /* i2s1 device registeration */
+static struct dw_dma_slave i2s1_dma_data[] = {
+	{
+		/* Play */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR13XX_I2S1_BASE + I2S_TXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = 0,
+		.dst_master = 1,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Record */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR13XX_I2S1_BASE + I2S_RXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = 1,
+		.dst_master = 0,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct i2s_platform_data i2s1_data = {
+	.cap = PLAY | RECORD,
+	.channel = 4,
+	.play_dma_data = &i2s1_dma_data[0],
+	.capture_dma_data = &i2s1_dma_data[1],
+};
+
 static struct resource i2s1_resources[] = {
 	{
 		.start	= SPEAR13XX_I2S1_BASE,
@@ -876,7 +936,7 @@ struct platform_device spear13xx_i2s1_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data,
+		.platform_data = &i2s1_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s1_resources),
 	.resource = i2s1_resources,
