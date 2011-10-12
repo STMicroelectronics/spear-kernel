@@ -281,7 +281,8 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 
 	ret = pcm_alloc_dma_chan(substream);
 	if (ret) {
-		dev_err(&prtd->dev, "pcm:Failed to get dma channels\n");
+		dev_err(substream->pcm->card->dev,
+				"pcm:Failed to get dma channels\n");
 		kfree(prtd);
 	}
 

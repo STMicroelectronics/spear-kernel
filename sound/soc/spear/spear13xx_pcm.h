@@ -15,7 +15,6 @@
 #define SPEAR13XX_PCM_H
 
 struct spear13xx_runtime_data {
-	struct device dev;
 	struct dma_chan *dma_chan[2];
 	spinlock_t lock;
 	struct snd_pcm_substream *substream;
