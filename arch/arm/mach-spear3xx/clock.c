@@ -189,8 +189,8 @@ static struct aux_clk_config uart_synth_config = {
 /* aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
-	{.xscale = 1, .yscale = 8, .eq = 1}, /* 41.5 MHz */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* 83 MHz */
+	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
 };
 

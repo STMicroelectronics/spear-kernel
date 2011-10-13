@@ -545,10 +545,10 @@ static struct aux_clk_masks aux_masks = {
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For VCO1div2 = 500 MHz */
-	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
-	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* 125 MHz */
+	{.xscale = 10, .yscale = 204, .eq = 0}, /* 12.29 MHz */
+	{.xscale = 4, .yscale = 21, .eq = 0}, /* 48 MHz */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* 83 MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* 125 MHz */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 250 MHz */
 };
@@ -793,8 +793,8 @@ static struct clk gmac_phy_input_clk = {
 /* gmac rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl gmac_rtbl[] = {
 	/* For gmac phy input clk */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* divided by 6 */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* divided by 4 */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* divided by 6 */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* divided by 4 */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* divided by 3 */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* divided by 2 */
 };
