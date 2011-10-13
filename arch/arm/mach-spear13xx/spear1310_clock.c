@@ -747,7 +747,7 @@ static struct clk clcd_clk = {
 /* i2s source clock parents */
 static struct clk i2s_src_pad_clk = {
 	.flags = ALWAYS_ENABLED,
-	.rate = 0, /* fill correct rate if available */
+	.rate = 12288000,
 };
 
 static struct pclk_info i2s_src_pclk_info[] = {
