@@ -18,6 +18,7 @@
 #include <asm/cacheflush.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <mach/suspend.h>
@@ -52,8 +53,10 @@ static int spear_pm_sleep(suspend_state_t state)
 	if (state == PM_SUSPEND_MEM) {
 		gic_cpu_exit(0);
 		gic_dist_save(0);
+#ifdef CONFIG_PCI
 		/* Suspend PCIE bus */
 		spear_pcie_suspend();
+#endif
 	}
 
 	/* Suspend the event timer */
@@ -61,7 +64,8 @@ static int spear_pm_sleep(suspend_state_t state)
 	/* Move the cpu into suspend */
 	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
 	/* Resume Operations begin */
-	l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x00260249, 0xfe00ffff);
+	if (state == PM_SUSPEND_MEM)
+		spear13xx_l2x0_init();
 	/* Call the CPU PM notifiers to notify exit from sleep */
 	cpu_pm_exit();
 	/* twd timer restart */
@@ -70,9 +74,12 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Do the GIC restoration for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
+		gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
 		gic_dist_restore(0);
+#ifdef CONFIG_PCI
 		/* Resume PCIE bus */
 		spear_pcie_resume();
+#endif
 	}
 
 	/* Resume the event timer */
@@ -87,8 +94,8 @@ static int spear_pm_sleep(suspend_state_t state)
 void spear_sys_suspend(suspend_state_t state)
 {
 
-	void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk,
-			int revision) = NULL;
+	void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk)
+		= NULL;
 	void (*spear_sram_wake)(void) = NULL;
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 	void *sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
@@ -125,14 +132,20 @@ void spear_sys_suspend(suspend_state_t state)
 	 * Ensure that the backup of these registers does not
 	 * overlap the code being copied.
 	 */
-	if (cpu_is_spear1340())
+	if (cpu_is_spear1340()) {
 		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
-	else
+		/* Copy the Sleep code on to the SRAM*/
+		spear_sram_sleep =
+			memcpy(sram_dest, (void *)spear1340_sleep_mode,
+				spear1340_sleep_mode_sz);
+	} else {
 		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
+		/* Copy the Sleep code on to the SRAM*/
+		spear_sram_sleep =
+			memcpy(sram_dest, (void *)spear13xx_sleep_mode,
+					spear13xx_sleep_mode_sz);
+	}
 
-	/* Copy the Sleep code on to the SRAM*/
-	spear_sram_sleep = memcpy(sram_dest, (void *)spear_sleep_mode,
-			spear_sleep_mode_sz);
 	/* Call the CPU PM notifiers to notify entry in sleep */
 	cpu_pm_enter();
 	/* Flush the cache */
@@ -141,10 +154,7 @@ void spear_sys_suspend(suspend_state_t state)
 	outer_disable();
 	outer_sync();
 	/* Jump to the suspend routines in sram */
-	if (cpu_is_spear1340() || cpu_is_spear1310())
-		spear_sram_sleep(state, (unsigned long *)cpu_resume, 1);
-	else
-		spear_sram_sleep(state, (unsigned long *)cpu_resume, 0);
+	spear_sram_sleep(state, (unsigned long *)cpu_resume);
 }
 
 /*
@@ -223,6 +233,10 @@ static int __init spear_pm_init(void)
 {
 	void * sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
 	void * sram_st_va = (void *)IO_ADDRESS(SPEAR_START_SRAM);
+	int spear_sleep_mode_sz = spear13xx_sleep_mode_sz;
+
+	if (cpu_is_spear1340())
+		spear_sleep_mode_sz = spear1340_sleep_mode_sz;
 
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
