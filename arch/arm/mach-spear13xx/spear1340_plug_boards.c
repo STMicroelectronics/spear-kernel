@@ -28,6 +28,8 @@
  * - hdmi_tx: hdmi transmitter
  * - cam: camera sensors for all camera devices
  * - vga:
+ * - sata: It is not a separate physical plug board but a board
+ *   configuration
  *
  * Plug boards details can be found at:
  * https://codex.cro.st.com/plugins/docman/?group_id=1309&action=show&id=164214
@@ -350,6 +352,38 @@ static void __init vga_pb_init(void)
 {
 }
 
+/*
+ * Definitions specific to SATA configuration
+ * This is an exception as SATA is not a separate plug board but is a
+ * change in normal evaulation board for supporting SATA.
+ */
+/* padmux devices to enable */
+static struct pmx_dev *sata_pb_pmx_devs[] = {
+	&spear1340_pmx_sata,
+};
+
+/* Amba and platform devices to be removed, added previously by evb board */
+static struct amba_device *sata_pb_rm_adevs[] __initdata = {
+};
+
+static struct platform_device *sata_pb_rm_pdevs[] __initdata = {
+	&spear13xx_pcie_host0_device,
+};
+
+/* Amba and platform devices to be added */
+static struct amba_device *sata_pb_add_adevs[] __initdata = {
+};
+
+static struct platform_device *sata_pb_add_pdevs[] __initdata = {
+	&spear1340_sata0_device,
+};
+
+static void __init sata_pb_init(void)
+{
+	/* Miphy configuration for SATA */
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+}
 
 static int __init spear1340_pb_select(char *boards)
 {
@@ -382,6 +416,8 @@ static int make_pb_list(struct list_head *pb_list)
 			INIT_PB(cam, pb);
 		} else if (!strcmp(pb_name, "vga")) {
 			INIT_PB(vga, pb);
+		} else if (!strcmp(pb_name, "sata")) {
+			INIT_PB(sata, pb);
 		} else {
 			pr_err("Invalid plug board requested: %s\n", pb_name);
 			goto release_pb;

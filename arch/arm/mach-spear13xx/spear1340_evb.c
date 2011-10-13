@@ -464,12 +464,6 @@ static void __init spear1340_evb_init(void)
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
 #endif
 
-#if 0
-	/* Miphy configuration for SATA */
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
-#endif
-
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
