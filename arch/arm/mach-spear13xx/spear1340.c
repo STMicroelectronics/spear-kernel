@@ -1682,6 +1682,50 @@ struct platform_device spear1340_camif3_device = {
 	.resource = camif3_resources,
 };
 
+/* CEC device registration */
+static struct resource cec0_resources[] = {
+	{
+		.start = SPEAR1340_CEC0_BASE,
+		.end = SPEAR1340_CEC0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_CEC0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_cec0_device = {
+	.name = "spear_cec",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(cec0_resources),
+	.resource = cec0_resources,
+};
+
+/* CEC1 device registration */
+static struct resource cec1_resources[] = {
+	{
+		.start = SPEAR1340_CEC1_BASE,
+		.end = SPEAR1340_CEC1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_CEC1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_cec1_device = {
+	.name = "spear_cec",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(cec1_resources),
+	.resource = cec1_resources,
+};
+
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
 	.select_bank = nand_select_bank,
 };

@@ -243,6 +243,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1340 specific devices */
 	&spear1340_camif3_device,
 	&spear1340_cam3_sensor_device,
+	&spear1340_cec0_device,
+	&spear1340_cec1_device,
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
