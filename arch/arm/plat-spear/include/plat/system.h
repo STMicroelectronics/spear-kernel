@@ -41,7 +41,7 @@ static inline void arch_reset(char mode, const char *cmd)
 
 static inline int arch_change_mode(int mode)
 {
-	return sysctl_change_mode(VA_SPEAR_SYS_CTRL_BASE, mode);
+	return sysctl_change_mode((void __iomem *)VA_SPEAR_SYS_CTRL_BASE, mode);
 }
 
 #endif /* __PLAT_SYSTEM_H */
