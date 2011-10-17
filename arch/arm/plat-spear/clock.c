@@ -319,6 +319,31 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 }
 EXPORT_SYMBOL(clk_set_parent);
 
+int clk_set_parent_sys(char *dev_id, char *con_id, char *pdev_id, char *pcon_id)
+{
+	struct clk *clk, *pclk;
+	int ret = 0;
+
+	clk = clk_get_sys(dev_id, con_id);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	pclk = clk_get_sys(pdev_id, pcon_id);
+	if (IS_ERR(pclk)) {
+		ret = PTR_ERR(pclk);
+		goto put_clk;
+	}
+
+	ret = clk_set_parent(clk, pclk);
+	clk_put(pclk);
+
+put_clk:
+	clk_put(clk);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_set_parent_sys);
+
 /**
  * clk_set_rate - set the clock rate for a clock source
  * @clk: clock source
