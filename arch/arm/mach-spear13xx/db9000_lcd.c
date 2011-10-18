@@ -123,7 +123,6 @@ static struct db9000fb_mach_info chimei_b101aw02_info = {
 static void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
-	unsigned int status = 0;
 	struct db9000fb_mode_info *inf = data->modes;
 	struct clk *pclk, *vco_clk, *clcd_pclk, *fb_clk, *ah_clk;
 
@@ -132,14 +131,12 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 	if (!strcmp("Chemei B101AW02", inf->mode.name)) {
 		vco_clk = clk_get(NULL, "vco1div4_clk");
 		if (IS_ERR(vco_clk)) {
-			status = PTR_ERR(vco_clk);
 			pr_err("%s:vco1div 4 clock get fail\n", __func__);
 			return ;
 		}
 
 		pclk = clk_get(NULL, "clcd_synth_clk");
 		if (IS_ERR(pclk)) {
-			status = PTR_ERR(pclk);
 			pr_err("%s:clcd synth clock get fail\n", __func__);
 			goto free_vco_clk;
 		}
@@ -147,7 +144,6 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 
 		clcd_pclk = clk_get_sys("clcd_pixel_clk", NULL);
 		if (IS_ERR(clcd_pclk)) {
-			status = PTR_ERR(clcd_pclk);
 			pr_err("%s:clcd-pixel clock get fail\n", __func__);
 			goto free_pclk;
 		}
@@ -155,7 +151,6 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 
 		fb_clk = clk_get_sys("clcd-db9000", NULL);
 		if (IS_ERR(fb_clk)) {
-			status = PTR_ERR(fb_clk);
 			pr_err("%s:clcd clock get fail\n", __func__);
 			goto free_clcd_pclk;
 		}
@@ -172,13 +167,11 @@ free_vco_clk:
 
 		ah_clk = clk_get(NULL, "ahb_clk");
 		if (IS_ERR(ah_clk)) {
-			status = PTR_ERR(ah_clk);
 			pr_err("%s:enabling ahb_clk fail\n", __func__);
 			return ;
 		}
 		fb_clk = clk_get_sys("clcd-db9000", NULL);
 		if (IS_ERR(fb_clk)) {
-			status = PTR_ERR(fb_clk);
 			pr_err("%s:enabling fb_clk fail\n", __func__);
 			clk_put(ah_clk);
 			return;
