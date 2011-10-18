@@ -1232,8 +1232,6 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 {
 	struct db9000fb_info *fbi;
-	void *addr;
-	unsigned int status = 0;
 	struct db9000fb_mach_info *inf = dev->platform_data;
 
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
@@ -1248,7 +1246,6 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->dev = dev;
 	fbi->clk = clk_get(dev, NULL);
 	if (IS_ERR(fbi->clk)) {
-		status = PTR_ERR(fbi->clk);
 		kfree(fbi);
 		return NULL;
 	}
@@ -1273,7 +1270,6 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->fb.flags		= FBINFO_DEFAULT;
 	fbi->fb.node		= -1;
 
-	addr = fbi;
 	fbi->palette_mode = PAL_STATIC;
 
 	fbi->state		= C_STARTUP;
