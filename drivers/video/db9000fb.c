@@ -766,6 +766,17 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 static void setup_parallel_timing(struct db9000fb_info *fbi,
 				  struct fb_var_screeninfo *var)
 {
+	u32 x_res, y_res, clk_rate;
+	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
+
+	x_res = var->xres + var->hsync_len + var->left_margin
+		+ var->right_margin;
+	y_res = var->yres + var->vsync_len + var->upper_margin
+		+ var->lower_margin;
+	clk_rate = x_res * y_res * inf->modes->mode.refresh;
+
+	pr_debug("Clock value is %x", clk_rate);
+
 	if (!(fbi->reg_pctr & DB9000_PCTR_PCI)) {
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
@@ -774,12 +785,10 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 			set_hsync_time(fbi, pcd);
 		}
 	} else
-		clk_set_rate(fbi->clk, 58000000);
-
+		clk_set_rate(fbi->clk, clk_rate);
 	fbi->reg_htr =
 	/* horizontal sync width */
-/*	DB9000_HTR_HSW((var->hsync_len) - 1) | */
-		DB9000_HTR_HSW(var->hsync_len) |
+		DB9000_HTR_HSW((var->hsync_len) - 1) |
 	/* horizontal back porch */
 		DB9000_HTR_HBP(var->left_margin) |
 	/* Pixels per line  */
