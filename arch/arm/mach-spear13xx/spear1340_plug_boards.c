@@ -519,7 +519,7 @@ int __init spear1340_pb_init(struct platform_device **pdevs, u8 pcnt,
 
 	/* Add Platform Devices passed from evb.c */
 	for (i = 0; i < pcnt; i++) {
-		if (skip_device(&pb_list, pdevs[i], false))
+		if (skip_device(&pb_list, pdevs[i], true))
 			continue;
 
 		platform_device_register(pdevs[i]);
