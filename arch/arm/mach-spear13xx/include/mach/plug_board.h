@@ -15,13 +15,19 @@
 #define __MACH_PLUG_BOARD_H
 
 #include <linux/amba/bus.h>
+#include <linux/i2c.h>
 #include <linux/platform_device.h>
+#include <linux/spi/spi.h>
 
 struct plug_board_info {
 	struct platform_device **pdevs;
 	u8 pcnt;
 	struct amba_device **adevs;
 	u8 acnt;
+	struct spi_board_info **spi_devs;
+	u8 spi_cnt;
+	struct i2c_board_info **i2c_devs;
+	u8 i2c_cnt;
 };
 
 int __init spear1340_pb_init(struct plug_board_info *pb_info);

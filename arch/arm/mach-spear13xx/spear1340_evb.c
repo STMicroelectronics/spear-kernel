@@ -474,6 +474,10 @@ static void __init spear1340_evb_init(void)
 		pb_info.pcnt = ARRAY_SIZE(plat_devs);
 		pb_info.adevs = amba_devs;
 		pb_info.acnt = ARRAY_SIZE(amba_devs);
+		pb_info.spi_devs = spi_board;
+		pb_info.spi_cnt = ARRAY_SIZE(spi_board);
+		pb_info.i2c_devs = i2c_board;
+		pb_info.i2c_cnt = ARRAY_SIZE(i2c_board);
 		ret = spear1340_pb_init(&pb_info);
 		if (!ret)
 			return;
