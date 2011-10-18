@@ -272,14 +272,36 @@ static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.axis_map_z = 2,
 };
 
-static struct i2c_board_info __initdata i2c_board_info[] = {
+struct i2c_board_info spear1340_evb_i2c_l3g4200d_gyr = {
 	/* gyroscope board info */
-	{
-		.type = "l3g4200d_gyr",
-		.addr = 0x69,
-		.platform_data = &l3g4200d_pdata,
-	},
+	.type = "l3g4200d_gyr",
+	.addr = 0x69,
+	.platform_data = &l3g4200d_pdata,
 };
+
+struct i2c_board_info spear1340_evb_i2c_eeprom0 = {
+	.type = "eeprom",
+	.addr = 0x50,
+};
+
+struct i2c_board_info spear1340_evb_i2c_eeprom1 = {
+	.type = "eeprom",
+	.addr = 0x51,
+};
+
+struct i2c_board_info spear1340_evb_i2c_sta529 = {
+	.type = "sta529",
+	.addr = 0x1a,
+};
+
+static struct i2c_board_info *i2c_board[] __initdata = {
+	&spear1340_evb_i2c_l3g4200d_gyr,
+	&spear1340_evb_i2c_eeprom0,
+	&spear1340_evb_i2c_eeprom1,
+	&spear1340_evb_i2c_sta529,
+};
+
+/* Definitions for SPI Devices*/
 
 /* spi master's configuration routine */
 DECLARE_SPI_CS_CFG(0, VA_SPEAR1340_PERIP_CFG, SPEAR1340_SSP_CS_SEL_MASK,
@@ -335,30 +357,36 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.cs_control = spi0_ts_cs_control,
 };
 
-static struct spi_board_info __initdata spi_board_info[] = {
-	{
-		.modalias = "m25p80",
-		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 12000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
-		.mode = SPI_MODE_3,
-	}, {
-		.modalias = "stmpe610-spi",
-		.platform_data = &stmpe610_spi_pdata,
-		.controller_data = &spi0_ts_chip_info,
-		.max_speed_hz = 1000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS1,
-		.mode = SPI_MODE_1,
-	}, {
-		.modalias = "spidev",
-		.controller_data = &spi0_dev_chip_info,
-		.max_speed_hz = 25000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS2,
-		.mode = SPI_MODE_1,
-	}
+struct spi_board_info spear1340_evb_spi_m25p80 = {
+	.modalias = "m25p80",
+	.controller_data = &spi0_flash_chip_info,
+	.max_speed_hz = 12000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
+	.mode = SPI_MODE_3,
+};
+struct spi_board_info spear1340_evb_spi_stmpe610 = {
+	.modalias = "stmpe610-spi",
+	.platform_data = &stmpe610_spi_pdata,
+	.controller_data = &spi0_ts_chip_info,
+	.max_speed_hz = 1000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS1,
+	.mode = SPI_MODE_1,
+};
+struct spi_board_info spear1340_evb_spi_spidev = {
+	.modalias = "spidev",
+	.controller_data = &spi0_dev_chip_info,
+	.max_speed_hz = 25000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS2,
+	.mode = SPI_MODE_1,
+};
+
+static struct spi_board_info *spi_board[] __initdata = {
+	&spear1340_evb_spi_m25p80,
+	&spear1340_evb_spi_stmpe610,
+	&spear1340_evb_spi_spidev,
 };
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
@@ -436,15 +464,6 @@ static void __init spear1340_evb_init(void)
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
-	/* Register spear1340 evb board specific i2c slave devices */
-	i2c_register_board_info(0, i2c_board_info,
-				ARRAY_SIZE(i2c_board_info));
-
-	/* Register slave devices on the I2C buses */
-	i2c_register_default_devices();
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 	/* Check if plug boards are requested or not */
 	if (spear1340_plug_board[0] != '\0') {
@@ -460,6 +479,14 @@ static void __init spear1340_evb_init(void)
 			return;
 	}
 #endif
+
+	/* Register spear1340 evb board specific i2c slave devices */
+	for (i = 0; i < ARRAY_SIZE(i2c_board); i++)
+		i2c_register_board_info(0, i2c_board[i], 1);
+
+	/* Register SPI Board */
+	for (i = 0; i < ARRAY_SIZE(spi_board); i++)
+		spi_register_board_info(spi_board[i], 1);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

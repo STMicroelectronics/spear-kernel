@@ -610,6 +610,17 @@ extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
 extern struct platform_device spear1340_thermal_device;
 
+/* Add spear1340 spi devices structure declaration */
+extern struct spi_board_info spear1340_evb_spi_m25p80;
+extern struct spi_board_info spear1340_evb_spi_stmpe610;
+extern struct spi_board_info spear1340_evb_spi_spidev;
+
+/* Add spear1340 i2c devices structure declaration */
+extern struct i2c_board_info spear1340_evb_i2c_l3g4200d_gyr;
+extern struct i2c_board_info spear1340_evb_i2c_eeprom0;
+extern struct i2c_board_info spear1340_evb_i2c_eeprom1;
+extern struct i2c_board_info spear1340_evb_i2c_sta529;
+
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
