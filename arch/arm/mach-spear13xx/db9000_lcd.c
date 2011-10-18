@@ -87,7 +87,40 @@ static struct db9000fb_mach_info hannstar_hsd07_info = {
 	.cmap_inverse   = 0,
 };
 
-/* 10.4 inch lcd panel information */
+/* Max possible resolution for HDMI TX */
+static struct db9000fb_mode_info hdmi_1080p_mode = {
+	.mode = { 	/* 1080p */
+		.name = "HDMI 1080p",
+		.refresh = 60,
+		.xres = 1920,
+		.yres = 1080,
+		.pixclock = 6734,
+		.left_margin = 148,
+		.right_margin = 88,
+		.upper_margin = 36,
+		.lower_margin = 4,
+		.hsync_len = 44,
+		.vsync_len = 5,
+		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+	},
+	.bpp = 32,
+	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
+		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
+	.pwmfr = DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x8),
+	.pctr = DB9000_PCTR_PCI,
+	.dear = 0,
+};
+
+static struct db9000fb_mach_info hdmi_1080p_info = {
+	.modes          = &hdmi_1080p_mode,
+	.num_modes      = 1,
+	.lcd_conn       = LCD_PCLK_EDGE_FALL,
+	.video_mem_size = 0,
+	.cmap_static    = 0,
+	.cmap_inverse   = 0,
+};
+
 static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.mode = {
 		.name = "Chemei B101AW02",
@@ -128,7 +161,8 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 
 	pdev->dev.platform_data = data;
 
-	if (!strcmp("Chemei B101AW02", inf->mode.name)) {
+	if (!strcmp("Chemei B101AW02", inf->mode.name)
+			|| (!strcmp("HDMI 1080p", inf->mode.name))) {
 		vco_clk = clk_get(NULL, "vco1div4_clk");
 		if (IS_ERR(vco_clk)) {
 			pr_err("%s:vco1div 4 clock get fail\n", __func__);
@@ -204,6 +238,8 @@ static struct db9000fb_mach_info *panel_to_mach_info(char *panel)
 		mach_info = &sharp_lcd_info;
 	else if (!strcmp(spear13xx_panel, "hannstar"))
 		mach_info = &hannstar_hsd07_info;
+	else if (!strcmp(spear13xx_panel, "1080p"))
+		mach_info = &hdmi_1080p_info;
 	else {
 		/* choose a default panel based upon board */
 		if (machine_is_spear1340_evb() || machine_is_spear900_evb())
