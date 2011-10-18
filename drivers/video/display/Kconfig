@@ -21,4 +21,9 @@ config DISPLAY_SUPPORT
 comment "Display hardware drivers"
 	depends on DISPLAY_SUPPORT
 
+config FB_AD9889B_HDMI
+	tristate "AD9889B HDMI controller support"
+	depends on FB_DB9000
+	---help---
+	 Analog Devices AD9889B HDMI TX Controller.
 endmenu
