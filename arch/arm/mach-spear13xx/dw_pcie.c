@@ -790,9 +790,12 @@ static struct platform_driver pcie_driver = {
 static int __init pcie_init(void)
 {
 	INIT_LIST_HEAD(&pcie_port_list);
-	platform_driver_probe(&pcie_driver, pcie_probe);
-	pci_common_init(&pci);
-	pr_info("pcie init successful\n");
+	platform_driver_register(&pcie_driver);
+	if (pci.nr_controllers) {
+		pci_common_init(&pci);
+		pr_info("pcie init successful\n");
+	}
+
 	return 0;
 }
 subsys_initcall(pcie_init);
