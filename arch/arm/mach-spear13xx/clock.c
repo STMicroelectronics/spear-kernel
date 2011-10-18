@@ -883,6 +883,7 @@ static struct clk i2s_ref_pad_clk = {
 static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
 	/* For i2s_ref_clk = 12.288MHz */
 	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 3.07 Mhz */
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
