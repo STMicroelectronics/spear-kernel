@@ -1730,9 +1730,6 @@ static struct resource cec0_resources[] = {
 struct platform_device spear1340_cec0_device = {
 	.name = "spear_cec",
 	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
 	.num_resources = ARRAY_SIZE(cec0_resources),
 	.resource = cec0_resources,
 };
@@ -1752,9 +1749,6 @@ static struct resource cec1_resources[] = {
 struct platform_device spear1340_cec1_device = {
 	.name = "spear_cec",
 	.id = 1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-	},
 	.num_resources = ARRAY_SIZE(cec1_resources),
 	.resource = cec1_resources,
 };
