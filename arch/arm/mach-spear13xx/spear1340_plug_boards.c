@@ -62,6 +62,7 @@
 #include <media/soc_camera.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 
 /* name of an individual plug-board is limited to 10 chars */
@@ -118,6 +119,11 @@ struct plug_board {
 
 	struct list_head node;
 	char name[PB_NAME_LIMIT];
+};
+
+enum skip_device_type {
+	SKIP_AMBA_DEVICE,
+	SKIP_PLAT_DEVICE,
 };
 
 /* string specifying which plug boards are requested */
@@ -419,13 +425,15 @@ release_pb:
 	return -EINVAL;
 }
 
-static bool skip_device(struct list_head *pb_list, void *dev, bool is_pdev)
+static bool skip_device(struct list_head *pb_list, void *dev,
+		enum skip_device_type skip)
 {
 	struct plug_board *pb;
 	int i;
 
 	list_for_each_entry(pb, pb_list, node) {
-		if (is_pdev) {
+		switch (skip) {
+		case SKIP_PLAT_DEVICE:
 			for (i = 0; i < pb->rm_pcnt; i++) {
 				if (dev == pb->rm_pdevs[i]) {
 					pr_debug("%s: skip %s.%d\n",
@@ -435,7 +443,8 @@ static bool skip_device(struct list_head *pb_list, void *dev, bool is_pdev)
 					return true;
 				}
 			}
-		} else {
+			break;
+		case SKIP_AMBA_DEVICE:
 			for (i = 0; i < pb->rm_acnt; i++) {
 				if (dev == pb->rm_adevs[i]) {
 					pr_debug("%s: skip %s\n", pb->name,
@@ -443,18 +452,31 @@ static bool skip_device(struct list_head *pb_list, void *dev, bool is_pdev)
 					return true;
 				}
 			}
+			break;
+		default:
+			return false;
 		}
 	}
 
 	return false;
 }
 
-int __init spear1340_pb_init(struct platform_device **pdevs, u8 pcnt,
-		struct amba_device **adevs, u8 acnt)
+int __init spear1340_pb_init(struct plug_board_info *pb_info)
 {
+	struct platform_device **pdevs;
+	struct amba_device **adevs;
+	u8 pcnt, acnt;
 	LIST_HEAD(pb_list);
 	struct plug_board *pb;
 	int ret, i;
+
+	if (!pb_info)
+		return -EINVAL;
+
+	pdevs = pb_info->pdevs;
+	pcnt = pb_info->pcnt;
+	adevs = pb_info->adevs;
+	acnt = pb_info->acnt;
 
 	ret = make_pb_list(&pb_list);
 	if (ret) {
@@ -482,7 +504,7 @@ int __init spear1340_pb_init(struct platform_device **pdevs, u8 pcnt,
 
 	/* Add Amba Devices passed from evb.c */
 	for (i = 0; i < acnt; i++) {
-		if (skip_device(&pb_list, adevs[i], false))
+		if (skip_device(&pb_list, adevs[i], SKIP_AMBA_DEVICE))
 			continue;
 
 		amba_device_register(adevs[i], &iomem_resource);
@@ -498,7 +520,7 @@ int __init spear1340_pb_init(struct platform_device **pdevs, u8 pcnt,
 
 	/* Add Platform Devices passed from evb.c */
 	for (i = 0; i < pcnt; i++) {
-		if (skip_device(&pb_list, pdevs[i], true))
+		if (skip_device(&pb_list, pdevs[i], SKIP_PLAT_DEVICE))
 			continue;
 
 		platform_device_register(pdevs[i]);

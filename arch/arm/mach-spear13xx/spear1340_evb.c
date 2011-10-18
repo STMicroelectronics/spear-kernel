@@ -34,6 +34,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
 
@@ -454,8 +455,14 @@ static void __init spear1340_evb_init(void)
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 	/* Check if plug boards are requested or not */
 	if (spear1340_plug_board[0] != '\0') {
-		int ret = spear1340_pb_init(plat_devs, ARRAY_SIZE(plat_devs),
-				amba_devs, ARRAY_SIZE(amba_devs));
+		struct plug_board_info pb_info;
+		int ret;
+
+		pb_info.pdevs = plat_devs;
+		pb_info.pcnt = ARRAY_SIZE(plat_devs);
+		pb_info.adevs = amba_devs;
+		pb_info.acnt = ARRAY_SIZE(amba_devs);
+		ret = spear1340_pb_init(&pb_info);
 		if (!ret)
 			return;
 	}
