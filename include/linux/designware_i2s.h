@@ -37,6 +37,7 @@ struct i2s_platform_data {
 	unsigned int cap;
 	int channel;
 	struct dma_slaves ds;
+	u8 swidth;
 };
 
 #define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */

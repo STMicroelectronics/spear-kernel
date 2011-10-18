@@ -87,6 +87,7 @@ struct dw_i2s_dev {
 	/* data related to DMA transfers b/w i2s and DMAC */
 	dma_cap_mask_t smask;
 	struct dma_slaves ds;
+	u8 swidth;
 };
 
 struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
@@ -176,7 +177,14 @@ void i2s_start(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		dev_err(dev->dev, "channel not supported\n");
 	}
 
-	i2s_write_reg(dev->i2s_base, CCR, 0x00);
+	/*
+	 * AD9889B has a limitation. It requires 64 SCLK per
+	 * LRCLK even for 16 bit samples
+	 */
+	if (dev->swidth == 32)
+		i2s_write_reg(dev->i2s_base, CCR, 0x10);
+	else
+		i2s_write_reg(dev->i2s_base, CCR, 0x00);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		i2s_write_reg(dev->i2s_base, ITER, 1);
@@ -410,6 +418,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->res = res;
 	dev->max_channel = pdata->channel;
 	dev->capability = cap;
+	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
 	dma_cap_zero(dev->smask);

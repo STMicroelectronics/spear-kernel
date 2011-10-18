@@ -821,6 +821,7 @@ static struct i2s_platform_data i2s_data = {
 	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
 			SPEAR13XX_DMA_REQ_I2S_TX,
 			SPEAR13XX_DMA_REQ_I2S_RX),
+	.swidth = 16,
 };
 
 /* i2s0 device registeration */

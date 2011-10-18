@@ -1810,12 +1810,14 @@ static struct i2s_platform_data i2s_data[] = {
 		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
 				SPEAR1340_DMA_REQ_I2S_TX,
 				SPEAR1340_DMA_REQ_I2S_RX),
+		.swidth = 16,
 	}, {
 		.cap = RECORD,
 		.channel = 8,
 		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
 				SPEAR1340_DMA_REQ_I2S_TX,
 				SPEAR1340_DMA_REQ_I2S_RX),
+		.swidth = 16,
 	},
 };
 
