@@ -53,15 +53,18 @@
  * bootargs: console=ttyAMA0,115200 pb=rgmii,hdmi_tx,cam0
  */
 
+#include <linux/ad9889b.h>
 #include <linux/bug.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
+#include <linux/designware_i2s.h>
 #include <linux/list.h>
 #include <linux/phy.h>
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <media/soc_camera.h>
+#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
@@ -335,9 +338,22 @@ static struct platform_device *hdmi_tx_pb_add_pdevs[] __initdata = {
 
 /* SPI devices to be removed */
 static struct spi_board_info *hdmi_tx_pb_rm_spi_devs[] __initdata = {
+	&spear1340_evb_spi_stmpe610,
 };
 /* SPI devices to be added */
 static struct spi_board_info *hdmi_tx_pb_add_spi_devs[] __initdata = {
+};
+
+static struct ad9889b_pdata ad9889b_platdata = {
+	.irq_gpio = GPIO1_6,
+	.irq_type = IRQF_DISABLED | IRQF_SHARED | IRQF_TRIGGER_FALLING,
+	.fb = 0,
+};
+
+static struct i2c_board_info spear1340_pb_i2c_hdmi_tx = {
+		.type = "adi9889_i2c",
+		.addr = 0x39,
+		.platform_data = &ad9889b_platdata,
 };
 
 /* I2C devices to be removed */
@@ -345,10 +361,30 @@ static struct i2c_board_info *hdmi_tx_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
 static struct i2c_board_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
+	&spear1340_pb_i2c_hdmi_tx,
 };
 
 static void __init hdmi_tx_pb_init(void)
 {
+	struct clk *i2s_sclk_clk;
+	struct i2s_platform_data *pdata
+		= dev_get_platdata(&spear1340_i2s_play_device.dev);
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk))
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+
+	if (clk_set_rate(i2s_sclk_clk, 3070000)) {
+		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+		clk_put(i2s_sclk_clk);
+	}
+
+	if (clk_enable(i2s_sclk_clk)) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		clk_put(i2s_sclk_clk);
+	}
+
+	pdata->swidth = 32;
 }
 
 
