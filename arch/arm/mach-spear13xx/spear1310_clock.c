@@ -661,12 +661,24 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 
 /* clcd rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl clcd_rtbl[] = {
-	/* All below entries generate 58 MHz for different values of vco1div4 */
-	{.div = 0x0D8C0}, /* for vco1div4 = 393 MHz */
-	{.div = 0x0B740}, /* for vco1div4 = 332 MHz */
-	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
-	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
+	{.div = 0x14000}, /* 25 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x1284B}, /* 27 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
+	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
+	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
+	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x04A12}, /* 108 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0378E}, /* 144 Mhz , for vc01div4 = 250 MHz*/
+	/*
+	 * TODO : 1080p should work on 148 Mhz. But we see lots of
+	 * flickering at 148 Mhz.So, commenting this entry till we
+	 * resolve this issue
+	 */
+	/* {.div = 0x0360D}, */ /* 148 Mhz , for vc01div4 = 250 MHz*/
 };
+
 /* clcd fractional synthesizer clock */
 static struct clk clcd_synth_clk = {
 	.flags = ALWAYS_ENABLED,
