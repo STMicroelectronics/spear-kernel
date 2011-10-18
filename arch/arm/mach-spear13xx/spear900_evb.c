@@ -271,13 +271,7 @@ static void spear900_evb_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	unsigned long size;
-
-	size = clcd_get_fb_size(&chimei_b101aw02_info, NUM_OF_FRAMEBUFFERS);
-	chimei_b101aw02_info.frame_buf_base =
-		reserve_mem(mi, ALIGN(size, SZ_1M));
-	if (chimei_b101aw02_info.frame_buf_base == ~0)
-		pr_err("Unable to allocate fb buffer\n");
+	spear13xx_panel_fixup(mi);
 #endif
 }
 
@@ -293,8 +287,7 @@ static void __init spear900_evb_init(void)
 
 #if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
 	/* db9000_clcd plat data */
-	clcd_set_plat_data(&spear13xx_db9000_clcd_device,
-			&chimei_b101aw02_info);
+	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,

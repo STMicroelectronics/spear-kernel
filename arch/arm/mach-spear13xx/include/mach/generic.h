@@ -494,8 +494,6 @@ extern struct platform_device spear13xx_udc_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */
-extern struct db9000fb_mach_info sharp_lcd_info;
-extern struct db9000fb_mach_info chimei_b101aw02_info;
 extern struct dw_dma_slave cf_dma_priv;
 
 /* Add spear13xx family function declarations here */

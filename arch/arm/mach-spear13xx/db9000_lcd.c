@@ -17,8 +17,10 @@
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/amba/bus.h>
+#include <asm/setup.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
+#include <mach/generic.h>
 #include <mach/hardware.h>
 
 static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
@@ -44,7 +46,7 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.pctr = 0,
 	.dear = 0,
 };
-struct db9000fb_mach_info sharp_lcd_info = {
+static struct db9000fb_mach_info sharp_lcd_info = {
 	.modes		= &sharp_LQ043T3DX0A_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
@@ -76,7 +78,7 @@ static struct db9000fb_mode_info hannstar_hsd07_mode = {
 	.pctr = 0,
 	.dear = 0,
 };
-struct db9000fb_mach_info hannstar_hsd07_info = {
+static struct db9000fb_mach_info hannstar_hsd07_info = {
 	.modes		= &hannstar_hsd07_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
@@ -85,7 +87,7 @@ struct db9000fb_mach_info hannstar_hsd07_info = {
 	.cmap_inverse   = 0,
 };
 
-/* 10.4 inch lcd pannel information */
+/* 10.4 inch lcd panel information */
 static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.mode = {
 		.name = "Chemei B101AW02",
@@ -109,7 +111,7 @@ static struct db9000fb_mode_info chimei_b101aw02_mode = {
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
-struct db9000fb_mach_info chimei_b101aw02_info = {
+static struct db9000fb_mach_info chimei_b101aw02_info = {
 	.modes          = &chimei_b101aw02_mode,
 	.num_modes      = 1,
 	.lcd_conn       = LCD_PCLK_EDGE_FALL,
@@ -118,17 +120,7 @@ struct db9000fb_mach_info chimei_b101aw02_info = {
 	.cmap_inverse   = 0,
 };
 
-unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int buffer_cnt)
-{
-	unsigned long size;
-	struct db9000fb_mode_info *info = data->modes;
-
-	size = PALETTE_SIZE + (buffer_cnt * info->mode.xres *
-			info->mode.yres * info->bpp / 8);
-	return size;
-}
-
-void clcd_set_plat_data(struct platform_device *pdev,
+static void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
 	unsigned int status = 0;
@@ -194,4 +186,65 @@ free_vco_clk:
 		clk_set_parent(fb_clk, ah_clk);
 	}
 	return ;
+}
+
+/* string specifying which clcd boards are requested */
+static char spear13xx_panel[20] = {'\0', };
+static int __init spear13xx_panel_select(char *panel)
+{
+	if (strlen(panel) <= sizeof(spear13xx_panel))
+		strcpy(spear13xx_panel, panel);
+	else
+		return -ENOMEM;
+
+	return 0;
+}
+__setup("panel=", spear13xx_panel_select);
+
+static struct db9000fb_mach_info *panel_to_mach_info(char *panel)
+{
+	struct db9000fb_mach_info *mach_info;
+
+	if (!strcmp(spear13xx_panel, "chimei"))
+		mach_info = &chimei_b101aw02_info;
+	else if (!strcmp(spear13xx_panel, "sharp"))
+		mach_info = &sharp_lcd_info;
+	else if (!strcmp(spear13xx_panel, "hannstar"))
+		mach_info = &hannstar_hsd07_info;
+	else {
+		/* choose a default panel based upon board */
+		if (machine_is_spear1340_evb() || machine_is_spear900_evb())
+			mach_info = &chimei_b101aw02_info;
+		else
+			mach_info = &sharp_lcd_info;
+	}
+
+	return mach_info;
+}
+
+static unsigned long frame_buf_base;
+void spear13xx_panel_fixup(struct meminfo *mi)
+{
+	int size;
+
+	size = PALETTE_SIZE + (NUM_OF_FRAMEBUFFERS * PANEL_MAX_XRES *
+			PANEL_MAX_YRES * PANEL_MAX_BPP / 8);
+	frame_buf_base = reserve_mem(mi, ALIGN(size, SZ_1M));
+	if (frame_buf_base == ~0)
+		pr_err("Unable to allocate fb buffer\n");
+}
+
+void spear13xx_panel_init(struct platform_device *pdev)
+{
+	struct db9000fb_mach_info *mach_info;
+
+	mach_info = panel_to_mach_info(spear13xx_panel);
+
+	if (!mach_info) {
+		pr_err("Invalid panel requested: %s\n", spear13xx_panel);
+		return;
+	}
+
+	mach_info->frame_buf_base = frame_buf_base;
+	clcd_set_plat_data(&spear13xx_db9000_clcd_device, mach_info);
 }
