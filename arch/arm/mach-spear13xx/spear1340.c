@@ -17,6 +17,7 @@
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
+#include <linux/spear_thermal.h>
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
 #include <mach/dma.h>
@@ -1942,6 +1943,29 @@ struct platform_device spear1340_sata0_device = {
 		.dma_mask = &ahci_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
+};
+
+/* SPEAr Thermal Sensor Platform Data for 1340 */
+static struct resource spear1340_thermal_resources[] = {
+	{
+		.start = SPEAR1340_THSENS_CFG,
+		.end = SPEAR1340_THSENS_CFG + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct spear_thermal_pdata spear1340_thermal_pdata = {
+	.thermal_flags = SPEAR1340_THERMAL_CONFIG_FLAGS,
+};
+
+struct platform_device spear1340_thermal_device = {
+	.name = "spear_thermal",
+	.id = -1,
+	.dev = {
+		.platform_data = &spear1340_thermal_pdata,
+	},
+	.num_resources = ARRAY_SIZE(spear1340_thermal_resources),
+	.resource = spear1340_thermal_resources,
 };
 
 static int spear1340_otg_phy_init(void)

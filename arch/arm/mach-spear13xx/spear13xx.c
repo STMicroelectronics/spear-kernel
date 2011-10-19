@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/netdevice.h>
+#include <linux/spear_thermal.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
@@ -87,6 +88,29 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 		return false;
 	}
 }
+
+/* SPEAr Thermal Sensor Platform Data */
+static struct resource spear13xx_thermal_resources[] = {
+	{
+		.start = THSENS_CFG,
+		.end = THSENS_CFG + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct spear_thermal_pdata spear13xx_thermal_pdata = {
+	.thermal_flags = THERMAL_CONFIG_FLAGS,
+};
+
+struct platform_device spear13xx_thermal_device = {
+	.name = "spear_thermal",
+	.id = -1,
+	.dev = {
+		.platform_data = &spear13xx_thermal_pdata,
+	},
+	.num_resources = ARRAY_SIZE(spear13xx_thermal_resources),
+	.resource = spear13xx_thermal_resources,
+};
 
 /* gpio device registeration */
 static struct pl061_platform_data gpio_plat_data[] = {

@@ -471,6 +471,7 @@ extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
+extern struct platform_device spear13xx_thermal_device;
 extern struct platform_device spear13xx_wdt_device;
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
@@ -609,6 +610,7 @@ extern struct platform_device spear1340_phy0_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
+extern struct platform_device spear1340_thermal_device;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);

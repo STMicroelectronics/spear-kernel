@@ -367,7 +367,9 @@
 #define VA_PAD_FUNCTION_EN_3		(VA_MISC_BASE + 0x658)
 #define PAD_FUNCTION_EN_3		(SPEAR13XX_MISC_BASE + 0x658)
 #define VA_DDR_PAD_CFG			(VA_MISC_BASE + 0x65C)
+#define THSENS_CFG			(SPEAR13XX_MISC_BASE + 0x6C4)
 #define VA_THSENS_CFG			(VA_MISC_BASE + 0x6C4)
+	#define THERMAL_CONFIG_FLAGS		0x7000
 
 /* Compensation Configuration Registers */
 #define VA_COMP_1V8_2V5_3V3__1_CFG	(VA_MISC_BASE + 0x700)
