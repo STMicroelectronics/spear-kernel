@@ -1209,7 +1209,11 @@ static void i2s_clk_init(void)
 
 	if (clk_enable(i2s_sclk_clk)) {
 		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_src_pad_clk;
 	}
+
+	if (clk_enable(i2s_ref_clk))
+		pr_err("%s:enabling i2s_ref_clk\n", __func__);
 
 put_src_pad_clk:
 	clk_put(i2s_src_pad_clk);
