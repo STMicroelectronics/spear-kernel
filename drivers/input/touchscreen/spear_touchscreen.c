@@ -509,8 +509,15 @@ int spear_ts_thread(void *data)
 
 		/* Wait for completion from Timer */
 		wait_for_completion(&spear_ts->time_complete);
-		if (spear_ts->ts_open_done != 1)
-			ts_open(spear_ts);
+		if (spear_ts->ts_open_done != 1) {
+			if (ts_open(spear_ts)) {
+				spear_ts->exit_ts_thread = 1;
+				del_timer_sync(&spear_ts->timer);
+				dev_err(&spear_ts->pdev->dev, "Exit %s\n",
+						__func__);
+				continue;
+			}
+		}
 
 		ts_state_machine(spear_ts);
 
