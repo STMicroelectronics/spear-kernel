@@ -378,20 +378,20 @@ static int ts_adc_close(struct spear_ts_dev *spear_ts)
  */
 int ts_open(struct spear_ts_dev *spear_ts)
 {
-	int status, gpio_err;
+	int status;
 
-	gpio_err = gpio_request(spear_ts->spr_ts_info->gpio_pin, "ts_gpio");
-	if (gpio_err < 0) {
+	status = gpio_request(spear_ts->spr_ts_info->gpio_pin, "ts_gpio");
+	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err gpio request=%d\n",
-				gpio_err);
-		return -1;
+				status);
+		return status;
 	}
 
-	gpio_err = gpio_direction_output(spear_ts->spr_ts_info->gpio_pin, 1);
-	if (gpio_err < 0) {
+	status = gpio_direction_output(spear_ts->spr_ts_info->gpio_pin, 1);
+	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err gpio dir set=%d\n",
-				gpio_err);
-		return -1;
+				status);
+		return status;
 	}
 
 	/* Acquire and Configure ADC for X-Y coordinate*/
@@ -407,7 +407,7 @@ int ts_open(struct spear_ts_dev *spear_ts)
 
 	spear_ts->ts_open_done = 1;
 
-	return 0;
+	return status;
 }
 
 /**
