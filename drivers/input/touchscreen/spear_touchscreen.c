@@ -391,14 +391,14 @@ int ts_open(struct spear_ts_dev *spear_ts)
 	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err gpio dir set=%d\n",
 				status);
-		return status;
+		goto free_gpio;
 	}
 
 	/* Acquire and Configure ADC for X-Y coordinate*/
 	status = ts_adc_open(spear_ts);
 	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err adc open=%d\n", status);
-		return status;
+		goto free_gpio;
 	}
 
 	ts_get_adc_idle_values(spear_ts);
@@ -406,6 +406,9 @@ int ts_open(struct spear_ts_dev *spear_ts)
 	spear_ts->finger_state = IDLE;
 
 	spear_ts->ts_open_done = 1;
+
+free_gpio:
+	gpio_free(spear_ts->spr_ts_info->gpio_pin);
 
 	return status;
 }
