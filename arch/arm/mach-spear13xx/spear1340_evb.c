@@ -36,7 +36,6 @@
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
-#include <media/soc_camera.h>
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 /* Variable specifying which plug boards are requested */
@@ -140,28 +139,6 @@ static struct pmx_dev spear1340_pmx_plgpios = {
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
 };
 
-/* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info[] = {
-	{
-		I2C_BOARD_INFO("vs6725", 0x10),
-	},
-};
-
-static struct soc_camera_link vs6725_cam3_sensor_iclink = {
-	.bus_id = 3,	/* sensor is connected to cam3 */
-	.i2c_adapter_id = 0,
-	.board_info = &vs6725_camera_sensor_info[0],
-	.module_name = "vs6725",
-};
-
-struct platform_device spear1340_cam3_sensor_device = {
-	.name = "soc-camera-pdrv",
-	.id = -1,
-	.dev = {
-		.platform_data = &vs6725_cam3_sensor_iclink,
-	},
-};
-
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/*
@@ -183,10 +160,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_pwm2,
 #endif
 	&spear1340_pmx_pwm3,
-	&spear1340_pmx_video_in_mux_cam0,
-	&spear1340_pmx_video_in_mux_cam1,
-	&spear1340_pmx_video_in_mux_cam2,
-	&spear1340_pmx_cam3,
 	&spear1340_pmx_smi,
 	&spear1340_pmx_ssp0,
 	&spear1340_pmx_uart0,
@@ -243,8 +216,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
-	&spear1340_camif3_device,
-	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
