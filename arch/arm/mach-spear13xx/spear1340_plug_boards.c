@@ -73,6 +73,13 @@
 #define DEBUG 1
 #define INIT_PB(pb_name, pb)						\
 	do {								\
+		if (strlen(#pb_name) > PB_NAME_LIMIT) {			\
+			pr_err("Error: name choosen for plug board is "	\
+				"more than 10 chars, use a smaller "	\
+				"name instead\n");			\
+			continue;					\
+		}							\
+									\
 		pb = kmalloc(sizeof(struct plug_board), GFP_KERNEL);	\
 		if (!pb) {						\
 			pr_err("Error allocating memory for pb: %s\n",	\
@@ -402,7 +409,7 @@ __setup("pb=", spear1340_pb_select);
 static int make_pb_list(struct list_head *pb_list)
 {
 	char *pb_name;
-	struct plug_board *pb;
+	struct plug_board *pb = NULL;
 	char *str = spear1340_plug_board;
 
 	pr_debug("%s: Plug board string passed from bootargs: %s\n", __func__,
@@ -428,6 +435,9 @@ static int make_pb_list(struct list_head *pb_list)
 			pr_err("Invalid plug board requested: %s\n", pb_name);
 			goto release_pb;
 		}
+
+		if (!pb)
+			goto release_pb;
 
 		list_add_tail(&pb->node, pb_list);
 	}
