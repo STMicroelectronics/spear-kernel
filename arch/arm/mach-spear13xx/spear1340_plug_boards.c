@@ -64,6 +64,12 @@
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
 
+/* name of an individual plug-board is limited to 10 chars */
+#define PB_NAME_LIMIT	10
+
+/* max plug-boards which can be requested via bootargs is limited to 50 */
+#define MAX_REQ_PB	50
+
 #define DEBUG 1
 #define INIT_PB(pb_name, pb)						\
 	do {								\
@@ -104,11 +110,11 @@ struct plug_board {
 	void (*pb_init)(void);
 
 	struct list_head node;
-	char name[10];
+	char name[PB_NAME_LIMIT];
 };
 
 /* string specifying which plug boards are requested */
-char spear1340_plug_board[50] = {'\0', };
+char spear1340_plug_board[MAX_REQ_PB] = {'\0', };
 
 
 /* Definitions specific to GMII plug board */
