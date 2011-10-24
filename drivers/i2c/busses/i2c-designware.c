@@ -216,11 +216,11 @@ struct dw_i2c_dev {
 	u32			abort_source;
 	int			irq;
 	struct i2c_adapter	adapter;
-	unsigned int		tx_fifo_depth;
-	unsigned int		rx_fifo_depth;
+	u16			tx_fifo_depth;
+	u16			rx_fifo_depth;
 };
 
-static u32
+static u16
 i2c_dw_scl_hcnt(u32 ic_clk, u32 tSYMBOL, u32 tf, int cond, int offset)
 {
 	/*
@@ -259,7 +259,7 @@ i2c_dw_scl_hcnt(u32 ic_clk, u32 tSYMBOL, u32 tf, int cond, int offset)
 		return (ic_clk * (tSYMBOL + tf) + 5000) / 10000 - 3 + offset;
 }
 
-static u32 i2c_dw_scl_lcnt(u32 ic_clk, u32 tLOW, u32 tf, int offset)
+static u16 i2c_dw_scl_lcnt(u32 ic_clk, u32 tLOW, u32 tf, int offset)
 {
 	/*
 	 * Conditional expression:
@@ -286,7 +286,7 @@ static u32 i2c_dw_scl_lcnt(u32 ic_clk, u32 tLOW, u32 tf, int offset)
 static void i2c_dw_init(struct dw_i2c_dev *dev)
 {
 	u32 input_clock_khz = clk_get_rate(dev->clk) / 1000;
-	u32 ic_con, hcnt, lcnt;
+	u16 ic_con, hcnt, lcnt;
 
 	/* Disable the adapter */
 	writew(0, dev->base + DW_IC_ENABLE);
@@ -353,7 +353,7 @@ static int i2c_dw_wait_bus_not_busy(struct dw_i2c_dev *dev)
 static void i2c_dw_xfer_init(struct dw_i2c_dev *dev)
 {
 	struct i2c_msg *msgs = dev->msgs;
-	u32 ic_con;
+	u16 ic_con;
 
 	/* Disable the adapter */
 	writew(0, dev->base + DW_IC_ENABLE);
@@ -386,8 +386,8 @@ static void
 i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 {
 	struct i2c_msg *msgs = dev->msgs;
-	u32 intr_mask;
-	int tx_limit, rx_limit;
+	u16 intr_mask;
+	u16 tx_limit, rx_limit;
 	u32 addr = msgs[dev->msg_write_idx].addr;
 	u32 buf_len = dev->tx_buf_len;
 	u8 *buf = dev->tx_buf;;
@@ -591,9 +591,9 @@ static u32 i2c_dw_func(struct i2c_adapter *adap)
 		I2C_FUNC_SMBUS_I2C_BLOCK;
 }
 
-static u32 i2c_dw_read_clear_intrbits(struct dw_i2c_dev *dev)
+static u16 i2c_dw_read_clear_intrbits(struct dw_i2c_dev *dev)
 {
-	u32 stat;
+	u16 stat;
 
 	/*
 	 * The IC_INTR_STAT register just indicates "enabled" interrupts.
@@ -653,7 +653,7 @@ static u32 i2c_dw_read_clear_intrbits(struct dw_i2c_dev *dev)
 static irqreturn_t i2c_dw_isr(int this_irq, void *dev_id)
 {
 	struct dw_i2c_dev *dev = dev_id;
-	u32 stat;
+	u16 stat;
 
 	stat = i2c_dw_read_clear_intrbits(dev);
 	dev_dbg(dev->dev, "%s: stat=0x%x\n", __func__, stat);
