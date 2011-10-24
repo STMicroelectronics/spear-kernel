@@ -104,6 +104,7 @@ struct db9000fb_info {
 /* Local images/copies of device registers */
 	u32			reg_cr1;
 	u32			reg_htr;
+	u32			reg_hvter;
 	u32			reg_vtr1;
 	u32			reg_vtr2;
 	u32			reg_pctr;
@@ -142,6 +143,7 @@ struct db9000fb_info {
 	struct backlight_device *backlight;
 	u8 bl_power;
 #endif
+	u16 db9000_rev;
 };
 
 #define TO_INF(ptr, member) container_of(ptr, struct db9000fb_info, member)

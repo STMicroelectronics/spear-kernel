@@ -796,6 +796,15 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 	/* Horizontal Front Porch */
 		DB9000_HTR_HFP(var->right_margin);
 
+	/* Vertical and Horizontal Timing Extension write */
+	if (fbi->db9000_rev >= DB9000_REVISION_1_14) {
+		fbi->reg_hvter =
+			DB9000_HVTER_HFPE(var->right_margin) |
+			DB9000_HVTER_HBPE(var->left_margin) |
+			DB9000_HVTER_VFPE(var->lower_margin) |
+			DB9000_HVTER_VBPE(var->upper_margin);
+	}
+
 	fbi->reg_vtr1 =
 		DB9000_VTR1_VBP(var->upper_margin) |
 		DB9000_VTR1_VFP(var->lower_margin) |
@@ -893,6 +902,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_HTR) != fbi->reg_htr) ||
 		(lcd_readl(fbi, DB9000_VTR1) != fbi->reg_vtr1) ||
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
+		(lcd_readl(fbi, DB9000_HVTER) != fbi->reg_hvter) ||
 		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 
@@ -959,6 +969,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_HTR, fbi->reg_htr);
 	lcd_writel(fbi, DB9000_VTR1, fbi->reg_vtr1);
 	lcd_writel(fbi, DB9000_VTR2, fbi->reg_vtr2);
+	lcd_writel(fbi, DB9000_HVTER, fbi->reg_hvter);
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
@@ -1654,7 +1665,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	int irq, ret;
 	int video_buf_size = 0;
 	int bits_per_pixel = 0;
-	uint32_t db9000_reg;
 	char __iomem *addr;
 	inf = pdev->dev.platform_data;
 	ret = -EBUSY;
@@ -1705,11 +1715,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_free_fbi;
 	}
-
-	/* Read the core version register and print it out */
-	db9000_reg = lcd_readl(fbi, DB9000_CIR);
-	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
-			__func__, db9000_reg);
 
 	bits_per_pixel = inf->modes->bpp;
 	if ((inf->modes->bpp == 24) &&
@@ -1811,6 +1816,12 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
+
+	/* Read the core version register and print it out */
+	fbi->db9000_rev = lcd_readl(fbi, DB9000_CIR);
+	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
+			__func__, fbi->db9000_rev);
+
 	return 0;
 
 err_clear_plat_data:
