@@ -89,7 +89,7 @@ static struct db9000fb_mach_info hannstar_hsd07_info = {
 
 /* Max possible resolution for HDMI TX */
 static struct db9000fb_mode_info hdmi_1080p_mode = {
-	.mode = { /* 1080p */
+	.mode = { 	/* 1080p */
 		.name = "HDMI 1080p",
 		.refresh = 60,
 		.xres = 1920,
@@ -111,6 +111,7 @@ static struct db9000fb_mode_info hdmi_1080p_mode = {
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
+
 static struct db9000fb_mach_info hdmi_1080p_info = {
 	.modes          = &hdmi_1080p_mode,
 	.num_modes      = 1,
