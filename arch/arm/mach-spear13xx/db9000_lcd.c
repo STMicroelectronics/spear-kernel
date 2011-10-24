@@ -255,8 +255,8 @@ void spear13xx_panel_fixup(struct meminfo *mi)
 {
 	int size;
 
-	size = PALETTE_SIZE + (NUM_OF_FRAMEBUFFERS * PANEL_MAX_XRES *
-			PANEL_MAX_YRES * PANEL_MAX_BPP / 8);
+	size = (NUM_OF_FRAMEBUFFERS * PANEL_MAX_XRES * PANEL_MAX_YRES *
+			PANEL_MAX_BPP / 8);
 	frame_buf_base = reserve_mem(mi, ALIGN(size, SZ_1M));
 	if (frame_buf_base == ~0)
 		pr_err("Unable to allocate fb buffer\n");
