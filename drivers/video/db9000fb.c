@@ -931,6 +931,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	u32 val;
 	unsigned int isr;
 	unsigned int imr;
+	int ret = 0;
 
 	pr_debug("db9000fb: Enabling LCD controller\n");
 	pr_debug("reg_cr1: 0x%08x\n", (unsigned int) fbi->reg_cr1);
@@ -940,7 +941,13 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	pr_debug("reg_pctr: 0x%08x\n", (unsigned int) fbi->reg_pctr);
 
 	/* enable LCD controller clock */
-	clk_enable(fbi->clk);
+	ret = clk_enable(fbi->clk);
+	if (ret) {
+		ret = PTR_ERR(fbi->clk);
+		clk_put(fbi->clk);
+		kfree(fbi);
+		return;
+	}
 
 	/* Write into the palette memory */
 	if (fbi->palette_size > 0) {
