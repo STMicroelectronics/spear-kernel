@@ -40,6 +40,17 @@ static void memcpy_decr_ptr(void *dest, void *src, u32 len)
 		*((u32 *)(dest - (i<<2))) = *((u32 *)(src + (i<<2)));
 }
 
+/*
+ *	spear_pm_on - Manage PM_SUSPEND_ON state.
+ *
+ */
+static int spear_pm_on(void)
+{
+	cpu_do_idle();
+
+	return 0;
+}
+
 static int spear_pm_sleep(suspend_state_t state)
 {
 	u32 twd_ctrl, twd_load;
@@ -179,6 +190,9 @@ static int spear_pm_enter(suspend_state_t state)
 	int ret;
 
 	switch (state) {
+	case PM_SUSPEND_ON:
+		ret = spear_pm_on();
+		break;
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
 		ret = spear_pm_sleep(state);
@@ -209,6 +223,7 @@ static void spear_pm_finish(void)
 static int spear_pm_valid_state(suspend_state_t state)
 {
 	switch (state) {
+	case PM_SUSPEND_ON:
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
 		return 1;
