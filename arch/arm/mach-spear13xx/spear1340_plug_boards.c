@@ -338,7 +338,6 @@ static struct platform_device *hdmi_tx_pb_add_pdevs[] __initdata = {
 
 /* SPI devices to be removed */
 static struct spi_board_info *hdmi_tx_pb_rm_spi_devs[] __initdata = {
-	&spear1340_evb_spi_stmpe610,
 };
 /* SPI devices to be added */
 static struct spi_board_info *hdmi_tx_pb_add_spi_devs[] __initdata = {
