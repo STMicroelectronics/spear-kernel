@@ -690,6 +690,7 @@ int spear_pcie_suspend(void)
 		if (pp->ops.link_up(pp->va_app_base)) {
 			pp->ops.host_exit(pp);
 			pp->ops.clk_exit(pp);
+			pp->susp_state = 1;
 		}
 	}
 
@@ -703,9 +704,12 @@ int spear_pcie_resume(void)
 
 	for (i = 0; i < pci.nr_controllers; i++) {
 		pp = controller_to_port(i);
-		pp->ops.clk_init(pp);
-		if (!pp->ops.link_up(pp->va_app_base))
-			pp->ops.host_init(pp);
+		if (pp->susp_state) {
+			pp->ops.clk_init(pp);
+			pp->susp_state = 0;
+			if (!pp->ops.link_up(pp->va_app_base))
+				pp->ops.host_init(pp);
+		}
 	}
 
 	return 0;

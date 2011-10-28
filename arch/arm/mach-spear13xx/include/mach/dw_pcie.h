@@ -70,6 +70,7 @@ struct pcie_port {
 	struct list_head	next;
 	struct pcie_private_ops	ops;
 	struct clk *clk;
+	int	susp_state;
 };
 
 /* synopsis specific PCIE configuration registers*/
