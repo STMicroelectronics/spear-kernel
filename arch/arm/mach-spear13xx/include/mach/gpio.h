@@ -14,6 +14,10 @@
 #ifndef __MACH_GPIO_H
 #define __MACH_GPIO_H
 
+#ifdef CONFIG_MACH_SPEAR1340_EVB
+#include <linux/mfd/stmpe.h>
+#endif
+
 /**
  * In Arch SPEAr13xx, plgpio gpio pins are grouped in number of four for
  * interrupt registers. Every group of four gpio's is represented by one bit
@@ -303,10 +307,25 @@
 #define PLGPIO_247		263
 #define PLGPIO_248		264
 #define PLGPIO_249		265
+
 #endif /* CPU_SPEAR1310_REVA, CPU_SPEAR1310, CPU_SPEAR1340 */
 
+#ifdef CONFIG_MACH_SPEAR1340_EVB
+#define SPEAR_STMPE801_GPIO_BASE	(PLGPIO_249 + 1)
+#define SPEAR_STMPE801_GPIO_END	(SPEAR_STMPE801_GPIO_BASE + STMPE_NR_GPIOS - 1)
+#define STMPE801_GPIO_0		(SPEAR_STMPE801_GPIO_BASE + 0)
+#define STMPE801_GPIO_1		(SPEAR_STMPE801_GPIO_BASE + 1)
+#define STMPE801_GPIO_2		(SPEAR_STMPE801_GPIO_BASE + 2)
+#define STMPE801_GPIO_3		(SPEAR_STMPE801_GPIO_BASE + 3)
+#define STMPE801_GPIO_4		(SPEAR_STMPE801_GPIO_BASE + 4)
+#define STMPE801_GPIO_5		(SPEAR_STMPE801_GPIO_BASE + 5)
+#define STMPE801_GPIO_6		(SPEAR_STMPE801_GPIO_BASE + 6)
+#define STMPE801_GPIO_7		(SPEAR_STMPE801_GPIO_BASE + 7)
+#define ARCH_NR_GPIOS		(SPEAR_STMPE801_GPIO_END + 1)
+#else
 /* spear 13xx have 266 gpio pins */
 #define ARCH_NR_GPIOS		(PLGPIO_249 + 1)
+#endif
 
 #include <plat/gpio.h>
 

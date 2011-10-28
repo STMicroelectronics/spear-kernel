@@ -16,6 +16,9 @@
 #define __MACH_IRQS_H
 
 #include <linux/kernel.h>
+#ifdef CONFIG_MACH_SPEAR1340_EVB
+#include <linux/mfd/stmpe.h>
+#endif
 #include <mach/gpio.h>
 
 /* IRQ definitions */
@@ -269,7 +272,15 @@
 #define SPEAR_INTX2_BASE	(SPEAR_INTX1_END + 0)
 #define SPEAR_INTX2_END		(SPEAR_INTX2_BASE + SPEAR_NUM_INTX_IRQS)
 
+#ifdef CONFIG_MACH_SPEAR1340_EVB
+#define SPEAR_STMPE801_GPIO_INT_BASE	(SPEAR_INTX2_END + 0)
+#define SPEAR_STMPE801_GPIO_INT_END	(SPEAR_STMPE801_GPIO_INT_BASE + \
+					STMPE_NR_IRQS)
+#define VIRQ_END		SPEAR_STMPE801_GPIO_INT_END
+#else
 #define VIRQ_END		SPEAR_INTX2_END
+#endif
+
 #define NR_IRQS			VIRQ_END
 
 #endif /* __MACH_IRQS_H */
