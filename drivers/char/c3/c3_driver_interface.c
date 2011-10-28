@@ -4315,6 +4315,11 @@ unsigned int c3_SHA512_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " len is not module of 4\n");
+		return C3_ERR;
+	}
+
 	if (!input_len) {
 		printk(C3_KERN_INFO "zero len data not supported\n");
 		return C3_SKIP;
