@@ -344,7 +344,7 @@ static struct spi_board_info *hdmi_tx_pb_add_spi_devs[] __initdata = {
 };
 
 static struct ad9889b_pdata ad9889b_platdata = {
-	.irq_gpio = GPIO1_6,
+	.irq_gpio = STMPE801_GPIO_7,
 	.irq_type = IRQF_DISABLED | IRQF_SHARED | IRQF_TRIGGER_FALLING,
 	.fb = 0,
 };
