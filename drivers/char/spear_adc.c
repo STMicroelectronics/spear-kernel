@@ -1290,6 +1290,31 @@ static const struct file_operations spear_adc_fops = {
 	.unlocked_ioctl = spear_adc_ioctl
 };
 
+int default_configure(void)
+{
+	int status, ret;
+
+	status = spear_adc_chan_get(g_drv_data, ADC_CHANNEL0);
+	if (status) {
+		dev_err(&g_drv_data->pdev->dev, "chan get failed\n");
+		return status;
+	}
+
+	status = spear_adc_configure(g_drv_data, ADC_CHANNEL0,
+			&g_drv_data->data->config);
+	ret = spear_adc_chan_put(g_drv_data, ADC_CHANNEL0);
+
+	if (status) {
+		dev_err(&g_drv_data->pdev->dev, "default configure failed\n");
+		return status;
+	}
+
+	if (ret)
+		dev_err(&g_drv_data->pdev->dev, "chan put failed\n");
+
+	return ret;
+}
+
 static s32 spear_adc_probe(struct platform_device *pdev)
 {
 	s32 status = 0, i = 0;
@@ -1388,10 +1413,9 @@ static s32 spear_adc_probe(struct platform_device *pdev)
 	set_adc_rx_reg(g_drv_data->data, rx_reg);
 #endif
 
-	/* configure with platform specific configurations */
-	spear_adc_chan_get(g_drv_data, ADC_CHANNEL0);
-	spear_adc_configure(g_drv_data, ADC_CHANNEL0, &plat_data->config);
-	spear_adc_chan_put(g_drv_data, ADC_CHANNEL0);
+	status = default_configure();
+	if (status)
+		goto out_chrdev_add;
 
 	dev_info(&pdev->dev, "registeration successful\n");
 	return 0;
@@ -1466,41 +1490,77 @@ static s32 spear_adc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static s32 spear_adc_suspend(struct device *dev)
 {
-	int i;
+	int i, ret = 0;
+	bool got_config = false;
 
-	spear_adc_chan_get(g_drv_data, ADC_CHANNEL0);
-	if (!g_drv_data->configured)
+	if (!g_drv_data->usage_count)
 		return 0;
 
-	spear_adc_get_configure(g_drv_data->chan[ADC_CHANNEL0].owner,
-			ADC_CHANNEL0, &g_drv_data->adc_saved_config);
+	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++) {
+		if (got_config == false) {
+			ret = spear_adc_get_configure(g_drv_data->chan[i].owner,
+					i, &g_drv_data->adc_saved_config);
+			if (ret) {
+				dev_err(dev, "Suspend: get configure failed\n");
+				break;
+			}
+			got_config = true;
+		}
 
-	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++)
-		spear_adc_get_chan_configure(g_drv_data->chan[i].owner,
+		ret = spear_adc_get_chan_configure(g_drv_data->chan[i].owner,
 				&g_drv_data->chan[i].adc_saved_chan_config);
+		if (ret) {
+			dev_err(dev, "Suspend: get chan configure failed\n");
+			break;
+		}
+	}
 
 	clk_disable(g_drv_data->clk);
 
-	return 0;
+	return ret;
 }
 
 static s32 spear_adc_resume(struct device *dev)
 {
-	int i;
+	int i, ret;
+	bool configured = false;
 
-	spear_adc_chan_get(g_drv_data, ADC_CHANNEL0);
-	if (!g_drv_data->configured)
-		return 0;
+	if (!g_drv_data->usage_count) {
+		ret = default_configure();
+		return ret;
+	}
 
-	clk_enable(g_drv_data->clk);
-	spear_adc_configure(g_drv_data->chan[ADC_CHANNEL0].owner, ADC_CHANNEL0,
-			&g_drv_data->adc_saved_config);
+	ret = clk_enable(g_drv_data->clk);
+	if (ret) {
+		dev_err(dev, "Resume: clk enable failed\n");
+		return ret;
+	}
 
-	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++)
-		spear_adc_chan_configure(g_drv_data->chan[i].owner,
+	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++) {
+		if (configured == false) {
+			ret = spear_adc_configure(g_drv_data->chan[i].owner,
+					i, &g_drv_data->adc_saved_config);
+			if (ret) {
+				dev_err(dev, "Resume: configure failed\n");
+				goto disable_clk;
+			}
+			configured = true;
+		}
+
+		ret = spear_adc_chan_configure(g_drv_data->chan[i].owner,
 				&g_drv_data->chan[i].adc_saved_chan_config);
+		if (ret) {
+			dev_err(dev, "Resume: chan configure failed\n");
+			goto disable_clk;
+		}
+	}
 
 	return 0;
+
+disable_clk:
+	clk_disable(g_drv_data->clk);
+
+	return ret;
 }
 
 static const struct dev_pm_ops spear_adc_dev_pm_ops = {
