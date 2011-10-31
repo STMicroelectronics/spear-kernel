@@ -1353,6 +1353,9 @@ static s32 spear_adc_probe(struct platform_device *pdev)
 		g_drv_data->chan[i].id = i;
 		g_drv_data->chan[i].dev_num =
 			MKDEV(MAJOR(g_drv_data->chan[0].dev_num), i);
+#ifdef CONFIG_PM
+		g_drv_data->chan[i].adc_saved_chan_config.chan_id = i;
+#endif
 	}
 
 	for (i = 0; i < ADC_CHANNEL_NUM; i++) {
