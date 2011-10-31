@@ -57,6 +57,7 @@
 #include <mach/bitfield.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
+#include <mach/generic.h>
 
 /*
  * Complain if VAR is out of range.
@@ -931,8 +932,11 @@ static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
 	lcd_writel(fbi, DB9000_CR1, fbi->reg_cr1);
 }
 
-static void db9000fb_setup_gpio(struct db9000fb_info *fbi)
+static void db9000fb_setup_gpio(struct db9000fb_info *fbi, bool on)
 {
+	/* gpio or clcd pad selection */
+	if (fbi->setup_gpio)
+		fbi->setup_gpio(on);
 }
 
 static void db9000fb_enable_controller(struct db9000fb_info *fbi)
@@ -985,6 +989,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 
 	lcd_writel(fbi, DB9000_CR1,
 		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE);
+
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
 	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
@@ -1007,7 +1012,7 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 {
 	struct db9000fb_info *fbi = dev_id;
 	unsigned int isr = lcd_readl(fbi, DB9000_ISR);
-	unsigned int ivr;
+	unsigned int imr;
 	u32 dbar;
 
 	if (isr & DB9000_ISR_BAU) { /*DMA Base Address Register Update to DCAR*/
@@ -1020,8 +1025,8 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 	}
 
 	if (isr & DB9000_ISR_LDD) {
-		ivr = lcd_readl(fbi, DB9000_IVR);
-		lcd_writel(fbi, DB9000_IVR, ivr | DB9000_ISR_LDD);
+		imr = lcd_readl(fbi, DB9000_IMR);
+		lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_LDDM);
 		complete(&fbi->disable_done);
 	}
 	lcd_writel(fbi, DB9000_ISR, isr);
@@ -1053,6 +1058,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state != C_DISABLE && old_state != C_DISABLE_PM) {
 			db9000fb_lcd_power(fbi, 0);
+			db9000fb_setup_gpio(fbi, false);
 			fbi->state = state;
 			db9000fb_disable_controller(fbi);
 		}
@@ -1067,6 +1073,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			fbi->state = state;
 			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
+			db9000fb_setup_gpio(fbi, false);
 			if (old_state != C_DISABLE_CLKCHANGE)
 				db9000fb_disable_controller(fbi);
 		}
@@ -1079,6 +1086,8 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state == C_DISABLE_CLKCHANGE) {
 			fbi->state = C_ENABLE;
+			db9000fb_setup_gpio(fbi, true);
+			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 			/* TODO __db9000fb_lcd_power(fbi, 1); */
 		}
@@ -1092,9 +1101,10 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state == C_ENABLE) {
 			db9000fb_lcd_power(fbi, 0);
-			db9000fb_setup_gpio(fbi);
+			db9000fb_setup_gpio(fbi, false);
 			db9000fb_disable_controller(fbi);
 			msleep(100);
+			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 		}
@@ -1118,7 +1128,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		if (old_state != C_ENABLE) {
 
 			fbi->state = C_ENABLE;
-			db9000fb_setup_gpio(fbi);
+			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 			db9000fb_backlight_power(fbi, 1);
@@ -1742,6 +1752,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	fbi->fb.fix.smem_len = fbi->video_mem_size;
 	fbi->fb.var.height = fbi->fb.var.yres;
 	fbi->fb.var.width = fbi->fb.var.xres;
+	fbi->setup_gpio = inf->clcd_mux_selection;
 	/* Clear the screen */
 	memset((char *)fbi->fb.screen_base, 0, fbi->fb.fix.smem_len);
 
@@ -1857,7 +1868,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	info = &fbi->fb;
 
 	unregister_framebuffer(info);
-
+	db9000fb_setup_gpio(fbi, false);
 	db9000fb_disable_controller(fbi);
 	complete_and_exit(&fbi->vsync_notifier, 0);
 

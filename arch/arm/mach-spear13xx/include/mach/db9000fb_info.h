@@ -68,6 +68,7 @@ struct db9000fb_mach_info {
 			cmap_static:1,
 			acceleration_enabled:1,
 			unused:28;
+	void (*clcd_mux_selection) (bool);
 
 };
 unsigned long db9000fb_get_hsync_time(struct device *dev);

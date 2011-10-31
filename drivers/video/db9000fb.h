@@ -139,6 +139,7 @@ struct db9000fb_info {
 #endif
 	/* Completion - for PAN display alignment with VSYNC/BAU event */
 	struct completion vsync_notifier;
+	void (*setup_gpio)(bool);
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	struct backlight_device *backlight;
 	u8 bl_power;
