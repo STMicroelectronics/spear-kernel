@@ -21,6 +21,7 @@
 #include <linux/spear_thermal.h>
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
+#include <plat/gpio.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -2223,6 +2224,123 @@ fail_get_ahb_pclk:
 	clk_put(sys_pclk);
 fail_get_sys_pclk:
 	return ret;
+}
+
+/* gpio Configure in pull-down mode for clcd */
+static struct pmx_mux_reg gpio_pd_mux[] = {
+	{
+		.address = SPEAR1340_PAD_PU_CFG_5,
+		.mask = 0xFFFFFC00,
+		.value = 0XFFFFFC00,
+	}, {
+		.address = SPEAR1340_PAD_PU_CFG_6,
+		.mask = 0xFFFFFFFF,
+		.value = 0XFFFFFFFF,
+	}, {
+		.address = SPEAR1340_PAD_PD_CFG_5,
+		.mask = 0xFFFFFC00,
+		.value = ~0XFFFFFC00,
+	}, {
+		.address = SPEAR1340_PAD_PD_CFG_6,
+		.mask = 0xFFFFFFFF,
+		.value = ~0XFFFFFFFF,
+	},
+};
+
+static struct pmx_dev_mode gpio_pd_modes[] = {
+	{
+		.mux_regs = gpio_pd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(gpio_pd_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_clcd_gpio_pd = {
+	.name = "gpio",
+	.modes = gpio_pd_modes,
+	.mode_count = ARRAY_SIZE(gpio_pd_modes),
+};
+
+/* clcd/gpio pad selection */
+static struct pmx_mux_reg clcd_plgpios_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = 0xFFFFF800,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_6,
+		.mask = 0xFFFFFFFF,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = 0x00000001,
+	},
+
+};
+
+static struct pmx_dev_mode clcd_plgpios_modes[] = {
+	{
+		.mux_regs = clcd_plgpios_mux,
+		.mux_reg_cnt = ARRAY_SIZE(clcd_plgpios_mux),
+	},
+};
+
+struct pmx_dev clcd_pmx_plgpios = {
+	.name = "clcd",
+	.modes = clcd_plgpios_modes,
+	.mode_count = ARRAY_SIZE(clcd_plgpios_modes),
+};
+
+static struct pmx_dev *clcd_pmx_devs[] = {
+	&clcd_pmx_plgpios,
+};
+
+static struct gpio_req_list clcd_gpio_list[] = {
+	{
+		.start = PLGPIO_138,
+		.end = PLGPIO_191,
+	},
+};
+
+/* padmux devices to enable */
+static void config_clcd_pads(struct pmx_dev **devs, u8 count, bool on)
+{
+	struct pmx_mux_reg *mux_reg;
+	int ret, i, j, k;
+
+	/*
+	 * Some pmx structures will be used to set/reset register for clcd pmx
+	 * registers. Set register to make pads as clcd signals if on is true
+	 * else reset to make pads as gpio.
+	 */
+	for (i = 0; i < count; i++) {
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+				mux_reg = &devs[i]->modes[j].mux_regs[k];
+				mux_reg->value = on ? mux_reg->mask : 0x0;
+			}
+		}
+	}
+
+	ret = pmx_devs_enable(devs, count);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+/* Switch pads to plgpio or clcd now */
+void config_clcd_gpio_pads(bool on)
+{
+	int ret;
+	static bool gpio_avail = false;
+
+	if (!gpio_avail) {
+		ret = request_gpio(clcd_gpio_list, GPIOF_IN,
+				ARRAY_SIZE(clcd_gpio_list));
+		if (ret)
+			pr_err("clcd request for gpio is failed. err no:%d\n",
+					ret);
+
+		gpio_avail = true;
+	}
+
+	config_clcd_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
 }
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,

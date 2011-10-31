@@ -385,6 +385,7 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable I2S, SSP0_CS2, CEC0, 1, SPDIF out, CLCD */
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
+extern struct pmx_dev clcd_pmx_plgpios;
 extern struct pmx_dev spear1340_pmx_pads_as_gpio;
 extern struct pmx_dev spear1340_pmx_fsmc_8bit;
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
@@ -426,6 +427,7 @@ extern struct pmx_dev spear1340_pmx_sdhci;
 extern struct pmx_dev spear1340_pmx_cf;
 extern struct pmx_dev spear1340_pmx_xd;
 extern struct pmx_dev spear1340_pmx_clcd;
+extern struct pmx_dev spear1340_pmx_clcd_gpio_pd;
 extern struct pmx_dev spear1340_pmx_arm_trace;
 extern struct pmx_dev spear1340_pmx_devs_grp;
 extern struct pmx_dev spear1340_pmx_miphy_dbg;
@@ -626,6 +628,7 @@ void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
+void config_clcd_gpio_pads(bool);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
 

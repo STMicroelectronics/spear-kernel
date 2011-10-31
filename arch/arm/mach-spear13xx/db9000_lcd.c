@@ -160,6 +160,7 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 	struct clk *pclk, *vco_clk, *clcd_pclk, *fb_clk, *ah_clk;
 
 	pdev->dev.platform_data = data;
+	data->clcd_mux_selection = &config_clcd_gpio_pads;
 
 	if (!strcmp("Chemei B101AW02", inf->mode.name)
 			|| (!strcmp("HDMI 1080p", inf->mode.name))) {

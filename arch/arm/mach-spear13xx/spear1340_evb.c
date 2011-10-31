@@ -175,6 +175,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_mcif,
 	&spear1340_pmx_sdhci,
 	&spear1340_pmx_clcd,
+	&spear1340_pmx_clcd_gpio_pd,
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
 	&spear1340_pmx_pcie,
