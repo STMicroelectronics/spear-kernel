@@ -162,7 +162,7 @@ static int __init spear13xx_audio_init(void)
 	/* Create and register platform device */
 	evb_snd_device = platform_device_alloc("soc-audio", 0);
 	if (!evb_snd_device) {
-		printk(KERN_ERR "platform_device_alloc fails\n");
+		printk(KERN_ERR "soc audio platform_device_alloc fails\n");
 		return -ENOMEM;
 	}
 	platform_set_drvdata(evb_snd_device, spear_soc_card);
