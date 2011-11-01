@@ -45,8 +45,9 @@
 #define QQCIF_HEIGHT	72
 
 /* vs6725 cropping windows params */
-#define VS6725_MAX_WIDTH		1600
-#define VS6725_MAX_HEIGHT		1200
+/* FIXME: limit to a resolution of 512*512 for now */
+#define VS6725_MAX_WIDTH		512
+#define VS6725_MAX_HEIGHT		512
 #define VS6725_MIN_WIDTH		0
 #define VS6725_MIN_HEIGHT		0
 #define VS6725_COLUMN_SKIP		8
