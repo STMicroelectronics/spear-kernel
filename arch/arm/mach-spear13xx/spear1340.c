@@ -1427,7 +1427,7 @@ static struct camif_config_data cam0_data = {
 	.pclk_polarity = ACTIVE_LOW,
 	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
+	.burst_size = BURST_SIZE_64,
 	.channel = EVEN_CHANNEL,
 };
 
@@ -1437,26 +1437,26 @@ static struct dw_dma_slave camif0_dma_param[] = {
 		.dma_dev = &spear13xx_dmac_device[1].dev,
 		.tx_reg = 0,
 		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
 		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
 		.tx_reg = 0,
 		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
 		.fc = DW_DMA_FC_D_P2M,
 	}
 };
