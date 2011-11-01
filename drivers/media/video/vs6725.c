@@ -79,8 +79,8 @@
 #define AUTO_FRAME_RATE			1
 
 /* register write masks for HI and LO bytes */
-#define WRITE_HI_BYTE(x)		((x) & 0xff)
-#define WRITE_LO_BYTE(x)		(((x) & 0xff00) >> 8)
+#define WRITE_HI_BYTE(x)		(((x) & 0xff00) >> 8)
+#define WRITE_LO_BYTE(x)		((x) & 0xff)
 
 /* rgb flip shift */
 #define RGB_FLIP_SHIFT(x)		((x) <<	1)
