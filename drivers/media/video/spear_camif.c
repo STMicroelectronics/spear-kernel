@@ -645,35 +645,19 @@ static int camif_add_device(struct soc_camera_device *icd)
 /* Called with .video_lock held */
 static void camif_remove_device(struct soc_camera_device *icd)
 {
-	int i;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct camif *camif = ici->priv;
 
 	BUG_ON(icd != camif->icd);
 
-	if (camif->vq && camif->vq->streaming) {
-		/*
-		 * This calls buf_release from host driver's videobuf_queue_ops
-		 * for all remaining buffers. When the last buffer is freed,
-		 * stop capture
-		 */
-		videobuf_streamoff(camif->vq);
-	}
-
-	v4l2_subdev_call(sd, video, s_stream, 0);
+	/*
+	 * FIXME:
+	 * Do not stop streaming on the subdevice as the
+	 * sensor we are connected to requiring a strange set of
+	 * patch-set to be written after every STOP operation.
+	 * Later find a more elegant solution to this issue.
+	 */
 	stop_camif(camif);
-	if (camif->vq) {
-		mutex_lock(&camif->vq->vb_lock);
-		for (i = 0; i < VIDEO_MAX_FRAME; i++) {
-			if (NULL == camif->vq->bufs[i])
-				continue;
-			kfree(camif->vq->bufs[i]);
-			camif->vq->bufs[i] = NULL;
-		}
-		mutex_unlock(&camif->vq->vb_lock);
-		camif->vq = NULL;
-	}
 
 	dev_info(icd->dev.parent,
 		"SPEAr Camera driver detached from camera %d\n", icd->devnum);
