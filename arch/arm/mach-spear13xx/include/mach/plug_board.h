@@ -19,6 +19,11 @@
 #include <linux/platform_device.h>
 #include <linux/spi/spi.h>
 
+struct i2c_dev_info {
+	struct i2c_board_info *board;
+	int busnum;
+};
+
 struct plug_board_info {
 	struct platform_device **pdevs;
 	u8 pcnt;
@@ -26,9 +31,15 @@ struct plug_board_info {
 	u8 acnt;
 	struct spi_board_info **spi_devs;
 	u8 spi_cnt;
-	struct i2c_board_info **i2c_devs;
+	struct i2c_dev_info **i2c_devs;
 	u8 i2c_cnt;
 };
+
+/* Add spear1340 i2c devices structure declaration */
+extern struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom0;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom1;
+extern struct i2c_dev_info spear1340_evb_i2c_sta529;
 
 int __init spear1340_pb_init(struct plug_board_info *pb_info);
 #endif

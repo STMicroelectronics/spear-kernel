@@ -125,8 +125,8 @@ struct plug_board {
 	struct platform_device **add_pdevs;
 	struct spi_board_info **rm_spi_devs;
 	struct spi_board_info **add_spi_devs;
-	struct i2c_board_info **rm_i2c_devs;
-	struct i2c_board_info **add_i2c_devs;
+	struct i2c_dev_info **rm_i2c_devs;
+	struct i2c_dev_info **add_i2c_devs;
 	u32 pmx_cnt;
 	u32 rm_acnt;
 	u32 add_acnt;
@@ -181,10 +181,10 @@ static struct spi_board_info *gmii_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *gmii_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *gmii_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *gmii_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *gmii_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init gmii_pb_init(void)
@@ -225,10 +225,10 @@ static struct spi_board_info *rgmii_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *rgmii_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *rgmii_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *rgmii_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *rgmii_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init rgmii_pb_init(void)
@@ -268,10 +268,10 @@ static struct spi_board_info *etm_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *etm_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *etm_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *etm_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *etm_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init etm_pb_init(void)
@@ -306,10 +306,10 @@ static struct spi_board_info *hdmi_rx_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *hdmi_rx_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *hdmi_rx_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *hdmi_rx_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *hdmi_rx_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init hdmi_rx_pb_init(void)
@@ -349,17 +349,22 @@ static struct ad9889b_pdata ad9889b_platdata = {
 	.fb = 0,
 };
 
-static struct i2c_board_info spear1340_pb_i2c_hdmi_tx = {
+static struct i2c_board_info spear1340_pb_i2c_board_hdmi_tx = {
 		.type = "adi9889_i2c",
 		.addr = 0x39,
 		.platform_data = &ad9889b_platdata,
 };
 
+static struct i2c_dev_info spear1340_pb_i2c_hdmi_tx = {
+	.board = &spear1340_pb_i2c_board_hdmi_tx,
+	.busnum = 0,
+};
+
 /* I2C devices to be removed */
-static struct i2c_board_info *hdmi_tx_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *hdmi_tx_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
 	&spear1340_pb_i2c_hdmi_tx,
 };
 
@@ -412,10 +417,10 @@ static struct spi_board_info *cam0_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *cam0_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *cam0_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *cam0_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *cam0_pb_add_i2c_devs[] __initdata = {
 };
 
 /* camera sensor registeration */
@@ -477,10 +482,10 @@ static struct spi_board_info *vga_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *vga_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *vga_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *vga_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *vga_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init vga_pb_init(void)
@@ -521,10 +526,10 @@ static struct spi_board_info *sata_pb_add_spi_devs[] __initdata = {
 };
 
 /* I2C devices to be removed */
-static struct i2c_board_info *sata_pb_rm_i2c_devs[] __initdata = {
+static struct i2c_dev_info *sata_pb_rm_i2c_devs[] __initdata = {
 };
 /* I2C devices to be added */
-static struct i2c_board_info *sata_pb_add_i2c_devs[] __initdata = {
+static struct i2c_dev_info *sata_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init sata_pb_init(void)
@@ -633,7 +638,7 @@ static bool skip_device(struct list_head *pb_list, void *dev,
 			for (i = 0; i < pb->rm_i2c_cnt; i++) {
 				if (dev == pb->rm_i2c_devs[i]) {
 					pr_debug("%s: skip %s\n", pb->name,
-						pb->rm_i2c_devs[i]->type);
+					pb->rm_i2c_devs[i]->board->type);
 					return true;
 				}
 			}
@@ -653,7 +658,7 @@ int __init spear1340_pb_init(struct plug_board_info *pb_info)
 	struct amba_device **adevs;
 	struct plug_board *pb;
 	struct spi_board_info **spi_devs;
-	struct i2c_board_info **i2c_devs;
+	struct i2c_dev_info **i2c_devs;
 	int ret, i;
 	u8 pcnt, acnt, spi_cnt, i2c_cnt;
 	LIST_HEAD(pb_list);
@@ -716,13 +721,15 @@ int __init spear1340_pb_init(struct plug_board_info *pb_info)
 		if (skip_device(&pb_list, i2c_devs[i], SKIP_I2C_DEVICE))
 			continue;
 
-		i2c_register_board_info(0, i2c_devs[i], 1);
+		i2c_register_board_info(i2c_devs[i]->busnum,
+				i2c_devs[i]->board, 1);
 	}
 
 	/* Add I2C Devices requested by plug boards */
 	list_for_each_entry(pb, &pb_list, node) {
 		for (i = 0; i < pb->add_i2c_cnt; i++)
-			i2c_register_board_info(0, pb->add_i2c_devs[i], 1);
+			i2c_register_board_info(pb->add_i2c_devs[i]->busnum,
+				pb->add_i2c_devs[i]->board, 1);
 
 		pr_debug("%s: Added %d I2C devices\n",
 				pb->name, pb->add_i2c_cnt);
