@@ -27,6 +27,7 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
+#include <mach/spdif_out.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -1996,6 +1997,44 @@ struct platform_device spear1340_sata0_device = {
 		.dma_mask = &ahci_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
+};
+
+/* spdif-out device registeration */
+static struct dw_dma_slave spdif_out_dma_data = {
+	/* Play */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.tx_reg = SPEAR1340_SPDIF_OUT_BASE + SPDIF_OUT_FIFO_DATA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_SPDIF_TX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_SPDIF,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_M2P,
+};
+
+static struct spdif_out_platform_data spdif_out_data = {
+	.dma_params = &spdif_out_dma_data,
+};
+
+static struct resource spdif_out_resources[] = {
+	{
+		.start = SPEAR1340_SPDIF_OUT_BASE,
+		.end = SPEAR1340_SPDIF_OUT_BASE + SZ_128 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_SPDIF_OUT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_spdif_out_device = {
+	.name = "spdif-out",
+	.id = -1,
+	.dev.platform_data = &spdif_out_data,
+	.num_resources = ARRAY_SIZE(spdif_out_resources),
+	.resource = spdif_out_resources,
 };
 
 /* SPEAr Thermal Sensor Platform Data for 1340 */
