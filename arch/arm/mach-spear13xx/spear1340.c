@@ -12,6 +12,7 @@
  */
 
 #include <asm/irq.h>
+#include <linux/ahci_platform.h>
 #include <linux/amba/serial.h>
 #include <linux/delay.h>
 #include <linux/mtd/fsmc.h>
@@ -1946,6 +1947,21 @@ struct platform_device spear1340_pwm_device = {
 };
 
 /* SATA device registration */
+void sata_miphy_exit(struct device *dev)
+{
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+}
+
+static int sata_miphy_init(struct device *dev, void __iomem *addr)
+{
+	writel(SPEAR1340_SATA_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+
+	return 0;
+}
+
 static struct resource sata_resources[] = {
 	{
 		.start = SPEAR1340_SATA_BASE,
@@ -1957,6 +1973,11 @@ static struct resource sata_resources[] = {
 	},
 };
 
+static struct ahci_platform_data sata_pdata = {
+	.init = sata_miphy_init,
+	.exit = sata_miphy_exit,
+};
+
 static u64 ahci_dmamask = DMA_BIT_MASK(32);
 
 struct platform_device spear1340_sata0_device = {
@@ -1965,6 +1986,7 @@ struct platform_device spear1340_sata0_device = {
 	.num_resources = ARRAY_SIZE(sata_resources),
 	.resource = sata_resources,
 	.dev = {
+		.platform_data = &sata_pdata,
 		.dma_mask = &ahci_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
