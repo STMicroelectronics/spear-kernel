@@ -1422,8 +1422,8 @@ struct amba_device spear1340_uart1_device = {
 /* camera interface 0 device registeration */
 static struct camif_config_data cam0_data = {
 	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
 	.pclk_polarity = ACTIVE_LOW,
 	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
