@@ -962,7 +962,7 @@ static void camif_setup_ctrl(struct soc_camera_device *icd,
 	u32 ctrl;
 
 	ctrl = readl(camif->base + CAMIF_CTRL);
-	ctrl |= CTRL_PCK_POL | CTRL_VS_POL | CTRL_HS_POL;
+	ctrl |= CTRL_VS_POL | CTRL_HS_POL;
 
 	if (flags & SOCAM_PCLK_SAMPLE_FALLING)
 		ctrl &= ~CTRL_PCK_POL;
