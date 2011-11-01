@@ -123,6 +123,14 @@ static struct snd_soc_card spear13xx_snd_card = {
 /* SPEAr1340 audio interface glue - connects codec <--> CPU <--> platform */
 static struct snd_soc_dai_link spear1340_evb_dai[] = {
 	{
+		.name		= "spdif-pcm",
+		.stream_name	= "pcm",
+		.cpu_dai_name	= "spdif-out",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "dit-hifi",
+		.codec_name	= "spdif-dit",
+		.ops		= NULL,
+	}, {
 		.name		= "sta529-pcm0",
 		.stream_name	= "pcm",
 		.cpu_dai_name	= "designware-i2s.0",
