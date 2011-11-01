@@ -1816,33 +1816,33 @@ static int vs6725_set_bus_param(struct soc_camera_device *icd,
 	if (flags & SOCAM_PCLK_SAMPLE_RISING)
 		ret = vs6725_reg_write(client,
 				OIF_PCLK_SETUP,
-				PCLK_PROG_POL_HI_INIT_LO);
+				0xFE | PCLK_PROG_POL_HI_INIT_LO);
 	else
 		ret = vs6725_reg_write(client,
 				OIF_PCLK_SETUP,
-				PCLK_PROG_POL_LO_INIT_LO);
+				0xFE | PCLK_PROG_POL_LO_INIT_LO);
 	if (ret)
 		return ret;
 
-	if (flags & SOCAM_HSYNC_ACTIVE_LOW)
+	if (flags & SOCAM_HSYNC_ACTIVE_HIGH)
 		ret = vs6725_reg_write(client,
 				OIF_HSYNC_SETUP,
-				HSYNC_POLARITY_ACTIVE_LO);
+				0x0C | HSYNC_ENABLE | HSYNC_POLARITY_ACTIVE_LO);
 	else
 		ret = vs6725_reg_write(client,
 				OIF_HSYNC_SETUP,
-				VSYNC_POLARITY_ACTIVE_HI);
+				0x0C | HSYNC_ENABLE | HSYNC_POLARITY_ACTIVE_HI);
 	if (ret)
 		return ret;
 
-	if (flags & SOCAM_VSYNC_ACTIVE_LOW)
+	if (flags & SOCAM_VSYNC_ACTIVE_HIGH)
 		ret = vs6725_reg_write(client,
 				OIF_VSYNC_SETUP,
-				VSYNC_POLARITY_ACTIVE_LO);
+				0x0C | VSYNC_ENABLE | VSYNC_POLARITY_ACTIVE_LO);
 	else
 		ret = vs6725_reg_write(client,
 				OIF_VSYNC_SETUP,
-				VSYNC_POLARITY_ACTIVE_HI);
+				0x0C | VSYNC_ENABLE | VSYNC_POLARITY_ACTIVE_HI);
 
 	return ret;
 }
@@ -1857,9 +1857,8 @@ static unsigned long vs6725_query_bus_param(struct soc_camera_device *icd)
 	 * these settings must be passed from platform data somehow
 	 */
 	unsigned long flags = SOCAM_MASTER |
-		SOCAM_PCLK_SAMPLE_RISING | SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_HSYNC_ACTIVE_LOW |
-		SOCAM_VSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_LOW |
+		SOCAM_PCLK_SAMPLE_FALLING |
+		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
 		SOCAM_DATA_ACTIVE_HIGH | SOCAM_DATAWIDTH_8;
 
 	return soc_camera_apply_sensor_flags(icl, flags);
