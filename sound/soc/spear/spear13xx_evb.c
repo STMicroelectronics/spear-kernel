@@ -156,6 +156,9 @@ static struct snd_soc_card spear1340_snd_card = {
 };
 
 static struct platform_device *evb_snd_device;
+#if defined(CONFIG_CPU_SPEAR1340)
+static struct platform_device *spdif_dit_device;
+#endif
 
 static int __init spear13xx_audio_init(void)
 {
@@ -167,6 +170,21 @@ static int __init spear13xx_audio_init(void)
 	else
 		spear_soc_card = &spear13xx_snd_card;
 
+#if defined(CONFIG_CPU_SPEAR1340)
+	if (cpu_is_spear1340()) {
+		/* Create and register spdif platform device */
+		spdif_dit_device = platform_device_alloc("spdif-dit", -1);
+		if (!spdif_dit_device) {
+			printk(KERN_ERR "spdif platform_device_alloc fails\n");
+			return -ENOMEM;
+		}
+		ret = platform_device_add(spdif_dit_device);
+		if (ret) {
+			printk(KERN_ERR "Unable to add platform device\n");
+			platform_device_put(spdif_dit_device);
+		}
+	}
+#endif
 	/* Create and register platform device */
 	evb_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!evb_snd_device) {
