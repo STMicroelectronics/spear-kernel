@@ -372,7 +372,7 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 {
 	struct camif *camif = (struct camif *)dev_id;
 	struct camif_buffer *active;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int status_reg;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
@@ -384,7 +384,7 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
 		spin_lock_irqsave(&camif->lock, flags);
 		camif->frame_start = 1;
-		spin_unlock_irqrestore(&camif->lock, flags);
+		goto exit_isr;
 	}
 
 	if (status_reg & IRQ_STATUS_FRAME_END) {
@@ -396,20 +396,15 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		 * received the frame start interrupt first. Check for the same.
 		 */
 		spin_lock_irqsave(&camif->lock, flags);
-		if (!camif->frame_start) {
-			spin_unlock_irqrestore(&camif->lock, flags);
+		if (!camif->frame_start)
 			goto exit_isr;
-		}
 
 		camif->frame_start = 0;
 
 		/* check if the previous dma is complete */
-		if (!camif->first_entry) {
-			if (!camif->dma_complete) {
-				spin_unlock_irqrestore(&camif->lock, flags);
+		if (!camif->first_entry)
+			if (!camif->dma_complete)
 				goto exit_isr;
-			}
-		}
 
 		camif->first_entry = 0;
 		if (!list_empty(&camif->capture)) {
@@ -421,7 +416,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 				dev_err(camif->ici.v4l2_dev.dev,
 					"dma submit error %d\n",
 					camif->cookie);
-				spin_unlock_irqrestore(&camif->lock, flags);
 				goto exit_isr;
 			}
 
@@ -432,10 +426,11 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 					"cam->capture is NULL\n");
 		}
 
-		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
 exit_isr:
+	spin_unlock_irqrestore(&camif->lock, flags);
+
 	return IRQ_HANDLED;
 }
 
