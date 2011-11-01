@@ -582,7 +582,7 @@ static void ad9889b_setup(struct i2c_client *client)
 	/* Positive clk edge capture for input video clock */
 	ad9889b_wr_and_or(client, 0xba, 0x1f, 0x60);
 
-	ad9889b_wr(client, 0x44, 0x78);
+	ad9889b_wr(client, 0x44, 0xF8);
 	ad9889b_wr_and_or(client, 0x73, 0xf8, 0x01);
 
 	ad9889b_audio_setup(client);
@@ -645,7 +645,7 @@ static int ad9889b_s_power(struct i2c_client *client, u8 on)
 	ad9889b_wr(client, 0xa3, 0x84);
 	/* pixel clock > 80 then 87 otherwise 84 */
 	udelay(10); /* adding udelays between successive writes */
-	ad9889b_wr_and_or(client, 0x0a, 0x9f, 0x00);
+	ad9889b_wr_and_or(client, 0x0a, 0x9f, 0x10);
 	udelay(10); /* adding udelays between successive writes */
 	ad9889b_wr(client, 0x9f, 0x70);
 	/* according to document it shud be 00 for proper operation */
