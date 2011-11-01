@@ -1434,7 +1434,7 @@ static struct camif_config_data cam0_data = {
 static struct dw_dma_slave camif0_dma_param[] = {
 	{
 		/* odd line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.dma_dev = &spear13xx_dmac_device[1].dev,
 		.tx_reg = 0,
 		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
 		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
@@ -1447,7 +1447,7 @@ static struct dw_dma_slave camif0_dma_param[] = {
 		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.dma_dev = &spear13xx_dmac_device[1].dev,
 		.tx_reg = 0,
 		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
 		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
