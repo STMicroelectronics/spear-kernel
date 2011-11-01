@@ -160,7 +160,7 @@ static int __init spear13xx_audio_init(void)
 		spear_soc_card = &spear13xx_snd_card;
 
 	/* Create and register platform device */
-	evb_snd_device = platform_device_alloc("soc-audio", 0);
+	evb_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!evb_snd_device) {
 		printk(KERN_ERR "soc audio platform_device_alloc fails\n");
 		return -ENOMEM;
