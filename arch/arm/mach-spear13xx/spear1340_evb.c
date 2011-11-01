@@ -274,29 +274,49 @@ static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.axis_map_z = 2,
 };
 
-struct i2c_board_info spear1340_evb_i2c_l3g4200d_gyr = {
+static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 	/* gyroscope board info */
 	.type = "l3g4200d_gyr",
 	.addr = 0x69,
 	.platform_data = &l3g4200d_pdata,
 };
 
-struct i2c_board_info spear1340_evb_i2c_eeprom0 = {
+struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr = {
+	.board = &spear1340_evb_i2c_board_l3g4200d_gyr,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_eeprom0 = {
 	.type = "eeprom",
 	.addr = 0x50,
 };
 
-struct i2c_board_info spear1340_evb_i2c_eeprom1 = {
+struct i2c_dev_info spear1340_evb_i2c_eeprom0 = {
+	.board = &spear1340_evb_i2c_board_eeprom0,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_eeprom1 = {
 	.type = "eeprom",
 	.addr = 0x51,
 };
 
-struct i2c_board_info spear1340_evb_i2c_sta529 = {
+struct i2c_dev_info spear1340_evb_i2c_eeprom1 = {
+	.board = &spear1340_evb_i2c_board_eeprom1,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_sta529 = {
 	.type = "sta529",
 	.addr = 0x1a,
 };
 
-static struct i2c_board_info *i2c_board[] __initdata = {
+struct i2c_dev_info spear1340_evb_i2c_sta529 = {
+	.board = &spear1340_evb_i2c_board_sta529,
+	.busnum = 0,
+};
+
+static struct i2c_dev_info *i2c_devs[] __initdata = {
 	&spear1340_evb_i2c_l3g4200d_gyr,
 	&spear1340_evb_i2c_eeprom0,
 	&spear1340_evb_i2c_eeprom1,
@@ -478,8 +498,8 @@ static void __init spear1340_evb_init(void)
 		pb_info.acnt = ARRAY_SIZE(amba_devs);
 		pb_info.spi_devs = spi_board;
 		pb_info.spi_cnt = ARRAY_SIZE(spi_board);
-		pb_info.i2c_devs = i2c_board;
-		pb_info.i2c_cnt = ARRAY_SIZE(i2c_board);
+		pb_info.i2c_devs = i2c_devs;
+		pb_info.i2c_cnt = ARRAY_SIZE(i2c_devs);
 		ret = spear1340_pb_init(&pb_info);
 		if (!ret)
 			return;
@@ -487,8 +507,9 @@ static void __init spear1340_evb_init(void)
 #endif
 
 	/* Register spear1340 evb board specific i2c slave devices */
-	for (i = 0; i < ARRAY_SIZE(i2c_board); i++)
-		i2c_register_board_info(0, i2c_board[i], 1);
+	for (i = 0; i < ARRAY_SIZE(i2c_devs); i++)
+		i2c_register_board_info(i2c_devs[i]->busnum,
+				i2c_devs[i]->board, 1);
 
 	/* Register SPI Board */
 	for (i = 0; i < ARRAY_SIZE(spi_board); i++)
