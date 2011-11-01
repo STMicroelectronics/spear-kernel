@@ -24,6 +24,26 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-subdev.h>
 
+/* resolutons */
+#define UXGA_WIDTH	1600
+#define UXGA_HEIGHT	1200
+#define SXGA_WIDTH	1280
+#define SXGA_HEIGHT	1024
+#define SVGA_WIDTH	800
+#define SVGA_HEIGHT	600
+#define VGA_WIDTH	640
+#define VGA_HEIGHT	480
+#define CIF_WIDTH	352
+#define CIF_HEIGHT	288
+#define QVGA_WIDTH	320
+#define QVGA_HEIGHT	240
+#define QCIF_WIDTH	176
+#define QCIF_HEIGHT	144
+#define QQVGA_WIDTH	160
+#define QQVGA_HEIGHT	120
+#define QQCIF_WIDTH	88
+#define QQCIF_HEIGHT	72
+
 /* vs6725 cropping windows params */
 #define VS6725_MAX_WIDTH		1600
 #define VS6725_MAX_HEIGHT		1200
@@ -2309,51 +2329,21 @@ static int vs6725_g_fmt(struct v4l2_subdev *sd,
 static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	int ret = 0;
+
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
-	struct v4l2_crop a = {
-		.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-		.c = {
-			.left	= priv->rect.left + priv->rect.width -
-					mf->width,
-			.top	= priv->rect.top + priv->rect.height -
-					mf->height,
-			.width	= mf->width,
-			.height	= mf->height,
-		},
-	};
 	enum v4l2_mbus_pixelcode code = mf->code;
 
-	/*
-	 * FIXME: VS6725 specs state that both YCbCr-JFIF and
-	 * YCbCr-Rec601 data formats are supported and in addtion some
-	 * custom modes are also supported for RGB444, RGB565 and YCbCr.
-	 * There is also support for a Bayer data format in Bypass mode.
-	 * Need to clarify details of these formats from the sensor
-	 * designer before adding the support for the same.
-	 *
-	 * Note that later we may need to add colorspace Rec601 in
-	 * addition to JPEG for YCbCr data formats.
-	 *
-	 * Also note that section 3.8.3 of the user manual mentions a
-	 * bYCbCrSetup register which can be used to change the order of
-	 * YCbcr components. However, no such details are present in the
-	 * interface/Hardware register section. Instead there is a
-	 * OPF_YCBCR_SETUP register in the Output Format section which
-	 * mentions the capability to swap Y and Cb, Cr components.
-	 * Treating the details mentioned in section 3.8.3 as correct as
-	 * of now.
-	 */
 	switch (code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 		dev_dbg(&client->dev, "pixel format YUYV8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_JFIF);
+			DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
-			YCBYCR_DATA_SEQUENCE);
+			CBYCRY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
@@ -2361,7 +2351,7 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_JFIF);
+			DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
@@ -2372,10 +2362,10 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_JFIF);
+			DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
-			YCRYCB_DATA_SEQUENCE);
+			CBYCRY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
@@ -2383,10 +2373,10 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_JFIF);
+			DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
-			CRYCBY_DATA_SEQUENCE);
+			CBYCRY_DATA_SEQUENCE);
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
@@ -2420,11 +2410,11 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		 * return.
 		 */
 		dev_err(&client->dev, "Pixel format not handled: 0x%x\n"
-			"Reverting to default YCbCr-JFIF format\n", code);
+			"Reverting to default YVYU8 format\n", code);
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_JFIF);
+			DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
@@ -2432,9 +2422,86 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		break;
 	}
 
+	/* set image size */
 	if (!ret) {
 		priv->code = code;
-		ret = vs6725_s_crop(sd, &a);
+
+		if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_UXGA);
+		else if ((mf->width == SXGA_WIDTH) &&
+				(mf->height == SXGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_SXGA);
+		else if ((mf->width == SVGA_WIDTH) &&
+				(mf->height == SVGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_SVGA);
+		else if ((mf->width == VGA_WIDTH) &&
+				(mf->height == VGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_VGA);
+		else if ((mf->width == CIF_WIDTH) &&
+				(mf->height == CIF_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_CIF);
+		else if ((mf->width == QVGA_WIDTH) &&
+				(mf->height == QVGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_QVGA);
+		else if ((mf->width == QCIF_WIDTH) &&
+				(mf->height == QCIF_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_QCIF);
+		else if ((mf->width == QQVGA_WIDTH) &&
+				(mf->height == QQVGA_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_QQVGA);
+		else if ((mf->width == QQCIF_WIDTH) &&
+				(mf->height == QQCIF_HEIGHT))
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+					IMAGE_SIZE_QQCIF);
+		else {
+			/* manual size */
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_MANUAL);
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+					PIPE0_MANUAL_HS_HI : PIPE1_MANUAL_HS_HI,
+					WRITE_HI_BYTE(mf->width));
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+					PIPE0_MANUAL_HS_LO : PIPE1_MANUAL_HS_LO,
+					WRITE_LO_BYTE(mf->width));
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+					PIPE0_MANUAL_VS_HI : PIPE1_MANUAL_VS_HI,
+					WRITE_HI_BYTE(mf->height));
+			vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+					PIPE0_MANUAL_VS_LO : PIPE1_MANUAL_VS_LO,
+					WRITE_LO_BYTE(mf->height));
+		}
 	}
 
 	if (!ret) {
