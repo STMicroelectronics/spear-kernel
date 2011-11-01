@@ -971,7 +971,11 @@ static struct pmx_mux_reg pmx_spdif_out_mux[] = {
 		.address = SPEAR1340_PAD_FUNCTION_EN_5,
 		.mask = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
 		.value = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
-	},
+	}, {
+		.address = SPEAR1340_PERIP_CFG,
+		.mask = SPEAR1340_SPDIF_OUT_ENB_MASK,
+		.value = SPEAR1340_SPDIF_OUT_ENB_MASK,
+	}
 };
 
 static struct pmx_dev_mode pmx_spdif_out_modes[] = {
