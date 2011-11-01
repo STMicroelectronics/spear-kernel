@@ -22,6 +22,7 @@
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
 #include <plat/gpio.h>
+#include <plat/clock.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -2343,6 +2344,19 @@ void config_clcd_gpio_pads(bool on)
 	config_clcd_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
 }
 
+#ifdef CONFIG_SND_SPEAR_SPDIF_OUT
+static int spdif_out_clk_init(void)
+{
+	int ret;
+
+	ret = clk_set_parent_sys("gen_synth2_clk", NULL, NULL, "vco1div4_clk");
+	if (ret)
+		return ret;
+
+	return clk_set_parent_sys("spdif-out", NULL, "gen_synth2_clk", NULL);
+}
+#endif
+
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
 {
@@ -2355,6 +2369,13 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	ret = spear1340_sys_clk_init();
 	if (ret)
 		pr_err("SPEAr1340: sysclock init failed, err no: %d\n", ret);
+
+#ifdef CONFIG_SND_SPEAR_SPDIF_OUT
+	/* call spdif clock init */
+	ret = spdif_out_clk_init();
+	if (ret)
+		pr_err("SPEAr1340: spdif clock init failed, err no: %d\n", ret);
+#endif
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
