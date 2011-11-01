@@ -1704,7 +1704,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "arasan_cf",			.clk = &cfxd_clk},
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
 	{.dev_id = "mali",			.clk = &mali_clk},
-	{.dev_id = "spdif_out",			.clk = &spdif_out_clk},
+	{.dev_id = "spdif-out",			.clk = &spdif_out_clk},
 	{.dev_id = "spdif_in",			.clk = &spdif_in_clk},
 	{.dev_id = "video_dec",			.clk = &video_dec_clk},
 	{.dev_id = "video_enc",			.clk = &video_enc_clk},
