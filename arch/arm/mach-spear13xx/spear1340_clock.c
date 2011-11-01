@@ -1396,8 +1396,12 @@ static struct pclk_sel gen_synth2_3_pclk_sel = {
 /* GEN rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl gen_rtbl[] = {
 	/* For vco1div4 = 250 MHz */
+	{.div = 0x1624E}, /* 22.5792 MHz */
+	{.div = 0x14585}, /* 24.576 MHz */
 	{.div = 0x14000}, /* 25 MHz */
+	{.div = 0x0B127}, /* 45.1584 MHz */
 	{.div = 0x0A000}, /* 50 MHz */
+	{.div = 0x061A8}, /* 81.92 MHz */
 	{.div = 0x05000}, /* 100 MHz */
 	{.div = 0x02000}, /* 250 MHz */
 };
@@ -1411,7 +1415,7 @@ static struct clk gen_synth0_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth0_config,
 };
 
@@ -1424,7 +1428,7 @@ static struct clk gen_synth1_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth1_config,
 };
 
@@ -1437,7 +1441,7 @@ static struct clk gen_synth2_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth2_config,
 };
 
@@ -1450,7 +1454,7 @@ static struct clk gen_synth3_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth3_config,
 };
 
