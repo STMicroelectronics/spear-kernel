@@ -675,7 +675,7 @@ static void camif_remove_device(struct soc_camera_device *icd)
 		camif->vq = NULL;
 	}
 
-	dev_dbg(icd->dev.parent,
+	dev_info(icd->dev.parent,
 		"SPEAr Camera driver detached from camera %d\n", icd->devnum);
 
 	camif->icd = NULL;
