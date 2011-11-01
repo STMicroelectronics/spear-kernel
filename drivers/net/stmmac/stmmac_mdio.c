@@ -53,15 +53,16 @@ u32 *mac1_bus;
 
 static int stmmac_mdio_busy_wait(unsigned long ioaddr, unsigned int mii_addr)
 {
-	u32 timeout = 100;
+	unsigned long finish = jiffies + 3 * HZ;
 
-	while (((readl(ioaddr + mii_addr)) & MII_BUSY) == 1) {
-		mdelay(1);
-		if (--timeout == 0)
-			return -EBUSY;
-	}
+	do {
+		if (readl(ioaddr + mii_addr) & MII_BUSY)
+			cpu_relax();
+		else
+			return 0;
+	} while (!time_after_eq(jiffies, finish));
 
-	return 0;
+	return -EBUSY;
 }
 
 static int stmmac_get_mac_clk(struct stmmac_priv *priv)
@@ -193,7 +194,6 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 
 	value |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
-	/* Wait 100 ms for existing MII operation is complete */
 	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
 		return -EBUSY;
 
