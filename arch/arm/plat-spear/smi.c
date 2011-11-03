@@ -50,30 +50,6 @@ static struct spear_smi_flash_info nor_flash_info[] = {
 	},
 };
 
-#ifdef CONFIG_CPU_SPEAR1340
-static struct mtd_partition m25p40_partition_info[] = {
-	DEFINE_PARTS("Root File System", 0x0000, 0x80000),
-};
-
-static struct spear_smi_flash_info spear1340_nor_flash_info[] = {
-	{
-		.name = "m25p64",
-		.fast_mode = 1,
-		.mem_base = FLASH_MEM_BASE,
-		.size = 8 * 1024 * 1024,
-		.num_parts = ARRAY_SIZE(m25p64_partition_info),
-		.parts = m25p64_partition_info,
-	}, {
-		.name = "m25p40",
-		.fast_mode = 0,
-		.mem_base = SPEAR13XX_SMI_MEM1_BASE,
-		.size = 512 * 1024,
-		.num_parts = ARRAY_SIZE(m25p40_partition_info),
-		.parts = m25p40_partition_info,
-	},
-};
-#endif
-
 /* smi specific board data */
 static struct spear_smi_plat_data smi_plat_data = {
 	.clk_rate = 50000000,	/* 50MHz */
@@ -83,12 +59,5 @@ static struct spear_smi_plat_data smi_plat_data = {
 
 void smi_init_board_info(struct platform_device *pdev)
 {
-#ifdef CONFIG_CPU_SPEAR1340
-	if (cpu_is_spear1340()) {
-		smi_plat_data.board_flash_info = spear1340_nor_flash_info;
-		smi_plat_data.num_flashes =
-			ARRAY_SIZE(spear1340_nor_flash_info);
-	}
-#endif
 	smi_set_plat_data(pdev, &smi_plat_data);
 }
