@@ -14,11 +14,6 @@
 #ifndef __MACH_GPIO_H
 #define __MACH_GPIO_H
 
-/* spear 13xx have 266 gpio pins */
-#define ARCH_NR_GPIOS		266
-
-#include <plat/gpio.h>
-
 /**
  * In Arch SPEAr13xx, plgpio gpio pins are grouped in number of four for
  * interrupt registers. Every group of four gpio's is represented by one bit
@@ -309,5 +304,10 @@
 #define PLGPIO_248		264
 #define PLGPIO_249		265
 #endif /* CPU_SPEAR1310_REVA, CPU_SPEAR1310, CPU_SPEAR1340 */
+
+/* spear 13xx have 266 gpio pins */
+#define ARCH_NR_GPIOS		(PLGPIO_249 + 1)
+
+#include <plat/gpio.h>
 
 #endif /* __MACH_GPIO_H */
