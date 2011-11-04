@@ -3419,4 +3419,14 @@ config VMXNET3
          To compile this driver as a module, choose M here: the
          module will be called vmxnet3.
 
+config NWHW_CONFIG
+	bool "Configure network hardware from the command line"
+	help
+	  Many network drivers support hardware level configuration via
+	  utilities such as ifconfig, ethtool and mii-tool. However sometimes
+	  these settings need to be adjusted before a file system is
+	  available (typically if the root file system uses NFS).
+	  This option adds a simple kernel command line interface to configure
+	  some common network parameters.
+
 endif # NETDEVICES
