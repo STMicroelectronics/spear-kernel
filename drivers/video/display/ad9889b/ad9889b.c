@@ -307,11 +307,11 @@ static int select_sink_native_format(struct sink_edid_info *edid)
 {
 	int svd_count;
 
-	for (svd_count = 0; svd_count < edid->cea.cea->svd_count; svd_count++) {
-		if (edid->cea.cea->svd[svd_count].native == 1) {
+	for (svd_count = 0; svd_count < edid->cea.cea.svd_count; svd_count++) {
+		if (edid->cea.cea.svd[svd_count].native == 1) {
 			pr_info("Sink supports VID Code:%d as native format\n",
-					edid->cea.cea->svd[svd_count].vid_id);
-			return edid->cea.cea->svd[svd_count].vid_id;
+					edid->cea.cea.svd[svd_count].vid_id);
+			return edid->cea.cea.svd[svd_count].vid_id;
 			/*
 			 * return the VID index of first CEA format
 			 * supported by sink
