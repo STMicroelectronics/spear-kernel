@@ -120,7 +120,7 @@ static void add_svd(struct sink_sv_descriptorlist svd,
 		struct sink_edid_info *e)
 {
 	if (e->svd_count < SVD_MAX) {
-		e->cea.cea->svd[e->svd_count] = svd;
+		e->cea.cea.svd[e->svd_count] = svd;
 		e->svd_count++;
 	}
 }
@@ -130,7 +130,7 @@ static void add_sad(struct sink_sa_descriptorlist sad,
 		struct sink_edid_info *e)
 {
 	if (e->sad_count < SAD_MAX) {
-		e->cea.cea->sad[e->sad_count] = sad;
+		e->cea.cea.sad[e->sad_count] = sad;
 		e->sad_count++;
 	}
 }
@@ -182,8 +182,8 @@ static void delete_svds(struct sink_edid_info *e)
 	int i;
 
 	for (i = 0; i < SVD_MAX; i++) {
-		e->cea.cea->svd[i].native = 0;
-		e->cea.cea->svd[i].vid_id = 0;
+		e->cea.cea.svd[i].native = 0;
+		e->cea.cea.svd[i].vid_id = 0;
 	}
 }
 
@@ -193,24 +193,24 @@ static void delete_sads(struct sink_edid_info *e)
 	int i;
 
 	for (i = 0; i < SAD_MAX; i++) {
-		e->cea.cea->sad[i].aud_format = 0;
-		e->cea.cea->sad[i].max_num_chan = 0;
-		e->cea.cea->sad[i].rsvd1 = 0;
-		e->cea.cea->sad[i].rsvd2 = 0;
-		e->cea.cea->sad[i].khz_192 = 0;
-		e->cea.cea->sad[i].khz_176 = 0;
-		e->cea.cea->sad[i].khz_96 = 0;
-		e->cea.cea->sad[i].khz_88 = 0;
-		e->cea.cea->sad[i].khz_48 = 0;
-		e->cea.cea->sad[i].khz_44 = 0;
-		e->cea.cea->sad[i].khz_32 = 0;
-		e->cea.cea->sad[i].unc_rsrvd = 0;
-		e->cea.cea->sad[i].unc_24bit = 0;
-		e->cea.cea->sad[i].unc_20bit = 0;
-		e->cea.cea->sad[i].unc_16bit = 0;
-		e->cea.cea->sad[i].comp_maxbitrate = 0;
-		e->cea.cea->sad[i].sample_sizes = 0;
-		e->cea.cea->sad[i].sample_rates = 0;
+		e->cea.cea.sad[i].aud_format = 0;
+		e->cea.cea.sad[i].max_num_chan = 0;
+		e->cea.cea.sad[i].rsvd1 = 0;
+		e->cea.cea.sad[i].rsvd2 = 0;
+		e->cea.cea.sad[i].khz_192 = 0;
+		e->cea.cea.sad[i].khz_176 = 0;
+		e->cea.cea.sad[i].khz_96 = 0;
+		e->cea.cea.sad[i].khz_88 = 0;
+		e->cea.cea.sad[i].khz_48 = 0;
+		e->cea.cea.sad[i].khz_44 = 0;
+		e->cea.cea.sad[i].khz_32 = 0;
+		e->cea.cea.sad[i].unc_rsrvd = 0;
+		e->cea.cea.sad[i].unc_24bit = 0;
+		e->cea.cea.sad[i].unc_20bit = 0;
+		e->cea.cea.sad[i].unc_16bit = 0;
+		e->cea.cea.sad[i].comp_maxbitrate = 0;
+		e->cea.cea.sad[i].sample_sizes = 0;
+		e->cea.cea.sad[i].sample_rates = 0;
 	}
 }
 
@@ -522,23 +522,23 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 				svd.vid_id = get_bits(d[k], 6, 0);
 				svd.native = get_bits(d[k], 7, 7);
 				add_svd(svd, e);
-				e->cea.cea->svd_count++;
+				e->cea.cea.svd_count++;
 			}
 		} else if (tag == 3) {
 			pr_info("Vendor Specific Data Block\n");
 			/*lsb */
-			e->cea.cea->ieee_reg[1] = (u16)((d[j+1])
+			e->cea.cea.ieee_reg[1] = (u16)((d[j+1])
 					| (d[j+2] << 8));
 			/*msb */
-			e->cea.cea->ieee_reg[0] = (u16)(d[j+3]);
-			e->cea.cea->hdmi_addr_a = get_bits(d[j+4], 7, 4);
-			e->cea.cea->hdmi_addr_b = get_bits(d[j+4], 3, 0);
-			e->cea.cea->hdmi_addr_c = get_bits(d[j+5], 7, 4);
-			e->cea.cea->hdmi_addr_d = get_bits(d[j+5], 3, 0);
+			e->cea.cea.ieee_reg[0] = (u16)(d[j+3]);
+			e->cea.cea.hdmi_addr_a = get_bits(d[j+4], 7, 4);
+			e->cea.cea.hdmi_addr_b = get_bits(d[j+4], 3, 0);
+			e->cea.cea.hdmi_addr_c = get_bits(d[j+5], 7, 4);
+			e->cea.cea.hdmi_addr_d = get_bits(d[j+5], 3, 0);
 			if (get_bits(d[j], 4, 0) >= 6) {
-				e->cea.cea->supports_ai
+				e->cea.cea.supports_ai
 					= get_bits(d[j+6], 1, 1);
-				e->cea.cea->vsdb_ext[0]
+				e->cea.cea.vsdb_ext[0]
 					= get_bits(d[j+6], 6, 0);
 #if 0
 				while ((k < (get_bits(d[j], 4, 0)-5))
@@ -547,18 +547,18 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 #endif
 
 			}
-			if ((e->cea.cea->ieee_reg[1] == 0x0C03)
-					|| (e->cea.cea->ieee_reg[0] == 0x00))
-				e->cea.cea->vsdb_hdmi = TRUE;
+			if ((e->cea.cea.ieee_reg[1] == 0x0C03)
+					|| (e->cea.cea.ieee_reg[0] == 0x00))
+				e->cea.cea.vsdb_hdmi = TRUE;
 		} else if (tag == 4) {
 			pr_info("Speaker Allocation Block\n");
-			e->cea.cea->spad->rlc_rrc = get_bits(d[j+1], 6, 6);
-			e->cea.cea->spad->flc_frc = get_bits(d[j+1], 5, 5);
-			e->cea.cea->spad->rc = get_bits(d[j+1], 4, 4);
-			e->cea.cea->spad->rl_rr = get_bits(d[j+1], 3, 3);
-			e->cea.cea->spad->fc = get_bits(d[j+1], 2, 2);
-			e->cea.cea->spad->lfe = get_bits(d[j+1], 1, 1);
-			e->cea.cea->spad->fl_fr = get_bits(d[j+1], 0, 0);
+			e->cea.cea.spad.rlc_rrc = get_bits(d[j+1], 6, 6);
+			e->cea.cea.spad.flc_frc = get_bits(d[j+1], 5, 5);
+			e->cea.cea.spad.rc = get_bits(d[j+1], 4, 4);
+			e->cea.cea.spad.rl_rr = get_bits(d[j+1], 3, 3);
+			e->cea.cea.spad.fc = get_bits(d[j+1], 2, 2);
+			e->cea.cea.spad.lfe = get_bits(d[j+1], 1, 1);
+			e->cea.cea.spad.fl_fr = get_bits(d[j+1], 0, 0);
 			/*e->cea->cea->spad-> */
 		} else if ((tag == 0) || (tag == 5) || (tag == 6) || (tag == 7))
 			pr_info("Reserved\n");
@@ -789,7 +789,7 @@ static void init_cea_data_block(struct sink_cea_data_block *cea)
 {
 	int i;
 
-	init_spad_payload(cea->spad);
+	init_spad_payload(&cea->spad);
 	cea->ieee_reg[0] = 0;
 	cea->ieee_reg[1] = 0;
 	cea->vsdb_hdmi = FALSE;
@@ -813,7 +813,7 @@ static void init_cea_timing_extension(struct sink_cea_timing_extension *cea)
 	cea->YCC444 = FALSE;
 	cea->YCC422 = FALSE;
 	cea->native_formats = 0;
-	init_cea_data_block(cea->cea);
+	init_cea_data_block(&cea->cea);
 	cea->checksum = 0;
 }
 

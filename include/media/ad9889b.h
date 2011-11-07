@@ -250,7 +250,7 @@ struct sink_spad_payload {
 struct sink_cea_data_block {
 	struct sink_sv_descriptorlist svd[SVD_MAX];
 	struct sink_sa_descriptorlist sad[SAD_MAX];
-	struct sink_spad_payload *spad;
+	struct sink_spad_payload spad;
 	unsigned short ieee_reg[2];
 	int vsdb_hdmi;
 	char *vsdb_payload;
@@ -270,7 +270,7 @@ struct sink_cea_timing_extension {
 	int YCC444;
 	int YCC422;
 	int native_formats;
-	struct sink_cea_data_block *cea;
+	struct sink_cea_data_block cea;
 	int checksum;
 };
 
