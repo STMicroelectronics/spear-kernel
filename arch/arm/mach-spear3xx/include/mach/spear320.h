@@ -102,6 +102,10 @@
 	#define SDHCI_PCLK_MASK				0x1
 	#define SDHCI_PCLK_VAL_48M			0x0
 	#define SDHCI_PCLK_VAL_SYNTH3			0x1
+	#define I2S_REF_PCLK_SHIFT			8
+	#define I2S_REF_PCLK_MASK			0x1
+	#define I2S_REF_PCLK_SYNTH_VAL			0x1
+	#define I2S_REF_PCLK_PLL2_VAL			0x0
 	#define UART1_2_PCLK_SHIFT			6
 	#define UART1_2_PCLK_MASK			0x1
 	#define SPEAR320_UARTX_PCLK_VAL_SYNTH1		0x0

@@ -191,6 +191,7 @@ static struct aux_clk_config uart_synth_config = {
 /* aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
+	{.xscale = 2, .yscale = 27, .eq = 0}, /* 12.296 MHz */
 	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
 	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
@@ -204,7 +205,7 @@ static struct clk uart_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
 	.private_data = &uart_synth_config,
 };
 
@@ -250,7 +251,7 @@ static struct clk firda_synth_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 2},
 	.private_data = &firda_synth_config,
 };
 
@@ -1005,6 +1006,46 @@ static struct clk spear320s_rs485_clk = {
 	.pclk_sel_shift = SPEAR320S_RS485_PCLK_SHIFT,
 	.recalc = &follow_parent,
 };
+
+/* i2s clock */
+static struct clk spear320s_i2s_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
+static struct pclk_info i2s_ref_pclk_info[] = {
+	{
+		.pclk = &ras_synth2_clk,
+		.pclk_val = I2S_REF_PCLK_SYNTH_VAL,
+	}, {
+		.pclk = &pll2_clk,
+		.pclk_val = I2S_REF_PCLK_PLL2_VAL,
+	},
+};
+
+static struct pclk_sel i2s_ref_pclk_sel = {
+	.pclk_info = i2s_ref_pclk_info,
+	.pclk_count = ARRAY_SIZE(i2s_ref_pclk_info),
+	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
+	.pclk_sel_mask = I2S_REF_PCLK_MASK,
+};
+
+/* i2s ref clock */
+static struct clk spear320s_i2s_ref_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &i2s_ref_pclk_sel,
+	.pclk_sel_shift = I2S_REF_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+/* i2s sclk clock */
+static struct clk spear320s_i2s_sclk_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &spear320s_i2s_ref_clk,
+	.div_factor = 4,
+	.recalc = &follow_parent,
+};
 #endif
 
 /* clk structures common to several machines */
@@ -1140,6 +1181,9 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
 
 	/* Extended mode clocks */
+	{ .dev_id = "designware-i2s",	.clk = &spear320s_i2s_clk},
+	{ .con_id = "i2s_ref_clk",	.clk = &spear320s_i2s_ref_clk},
+	{ .con_id = "i2s_sclk_clk",	.clk = &spear320s_i2s_sclk_clk},
 	{ .dev_id = "uart2",		.clk = &spear320s_uart2_clk},
 	{ .dev_id = "uart3",		.clk = &spear320s_uart3_clk},
 	{ .dev_id = "uart4",		.clk = &spear320s_uart4_clk},
