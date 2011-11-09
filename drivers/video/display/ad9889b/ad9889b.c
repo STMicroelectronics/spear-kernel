@@ -50,98 +50,109 @@
 #define I2C_WRITE_TRIES		10
 #define I2C_READ_TRIES		10
 
-static struct fb_videomode cea_std_formats[] = {
-	/* 640x480p@60Hz */
-	{.name = NULL, .refresh = 60, .xres = 640, .yres = 480,
-		.pixclock = 39682, .left_margin = 48, .right_margin = 16,
-		.upper_margin = 33, .lower_margin = 10, .hsync_len = 96,
-		.vsync_len = 2},
-	/* 720x480p@60Hz-4:3 */
-	{.name = NULL, .refresh = 60, .xres = 720, .yres = 480,
-		.pixclock = 37000, .left_margin = 60, .right_margin = 16,
-		.upper_margin = 30, .lower_margin = 9, .hsync_len = 62,
-		.vsync_len = 26},
-	/* 720x480p@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 720, .yres = 480,
-		.pixclock = 37000, .left_margin = 60, .right_margin = 16,
-		.upper_margin = 30, .lower_margin = 9, .hsync_len = 62,
-		.vsync_len = 6},
-	/* 1280x720p@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1280, .yres = 720,
-		.pixclock = 13468, .left_margin = 220, .right_margin = 110,
-		.upper_margin = 20, .lower_margin = 5, .hsync_len = 40,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080p@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 1080,
-		.pixclock = 6743, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 36, .lower_margin = 4, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	/* 1920x1080i@60Hz-16:9 */
-	{.name = NULL, .refresh = 60, .xres = 1920, .yres = 540,
-		.pixclock = 13468, .left_margin = 148, .right_margin = 88,
-		.upper_margin = 15, .lower_margin = 2, .hsync_len = 44,
-		.vsync_len = 5},
-	{NULL}
+/*
+ * TODO
+ * Since , following structures are part of standard, so must be defined
+ * in a common file, accesible to all video device.
+ */
+
+/* 640x480p@60Hz */
+static struct fb_videomode cea_video_code_1 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 640,
+	.yres = 480,
+	.pixclock = 39682,
+	.left_margin = 48,
+	.right_margin = 16,
+	.upper_margin = 33,
+	.lower_margin = 10,
+	.hsync_len = 96,
+	.vsync_len = 2
+};
+
+/* 720x480p@60Hz-4:3 */
+static struct fb_videomode cea_video_code_2 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 720,
+	.yres = 480,
+	.pixclock = 37000,
+	.left_margin = 60,
+	.right_margin = 16,
+	.upper_margin = 30,
+	.lower_margin = 9,
+	.hsync_len = 62,
+	.vsync_len = 26
+};
+
+/* 720x480p@60Hz-16:9 */
+static struct fb_videomode cea_video_code_3 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 720,
+	.yres = 480,
+	.pixclock = 37000,
+	.left_margin = 60,
+	.right_margin = 16,
+	.upper_margin = 30,
+	.lower_margin = 9,
+	.hsync_len = 62,
+	.vsync_len = 6
+};
+
+/* 1280x720p@60Hz-16:9 */
+static struct fb_videomode cea_video_code_4 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 1280,
+	.yres = 720,
+	.pixclock = 13468,
+	.left_margin = 220,
+	.right_margin = 110,
+	.upper_margin = 20,
+	.lower_margin = 5,
+	.hsync_len = 40,
+	.vsync_len = 5
+};
+
+/* 1920x1080i@60Hz-16:9 */
+static struct fb_videomode cea_video_code_5 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 1920,
+	.yres = 540,
+	.pixclock = 13468,
+	.left_margin = 148,
+	.right_margin = 88,
+	.upper_margin = 15,
+	.lower_margin = 2,
+	.hsync_len = 44,
+	.vsync_len = 5
+};
+
+/* 1920x1080p@25Hz-16:9 */
+static struct fb_videomode cea_video_code_33 = {
+	.name = NULL,
+	.refresh = 60,
+	.xres = 1920,
+	.yres = 1080,
+	.pixclock = 6734,
+	.left_margin = 148,
+	.right_margin = 88,
+	.upper_margin = 36,
+	.lower_margin = 4,
+	.hsync_len = 44,
+	.vsync_len = 5
+};
+
+static struct fb_videomode *cea_std_formats[] = {
+	[0] = &cea_video_code_1,
+	[1] = &cea_video_code_2,
+	[2] = &cea_video_code_3,
+	[3] = &cea_video_code_4,
+	[4] = &cea_video_code_5,
+	[32] = &cea_video_code_33,
 };
 
 /* AD9889B edid status */
@@ -374,10 +385,9 @@ static u8 ad9889b_check_edid_status(struct ad9889b_state *state)
 			state->edid.edid_read_incomplete = 0;
 			display_sink_edid(&state->edid_info);
 			vid_id = select_sink_native_format(&state->edid_info);
-			if (vid_id == 4 || vid_id == 5 || vid_id == 2
-					|| vid_id == 16) {
+			if (cea_std_formats[vid_id - 1]) {
 				fb_videomode_to_var(&screen,
-						&cea_std_formats[vid_id - 1]);
+						cea_std_formats[vid_id - 1]);
 				screen.bits_per_pixel = 32; /* TODO */
 				if (registered_fb[pdata->fb])
 					fb_set_var(registered_fb[pdata->fb],
