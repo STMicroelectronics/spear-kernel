@@ -329,11 +329,12 @@ spear_cec_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct cec_dev *cdev = get_cec_priv_data(file->private_data);
 	unsigned long flags;
+	int ret = 0;
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->state) {
-		spin_unlock_irqrestore(&cdev->lock, flags);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto err_ioctl;
 	}
 
 	switch (cmd) {
@@ -341,10 +342,12 @@ spear_cec_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		spear_cec_set_addr(cdev, arg);
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 	}
 
-	return 0;
+err_ioctl:
+	spin_unlock_irqrestore(&cdev->lock, flags);
+	return ret;
 }
 
 static const struct file_operations cec_fops = {
