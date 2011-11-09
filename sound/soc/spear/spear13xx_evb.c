@@ -124,7 +124,7 @@ static struct snd_soc_card spear13xx_snd_card = {
 static struct snd_soc_dai_link spear1340_evb_dai[] = {
 	{
 		.name		= "spdif-pcm",
-		.stream_name	= "pcm",
+		.stream_name	= "SPDIF Playback",
 		.cpu_dai_name	= "spdif-out",
 		.platform_name	= "spear-pcm-audio",
 		.codec_dai_name	= "dit-hifi",
@@ -132,7 +132,7 @@ static struct snd_soc_dai_link spear1340_evb_dai[] = {
 		.ops		= NULL,
 	}, {
 		.name		= "sta529-pcm0",
-		.stream_name	= "pcm",
+		.stream_name	= "I2S Playback",
 		.cpu_dai_name	= "designware-i2s.0",
 		.platform_name	= "spear-pcm-audio",
 		.codec_dai_name	= "sta529-audio",
@@ -140,7 +140,7 @@ static struct snd_soc_dai_link spear1340_evb_dai[] = {
 		.ops		= &sta529_ops,
 	}, {
 		.name		= "sta529-pcm1",
-		.stream_name	= "pcm",
+		.stream_name	= "I2S Capture",
 		.cpu_dai_name	= "designware-i2s.1",
 		.platform_name	= "spear-pcm-audio",
 		.codec_dai_name	= "sta529-audio",
