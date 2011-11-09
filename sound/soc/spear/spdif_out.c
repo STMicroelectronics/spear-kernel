@@ -163,7 +163,9 @@ static struct snd_soc_dai_ops spdif_out_dai_ops = {
 	.hw_params	= spdif_out_hw_params,
 };
 
-#define SPDIF_OUT_RATES		SNDRV_PCM_RATE_8000_192000
+#define SPDIF_OUT_RATES		(SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 | \
+				 SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 | \
+				 SNDRV_PCM_RATE_192000)
 #define SPDIF_OUT_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
 
 struct snd_soc_dai_driver spdif_out_dai = {
