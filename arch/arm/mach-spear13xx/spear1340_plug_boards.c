@@ -347,6 +347,7 @@ static struct ad9889b_pdata ad9889b_platdata = {
 	.irq_gpio = STMPE801_GPIO_7,
 	.irq_type = IRQF_DISABLED | IRQF_SHARED | IRQF_TRIGGER_FALLING,
 	.fb = 0,
+	.ain = HDMI_AUDIO_IN_SPDIF,
 };
 
 static struct i2c_board_info spear1340_pb_i2c_board_hdmi_tx = {
