@@ -565,7 +565,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 /*
- * fsmc_correct_data
+ * fsmc_bch8_correct_data
  * @mtd:	mtd info structure
  * @dat:	buffer of read data
  * @read_ecc:	ecc read from device spare area
@@ -574,7 +574,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
  * calc_ecc is a 104 bit information containing maximum of 8 error
  * offset informations of 13 bits each in 512 bytes of read data.
  */
-static int fsmc_correct_data(struct mtd_info *mtd, uint8_t *dat,
+static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 			     uint8_t *read_ecc, uint8_t *calc_ecc)
 {
 	struct fsmc_nand_data *host = container_of(mtd,
@@ -609,7 +609,7 @@ static int fsmc_correct_data(struct mtd_info *mtd, uint8_t *dat,
 
 	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
 
-	if (num_err == 0xF)
+	if (num_err > 8)
 		return -EBADMSG;
 
 	i = 0;
@@ -758,7 +758,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
 		nand->ecc.calculate = fsmc_read_hwecc_ecc4;
-		nand->ecc.correct = fsmc_correct_data;
+		nand->ecc.correct = fsmc_bch8_correct_data;
 		nand->ecc.bytes = 13;
 	} else {
 		nand->ecc.calculate = fsmc_read_hwecc_ecc1;
