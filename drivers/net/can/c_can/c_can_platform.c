@@ -34,6 +34,7 @@
 #include <linux/clk.h>
 
 #include <linux/can/dev.h>
+#include <linux/can/platform/c_can.h>
 
 #include "c_can.h"
 
@@ -118,10 +119,20 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	void __iomem *addr;
 	struct net_device *dev;
 	struct c_can_priv *priv;
+	struct c_can_platform_data *pdata;
 	struct resource *mem, *irq;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
+#endif
 
+	/* must have platform data */
+	if (!pdev || !pdev->dev.platform_data) {
+		dev_err(&pdev->dev, "missing platform data\n");
+		ret = -ENODEV;
+		goto exit;
+	}
+
+#ifdef CONFIG_HAVE_CLK
 	/* get the appropriate clk */
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
@@ -130,8 +141,6 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit;
 	}
 #endif
-
-	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!mem || (irq <= 0)) {
@@ -168,6 +177,10 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	priv->can.clock.freq = clk_get_rate(clk);
 	priv->priv = clk;
 #endif
+
+	/* get the soc-id from the platform data */
+	pdata = pdev->dev.platform_data;
+	priv->is_quirk_required = pdata->is_quirk_required;
 
 	switch (mem->flags & IORESOURCE_MEM_TYPE_MASK) {
 	case IORESOURCE_MEM_32BIT:
