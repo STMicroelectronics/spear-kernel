@@ -379,14 +379,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 	if (!status_reg)
 		return IRQ_NONE;
 
-	if (status_reg & IRQ_STATUS_FRAME_START) {
-		/* perform a dummy write to clear frame-start interrupt */
-		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
-		spin_lock_irqsave(&camif->lock, flags);
-		camif->frame_start = 1;
-		goto exit_isr;
-	}
-
 	if (status_reg & IRQ_STATUS_FRAME_END) {
 		/* perform a dummy write to clear frame-end interrupt */
 		writel(IRQ_STATUS_FRAME_END, camif->base + CAMIF_STATUS);
@@ -396,17 +388,18 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		 * received the frame start interrupt first. Check for the same.
 		 */
 		spin_lock_irqsave(&camif->lock, flags);
-		if (!camif->frame_start)
-			goto exit_isr;
-
-		camif->frame_start = 0;
+		if (!camif->frame_start) {
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto check_for_start_int;
+		}
 
 		/* check if the previous dma is complete */
 		if (!camif->first_entry)
-			if (!camif->dma_complete)
+			if (!camif->dma_complete) {
+				spin_unlock_irqrestore(&camif->lock, flags);
 				goto exit_isr;
+			}
 
-		camif->first_entry = 0;
 		if (!list_empty(&camif->capture)) {
 			camif->active = list_first_entry(&camif->capture,
 					 struct camif_buffer, vb.queue);
@@ -416,21 +409,34 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 				dev_err(camif->ici.v4l2_dev.dev,
 					"dma submit error %d\n",
 					camif->cookie);
+				spin_unlock_irqrestore(&camif->lock, flags);
 				goto exit_isr;
 			}
 
 			camif->chan->device->device_issue_pending(camif->chan);
 			camif->dma_complete = 0;
+			camif->frame_start = 0;
+			camif->first_entry = 0;
+			spin_unlock_irqrestore(&camif->lock, flags);
 		} else {
+			/* we have no valid captured frame */
 			dev_err(camif->ici.v4l2_dev.dev,
 					"cam->capture is NULL\n");
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto exit_isr;
 		}
+	}
 
+check_for_start_int:
+	if (status_reg & IRQ_STATUS_FRAME_START) {
+		/* perform a dummy write to clear frame-start interrupt */
+		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
+		spin_lock_irqsave(&camif->lock, flags);
+		camif->frame_start = 1;
+		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
 exit_isr:
-	spin_unlock_irqrestore(&camif->lock, flags);
-
 	return IRQ_HANDLED;
 }
 
