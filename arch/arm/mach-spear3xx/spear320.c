@@ -14,6 +14,7 @@
 #include <linux/amba/pl022.h>
 #include <linux/amba/pl08x.h>
 #include <linux/amba/serial.h>
+#include <linux/can/platform/c_can.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
@@ -607,6 +608,13 @@ static int get_soc_id(void)
 	return soc_id;
 }
 
+static void c_can_enable_bugfix(struct platform_device *c_can, int soc_id)
+{
+	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
+
+	pdata->is_quirk_required = !soc_id ? 1 : 0;
+}
+
 /* Add spear320 specific devices here */
 /* CLCD device registration */
 struct amba_device spear320_clcd_device = {
@@ -901,6 +909,8 @@ struct amba_device spear320_uart2_device = {
 };
 
 /* CAN device registeration */
+static struct c_can_platform_data c_can_pdata;
+
 static struct resource can0_resources[] = {
 	{
 		.start = SPEAR320_CAN0_BASE,
@@ -917,6 +927,7 @@ struct platform_device spear320_can0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
 	.resource = can0_resources,
+	.dev.platform_data = &c_can_pdata,
 };
 
 static struct resource can1_resources[] = {
@@ -935,6 +946,7 @@ struct platform_device spear320_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+	.dev.platform_data = &c_can_pdata,
 };
 
 /* emi nor flash device registeration */
@@ -1305,6 +1317,7 @@ void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
 {
 	int ret = 0;
+	int soc_id;
 
 	/* call spear3xx family common init function */
 	spear3xx_init();
@@ -1336,4 +1349,11 @@ void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	/* Set DMAC platform data's slave info */
 	pl080_set_slaveinfo(&spear3xx_dma_device, pl080_slave_channels,
 			ARRAY_SIZE(pl080_slave_channels));
+
+	/* retreive soc-id */
+	soc_id = get_soc_id();
+
+	/* determine if bug-fix is required for CAN controllers */
+	c_can_enable_bugfix(&spear320_can0_device, soc_id);
+	c_can_enable_bugfix(&spear320_can1_device, soc_id);
 }
