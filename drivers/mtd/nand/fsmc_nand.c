@@ -296,6 +296,18 @@ static struct mtd_partition partition_info_128KB_blk[] = {
 	PARTITION("Root File System", 0x800000, 0),
 };
 
+/*
+ * Default partition layout for large page(> 512 bytes) devices with
+ * erase block size equal to 1024KB.
+ * Size for "Root file system" is updated in driver based on actual device size
+ */
+static struct mtd_partition partition_info_1024KB_blk[] = {
+	PARTITION("X-loader", 0, 4 * 0x100000),
+	PARTITION("U-Boot", 0x400000, 2 * 0x100000),
+	PARTITION("Kernel", 0x600000, 4 * 0x100000),
+	PARTITION("Root File System", 0xA00000, 0),
+};
+
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 const char *part_probes[] = { "cmdlinepart", NULL };
 #endif
@@ -905,10 +917,23 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			case 0x10000000:
 			case 0x20000000:
 			case 0x40000000:
-				host->partitions = partition_info_128KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_128KB_blk) /
-					sizeof(struct mtd_partition);
+			case 0x80000000:
+				switch (host->mtd.erasesize) {
+				case 0x100000:
+					host->partitions = partition_info_1024KB_blk;
+					host->nr_partitions =
+						sizeof(partition_info_1024KB_blk) /
+						sizeof(struct mtd_partition);
+					break;
+				case 0x20000:
+					host->partitions = partition_info_128KB_blk;
+					host->nr_partitions =
+						sizeof(partition_info_128KB_blk) /
+						sizeof(struct mtd_partition);
+					break;
+				default:
+					break;
+				}
 				break;
 			default:
 				ret = -ENXIO;
