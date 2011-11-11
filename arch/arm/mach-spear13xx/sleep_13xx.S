@@ -124,6 +124,25 @@ wait_till_srefresh_on_r0:
 	tst	r0, #0x2000
 	beq	wait_till_srefresh_on_r0
 
+#ifdef GPIO_DDR_ISOLATE
+	/* enable gpio clock */
+	ldr	r0, [r6, #0x274]
+	orr	r0, r0, #0x00800000
+	str	r0, [r6, #0x274]
+
+	ldr	r6, =GPIO_START_PA
+	/* Set the Direction of GPIO-2 as output */
+	ldr	r0, [r6, #0x400]
+	orr	r0, r0, #0xc
+	str	r0, [r6, #0x400]
+
+	/* Set the value of GPIO-2/3 */
+	ldr	r0, [r6, #0x3fc]
+	orr	r0, r0, #0xc
+	str	r0, [r6, #0x3fc]
+	ldr	r6, =MISC_BASE_PA
+#endif
+
 #ifdef MPMC_RESET
 	ldr	r7, =MPMC_BASE_PA
 	/* Stop the MPMC controller */
@@ -181,28 +200,6 @@ swoff_pll:
 	/* Clear pll_enable bit(2) of PLL1_CTR register in Misc registers */
 	bic	r0, r0, #0x04
 	str	r0, [r6, r1]
-	/* Change the source clock to pll-1 */
-	ldr	r0, [r6, #0x244]
-	bic	r0, r0, #0x0400
-	str	r0, [r6, #0x244]
-#endif
-#ifdef GPIO_DDR_ISOLATE
-	/* enable gpio clock */
-	ldr	r0, [r6, #0x274]
-	orr	r0, r0, #0x00800000
-	str	r0, [r6, #0x274]
-
-	ldr	r6, =GPIO_START_PA
-	/* Set the Direction of GPIO-2 as output */
-	ldr	r0, [r6, #0x400]
-	orr	r0, r0, #0xc
-	str	r0, [r6, #0x400]
-
-	/* Set the value of GPIO-2/3 */
-	ldr	r0, [r6, #0x3fc]
-	orr	r0, r0, #0x4
-	str	r0, [r6, #0x3fc]
-
 #endif
 #ifdef PWRDOMAINS_ON
 	cmp	r11, #0x1
@@ -286,11 +283,6 @@ pll_lock_4:
 	/* Wait for pll lock status */
 	cmp	r5, #0x1
 	bne	pll_lock_4
-
-	/* Switch the pll source back to pll-4 */
-	ldr	r0, [r6, #0x244]
-	orr	r0, r0, #0x0400
-	str	r0, [r6, #0x244]
 #endif
 
 	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
@@ -365,6 +357,7 @@ ddf:
 	add	r0, r0, #4
 	cmp	r0, #0x320
 	bne	mpmc_restore_regs
+
 	/* Enable MPMC */
 	ldr	r1, [r7, #0x2c]
 	orr	r1, r1, #0x1000000
@@ -378,19 +371,30 @@ ddf:
 	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 #ifdef GPIO_DDR_ISOLATE
+	/* Disable MPMC reset */
+	ldr	r6, =MISC_BASE_PA
+	mov	r0, #0
+	str	r0, [r6, #0x280]
+
 	ldr	r7, =GPIO_START_PA
 	/* Set the Direction of GPIO-2 as output */
 	ldr	r0, [r7, #0x400]
 	orr	r0, r0, #0xc
 	str	r0, [r7, #0x400]
 
-	/* Set the value of GPIO-2 */
+	/* Set the value of GPIO-2 DDR CLKEN*/
 	ldr	r0, [r7, #0x3fc]
-	bic	r0, r0, #0x4
+	bic	r0, r0, #0x7
 	str	r0, [r7, #0x3fc]
+
+	mov	r0, #0
+ddr_out_srefresh:
+	/* Add some delay */
+	add	r0, r0, #0x1
+	cmp	r0, #0x60000
+	bne	ddr_out_srefresh
 #endif
 	/* Move the DDR out of self refresh mode */
-	ldr	r6, =MISC_BASE_PA
 	ldr	r7, =MPMC_BASE_PA
 	ldr	r8, =SPEAR_SRAM_STACK_PA
 
@@ -409,6 +413,7 @@ ddf:
 	bic	r0, r0, #0x4
 	str	r0, [r6, #0x334]
 	str	r1, [r7, #0x2c]
+
 wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x334]
 	tst	r0, #0x2000
