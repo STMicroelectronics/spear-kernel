@@ -3267,6 +3267,11 @@ unsigned int c3_SHA256_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
+
 	if (!input_len) {
 		printk(C3_KERN_INFO "zero len data not supported\n");
 		return C3_SKIP;
