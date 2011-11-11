@@ -978,7 +978,7 @@ static struct regval_list vs6725_patch1[] = {
 	/* reset the MCU */
 	{0xffff, 0x00},
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list vs6725_patch2[] = {
@@ -1158,7 +1158,7 @@ static struct regval_list vs6725_patch2[] = {
 	{0xc3b8, 0x0D},	/* VTIMING ANALOG_BTL_LEVEL_SETUP */
 
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_non_gui[] = {
@@ -1193,7 +1193,7 @@ static struct regval_list default_non_gui[] = {
 	{0x0335, 0x80},	/* ArcticGaussianWeightControl fpHighThresh(20) {LSB} */
 
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_streaming[] = {
@@ -1201,7 +1201,7 @@ static struct regval_list default_streaming[] = {
 	{0x00b6, 30},	/* bUserMaximumFrameRate_Hz */
 
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_color[] = {
@@ -1220,7 +1220,7 @@ static struct regval_list default_color[] = {
 	/* Set Brightness */
 	{0x0062, 105},
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_exposure_ctrl[] = {
@@ -1231,20 +1231,20 @@ static struct regval_list default_exposure_ctrl[] = {
 	{0x00f1, 0x00},	/* ExposureControls bMetering {ExposureMetering_flat} */
 	{0x00f8, 0xFF},	/* ExposureControls iExposureCompensation */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_sharpness[] = {
 	{0x0297, 40},	/* bUserPeakLoThresh */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_orientation[] = {
 	{0x0063, 0},	/* fHorizontalMirror */
 	{0x0064, 0},	/* fVerticalFlip */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_analog_binnining_off[] = {
@@ -1263,7 +1263,7 @@ static struct regval_list default_before_analog_binnining_off[] = {
 	/* Magnification factor */
 	{0x21, 0x0}, {0x22, 0x1},
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_analog_binnining_off[] = {
@@ -1272,7 +1272,7 @@ static struct regval_list default_analog_binnining_off[] = {
 	{0xc345, 0xda},
 	{0x0201, 0x00}, /* DarkCalMode_LeakyOffset */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_auto_frame_rate_on[] = {
@@ -1301,7 +1301,7 @@ static struct regval_list default_before_auto_frame_rate_on[] = {
 	{0x0092, 0x1},	/* bDesiredFrameRate_Den */
 	{0x00B0, 0x0},	/* bMode {1=Frame Rate Mode Manual} */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_bayer_off[] = {
@@ -1312,7 +1312,7 @@ static struct regval_list default_bayer_off[] = {
 	/* Enable Arctic */
 	{0x02d1, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 static struct regval_list default_pre_run_setup[] = {
@@ -1600,7 +1600,7 @@ static struct regval_list default_pre_run_setup[] = {
 	{0x0317, 0x00},	/* ArcticScytheWeightControl fpFactor (0.75) LSB */
 
 	/* end of array */
-	{0xffff, 0xff},
+	{0x0000, 0x00},
 };
 
 /* controls supported by VS6725 */
@@ -1784,7 +1784,7 @@ static int vs6725_reg_write_multiple(struct i2c_client *client,
 {
 	int ret;
 
-	while (reg_list->reg != 0xFFFF && reg_list->val != 0xFF) {
+	while (reg_list->reg != 0x0000) {
 		ret = vs6725_reg_write(client, reg_list->reg,
 						reg_list->val);
 		if (ret < 0)
