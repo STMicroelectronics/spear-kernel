@@ -25,6 +25,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)
@@ -594,6 +595,17 @@ struct pmx_dev spear320_pmx_i2c1 = {
 static struct pmx_driver pmx_driver = {
 	.mode_reg = {.address = SPEAR320_CONTROL_REG, .mask = 0x00000007},
 };
+
+/*
+ * retreive the SoC-id for differentiating between SPEAr320
+ * and future variants of the same (for e.g. SPEAr320s)
+ */
+static int get_soc_id(void)
+{
+	int soc_id = readl(VA_SOC_CORE_ID);
+
+	return soc_id;
+}
 
 /* Add spear320 specific devices here */
 /* CLCD device registration */
