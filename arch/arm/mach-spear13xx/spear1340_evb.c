@@ -17,6 +17,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/l3g4200d.h>
 #include <linux/irq.h>
+#include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/netdevice.h>
@@ -94,7 +95,11 @@ struct platform_device spear1340_phy0_device = {
 static struct pmx_mux_reg pmx_plgpios_mux[] = {
 	{
 		.address = SPEAR1340_PAD_FUNCTION_EN_1,
-		.mask = 0x0,
+		/*
+		 * PLGPIO 12 is used for interrupt reception from
+		 * STMPE801.
+		 */
+		.mask = 0x2000,
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
@@ -265,6 +270,34 @@ static struct plat_stmmacenet_data eth_data = {
 };
 
 /* Initializing platform data for spear1340 evb specific I2C devices */
+
+/* STMPE801 platform data */
+static struct stmpe_gpio_platform_data stmpe801_gpio = {
+	.gpio_base = SPEAR_STMPE801_GPIO_BASE,
+	.norequest_mask = 0,
+};
+static struct stmpe_platform_data stmpe801_pdata = {
+	.id = 0,
+	.blocks = STMPE_BLOCK_GPIO,
+	.irq_base = SPEAR_STMPE801_GPIO_INT_BASE,
+	.irq_gpio = GPIO0_4,
+	.irq_over_gpio = true,
+	.irq_trigger = IRQF_TRIGGER_FALLING,
+	.irq_invert_polarity = false,
+	.autosleep = false,
+	.gpio = &stmpe801_gpio,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_stmpe801 = {
+	I2C_BOARD_INFO("stmpe801", 0x41),
+	.platform_data = &stmpe801_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_stmpe801 = {
+	.board = &spear1340_evb_i2c_board_stmpe801,
+	.busnum = 1,
+};
+
 /* Gyroscope platform data */
 static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.poll_interval = 5,
@@ -317,6 +350,7 @@ struct i2c_dev_info spear1340_evb_i2c_sta529 = {
 };
 
 static struct i2c_dev_info *i2c_devs[] __initdata = {
+	&spear1340_evb_i2c_stmpe801,
 	&spear1340_evb_i2c_l3g4200d_gyr,
 	&spear1340_evb_i2c_eeprom0,
 	&spear1340_evb_i2c_eeprom1,
