@@ -389,6 +389,7 @@ static u8 ad9889b_check_edid_status(struct ad9889b_state *state)
 				fb_videomode_to_var(&screen,
 						cea_std_formats[vid_id - 1]);
 				screen.bits_per_pixel = 32; /* TODO */
+				screen.activate = FB_ACTIVATE_NOW;
 				if (registered_fb[pdata->fb])
 					fb_set_var(registered_fb[pdata->fb],
 							&screen);
