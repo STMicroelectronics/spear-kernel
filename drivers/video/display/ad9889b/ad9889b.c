@@ -837,6 +837,9 @@ static void ad9889b_init_setup(struct i2c_client *client, u8 enable)
 		ad9889b_s_stream(client, enable);
 	else
 		ad9889b_s_stream(client, 0);
+
+	if (ad9889b_rd(client, 0x42) & MASK_AD9889B_EDID_RDY)
+		ad9889b_edid_reader(state);
 }
 
 static int ad9889b_i2c_probe(struct i2c_client *client,
