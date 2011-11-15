@@ -133,14 +133,12 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
 		ctrl &= ~SPDIF_OPMODE_MASK;
 		ctrl |= SPDIF_OPMODE_AUD_DATA | SPDIF_STATE_NORMAL;
 		writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
-		break;
-
-	case SNDRV_PCM_TRIGGER_RESUME:
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
