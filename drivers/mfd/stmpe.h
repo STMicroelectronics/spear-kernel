@@ -44,38 +44,6 @@ struct stmpe_variant_block {
 };
 
 /**
- * struct stmpe_variant_info - variant-specific information
- * @name:	part name
- * @id_val:	content of CHIPID register
- * @id_mask:	bits valid in CHIPID register for comparison with id_val
- * @num_gpios:	number of GPIOS
- * @af_bits:	number of bits used to specify the alternate function
- * @regs: variant specific registers.
- * @blocks:	list of blocks present on this device
- * @num_blocks:	number of blocks present on this device
- * @num_irqs:	number of internal IRQs available on this device
- * @enable:	callback to enable the specified blocks.
- *		Called with the I/O lock held.
- * @get_altfunc: callback to get the alternate function number for the
- *		 specific block
- * @enable_autosleep: callback to configure autosleep with specified timeout
- */
-struct stmpe_variant_info {
-	const char *name;
-	u16 id_val;
-	u16 id_mask;
-	int num_gpios;
-	int af_bits;
-	const u8 *regs;
-	struct stmpe_variant_block *blocks;
-	int num_blocks;
-	int num_irqs;
-	int (*enable)(struct stmpe *stmpe, unsigned int blocks, bool enable);
-	int (*get_altfunc)(struct stmpe *stmpe, enum stmpe_block block);
-	int (*enable_autosleep)(struct stmpe *stmpe, int autosleep_timeout);
-};
-
-/**
  * struct stmpe_client_info - i2c or spi specific routines/info
  * @data: client specific data
  * @read_byte: read single byte
