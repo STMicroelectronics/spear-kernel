@@ -58,9 +58,9 @@ static struct vco_clk_masks vco_masks = {
 
 /* vco rate configuration table, in ascending order of rates */
 struct vco_rate_tbl vco_rtbl[] = {
-	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* vco 332 & pll 166 MHz */
-	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* vco 532 & pll 266 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* vco 664 & pll 332 MHz */
+	{.mode = 0, .m = 0x53, .n = 0x0F, .p = 0x1}, /* vco 332 & pll 166 MHz */
+	{.mode = 0, .m = 0x85, .n = 0x0F, .p = 0x1}, /* vco 532 & pll 266 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x0F, .p = 0x1}, /* vco 664 & pll 332 MHz */
 };
 
 /* vco1 configuration structure */
