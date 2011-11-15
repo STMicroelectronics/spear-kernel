@@ -225,7 +225,6 @@ static int spdif_out_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_dai(&pdev->dev, &spdif_out_dai);
 	if (ret != 0) {
-		clk_disable(host->clk);
 		clk_put(host->clk);
 		return ret;
 	}
@@ -242,7 +241,6 @@ static int spdif_out_remove(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, NULL);
 	snd_soc_unregister_dai(&pdev->dev);
 
-	clk_disable(host->clk);
 	clk_put(host->clk);
 
 	return 0;
