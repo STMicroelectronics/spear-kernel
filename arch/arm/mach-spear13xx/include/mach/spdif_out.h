@@ -18,8 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#ifndef SPDIF_OUT_H
-#define SPDIF_OUT_H
+#ifndef MACH_SPDIF_OUT_H
+#define MACH_SPDIF_OUT_H
 
 struct spdif_out_platform_data {
 	void *dma_params;
@@ -81,4 +81,4 @@ struct spdif_out_platform_data {
 	#define SPDIF_OUT_FDMA_TRIG_16	(16 << 8)
 	#define SPDIF_OUT_FDMA_TRIG_18	(18 << 8)
 
-#endif /* SPDIF_OUT_H */
+#endif /* MACH_SPDIF_OUT_H */
