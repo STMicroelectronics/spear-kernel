@@ -823,15 +823,35 @@ static int l3g4200d_remove(struct i2c_client *client)
 #ifdef CONFIG_PM
 static int l3g4200d_suspend(struct device *dev)
 {
-	dev_dbg(dev, "l3g4200d_suspend\n");
-	/* TODO */
+	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
+
+	if (atomic_read(&gyro->enabled))
+		l3g4200d_device_power_off(gyro);
+
 	return 0;
 }
 
 static int l3g4200d_resume(struct device *dev)
 {
-	dev_dbg(dev, "l3g4200d_resume\n");
-	/* TODO */
+	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
+	size_t err = 0;
+
+	l3g4200d_device_power_on(gyro);
+	err = l3g4200d_update_fs_range(gyro, gyro->params.poll_rate_ms);
+	if (err < 0) {
+		dev_err(dev, "update_fs_range failed\n");
+		return err;
+	}
+
+	err = l3g4200d_update_odr(gyro, gyro->pdata->poll_interval);
+	if (err < 0) {
+		dev_err(dev, "update_odr failed\n");
+		return err;
+	}
+
+	if (!atomic_read(&gyro->enabled))
+		l3g4200d_device_power_off(gyro);
+
 	return 0;
 }
 
