@@ -215,13 +215,13 @@ static int spdif_out_probe(struct platform_device *pdev)
 	host->dev = &pdev->dev;
 	host->dma_params = pdata->dma_params;
 
+	dev_set_drvdata(&pdev->dev, host);
+
 	ret = snd_soc_register_dai(&pdev->dev, &spdif_out_dai);
 	if (ret != 0) {
 		clk_put(host->clk);
 		return ret;
 	}
-
-	dev_set_drvdata(&pdev->dev, host);
 
 	return 0;
 }
@@ -230,8 +230,8 @@ static int spdif_out_remove(struct platform_device *pdev)
 {
 	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
 
-	dev_set_drvdata(&pdev->dev, NULL);
 	snd_soc_unregister_dai(&pdev->dev);
+	dev_set_drvdata(&pdev->dev, NULL);
 
 	clk_put(host->clk);
 
