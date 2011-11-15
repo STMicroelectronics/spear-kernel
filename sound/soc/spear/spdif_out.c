@@ -11,8 +11,12 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
+#include <linux/ioport.h>
+#include <linux/platform_device.h>
 #include <sound/soc.h>
 #include <mach/spdif_out.h>
 #include "spdif_out_regs.h"
