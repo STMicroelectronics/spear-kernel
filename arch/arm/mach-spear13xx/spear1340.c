@@ -26,8 +26,8 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/spear1340_misc_regs.h>
 #include <mach/spdif_out.h>
+#include <mach/spear1340_misc_regs.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
