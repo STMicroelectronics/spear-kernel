@@ -1,8 +1,6 @@
 /*
  * ALSA SoC SPDIF Out Audio Layer for spear processors
  *
- * sound/soc/spear/spdif_out.c
- *
  * Copyright (C) 2011 ST Microelectronics
  * Vipin Kumar <vipin.kumar@st.com>
  *

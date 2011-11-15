@@ -1,6 +1,4 @@
 /*
- * sound/soc/spear/spdif_out.h
- *
  * SPEAr SPDIF OUT controller header file
  *
  * Copyright (ST) 2011 Vipin Kumar (vipin.kumar@st.com)
