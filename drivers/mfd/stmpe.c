@@ -870,7 +870,7 @@ static int __devinit stmpe_devices_init(struct stmpe *stmpe)
 }
 
 /* Called from client specific probe routines */
-int stmpe_probe(struct stmpe_client_info *ci)
+int stmpe_probe(struct stmpe_client_info *ci, int partnum)
 {
 	struct stmpe_platform_data *pdata = dev_get_platdata(ci->dev);
 	struct stmpe *stmpe;
@@ -891,11 +891,13 @@ int stmpe_probe(struct stmpe_client_info *ci)
 	stmpe->pdata = pdata;
 	stmpe->irq_base = pdata->irq_base;
 	stmpe->ci = ci;
-	stmpe->variant = stmpe_variant_info[stmpe->partnum];
+	stmpe->variant = stmpe_variant_info[partnum];
 	stmpe->regs = stmpe->variant->regs;
 	stmpe->num_gpios = stmpe->variant->num_gpios;
+	dev_set_drvdata(stmpe->dev, stmpe);
 
-	ci->init(stmpe);
+	if (ci->init)
+		ci->init(stmpe);
 
 	if (pdata->irq_over_gpio) {
 		ret = gpio_request_one(pdata->irq_gpio, GPIOF_DIR_IN, "stmpe");
