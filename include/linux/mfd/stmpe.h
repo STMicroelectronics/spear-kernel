@@ -59,7 +59,6 @@ struct stmpe_client_info;
  * @dev: device, mostly for dev_dbg()
  * @client: client - i2c or spi
  * @ci: client specific information
- * @partnum: part number
  * @variant: the detected STMPE model number
  * @regs: list of addresses of registers which are at different addresses on
  *	  different variants.  Indexed by one of STMPE_IDX_*.
@@ -76,7 +75,6 @@ struct stmpe {
 	struct device *dev;
 	void *client;
 	struct stmpe_client_info *ci;
-	enum stmpe_partnum partnum;
 	struct stmpe_variant_info *variant;
 	const u8 *regs;
 

@@ -45,20 +45,11 @@ static int i2c_block_write(struct stmpe *stmpe, u8 reg, u8 length,
 	return i2c_smbus_write_i2c_block_data(i2c, reg, length, values);
 }
 
-static void i2c_init(struct stmpe *stmpe)
-{
-	struct i2c_device_id *id = stmpe->ci->data;
-
-	stmpe->partnum = id->driver_data;
-	dev_set_drvdata(stmpe->dev, stmpe);
-}
-
 static struct stmpe_client_info i2c_ci = {
 	.read_byte = i2c_reg_read,
 	.write_byte = i2c_reg_write,
 	.read_block = i2c_block_read,
 	.write_block = i2c_block_write,
-	.init = i2c_init,
 };
 
 static int __devinit
@@ -69,7 +60,7 @@ stmpe_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	i2c_ci.client = i2c;
 	i2c_ci.dev = &i2c->dev;
 
-	return stmpe_probe(&i2c_ci);
+	return stmpe_probe(&i2c_ci, id->driver_data);
 }
 
 static int __devexit stmpe_i2c_remove(struct i2c_client *i2c)

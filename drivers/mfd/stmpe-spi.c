@@ -64,7 +64,6 @@ static void spi_init(struct stmpe *stmpe)
 {
 	struct spi_device *spi = stmpe->client;
 
-	dev_set_drvdata(stmpe->dev, stmpe);
 	spi->bits_per_word = 8;
 
 	/* This register is only present for stmpe811 */
@@ -86,6 +85,8 @@ static struct stmpe_client_info spi_ci = {
 static int __devinit
 stmpe_spi_probe(struct spi_device *spi)
 {
+	const struct spi_device_id *id = spi_get_device_id(spi);
+
 	/* don't exceed max specified rate - 1MHz - Limitation of STMPE */
 	if (spi->max_speed_hz > 1000000) {
 		dev_dbg(&spi->dev, "f(sample) %d KHz?\n",
@@ -97,7 +98,7 @@ stmpe_spi_probe(struct spi_device *spi)
 	spi_ci.client = spi;
 	spi_ci.dev = &spi->dev;
 
-	return stmpe_probe(&spi_ci);
+	return stmpe_probe(&spi_ci, id->driver_data);
 }
 
 static int __devexit stmpe_spi_remove(struct spi_device *spi)
