@@ -362,12 +362,17 @@ out:
 static int __init mount_nfs_root(void)
 {
 	char *root_dev, *root_data;
+	int attempt;
 
 	if (nfs_root_data(&root_dev, &root_data) != 0)
 		return 0;
-	if (do_mount_root(root_dev, "nfs", root_mountflags, root_data) != 0)
-		return 0;
-	return 1;
+
+	for (attempt = 1; attempt <= 3; attempt++) {
+		printk(KERN_INFO "NFS:%d. attempt to mount root", attempt);
+		if (do_mount_root(root_dev, "nfs", root_mountflags, root_data) == 0)
+			return 1;
+	}
+	return 0;
 }
 #endif
 
