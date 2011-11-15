@@ -15,6 +15,7 @@
 #include <linux/io.h>
 #include <sound/soc.h>
 #include <mach/spdif_out.h>
+#include "spdif_out_regs.h"
 
 struct spdif_out_dev {
 	struct device *dev;
