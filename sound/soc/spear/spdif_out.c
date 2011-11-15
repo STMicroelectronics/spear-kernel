@@ -202,7 +202,7 @@ static int spdif_out_probe(struct platform_device *pdev)
 	host->io_base = devm_ioremap(&pdev->dev, res->start,
 				resource_size(res));
 	if (!host->io_base) {
-		dev_warn(&pdev->dev, "ioremap fail for spdif out region\n");
+		dev_warn(&pdev->dev, "ioremap failed\n");
 		return -ENOMEM;
 	}
 
