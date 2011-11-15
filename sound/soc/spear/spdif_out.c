@@ -210,7 +210,7 @@ static int spdif_out_probe(struct platform_device *pdev)
 	if (IS_ERR(host->clk))
 		return PTR_ERR(host->clk);
 
-	pdata = pdev->dev.platform_data;
+	pdata = dev_get_platdata(&pdev->dev);
 
 	host->dev = &pdev->dev;
 	host->dma_params = pdata->dma_params;
