@@ -76,7 +76,7 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
-	u32 rate, ctrl, divider, synth_freq;
+	u32 rate, ctrl, divider, spdif_core_freq;
 
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return -EINVAL;
@@ -92,7 +92,7 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 		 * The clock is multiplied by 10 to bring it to feasible range
 		 * of frequencies for sscg
 		 */
-		synth_freq = 64000 * 128 * 10;	/* 81.92 MHz */
+		spdif_core_freq = 64000 * 128 * 10;	/* 81.92 MHz */
 		break;
 	case 5512:
 	case 11025:
@@ -100,17 +100,17 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 	case 44100:
 	case 88200:
 	case 176400:
-		synth_freq = 176400 * 128;	/* 22.5792 MHz */
+		spdif_core_freq = 176400 * 128;	/* 22.5792 MHz */
 		break;
 	case 48000:
 	case 96000:
 	case 192000:
 	default:
-		synth_freq = 192000 * 128;	/* 24.576 MHz */
+		spdif_core_freq = 192000 * 128;	/* 24.576 MHz */
 		break;
 	}
 
-	clk_set_rate(host->clk, synth_freq);
+	clk_set_rate(host->clk, spdif_core_freq);
 	divider = DIV_ROUND_CLOSEST(clk_get_rate(host->clk), (rate * 128));
 
 	ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
