@@ -51,6 +51,10 @@ static struct spear_smi_flash_info nor_flash_info[] = {
 };
 
 #ifdef CONFIG_CPU_SPEAR1340
+static struct mtd_partition m25p40_partition_info[] = {
+	DEFINE_PARTS("Root File System", 0x0000, 0x80000),
+};
+
 static struct spear_smi_flash_info spear1340_nor_flash_info[] = {
 	{
 		.name = "m25p64",
@@ -59,6 +63,13 @@ static struct spear_smi_flash_info spear1340_nor_flash_info[] = {
 		.size = 8 * 1024 * 1024,
 		.num_parts = ARRAY_SIZE(m25p64_partition_info),
 		.parts = m25p64_partition_info,
+	}, {
+		.name = "m25p40",
+		.fast_mode = 0,
+		.mem_base = SPEAR13XX_SMI_MEM1_BASE,
+		.size = 512 * 1024,
+		.num_parts = ARRAY_SIZE(m25p40_partition_info),
+		.parts = m25p40_partition_info,
 	},
 };
 #endif
