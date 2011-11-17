@@ -139,7 +139,7 @@ static int stmpe_gpio_irq_set_type(unsigned int irq, unsigned int type)
 	int mask = 1 << (offset % 8);
 
 	/* STMPE801 doesn't have RE and FE registers */
-	if (stmpe->variant->id_val == STMPE801) {
+	if (stmpe->partnum == STMPE801) {
 		if (type == IRQ_TYPE_LEVEL_LOW || type == IRQ_TYPE_LEVEL_HIGH)
 			return 0;
 		else
@@ -183,7 +183,7 @@ static void stmpe_gpio_irq_sync_unlock(unsigned int irq)
 
 	for (i = 0; i < CACHE_NR_REGS; i++) {
 		/* STMPE801 doesn't have RE and FE registers */
-		if ((stmpe->variant->id_val == STMPE801) &&
+		if ((stmpe->partnum == STMPE801) &&
 				(i != REG_IE))
 			continue;
 
@@ -265,7 +265,7 @@ static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
 		stmpe_reg_write(stmpe, statmsbreg + i, status[i]);
 
 		/* Edge detect register is not present on 801 */
-		if (stmpe->variant->id_val != STMPE801)
+		if (stmpe->partnum != STMPE801)
 			stmpe_reg_write(stmpe, stmpe->regs[STMPE_IDX_GPEDR_MSB]
 					+ i, status[i]);
 	}
