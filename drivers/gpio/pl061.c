@@ -425,7 +425,7 @@ static int pl061_resume(struct device *dev)
 	return 0;
 }
 
-SIMPLE_DEV_PM_OPS(pl061_dev_pm_ops, pl061_suspend, pl061_resume);
+static SIMPLE_DEV_PM_OPS(pl061_dev_pm_ops, pl061_suspend, pl061_resume);
 #endif
 
 static struct amba_id pl061_ids[] = {
