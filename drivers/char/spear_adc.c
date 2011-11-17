@@ -1496,7 +1496,8 @@ static s32 spear_adc_suspend(struct device *dev)
 	if (!g_drv_data->usage_count)
 		return 0;
 
-	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++) {
+	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].configured;
+			i++) {
 		if (got_config == false) {
 			ret = spear_adc_get_configure(g_drv_data->chan[i].owner,
 					i, &g_drv_data->adc_saved_config);
@@ -1536,7 +1537,8 @@ static s32 spear_adc_resume(struct device *dev)
 		return ret;
 	}
 
-	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].owner; i++) {
+	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].configured;
+			i++) {
 		if (configured == false) {
 			ret = spear_adc_configure(g_drv_data->chan[i].owner,
 					i, &g_drv_data->adc_saved_config);
