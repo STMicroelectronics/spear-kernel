@@ -40,7 +40,7 @@
 #define PL061_GPIO_NR	8
 
 #ifdef CONFIG_PM
-struct gpio_context_save_regs {
+struct pl061_context_save_regs {
 	u8 gpio_data;
 	u8 gpio_dir;
 	u8 gpio_is;
@@ -72,8 +72,9 @@ struct pl061_gpio {
 	struct gpio_chip	gc;
 	u8			wakeups;
 	u8			irq_wake;
+
 #ifdef CONFIG_PM
-	struct gpio_context_save_regs	csave_regs;
+	struct pl061_context_save_regs csave_regs;
 #endif
 };
 
@@ -424,14 +425,7 @@ static int pl061_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops pl061_dev_pm_ops = {
-	.suspend = pl061_suspend,
-	.resume = pl061_resume,
-};
-
-#define PL061_DEV_PM_OPS (&pl061_dev_pm_ops)
-#else
-#define PL061_DEV_PM_OPS NULL
+SIMPLE_DEV_PM_OPS(pl061_dev_pm_ops, pl061_suspend, pl061_resume);
 #endif
 
 static struct amba_id pl061_ids[] = {
@@ -445,7 +439,9 @@ static struct amba_id pl061_ids[] = {
 static struct amba_driver pl061_gpio_driver = {
 	.drv = {
 		.name	= "pl061_gpio",
-		.pm	= PL061_DEV_PM_OPS,
+#ifdef CONFIG_PM
+		.pm	= &pl061_dev_pm_ops,
+#endif
 	},
 	.id_table	= pl061_ids,
 	.probe		= pl061_probe,
