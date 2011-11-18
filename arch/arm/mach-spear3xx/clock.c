@@ -570,15 +570,6 @@ static struct clk adc_clk = {
 	.recalc = &follow_parent,
 };
 
-#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
-/* emi clock */
-static struct clk emi_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &ahb_clk,
-	.recalc = &follow_parent,
-};
-#endif
-
 /* ssp clock */
 static struct clk ssp0_clk = {
 	.pclk = &apb_clk,
@@ -597,7 +588,15 @@ static struct clk gpio_clk = {
 
 static struct clk dummy_apb_pclk;
 
+/* spear300 machine specific clock structures */
 #ifdef CONFIG_CPU_SPEAR300
+/* gpio1 clock */
+static struct clk gpio1_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &apb_clk,
+	.recalc = &follow_parent,
+};
+
 /* fsmc0 clock */
 static struct clk fsmc0_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -625,42 +624,6 @@ static struct clk fsmc3_clk = {
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
-#endif
-
-#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
-/* fsmc clock */
-static struct clk fsmc_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &ahb_clk,
-	.recalc = &follow_parent,
-};
-#endif
-
-/* common clocks to spear300 and spear320 */
-#if defined(CONFIG_CPU_SPEAR300) || defined(CONFIG_CPU_SPEAR320)
-/* clcd clock */
-static struct clk clcd_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &pll3_48m_clk,
-	.recalc = &follow_parent,
-};
-
-/* sdhci clock */
-static struct clk sdhci_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &ahb_clk,
-	.recalc = &follow_parent,
-};
-#endif /* CONFIG_CPU_SPEAR300 || CONFIG_CPU_SPEAR320 */
-
-/* spear300 machine specific clock structures */
-#ifdef CONFIG_CPU_SPEAR300
-/* gpio1 clock */
-static struct clk gpio1_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &apb_clk,
-	.recalc = &follow_parent,
-};
 
 /* keyboard clock */
 static struct clk kbd_clk = {
@@ -668,7 +631,6 @@ static struct clk kbd_clk = {
 	.pclk = &apb_clk,
 	.recalc = &follow_parent,
 };
-
 #endif
 
 /* spear310 machine specific clock structures */
@@ -776,6 +738,41 @@ static struct clk spear320_uart2_clk = {
 	.recalc = &follow_parent,
 };
 #endif
+
+/* clk structures common to several machines */
+
+#if defined(CONFIG_CPU_SPEAR310) || defined(CONFIG_CPU_SPEAR320)
+/* emi clock */
+static struct clk emi_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
+/* fsmc clock */
+static struct clk fsmc_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif
+
+/* common clocks to spear300 and spear320 */
+#if defined(CONFIG_CPU_SPEAR300) || defined(CONFIG_CPU_SPEAR320)
+/* clcd clock */
+static struct clk clcd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &pll3_48m_clk,
+	.recalc = &follow_parent,
+};
+
+/* sdhci clock */
+static struct clk sdhci_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+#endif /* CONFIG_CPU_SPEAR300 || CONFIG_CPU_SPEAR320 */
 
 /* array of all spear 3xx clock lookups */
 static struct clk_lookup spear_clk_lookups[] = {
