@@ -1837,7 +1837,6 @@ static struct resource i2s_play_resources[] = {
 		.end	= SPEAR1340_I2S_PLAY_BASE + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	}, {
-
 		.name	= "play_irq",
 		.start	= SPEAR1340_IRQ_I2S_PLAY_OR_M,
 		.flags	= IORESOURCE_IRQ,
