@@ -886,10 +886,10 @@ static struct clk pwm_clk = {
 static struct pclk_info uart1_2_pclk_info[] = {
 	{
 		.pclk = &apb_clk,
-		.pclk_val = UART1_2_PCLK_VAL_APB,
+		.pclk_val = SPEAR320_UARTX_PCLK_VAL_APB,
 	}, {
 		.pclk = &ras_synth1_clk,
-		.pclk_val = UART1_2_PCLK_VAL_SYNTH1,
+		.pclk_val = SPEAR320_UARTX_PCLK_VAL_SYNTH1,
 	},
 };
 

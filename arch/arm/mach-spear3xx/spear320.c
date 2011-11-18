@@ -1188,14 +1188,14 @@ static struct shirq_dev_config shirq_ras3_config[] = {
 		.clear_mask = SPEAR320_GPIO_IRQ_MASK,
 	}, {
 		.virq = SPEAR320_VIRQ_I2S_PLAY,
-		.enb_mask = SPEAR320_I2S_PLAY_IRQ_MASK,
-		.status_mask = SPEAR320_I2S_PLAY_IRQ_MASK,
-		.clear_mask = SPEAR320_I2S_PLAY_IRQ_MASK,
+		.enb_mask = SPEAR320S_I2S_IRQ_PLAY_OR_M,
+		.status_mask = SPEAR320S_I2S_IRQ_PLAY_OR_M,
+		.clear_mask = SPEAR320S_I2S_IRQ_PLAY_OR_M,
 	}, {
 		.virq = SPEAR320_VIRQ_I2S_REC,
-		.enb_mask = SPEAR320_I2S_REC_IRQ_MASK,
-		.status_mask = SPEAR320_I2S_REC_IRQ_MASK,
-		.clear_mask = SPEAR320_I2S_REC_IRQ_MASK,
+		.enb_mask = SPEAR320S_I2S_IRQ_REC_OR_S,
+		.status_mask = SPEAR320S_I2S_IRQ_REC_OR_S,
+		.clear_mask = SPEAR320S_I2S_IRQ_REC_OR_S,
 	},
 };
 
