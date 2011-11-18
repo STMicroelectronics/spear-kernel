@@ -38,25 +38,25 @@
 struct pmx_mode spear320_auto_net_smii_mode = {
 	.id = AUTO_NET_SMII_MODE,
 	.name = "Automation Networking SMII Mode",
-	.value = 0x00,
+	.value = AUTO_NET_SMII_MODE_VAL,
 };
 
 struct pmx_mode spear320_auto_net_mii_mode = {
 	.id = AUTO_NET_MII_MODE,
 	.name = "Automation Networking MII Mode",
-	.value = 0x01,
+	.value = AUTO_NET_MII_MODE_VAL,
 };
 
 struct pmx_mode spear320_auto_exp_mode = {
 	.id = AUTO_EXP_MODE,
 	.name = "Automation Expanded Mode",
-	.value = 0x02,
+	.value = AUTO_EXP_MODE_VAL,
 };
 
 struct pmx_mode spear320_small_printers_mode = {
 	.id = SMALL_PRINTERS_MODE,
 	.name = "Small Printers Mode",
-	.value = 0x03,
+	.value = SMALL_PRINTERS_MODE_VAL,
 };
 
 /* devices */
