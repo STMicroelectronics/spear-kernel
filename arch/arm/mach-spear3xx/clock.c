@@ -430,6 +430,132 @@ static struct clk gpt2_clk = {
 	.recalc = &follow_parent,
 };
 
+/*
+ * There are four general purpose synths present in SPEAr3xx, they can be used
+ * by fixed part as well as RAS. For enabling them in RAS there are separate
+ * gating bits present in RAS_CLK_ENB register
+ */
+/* RAS synth configurations */
+static struct aux_clk_config synth0_config = {
+	.synth_reg = VA_RAS0_CLK_SYNT,
+	.masks = &aux_masks,
+};
+
+static struct aux_clk_config synth1_config = {
+	.synth_reg = VA_RAS1_CLK_SYNT,
+	.masks = &aux_masks,
+};
+
+static struct aux_clk_config synth2_config = {
+	.synth_reg = VA_RAS2_CLK_SYNT,
+	.masks = &aux_masks,
+};
+
+static struct aux_clk_config synth3_config = {
+	.synth_reg = VA_RAS3_CLK_SYNT,
+	.masks = &aux_masks,
+};
+
+/* synth clock */
+static struct clk synth0_clk = {
+	.en_reg = VA_RAS0_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
+	.pclk = &pll1_clk,
+	.calc_rate = &aux_calc_rate,
+	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.private_data = &synth0_config,
+};
+
+static struct clk synth1_clk = {
+	.en_reg = VA_RAS1_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
+	.pclk = &pll1_clk,
+	.calc_rate = &aux_calc_rate,
+	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.private_data = &synth1_config,
+};
+
+/* synth 2 and 3 parents */
+static struct pclk_info synth2_3_pclk_info[] = {
+	{
+		.pclk = &pll1_clk,
+		.pclk_val = RAS_SYNTH2_3_CLK_PLL1_VAL,
+	}, {
+		.pclk = &pll2_clk,
+		.pclk_val = RAS_SYNTH2_3_CLK_PLL2_VAL,
+	},
+};
+
+/* synth2_3 parent select structure */
+static struct pclk_sel synth2_3_pclk_sel = {
+	.pclk_info = synth2_3_pclk_info,
+	.pclk_count = ARRAY_SIZE(synth2_3_pclk_info),
+	.pclk_sel_reg = VA_CORE_CLK_CFG,
+	.pclk_sel_mask = RAS_SYNTH2_3_CLK_MASK,
+};
+
+/* synth2_3 clock */
+static struct clk synth2_3_pclk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &synth2_3_pclk_sel,
+	.pclk_sel_shift = RAS_SYNTH2_3_CLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk synth2_clk = {
+	.en_reg = VA_RAS2_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
+	.pclk = &synth2_3_pclk,
+	.calc_rate = &aux_calc_rate,
+	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.private_data = &synth2_config,
+};
+
+static struct clk synth3_clk = {
+	.en_reg = VA_RAS3_CLK_SYNT,
+	.en_reg_bit = AUX_SYNT_ENB,
+	.pclk = &synth2_3_pclk,
+	.calc_rate = &aux_calc_rate,
+	.recalc = &aux_clk_recalc,
+	.set_rate = &aux_clk_set_rate,
+	.rate_config = {aux_rtbl, ARRAY_SIZE(aux_rtbl), 1},
+	.private_data = &synth3_config,
+};
+
+static struct clk ras_synth0_clk = {
+	.en_reg = VA_RAS_CLK_ENB,
+	.en_reg_bit = RAS_SYNT0_CLK_ENB,
+	.pclk = &synth0_clk,
+	.recalc = &follow_parent,
+};
+
+static struct clk ras_synth1_clk = {
+	.en_reg = VA_RAS_CLK_ENB,
+	.en_reg_bit = RAS_SYNT1_CLK_ENB,
+	.pclk = &synth1_clk,
+	.recalc = &follow_parent,
+};
+
+static struct clk ras_synth2_clk = {
+	.en_reg = VA_RAS_CLK_ENB,
+	.en_reg_bit = RAS_SYNT2_CLK_ENB,
+	.pclk = &synth2_clk,
+	.recalc = &follow_parent,
+};
+
+static struct clk ras_synth3_clk = {
+	.en_reg = VA_RAS_CLK_ENB,
+	.en_reg_bit = RAS_SYNT3_CLK_ENB,
+	.pclk = &synth3_clk,
+	.recalc = &follow_parent,
+};
+
 /* clock derived from pll3 clk */
 /* usbh clock */
 static struct clk usbh_clk = {
@@ -625,6 +751,13 @@ static struct clk fsmc3_clk = {
 	.recalc = &follow_parent,
 };
 
+/* sdhci clk */
+static struct clk spear300_sdhci_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
 /* keyboard clock */
 static struct clk kbd_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -701,6 +834,33 @@ static struct clk i2c1_clk = {
 	.recalc = &follow_parent,
 };
 
+/* mii parent clocks: smii for 320, rmii for 320s */
+static struct pclk_info mii_pclk_info[] = {
+	{
+		.pclk = &pll2_clk,
+		.pclk_val = MII_PCLK_VAL_PLL2,
+	}, {
+		.pclk = &ras_synth0_clk,
+		.pclk_val = MII_PCLK_VAL_SYNTH0,
+	},
+};
+
+/* mii parent select structure */
+static struct pclk_sel mii_pclk_sel = {
+	.pclk_info = mii_pclk_info,
+	.pclk_count = ARRAY_SIZE(mii_pclk_info),
+	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
+	.pclk_sel_mask = MII_PCLK_MASK,
+};
+
+/* mii clock */
+static struct clk spear320_mii_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &mii_pclk_sel,
+	.pclk_sel_shift = MII_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
 /* ssp1 clock */
 static struct clk ssp1_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -722,19 +882,71 @@ static struct clk pwm_clk = {
 	.recalc = &follow_parent,
 };
 
+/* uart1_2 parent clocks */
+static struct pclk_info uart1_2_pclk_info[] = {
+	{
+		.pclk = &apb_clk,
+		.pclk_val = UART1_2_PCLK_VAL_APB,
+	}, {
+		.pclk = &ras_synth1_clk,
+		.pclk_val = UART1_2_PCLK_VAL_SYNTH1,
+	},
+};
+
+/* uart1_2 parent select structure */
+static struct pclk_sel uart1_2_pclk_sel = {
+	.pclk_info = uart1_2_pclk_info,
+	.pclk_count = ARRAY_SIZE(uart1_2_pclk_info),
+	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
+	.pclk_sel_mask = UART1_2_PCLK_MASK,
+};
+
+/* uart1_2 clock */
+static struct clk spear320_uart1_2_pclk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uart1_2_pclk_sel,
+	.pclk_sel_shift = UART1_2_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
 /* uart1 clock */
 static struct clk spear320_uart1_clk = {
-	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
-	.en_reg_bit = UART1_2_PCLK_APB,
-	.pclk = &apb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &spear320_uart1_2_pclk,
 	.recalc = &follow_parent,
 };
 
 /* uart2 clock */
 static struct clk spear320_uart2_clk = {
-	.en_reg = IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)),
-	.en_reg_bit = UART1_2_PCLK_APB,
-	.pclk = &apb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &spear320_uart1_2_pclk,
+	.recalc = &follow_parent,
+};
+
+/* sdhci parent clocks */
+static struct pclk_info sdhci_pclk_info[] = {
+	{
+		.pclk = &pll3_48m_clk,
+		.pclk_val = SDHCI_PCLK_VAL_48M,
+	}, {
+		.pclk = &ras_synth3_clk,
+		.pclk_val = SDHCI_PCLK_VAL_SYNTH3,
+	},
+};
+
+/* sdhci parent select structure */
+static struct pclk_sel sdhci_pclk_sel = {
+	.pclk_info = sdhci_pclk_info,
+	.pclk_count = ARRAY_SIZE(sdhci_pclk_info),
+	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
+	.pclk_sel_mask = SDHCI_PCLK_MASK,
+};
+
+/* sdhci clock */
+static struct clk spear320_sdhci_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &sdhci_pclk_sel,
+	.pclk_sel_shift = SDHCI_PCLK_SHIFT,
 	.recalc = &follow_parent,
 };
 #endif
@@ -763,13 +975,6 @@ static struct clk fsmc_clk = {
 static struct clk clcd_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &pll3_48m_clk,
-	.recalc = &follow_parent,
-};
-
-/* sdhci clock */
-static struct clk sdhci_clk = {
-	.flags = ALWAYS_ENABLED,
-	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 #endif /* CONFIG_CPU_SPEAR300 || CONFIG_CPU_SPEAR320 */
@@ -804,6 +1009,15 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .dev_id = "gpt0",		.clk = &gpt0_clk},
 	{ .dev_id = "gpt1",		.clk = &gpt1_clk},
 	{ .dev_id = "gpt2",		.clk = &gpt2_clk},
+	{ .con_id = "synth0_clk",	.clk = &synth0_clk},
+	{ .con_id = "synth1_clk",	.clk = &synth1_clk},
+	{ .con_id = "synth2_3_pclk",	.clk = &synth2_3_pclk},
+	{ .con_id = "synth2_clk",	.clk = &synth2_clk},
+	{ .con_id = "synth3_clk",	.clk = &synth3_clk},
+	{ .con_id = "ras_synth0_clk",	.clk = &ras_synth0_clk},
+	{ .con_id = "ras_synth1_clk",	.clk = &ras_synth1_clk},
+	{ .con_id = "ras_synth2_clk",	.clk = &ras_synth2_clk},
+	{ .con_id = "ras_synth3_clk",	.clk = &ras_synth3_clk},
 	/* clock derived from pll3 clk */
 	{ .dev_id = "designware_udc",   .clk = &usbd_clk},
 	{ .con_id = "usbh_clk",		.clk = &usbh_clk},
@@ -833,7 +1047,7 @@ static struct clk_lookup spear300_clk_lookups[] = {
 	{ .dev_id = "fsmc-nand.3",	.clk = &fsmc3_clk},
 	{ .dev_id = "gpio1",		.clk = &gpio1_clk},
 	{ .dev_id = "keyboard",		.clk = &kbd_clk},
-	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
+	{ .dev_id = "sdhci",		.clk = &spear300_sdhci_clk},
 #endif
 };
 
@@ -858,8 +1072,9 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
+	{ .con_id = "mii_clk",		.clk = &spear320_mii_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
-	{ .dev_id = "sdhci",		.clk = &sdhci_clk},
+	{ .dev_id = "sdhci",		.clk = &spear320_sdhci_clk},
 	{ .dev_id = "c_can_platform.0",	.clk = &can0_clk},
 	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},

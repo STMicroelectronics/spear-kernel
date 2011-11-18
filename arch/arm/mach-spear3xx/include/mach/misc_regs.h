@@ -59,6 +59,11 @@
 #define VA_CORE_CLK_CFG		(VA_MISC_BASE + 0x024)
 
 /* CORE CLK CFG register masks */
+#define RAS_SYNTH2_3_CLK_SHIFT		18
+#define RAS_SYNTH2_3_CLK_MASK		0x1
+#define RAS_SYNTH2_3_CLK_PLL1_VAL	0x0
+#define RAS_SYNTH2_3_CLK_PLL2_VAL	0x1
+
 #define PLL_HCLK_RATIO_SHIFT	10
 #define PLL_HCLK_RATIO_MASK	0x3
 #define HCLK_PCLK_RATIO_SHIFT	8
@@ -98,6 +103,18 @@
 
 #define VA_SOC_CORE_ID		(VA_MISC_BASE + 0x030)
 #define VA_RAS_CLK_ENB		(VA_MISC_BASE + 0x034)
+	#define RAS_AHB_CLK_ENB		0
+	#define RAS_PLL1_CLK_ENB	1
+	#define RAS_APB_CLK_ENB		2
+	#define RAS_32K_CLK_ENB		3
+	#define RAS_24M_CLK_ENB		4
+	#define RAS_48M_CLK_ENB		5
+	#define RAS_PLL2_CLK_ENB	7
+	#define RAS_SYNT0_CLK_ENB	8
+	#define RAS_SYNT1_CLK_ENB	9
+	#define RAS_SYNT2_CLK_ENB	10
+	#define RAS_SYNT3_CLK_ENB	11
+
 #define VA_PERIP1_SOF_RST	(VA_MISC_BASE + 0x038)
 /* PERIP1_SOF_RST register masks */
 #define JPEG_SOF_RST		8
@@ -119,10 +136,10 @@
 #define VA_FIRDA_CLK_SYNT	(VA_MISC_BASE + 0x060)
 #define VA_UART_CLK_SYNT	(VA_MISC_BASE + 0x064)
 #define VA_GMAC_CLK_SYNT	(VA_MISC_BASE + 0x068)
-#define VA_RAS1_CLK_SYNT	(VA_MISC_BASE + 0x06C)
-#define VA_RAS2_CLK_SYNT	(VA_MISC_BASE + 0x070)
-#define VA_RAS3_CLK_SYNT	(VA_MISC_BASE + 0x074)
-#define VA_RAS4_CLK_SYNT	(VA_MISC_BASE + 0x078)
+#define VA_RAS0_CLK_SYNT	(VA_MISC_BASE + 0x06C)
+#define VA_RAS1_CLK_SYNT	(VA_MISC_BASE + 0x070)
+#define VA_RAS2_CLK_SYNT	(VA_MISC_BASE + 0x074)
+#define VA_RAS3_CLK_SYNT	(VA_MISC_BASE + 0x078)
 /* aux clk synthesiser register masks for irda to ras4 */
 #define AUX_SYNT_ENB		31
 #define AUX_EQ_SEL_SHIFT	30
