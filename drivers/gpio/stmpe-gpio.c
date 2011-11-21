@@ -69,11 +69,10 @@ static void stmpe_gpio_set(struct gpio_chip *chip, unsigned offset, int val)
 	 * Some variants have single register for gpio set/clear functionality.
 	 * For them we need to write 0 to clear and 1 to set.
 	 */
-	if (!val && (stmpe->regs[STMPE_IDX_GPSR_LSB] ==
-				stmpe->regs[STMPE_IDX_GPCR_LSB]))
-		stmpe_set_bits(stmpe, reg, mask, ~mask);
+	if (stmpe->regs[STMPE_IDX_GPSR_LSB] == stmpe->regs[STMPE_IDX_GPCR_LSB])
+		stmpe_set_bits(stmpe, reg, mask, val ? mask : 0);
 	else
-		stmpe_set_bits(stmpe, reg, mask, mask);
+		stmpe_reg_write(stmpe, reg, mask);
 }
 
 static int stmpe_gpio_direction_output(struct gpio_chip *chip,
@@ -133,21 +132,16 @@ static struct gpio_chip template_chip = {
 static int stmpe_gpio_irq_set_type(unsigned int irq, unsigned int type)
 {
 	struct stmpe_gpio *stmpe_gpio = get_irq_chip_data(irq);
-	struct stmpe *stmpe = stmpe_gpio->stmpe;
 	int offset = irq - stmpe_gpio->irq_base;
 	int regoffset = offset / 8;
 	int mask = 1 << (offset % 8);
 
-	/* STMPE801 doesn't have RE and FE registers */
-	if (stmpe->partnum == STMPE801) {
-		if (type == IRQ_TYPE_LEVEL_LOW || type == IRQ_TYPE_LEVEL_HIGH)
-			return 0;
-		else
-			return -EINVAL;
-	}
-
 	if (type == IRQ_TYPE_LEVEL_LOW || type == IRQ_TYPE_LEVEL_HIGH)
 		return -EINVAL;
+
+	/* STMPE801 doesn't have RE and FE registers */
+	if (stmpe_gpio->stmpe->partnum == STMPE801)
+		return 0;
 
 	if (type == IRQ_TYPE_EDGE_RISING)
 		stmpe_gpio->regs[REG_RE][regoffset] |= mask;
