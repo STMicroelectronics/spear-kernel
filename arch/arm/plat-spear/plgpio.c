@@ -67,7 +67,7 @@ static inline u32 is_plgpio_set(void __iomem *base, u32 pin, u32 reg)
 	void __iomem *reg_off = REG_OFFSET(base, reg, pin);
 	u32 val = readl(reg_off);
 
-	return val & (1 << offset);
+	return !!(val & (1 << offset));
 }
 
 static inline void plgpio_reg_set(void __iomem *base, u32 pin, u32 reg)
