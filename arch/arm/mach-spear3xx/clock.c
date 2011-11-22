@@ -882,8 +882,8 @@ static struct clk pwm_clk = {
 	.recalc = &follow_parent,
 };
 
-/* uart1_2 parent clocks */
-static struct pclk_info uart1_2_pclk_info[] = {
+/* uartx parent clocks */
+static struct pclk_info uartx_pclk_info[] = {
 	{
 		.pclk = &apb_clk,
 		.pclk_val = SPEAR320_UARTX_PCLK_VAL_APB,
@@ -895,8 +895,8 @@ static struct pclk_info uart1_2_pclk_info[] = {
 
 /* uart1_2 parent select structure */
 static struct pclk_sel uart1_2_pclk_sel = {
-	.pclk_info = uart1_2_pclk_info,
-	.pclk_count = ARRAY_SIZE(uart1_2_pclk_info),
+	.pclk_info = uartx_pclk_info,
+	.pclk_count = ARRAY_SIZE(uartx_pclk_info),
 	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
 	.pclk_sel_mask = UART1_2_PCLK_MASK,
 };
@@ -947,6 +947,62 @@ static struct clk spear320_sdhci_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk_sel = &sdhci_pclk_sel,
 	.pclk_sel_shift = SDHCI_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+/* SPEAr320S specific clock structures for Extended mode */
+/* uartx parent select structure */
+static struct pclk_sel uartx_pclk_sel = {
+	.pclk_info = uartx_pclk_info,
+	.pclk_count = ARRAY_SIZE(uartx_pclk_info),
+	.pclk_sel_reg = VA_SPEAR320S_EXT_CTRL_REG,
+	.pclk_sel_mask = SPEAR320S_UARTX_PCLK_MASK,
+};
+
+/* uartx clocks */
+/*
+ * Clock source for uart2 is selected using bits present in EXT_CTRL_REG in
+ * extended mode. Only one uart2_clk 320 or 320s must be registered finally.
+ */
+static struct clk spear320s_uart2_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_UART2_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk spear320s_uart3_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_UART3_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk spear320s_uart4_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_UART4_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk spear320s_uart5_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_UART5_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk spear320s_uart6_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_UART6_PCLK_SHIFT,
+	.recalc = &follow_parent,
+};
+
+static struct clk spear320s_rs485_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk_sel = &uartx_pclk_sel,
+	.pclk_sel_shift = SPEAR320S_RS485_PCLK_SHIFT,
 	.recalc = &follow_parent,
 };
 #endif
@@ -1079,9 +1135,17 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
-	{ .con_id = "uart1_2_pclk",     .clk = &spear320_uart1_2_pclk},
+	{ .con_id = "uart1_2_pclk",	.clk = &spear320_uart1_2_pclk},
 	{ .dev_id = "uart1",		.clk = &spear320_uart1_clk},
 	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
+
+	/* Extended mode clocks */
+	{ .dev_id = "uart2",		.clk = &spear320s_uart2_clk},
+	{ .dev_id = "uart3",		.clk = &spear320s_uart3_clk},
+	{ .dev_id = "uart4",		.clk = &spear320s_uart4_clk},
+	{ .dev_id = "uart5",		.clk = &spear320s_uart5_clk},
+	{ .dev_id = "uart6",		.clk = &spear320s_uart6_clk},
+	{ .dev_id = "uart7",		.clk = &spear320s_rs485_clk},
 #endif
 };
 
