@@ -65,6 +65,7 @@ enum touch_state {
 
 /* Structure for Context of Touchscreen */
 struct ts_context {
+	bool			idle_values_set;
 	struct ts_cordinate	idle;
 	struct ts_cordinate	touched_point;
 };
@@ -214,6 +215,7 @@ static void ts_get_adc_idle_values(struct spear_ts_dev *spear_ts)
 	dev_dbg(&spear_ts->pdev->dev,
 	     "idle value of x is=%d, idle value of y is=%d\n", x_idle, y_idle);
 
+	spear_ts->ts_ctx.idle_values_set = true;
 }
 
 /**
@@ -401,7 +403,8 @@ int ts_open(struct spear_ts_dev *spear_ts)
 		goto free_gpio;
 	}
 
-	ts_get_adc_idle_values(spear_ts);
+	if (spear_ts->ts_ctx.idle_values_set == false)
+		ts_get_adc_idle_values(spear_ts);
 
 	spear_ts->finger_state = IDLE;
 
