@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <linux/delay.h>
+#include <linux/kthread.h>
 #include <linux/platform_device.h>
 #include <linux/input.h>
 #include <linux/module.h>
@@ -565,6 +566,7 @@ int __devinit spear_ts_probe(struct platform_device *pdev)
 {
 	struct input_dev *input_dev;
 	struct spear_ts_dev *spear_ts;
+	struct task_struct *th;
 	int err = -ENOMEM;
 
 	/* Allocating Structure for Touchscreen */
@@ -607,7 +609,13 @@ int __devinit spear_ts_probe(struct platform_device *pdev)
 	init_completion(&spear_ts->thread_exit);
 
 	spear_ts->exit_ts_thread = 0;
-	kernel_thread(spear_ts_thread, spear_ts, 0);
+
+	th = kthread_run(spear_ts_thread, spear_ts, "spear-ts");
+	if (IS_ERR(th)) {
+		dev_err(&spear_ts->pdev->dev, "Could not start thread");
+		err = PTR_ERR(th);
+		goto dev_alloc_fail;
+	}
 
 	init_timer(&spear_ts->timer);
 	spear_ts->timer.data = (unsigned long)spear_ts;
