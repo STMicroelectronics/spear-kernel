@@ -211,7 +211,7 @@ static void __init spear320_hmi_init(void)
 	macb_init_board_info(&spear320_eth_macb1_mii_device);
 
 	/* call spear320 machine init function */
-	spear320_init(&spear320_auto_net_smii_mode, pmx_devs,
+	spear320_common_init(&spear320_auto_net_smii_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
 
 	/* Add Platform Devices */

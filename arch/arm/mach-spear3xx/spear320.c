@@ -597,24 +597,6 @@ static struct pmx_driver pmx_driver = {
 	.mode_reg = {.address = SPEAR320_CONTROL_REG, .mask = 0x00000007},
 };
 
-/*
- * retreive the SoC-id for differentiating between SPEAr320
- * and future variants of the same (for e.g. SPEAr320s)
- */
-static int get_soc_id(void)
-{
-	int soc_id = readl(VA_SOC_CORE_ID);
-
-	return soc_id;
-}
-
-static void c_can_enable_bugfix(struct platform_device *c_can, int soc_id)
-{
-	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
-
-	pdata->is_quirk_required = !soc_id ? 1 : 0;
-}
-
 /* Add spear320 specific devices here */
 /* CLCD device registration */
 struct amba_device spear320_clcd_device = {
@@ -1304,6 +1286,27 @@ static struct map_desc spear320_io_desc[] __initdata = {
 	},
 };
 
+/* spear320 routines */
+static void c_can_enable_bugfix(struct platform_device *c_can)
+{
+	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
+
+	pdata->is_quirk_required = 1;
+}
+
+/*
+ * retreive the SoC-id for differentiating between SPEAr320
+ * and future variants of the same (for e.g. SPEAr320s)
+ */
+#define SOC_SPEAR320_ID		0x1
+#define SOC_SPEAR320S_ID	0x2
+static int get_soc_id(void)
+{
+	int soc_id = readl(VA_SOC_CORE_ID);
+
+	return soc_id ? SOC_SPEAR320S_ID : SOC_SPEAR320_ID;
+}
+
 /* This will create static memory mapping for selected devices */
 void __init spear320_map_io(void)
 {
@@ -1312,9 +1315,23 @@ void __init spear320_map_io(void)
 	spear3xx_map_io();
 }
 
-/* spear320 routines */
-void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
-		u8 pmx_dev_count)
+/*
+ * There are two Soc Versions of SPEAr320. One is called SPEAr320 and other is
+ * called SPEAr320s.
+ */
+void __init spear320_init(void)
+{
+	/* enable bug-fix for CAN controllers */
+	c_can_enable_bugfix(&spear320_can0_device);
+	c_can_enable_bugfix(&spear320_can1_device);
+}
+
+void __init spear320s_init(void)
+{
+}
+
+void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
+		**pmx_devs, u8 pmx_dev_count)
 {
 	int ret = 0;
 	int soc_id;
@@ -1335,6 +1352,17 @@ void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	if (ret)
 		printk(KERN_ERR "Error registering Shared IRQ 4\n");
 
+	/* Set DMAC platform data's slave info */
+	pl080_set_slaveinfo(&spear3xx_dma_device, pl080_slave_channels,
+			ARRAY_SIZE(pl080_slave_channels));
+
+	/* retreive soc-id */
+	soc_id = get_soc_id();
+	if (soc_id == SOC_SPEAR320_ID)
+		spear320_init();
+	else
+		spear320s_init();
+
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
 	pmx_driver.devs = pmx_devs;
@@ -1345,15 +1373,4 @@ void __init spear320_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
-
-	/* Set DMAC platform data's slave info */
-	pl080_set_slaveinfo(&spear3xx_dma_device, pl080_slave_channels,
-			ARRAY_SIZE(pl080_slave_channels));
-
-	/* retreive soc-id */
-	soc_id = get_soc_id();
-
-	/* determine if bug-fix is required for CAN controllers */
-	c_can_enable_bugfix(&spear320_can0_device, soc_id);
-	c_can_enable_bugfix(&spear320_can1_device, soc_id);
 }
