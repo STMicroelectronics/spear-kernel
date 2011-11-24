@@ -228,6 +228,7 @@ extern struct pmx_mode spear320_auto_net_smii_mode;
 extern struct pmx_mode spear320_auto_net_mii_mode;
 extern struct pmx_mode spear320_auto_exp_mode;
 extern struct pmx_mode spear320_small_printers_mode;
+extern struct pmx_mode spear320s_extended_mode;
 
 /* pad mux devices */
 extern struct pmx_dev spear320_pmx_clcd;

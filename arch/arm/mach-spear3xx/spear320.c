@@ -34,6 +34,7 @@
 #define AUTO_EXP_MODE		(1 << 2)
 #define SMALL_PRINTERS_MODE	(1 << 3)
 #define ALL_LEGACY_MODES	0xF
+#define SPEAR320S_EXTENDED_MODE	(1 << 4)
 
 struct pmx_mode spear320_auto_net_smii_mode = {
 	.id = AUTO_NET_SMII_MODE,
@@ -57,6 +58,12 @@ struct pmx_mode spear320_small_printers_mode = {
 	.id = SMALL_PRINTERS_MODE,
 	.name = "Small Printers Mode",
 	.value = SMALL_PRINTERS_MODE_VAL,
+};
+
+struct pmx_mode spear320s_extended_mode = {
+	.id = SPEAR320S_EXTENDED_MODE,
+	.name = "spear320s extended mode",
+	.value = SPEAR320S_EXTENDED_MODE_VAL,
 };
 
 /* devices */
@@ -1326,8 +1333,16 @@ void __init spear320_init(void)
 	c_can_enable_bugfix(&spear320_can1_device);
 }
 
-void __init spear320s_init(void)
+void __init spear320s_init(struct pmx_mode *pmx_mode)
 {
+	if (pmx_mode == &spear320s_extended_mode) {
+		/* Fix SPEAr320s specific pmx stuff */
+		pmx_driver.mode_reg.address = SPEAR320S_EXT_CTRL_REG;
+		pmx_driver.mode_reg.mask = SPEAR320S_EXTENDED_MODE_VAL;
+	} else {
+		/* Clear ext ctrl reg to select legacy modes */
+		writel(0, VA_SPEAR320S_EXT_CTRL_REG);
+	}
 }
 
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
@@ -1361,7 +1376,7 @@ void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 	if (soc_id == SOC_SPEAR320_ID)
 		spear320_init();
 	else
-		spear320s_init();
+		spear320s_init(pmx_mode);
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
