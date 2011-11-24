@@ -58,6 +58,28 @@ static int pmx_mode_set(struct pmx_mode *mode)
 	return 0;
 }
 
+void enable_dev_for_mode(struct pmx_dev_mode *mode)
+{
+	int k;
+	struct pmx_mux_reg *mux_reg;
+	u32 *address, val;
+
+	/* enable peripheral */
+	for (k = 0; k < mode->mux_reg_cnt; k++) {
+		mux_reg = &mode->mux_regs[k];
+
+		address = ioremap(mux_reg->address, SZ_16);
+		if (address) {
+			val = readl(address);
+			val &= ~mux_reg->mask;
+			val |= mux_reg->value & mux_reg->mask;
+			writel(val, address);
+
+			iounmap(address);
+		}
+	}
+}
+
 /**
  * pmx_devs_enable - Enables list of devices
  * @devs - pointer to pmx device array
@@ -72,54 +94,40 @@ static int pmx_mode_set(struct pmx_mode *mode)
  */
 int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 {
-	u32 val, i;
-	u32 *address;
+	u32 i, j;
+	bool found;
 
 	if (!count)
 		return -EINVAL;
 
-	for (i = 0; i < count; i++) {
-		u8 k, j = 0;
+	if (!pmx->active_mode) {
+		printk(KERN_ERR "pmx active_mode is not set\n");
+		return -EAGAIN;
+	}
 
+	for (i = 0, j = 0; i < count; i++) {
 		if (!devs[i]->name || !devs[i]->modes) {
 			printk(KERN_ERR "padmux: dev name or modes is null\n");
 			continue;
 		}
-		/* check if peripheral exists in active mode */
-		if (pmx->active_mode) {
-			bool found = false;
-			for (j = 0; j < devs[i]->mode_count; j++) {
-				if (devs[i]->modes[j].ids &
-						pmx->active_mode->id) {
-					found = true;
-					break;
-				}
-			}
-			if (found == false) {
-				printk(KERN_ERR "%s device not available in %s"\
-						"mode\n", devs[i]->name,
-						pmx->active_mode->name);
-				continue;
+
+		found = false;
+
+		/* Enable dev for all struct modes which support current mode */
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			if (devs[i]->modes[j].ids & pmx->active_mode->id) {
+				found = true;
+				enable_dev_for_mode(&devs[i]->modes[j]);
 			}
 		}
 
-		/* enable peripheral */
-		for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
-			struct pmx_mux_reg *mux_reg =
-				&devs[i]->modes[j].mux_regs[k];
-
-			address = ioremap(mux_reg->address, SZ_16);
-			if (address) {
-				val = readl(address);
-				val &= ~mux_reg->mask;
-				val |= mux_reg->value & mux_reg->mask;
-				writel(val, address);
-
-				iounmap(address);
-			}
+		if (found) {
+			devs[i]->is_active = true;
+			continue;
 		}
 
-		devs[i]->is_active = true;
+		printk(KERN_ERR "%s device not available in %s mode\n",
+				devs[i]->name, pmx->active_mode->name);
 	}
 
 	return 0;
