@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/bitops.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/suspend.h>
@@ -28,6 +29,7 @@
 #define PLAT_PHYS_OFFSET	0x00000000
 #define PCM_SET_WAKEUP_CFG	0xfffff
 #define PCM_SET_CFG	0x3c04
+#define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
 static void __iomem *mpmc_regs_base;
@@ -117,6 +119,14 @@ void spear_sys_suspend(suspend_state_t state)
 				spear_wakeup_sz);
 		/* Increment destination pointer by the size copied*/
 		sram_dest += roundup(spear_wakeup_sz, 4);
+		/*
+		 * Set ddr_phy_no_shutoff to 0 in order to select
+		 * the SPEAr DDR pads, DDRIO_VDD1V8_1V5_OFF
+		 * and DDRIO_VDD1V2_OFF, to be used to control
+		 * the lines for the switching of the DDRPHY to the
+		 * external power supply.
+		 */
+		pm_cfg &= (unsigned long)DDR_PHY_NO_SHUTOFF_CFG;
 		/*
 		 * Set up the Power Domains specific registers.
 		 * 1. Setup the wake up enable of the desired sources.
