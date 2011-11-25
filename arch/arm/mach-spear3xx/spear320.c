@@ -33,7 +33,7 @@
 #define AUTO_NET_MII_MODE	(1 << 1)
 #define AUTO_EXP_MODE		(1 << 2)
 #define SMALL_PRINTERS_MODE	(1 << 3)
-#define ALL_MODES		0xF
+#define ALL_LEGACY_MODES	0xF
 
 struct pmx_mode spear320_auto_net_smii_mode = {
 	.id = AUTO_NET_SMII_MODE,
@@ -114,7 +114,7 @@ static struct pmx_mux_reg pmx_fsmc_mux[] = {
 
 static struct pmx_dev_mode pmx_fsmc_modes[] = {
 	{
-		.ids = ALL_MODES,
+		.ids = ALL_LEGACY_MODES,
 		.mux_regs = pmx_fsmc_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_mux),
 	},
@@ -203,7 +203,7 @@ static struct pmx_mux_reg pmx_uart1_mux[] = {
 
 static struct pmx_dev_mode pmx_uart1_modes[] = {
 	{
-		.ids = ALL_MODES,
+		.ids = ALL_LEGACY_MODES,
 		.mux_regs = pmx_uart1_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_mux),
 	},
@@ -260,7 +260,7 @@ static struct pmx_mux_reg pmx_uart2_mux[] = {
 
 static struct pmx_dev_mode pmx_uart2_modes[] = {
 	{
-		.ids = ALL_MODES,
+		.ids = ALL_LEGACY_MODES,
 		.mux_regs = pmx_uart2_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_uart2_mux),
 	},
