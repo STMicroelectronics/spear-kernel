@@ -1173,7 +1173,11 @@ struct sys_timer spear3xx_timer = {
 	.init = spear3xx_timer_init,
 };
 
-/* This fixes addresses of all pmx devices for different machines */
+/*
+ * This fixes addresses of all pmx devices for different machines, if address is
+ * passed as zero. If a valid address is passed, then it will not be
+ * overwritten.
+ */
 void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr)
 {
 	int i;
@@ -1185,8 +1189,10 @@ void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr)
 			int k;
 			struct pmx_dev_mode *mode = &pdev->modes[j];
 
-			for (k = 0; k < mode->mux_reg_cnt; k++)
-				mode->mux_regs[k].address = addr;
+			for (k = 0; k < mode->mux_reg_cnt; k++) {
+				if (!mode->mux_regs[k].address)
+					mode->mux_regs[k].address = addr;
+			}
 		}
 	}
 }
