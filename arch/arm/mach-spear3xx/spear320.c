@@ -829,8 +829,8 @@ struct amba_device spear320_ssp_device[] = {
 			.platform_data = &ssp_platform_data[0],
 		},
 		.res = {
-			.start = SPEAR320_SSP0_BASE,
-			.end = SPEAR320_SSP0_BASE + SZ_4K - 1,
+			.start = SPEAR320_SSP1_BASE,
+			.end = SPEAR320_SSP1_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
 		.irq = {SPEAR320_VIRQ_SSP1, NO_IRQ},
@@ -841,8 +841,8 @@ struct amba_device spear320_ssp_device[] = {
 			.platform_data = &ssp_platform_data[1],
 		},
 		.res = {
-			.start = SPEAR320_SSP1_BASE,
-			.end = SPEAR320_SSP1_BASE + SZ_4K - 1,
+			.start = SPEAR320_SSP2_BASE,
+			.end = SPEAR320_SSP2_BASE + SZ_4K - 1,
 			.flags = IORESOURCE_MEM,
 		},
 		.irq = {SPEAR320_VIRQ_SSP2, NO_IRQ},
