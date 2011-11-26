@@ -192,7 +192,7 @@ static struct pmx_dev_mode pmx_keyboard_row_col_modes[] = {
 	},
 };
 
-struct pmx_dev spear1340_pmx_keyboard_row_col= {
+struct pmx_dev spear1340_pmx_keyboard_row_col = {
 	.name = "keyboard_row_col",
 	.modes = pmx_keyboard_row_col_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_row_col_modes),
@@ -2416,7 +2416,7 @@ static void config_clcd_pads(struct pmx_dev **devs, u8 count, bool on)
 void config_clcd_gpio_pads(bool on)
 {
 	int ret;
-	static bool gpio_avail = false;
+	static bool gpio_avail;
 
 	if (!gpio_avail) {
 		ret = request_gpio(clcd_gpio_list, GPIOF_IN,
