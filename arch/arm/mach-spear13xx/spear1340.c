@@ -1429,7 +1429,7 @@ static struct camif_config_data cam0_data = {
 	.pclk_polarity = ACTIVE_LOW,
 	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_64,
+	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
 };
 
