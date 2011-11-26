@@ -1722,6 +1722,7 @@ static const struct v4l2_queryctrl vs6725_controls[] = {
 	},
 };
 
+static int vs6725_prog_default(struct i2c_client *client);
 static bool is_unscaled_image_ok(int width, int height, struct v4l2_rect *rect)
 {
 	return width > rect->width || height > rect->height;
@@ -2218,9 +2219,20 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	if (enable) {
+		ret = vs6725_prog_default(client);
+		if (ret) {
+			dev_err(&client->dev,
+				"VS6725 default register program failed\n");
+			return ret;
+		}
+
 		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
-		/* allow the sensor to really boot-up */
-		mdelay(100);
+
+		/*
+		 * Allow the sensor to really boot-up.
+		 * Don't change the delay value set here.
+		 */
+		mdelay(505);
 	} else {
 		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
 	}
@@ -2660,13 +2672,6 @@ static int vs6725_camera_init(struct soc_camera_device *icd,
 	dev_info(&client->dev,
 		"vs6725 Device-ID=0x%02x::0x%02x, Firmware-Ver=0x%02x"
 		" Patch-Ver=0x%02x\n", dev_id_hi, dev_id_lo, fm_ver, patch_ver);
-
-	ret = vs6725_prog_default(client);
-	if (ret) {
-		dev_err(&client->dev,
-				"VS6725 default register program failed\n");
-		return ret;
-	}
 
 	priv->active_pipe = PIPE_0;
 
