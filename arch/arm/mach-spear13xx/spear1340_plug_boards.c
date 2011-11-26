@@ -438,10 +438,35 @@ static struct i2c_board_info vs6725_camera_sensor_info[] = {
 	},
 };
 
+static struct soc_camera_link vs6725_cam0_sensor_iclink;
+
+static int vs6725_cam_power(struct device *dev, int val)
+{
+	int ret;
+	static bool gpio_avail;
+
+	if (!gpio_avail) {
+		/* Camera power: default is ON */
+		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
+		if (!ret)
+			gpio_direction_output(STMPE801_GPIO_6, 0);
+		else
+			vs6725_cam0_sensor_iclink.power = NULL;
+
+		gpio_avail = true;
+	}
+
+	/* turn on/off the CE pin for camera sensor */
+	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+
+	return 0;
+}
+
 static struct soc_camera_link vs6725_cam0_sensor_iclink = {
 	.bus_id = 0,	/* sensor is connected to camera device 0 */
 	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
 	.board_info = &vs6725_camera_sensor_info[0],
+	.power = vs6725_cam_power,
 	.module_name = "vs6725",
 };
 
