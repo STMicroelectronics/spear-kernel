@@ -83,31 +83,24 @@
 
 /* interrupt and dma mask register bits */
 #define IR_DUR_MASK_BREQ	BIT(15)
-#define IR_DUR_UNMASK_BREQ	(0 << 15)
+#define IR_DUR_UNMASK_BREQ	(~BIT(15))
 #define IR_DUR_MASK_SREQ	BIT(14)
-#define IR_DUR_UNMASK_SREQ	(0 << 14)
-#define IR_DUR_DMA_DUAL		BIT(12)
+#define IR_DUR_UNMASK_SREQ	(~BIT(14))
+#define IR_DUR_DMA_DUAL_EN	BIT(12)
+#define IR_DUR_DMA_DUAL_DIS	(~BIT(12))
 #define IR_DUR_DMA_EN		BIT(11)
-#define IR_DUR_DMA_DIS		(0 << 11)
+#define IR_DUR_DMA_DIS		(~BIT(11))
 #define IR_DUR_FRAME_START_EN	BIT(6)
-#define IR_DUR_FRAME_START_DIS	(0 << 6)
+#define IR_DUR_FRAME_START_DIS	(~BIT(6))
 #define IR_DUR_FRAME_END_EN	BIT(5)
-#define IR_DUR_FRAME_END_DIS	(0 << 5)
+#define IR_DUR_FRAME_END_DIS	(~BIT(5))
 #define IR_DUR_LINE_END_EN	BIT(4)
-#define IR_DUR_LINE_END_DIS	(0 << 4)
+#define IR_DUR_LINE_END_DIS	(~BIT(4))
 
 /* interrupt status register bits */
 #define IRQ_STATUS_FRAME_START	BIT(6)
 #define IRQ_STATUS_FRAME_END	BIT(5)
 #define IRQ_STATUS_LINE_END	BIT(4)
-
-#define IRQ_ENABLE_ALL		(IR_DUR_UNMASK_BREQ | IR_DUR_UNMASK_SREQ | \
-				IR_DUR_DMA_EN | IR_DUR_FRAME_START_EN | \
-				IR_DUR_LINE_END_EN | IR_DUR_FRAME_END_EN)
-
-#define IRQ_DISABLE_ALL		(IR_DUR_MASK_BREQ | IR_DUR_MASK_SREQ | \
-				IR_DUR_DMA_DIS | IR_DUR_FRAME_START_DIS | \
-				IR_DUR_FRAME_END_DIS | IR_DUR_LINE_END_DIS)
 
 /* embedded codes */
 #define ITU656_EMBED_EVEN_CODE	0xABB6809D
@@ -163,17 +156,26 @@ struct camif {
 	spinlock_t lock;
 	struct list_head capture;
 
-	/* video buffer and queue */
-	struct camif_buffer *active;
+	/* video buffer queue */
 	struct videobuf_queue *vq;
 
 	/* flags to indicate states */
-	bool dma_complete;
-	bool frame_start;
-	bool first_entry;
+	bool first_frame_end;
 
 	/* camif controller data specific to a platform */
 	struct camif_controller *pdata;
+};
+
+/* camif interrupt selection types */
+enum camif_interrupt_config {
+	ENABLE_ALL = 0,
+	DISABLE_ALL,
+	ENABLE_HSYNC_VSYNC_INT,
+	DISABLE_HSYNC_VYSNC_INT,
+	ENABLE_EVEN_FIELD_DMA,
+	DISABLE_EVEN_FIELD_DMA,
+	ENABLE_BOTH_FIELD_DMA,
+	DISABLE_BOTH_FIELD_DMA,
 };
 
 /*
@@ -214,7 +216,67 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 	},
 };
 
-static void start_camif(struct camif *camif)
+/* Helper routine to configure CAMIF interrupts */
+static void camif_configure_interrupts(struct camif *camif,
+		enum camif_interrupt_config config)
+{
+	int intr_dma_mask_reg = readl(camif->base + CAMIF_IR_DUR);
+
+	switch (config) {
+	case ENABLE_ALL:
+		intr_dma_mask_reg |= IR_DUR_LINE_END_EN | IR_DUR_FRAME_END_EN |
+				IR_DUR_FRAME_START_EN | IR_DUR_DMA_EN |
+				IR_DUR_DMA_DUAL_EN;
+		intr_dma_mask_reg &= IR_DUR_UNMASK_BREQ & IR_DUR_UNMASK_SREQ;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case DISABLE_ALL:
+		intr_dma_mask_reg |= IR_DUR_MASK_BREQ | IR_DUR_MASK_SREQ;
+		intr_dma_mask_reg &= IR_DUR_DMA_DIS & IR_DUR_DMA_DUAL_DIS &
+				IR_DUR_FRAME_START_DIS & IR_DUR_FRAME_END_DIS &
+				IR_DUR_LINE_END_DIS;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case ENABLE_HSYNC_VSYNC_INT:
+		intr_dma_mask_reg |= IR_DUR_FRAME_START_EN |
+			IR_DUR_LINE_END_EN | IR_DUR_FRAME_END_EN;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case DISABLE_HSYNC_VYSNC_INT:
+		intr_dma_mask_reg &= IR_DUR_FRAME_START_DIS &
+				IR_DUR_LINE_END_DIS & IR_DUR_FRAME_END_DIS;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case ENABLE_EVEN_FIELD_DMA:
+		intr_dma_mask_reg |= IR_DUR_DMA_EN;
+		intr_dma_mask_reg &= IR_DUR_DMA_DUAL_DIS & IR_DUR_UNMASK_BREQ &
+			IR_DUR_UNMASK_SREQ;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case DISABLE_EVEN_FIELD_DMA:
+		intr_dma_mask_reg &= IR_DUR_DMA_DIS;
+		intr_dma_mask_reg |= IR_DUR_MASK_BREQ | IR_DUR_MASK_SREQ;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case ENABLE_BOTH_FIELD_DMA:
+		intr_dma_mask_reg |= IR_DUR_DMA_EN | IR_DUR_DMA_DUAL_EN;
+		intr_dma_mask_reg &= IR_DUR_UNMASK_BREQ & IR_DUR_UNMASK_SREQ;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	case DISABLE_BOTH_FIELD_DMA:
+		intr_dma_mask_reg &= IR_DUR_DMA_DIS & IR_DUR_DMA_DUAL_DIS;
+		intr_dma_mask_reg |= IR_DUR_MASK_BREQ | IR_DUR_MASK_SREQ;
+		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
+		break;
+	default:
+		dev_err(camif->ici.v4l2_dev.dev,
+				"invalid interrupt config type\n");
+		break;
+	}
+}
+
+/* Program default values for CAMIF control register */
+static void camif_prog_default_ctrl(struct camif *camif)
 {
 	u32 ctrl = 0;
 	bool emb_synchro = 0;
@@ -239,82 +301,84 @@ static void start_camif(struct camif *camif)
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
 
-static void stop_camif(struct camif *camif)
+/* Reset the CAMIF registers to their default values */
+static void camif_reset_regs(struct camif *camif)
 {
-	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
-
 	writel(0x0, camif->base + CAMIF_CTRL);
+	writel(0x0, camif->base + CAMIF_IR_DUR);
 	writel(0x0, camif->base + CAMIF_EFEC);
 	writel(0x0, camif->base + CAMIF_OFEC);
 	writel(0x0, camif->base + CAMIF_CSTARTP);
 	writel(0x0, camif->base + CAMIF_CSTOPP);
 }
 
-/*
- * start video capturing:
- * Launch capturing. DMA channels should not be active yet. They should get
- * activated at the end of frame interrupt, to capture only whole frames, and
- * never begin the capture of a partial frame.
- */
-static void camif_start_capture(struct camif *camif)
+/* Stop CAMIF and DMA channels */
+static void camif_stop(struct camif *camif)
 {
-	writel(IRQ_ENABLE_ALL, camif->base + CAMIF_IR_DUR);
+	/* stop all interrupts */
+	camif_configure_interrupts(camif, DISABLE_ALL);
+
+	/* clear CAMIF registers */
+	camif_reset_regs(camif);
+
+	/* stop DMA engine */
+	if (camif->chan) {
+		dmaengine_terminate_all(camif->chan);
+		dma_release_channel(camif->chan);
+	}
 }
 
-static void camif_stop_capture(struct camif *camif)
-{
-	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
-	camif->active = NULL;
-}
-
-/*
- * TODO: At present we mask all interrupt sources while handling the
- * dma completion stuff and enable the interrupt sources when we are
- * done with the same. This needs to be implemented in a better way as
- * this may cause some interrupts to be missed while we are inside the
- * dma completion routine
- */
+/* DMA completion callback */
 static void camif_rx_dma_complete(void *arg)
 {
 	struct camif *camif = (struct camif *)arg;
 	struct camif_buffer *buf;
+	struct camif_buffer *active;
 	struct videobuf_buffer *vb;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
 
-	/* disable all interrupt sources */
-	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
-
 	/* check if we have an active buffer */
-	if (!camif->active) {
-		dev_err(camif->ici.v4l2_dev.dev, "buffer is not active\n");
-		goto out;
-	}
-
-	vb = &camif->active->vb;
-	buf = container_of(vb, struct camif_buffer, vb);
-	WARN_ON(buf->inwork || list_empty(&vb->queue));
-	camif->dma_complete = 1;
-
-	/* _init is used to debug races, see comment in camif_reqbufs() */
-	list_del_init(&vb->queue);
-	vb->state = VIDEOBUF_DONE;
-	do_gettimeofday(&vb->ts);
-	vb->field_count++;
-	wake_up(&vb->done);
-	dev_dbg(camif->ici.v4l2_dev.dev, "%s dequeud buffer (vb=0x%p)\n",
-			__func__, vb);
-
-	if (list_empty(&camif->capture)) {
-		camif_stop_capture(camif);
-		goto out;
-	}
-
-	camif->active = list_entry(camif->capture.next,
+	active = list_entry(camif->capture.next,
 				struct camif_buffer, vb.queue);
-	if (camif->active)
-		camif_start_capture(camif);
+	if (!active) {
+		dev_err(camif->ici.v4l2_dev.dev,
+				"no more videobufs, stop capture\n");
+		camif_stop(camif);
+		goto out;
+	}
+
+	vb = &active->vb;
+
+	if (waitqueue_active(&vb->done)) {
+		buf = container_of(vb, struct camif_buffer, vb);
+		WARN_ON(buf->inwork || list_empty(&vb->queue));
+
+		/*
+		 * _init is used to debug races, see comment in
+		 * camif_reqbufs()
+		 */
+		list_del_init(&vb->queue);
+		vb->state = VIDEOBUF_DONE;
+		do_gettimeofday(&vb->ts);
+		vb->field_count++;
+		wake_up(&vb->done);
+		dev_dbg(camif->ici.v4l2_dev.dev,
+				"%s processed buffer (vb=0x%p)\n",
+				__func__, vb);
+
+		active = list_entry(camif->capture.next,
+				struct camif_buffer, vb.queue);
+		if (!active) {
+			dev_err(camif->ici.v4l2_dev.dev,
+				"no more videobufs, stop capture\n");
+			camif_stop(camif);
+			goto out;
+		} else {
+			active->vb.state = VIDEOBUF_ACTIVE;
+		}
+	}
 
 out:
 	spin_unlock_irqrestore(&camif->lock, flags);
@@ -370,73 +434,44 @@ static irqreturn_t camif_line_int(int irq, void *dev_id)
  */
 static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 {
+	int status_reg;
+	unsigned long flags;
 	struct camif *camif = (struct camif *)dev_id;
 	struct camif_buffer *active;
-	unsigned long flags = 0;
-	int status_reg;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
 	if (!status_reg)
 		return IRQ_NONE;
 
 	if (status_reg & IRQ_STATUS_FRAME_END) {
+		spin_lock_irqsave(&camif->lock, flags);
+
 		/* perform a dummy write to clear frame-end interrupt */
 		writel(IRQ_STATUS_FRAME_END, camif->base + CAMIF_STATUS);
 
 		/*
-		 * we should receive a frame-end interrupt only after we have
-		 * received the frame start interrupt first. Check for the same.
+		 * For the 1st frame-end, mark 1st frame in capture queue
+		 * as ACTIVE and unmask DMA interrupt requests.
 		 */
-		spin_lock_irqsave(&camif->lock, flags);
-		if (!camif->frame_start) {
-			spin_unlock_irqrestore(&camif->lock, flags);
-			goto check_for_start_int;
+		if (camif->first_frame_end) {
+			if (!list_empty(&camif->capture)) {
+				active = list_first_entry(&camif->capture,
+						struct camif_buffer, vb.queue);
+				active->vb.state = VIDEOBUF_ACTIVE;
+			}
+			camif->first_frame_end = 0;
+			camif_configure_interrupts(camif,
+						ENABLE_EVEN_FIELD_DMA);
 		}
 
-		/* check if the previous dma is complete */
-		if (!camif->first_entry)
-			if (!camif->dma_complete) {
-				spin_unlock_irqrestore(&camif->lock, flags);
-				goto exit_isr;
-			}
-
-		if (!list_empty(&camif->capture)) {
-			camif->active = list_first_entry(&camif->capture,
-					 struct camif_buffer, vb.queue);
-			active = camif->active;
-			camif->cookie = active->desc->tx_submit(active->desc);
-			if (dma_submit_error(camif->cookie)) {
-				dev_err(camif->ici.v4l2_dev.dev,
-					"dma submit error %d\n",
-					camif->cookie);
-				spin_unlock_irqrestore(&camif->lock, flags);
-				goto exit_isr;
-			}
-
-			camif->chan->device->device_issue_pending(camif->chan);
-			camif->dma_complete = 0;
-			camif->frame_start = 0;
-			camif->first_entry = 0;
-			spin_unlock_irqrestore(&camif->lock, flags);
-		} else {
-			/* we have no valid captured frame */
-			dev_err(camif->ici.v4l2_dev.dev,
-					"cam->capture is NULL\n");
-			spin_unlock_irqrestore(&camif->lock, flags);
-			goto exit_isr;
-		}
-	}
-
-check_for_start_int:
-	if (status_reg & IRQ_STATUS_FRAME_START) {
-		/* perform a dummy write to clear frame-start interrupt */
-		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
-		spin_lock_irqsave(&camif->lock, flags);
-		camif->frame_start = 1;
 		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
-exit_isr:
+	if (status_reg & IRQ_STATUS_FRAME_START) {
+		/* perform a dummy write to clear frame-start interrupt */
+		writel(IRQ_STATUS_FRAME_START, camif->base + CAMIF_STATUS);
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -468,7 +503,6 @@ static int camif_videobuf_setup(struct videobuf_queue *vq,
 		unsigned int *count, unsigned int *size)
 {
 	struct soc_camera_device *icd = vq->priv_data;
-
 	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
 						icd->current_fmt->host_fmt);
 
@@ -561,14 +595,23 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		struct videobuf_buffer *vb)
 {
 	int ret;
+	dma_cookie_t cookie;
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 	struct camif *camif = ici->priv;
 
-	dev_dbg(icd->dev.parent, "%s (vb=0x%p) 0x%08lx %d active=%p\n",
-		__func__, vb, vb->baddr, vb->bsize, camif->active);
+	dev_dbg(icd->dev.parent, "%s (vb=0x%p) 0x%08lx %d\n",
+		__func__, vb, vb->baddr, vb->bsize);
 
+	/* add this buffer to our capture list and set state to QUEUED */
+	vb->state = VIDEOBUF_QUEUED;
+	list_add_tail(&vb->queue, &camif->capture);
+
+	/*
+	 * prepare DMA SG requests for the buffer just
+	 * requested by user-land
+	 */
 	ret = camif_init_dma_channel(camif, buf);
 	if (ret) {
 		dev_err(icd->dev.parent,
@@ -576,12 +619,19 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		return;
 	}
 
-	list_add_tail(&vb->queue, &camif->capture);
+	/* submit the DMA descriptor */
+	cookie = buf->desc->tx_submit(buf->desc);
+	ret = dma_submit_error(cookie);
+	if (ret) {
+		dev_err(icd->dev.parent,
+				"dma submit error %d\n", cookie);
+		return;
+	}
 
-	vb->state = VIDEOBUF_ACTIVE;
+	camif->chan->device->device_issue_pending(camif->chan);
 
-	if (!camif->active)
-		camif_start_capture(camif);
+	/* enable HSYNC/VSYNC interrupts */
+	camif_configure_interrupts(camif, ENABLE_HSYNC_VSYNC_INT);
 }
 
 static void camif_videobuf_release(struct videobuf_queue *vq,
@@ -611,6 +661,7 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 		break;
 	}
 #endif
+
 	free_buffer(vq, buf);
 }
 
@@ -637,10 +688,27 @@ static int camif_add_device(struct soc_camera_device *icd)
 	if (camif->icd)
 		return -EBUSY;
 
-	start_camif(camif);
-
 	camif->icd = icd;
-	camif->frame_start = 0;
+
+	/* initialize capture queue again */
+	INIT_LIST_HEAD(&camif->capture);
+
+	/*
+	 * program default values for the CTRL register using the info
+	 * passed from platform data.
+	 * Note: These will be changed as per the sensor resolution settings,
+	 * once SET_FMT is called from user-space
+	 */
+	camif_prog_default_ctrl(camif);
+
+	/*
+	 * enable HSYNC and VSYNC interrupts but don't enable DMA from
+	 * CAMIF as of yet
+	 */
+	camif_configure_interrupts(camif, DISABLE_ALL);
+
+	/* reset status flags */
+	camif->first_frame_end = 1;
 
 	dev_info(icd->dev.parent, "SPEAr Camera driver attached to camera %d\n",
 		 icd->devnum);
@@ -656,14 +724,11 @@ static void camif_remove_device(struct soc_camera_device *icd)
 
 	BUG_ON(icd != camif->icd);
 
-	/*
-	 * FIXME:
-	 * Do not stop streaming on the subdevice as the
-	 * sensor we are connected to requiring a strange set of
-	 * patch-set to be written after every STOP operation.
-	 * Later find a more elegant solution to this issue.
-	 */
-	stop_camif(camif);
+	/* stop CAMIF and DMA channels */
+	camif_stop(camif);
+
+	/* clear status flags */
+	camif->first_frame_end = 0;
 
 	dev_info(icd->dev.parent,
 		"SPEAr Camera driver detached from camera %d\n", icd->devnum);
@@ -1133,7 +1198,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	 * has not yet requested data and the sensor has been
 	 * initialized, disable interrupts initially.
 	 */
-	writel(IRQ_DISABLE_ALL, camif->base + CAMIF_IR_DUR);
+	camif_configure_interrupts(camif, DISABLE_ALL);
 
 	camif->ici.v4l2_dev.dev = &pdev->dev;
 	camif->ici.nr = pdev->id;
@@ -1147,11 +1212,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 			"failed to register camif as SoC camera host\n");
 		goto exit_free_frm_start_end_irq;
 	}
-
-	/* reset status flags */
-	camif->dma_complete = 0;
-	camif->frame_start = 0;
-	camif->first_entry = 1;
 
 	INIT_LIST_HEAD(&camif->capture);
 	spin_lock_init(&camif->lock);
