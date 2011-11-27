@@ -1922,6 +1922,9 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_COLORFX:
 		ctrl->value = priv->color_effect;
 		break;
+	default:
+		/* we don't support this ctrl id */
+		return -EINVAL;
 	}
 
 	return 0;
@@ -2135,6 +2138,9 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (!ret)
 			priv->color_effect = ctrl->value;
 		break;
+	default:
+		/* we don't support this ctrl id */
+		return -EINVAL;
 	}
 
 	return ret;
