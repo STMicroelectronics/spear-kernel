@@ -275,8 +275,8 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 
 	e->evr.ver = d[0x12];
 	e->evr.rev = d[0x13];
-	pr_info("EDID version : %d.%d\n", e->evr.ver, e->evr.rev);
-	pr_info("Manufacturing week : %d Manufacturing year: %d\n",
+	pr_debug("EDID version : %d.%d\n", e->evr.ver, e->evr.rev);
+	pr_debug("Manufacturing week : %d Manufacturing year: %d\n",
 			e->vpi.week, e->vpi.year);
 
 	/*
@@ -358,7 +358,7 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 		if ((d[i] == 0x0) && (d[i+1] == 0x0)) {
 			/* Monitor S/N */
 			if (d[i+3] == 0xFF) {
-				pr_info("Monitor S/N\n");
+				pr_debug("Monitor S/N\n");
 				for (j = 0; j < 13; j++) {
 					e->mdb.mon_snum[j] = d[i + 5 + j];
 					if (d[i + 5 + j] == 0xA)
@@ -368,7 +368,7 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 
 			/* ASCII Data String */
 			if (d[i+3] == 0xFE) {
-				pr_info("ASCII String\n");
+				pr_debug("ASCII String\n");
 				for (j = 0; j < 13; j++) {
 					e->mdb.ascii_data[j] = d[i + 5 + j];
 					if (d[i + 5 + j] == 0xA)
@@ -378,7 +378,7 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 
 			/* Monitor Range Limits */
 			if (d[i+3] == 0xFD) {
-				pr_info("Range Limits\n");
+				pr_debug("Range Limits\n");
 				e->mdb.mrl_min_vrate = d[i+5];
 				e->mdb.mrl_max_vrate = d[i+6];
 				e->mdb.mrl_min_hrate = d[i+7];
@@ -399,17 +399,17 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 
 			/* Monitor Name */
 			if (d[i+3] == 0xFC) {
-				pr_info("Monitor Name : ");
+				pr_debug("Monitor Name : ");
 				for (j = 0; j < 13; j++) {
 					e->mdb.mon_name[j] = d[i + 5 + j];
 					if (d[i + 5 + j] == 0xA)
 						e->mdb.mon_name[j] = '\0';
 				}
-				pr_info("%s\n", e->mdb.mon_name);
+				pr_debug("%s\n", e->mdb.mon_name);
 			}
 			/* Additional Color Point Data */
 			if (d[i+3] == 0xFB) {
-				pr_info("Additional Color Point Data\n");
+				pr_debug("Additional Color Point Data\n");
 				e->mdb.cp_wpoint_index1 = d[i+5];
 				e->mdb.cp_w_lb1 = d[i+6];
 				e->mdb.cp_w_x1 = d[i+7];
@@ -425,7 +425,7 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 			}
 			/* Additional Standard Timing Definitions */
 			if (d[i+3] == 0xFA) {
-				pr_info("Additional Standard Timing \
+				pr_debug("Additional Standard Timing \
 						Definitions\n");
 				for (j = 5; j < 18; j += 2) {
 					st.hap = (d[i + j]/28)-31;
@@ -438,20 +438,20 @@ static void parse_0_block(struct sink_edid_info *e, u8 *d)
 
 			/* Dummy Descriptor */
 			if (d[i+3] == 0x10)
-				pr_info("Dummy Descriptor\n");
+				pr_debug("Dummy Descriptor\n");
 
 			/* Manufacturer Defined descriptor
 			 * Only supports one for now. To more e->mbd->ms_byte
 			 * can be converted into a linked list of ms[]
 			 */
 			if (d[i+3] <= 0x0F) {
-				pr_info("Manufacturer Defined Descriptor\n");
+				pr_debug("Manufacturer Defined Descriptor\n");
 				for (j = 0; j < 13; j++)
 					e->mdb.ms_byte[j] = d[i + 5 + j];
 			}
 
 		} else	{
-			pr_info("DTB\n");
+			pr_debug("DTB\n");
 			/* Flag 1st DTB as preferred timing */
 			add_dtb(parse_dtb(i, d), e);
 
@@ -474,11 +474,11 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 	for (j = i; j < (i + 128); j++)
 		sum += d[j];
 	if (sum) {
-		pr_info("Check sum does not match, EDID information \
+		pr_debug("Check sum does not match, EDID information \
 				corrupted\n");
 		e->cea->checksum = FALSE;
 	} else {
-		pr_info("checksum ok\n");
+		pr_debug("checksum ok\n");
 		e->cea->checksum = TRUE;
 	}
 #else
@@ -495,7 +495,7 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 	while (j < i+d[i+2]) {
 		tag = get_bits(d[j], 7, 5);
 		if (tag == 1) {
-			pr_info("Short Audio Descriptor\n");
+			pr_debug("Short Audio Descriptor\n");
 
 			sad.aud_format = get_bits(d[j+1], 6, 3);
 			sad.max_num_chan = get_bits(d[j+1], 2, 0)+1;
@@ -517,7 +517,7 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 				sad.comp_maxbitrate = d[j+3] * 8;
 			add_sad(sad, e);
 		} else if (tag == 2) {
-			pr_info("Short Video Descriptor\n");
+			pr_debug("Short Video Descriptor\n");
 			for (k = j + 1; k <= (j + get_bits(d[j], 4, 0)); k++) {
 				svd.vid_id = get_bits(d[k], 6, 0);
 				svd.native = get_bits(d[k], 7, 7);
@@ -525,7 +525,7 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 				e->cea.cea.svd_count++;
 			}
 		} else if (tag == 3) {
-			pr_info("Vendor Specific Data Block\n");
+			pr_debug("Vendor Specific Data Block\n");
 			/*lsb */
 			e->cea.cea.ieee_reg[1] = (u16)((d[j+1])
 					| (d[j+2] << 8));
@@ -551,7 +551,7 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 					|| (e->cea.cea.ieee_reg[0] == 0x00))
 				e->cea.cea.vsdb_hdmi = TRUE;
 		} else if (tag == 4) {
-			pr_info("Speaker Allocation Block\n");
+			pr_debug("Speaker Allocation Block\n");
 			e->cea.cea.spad.rlc_rrc = get_bits(d[j+1], 6, 6);
 			e->cea.cea.spad.flc_frc = get_bits(d[j+1], 5, 5);
 			e->cea.cea.spad.rc = get_bits(d[j+1], 4, 4);
@@ -561,9 +561,9 @@ static void parse_cea_block(struct sink_edid_info *e, u8 *d,
 			e->cea.cea.spad.fl_fr = get_bits(d[j+1], 0, 0);
 			/*e->cea->cea->spad-> */
 		} else if ((tag == 0) || (tag == 5) || (tag == 6) || (tag == 7))
-			pr_info("Reserved\n");
+			pr_debug("Reserved\n");
 		else
-			pr_info("invalid tag in cea data block\n");
+			pr_debug("invalid tag in cea data block\n");
 
 		j += (get_bits(d[j], 4, 0) + 1);
 	}
@@ -586,7 +586,7 @@ int parse_edid(struct sink_edid_info *e, u8 *d)
 
 	if (!((d[0] == 0) || (d[0] == 2) || (d[0] == 0xF0) || (d[0x80] == 0)
 				|| (d[0x80] == 2) || (d[0x80] == 0xF0))) {
-		pr_info("Error: Trying to parse edid segment with \
+		pr_debug("Error: Trying to parse edid segment with \
 				no valid blocks");
 
 		/* to keep from returning a strange value */
@@ -609,7 +609,7 @@ int parse_edid(struct sink_edid_info *e, u8 *d)
 
 	for (i = 0; i < 2; i++) {
 		if ((d[i*0x80]) == 0x2) {
-			pr_info("cea extension block found\n");
+			pr_debug("cea extension block found\n");
 			parse_cea_block(e, d, i*0x80);
 		}
 	}
