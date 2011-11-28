@@ -2159,6 +2159,29 @@ struct platform_device spear1340_otg_device = {
 	.resource = otg_resources,
 };
 
+/* video input parallel port registeration */
+static struct resource vip_resources[] = {
+	{
+		.start = SPEAR1340_VIP_BASE,
+		.end = SPEAR1340_VIP_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fifo_overflow_irq",
+		.start = SPEAR1340_IRQ_VIP,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_vip_device = {
+	.name = "spear_vip",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(vip_resources),
+	.resource = vip_resources,
+};
+
 static int spear1340_sys_clk_init(void)
 {
 	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;
