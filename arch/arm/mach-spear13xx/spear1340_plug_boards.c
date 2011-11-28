@@ -66,6 +66,7 @@
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <media/soc_camera.h>
+#include <media/vip.h>
 #include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -119,6 +120,31 @@
 									\
 		pr_info("Adding plug board: %s\n", #pb_name);		\
 	} while (0)
+
+/*
+ * FIXME: Update this later when the HDMI receiver chip driver is available:
+ *
+ * 1. Here, we assume that the SIL9135A HDMI receiver chip supports
+ *    two inputs and a single output. The names of these macros can be
+ *    updated later.
+ * 2. Assume that SIL HDMI Rx chip supports all DV standards.
+ *    Also note that analog standards like PAL and NTSC is also supported by
+ *    VIP IP. So the STD supported by VIP driver will be a super-set
+ *    of these DV and analog standards.
+ */
+#define SIL9135A_INPUT_1	1
+#define SIL9135A_INPUT_2	2
+#define SIL9135A_OUTPUT		3
+#define SIL9135A_I2C_ADDR	0x18
+#define SIL9135A_STD_ALL	(V4L2_DV_480P59_94 | V4L2_DV_576P50 |	\
+				V4L2_DV_720P24 | V4L2_DV_720P25 |	\
+				V4L2_DV_720P30 | V4L2_DV_720P50 |	\
+				V4L2_DV_720P59_94 | V4L2_DV_720P60 |	\
+				V4L2_DV_1080I29_97 | V4L2_DV_1080I30 |	\
+				V4L2_DV_1080I25 | V4L2_DV_1080I50 |	\
+				V4L2_DV_1080I60 | V4L2_DV_1080P24 |	\
+				V4L2_DV_1080P25 | V4L2_DV_1080P30 |	\
+				V4L2_DV_1080P50 | V4L2_DV_1080P60)
 
 struct plug_board {
 	struct pmx_dev **pmx_devs;
@@ -283,6 +309,89 @@ static void __init etm_pb_init(void)
 
 
 /* Definitions specific to HDMI RX plug board */
+
+/* sil9135a hdmi rx chip related */
+
+/*
+ * inputs available at the SIL9135A HDMI receiver chip
+ * FIXME: Appropriate names should be added for HDMI receiver inputs
+ */
+static struct v4l2_input sil9135a_inputs[] = {
+	{
+		.index = 0,
+		.name = "1st Input",
+		.type = V4L2_INPUT_TYPE_CAMERA,
+		.std = SIL9135A_STD_ALL,
+	}, {
+		.index = 1,
+		.name = "2nd Input",
+		.type = V4L2_INPUT_TYPE_CAMERA,
+		.std = SIL9135A_STD_ALL,
+	},
+};
+
+/*
+ * this is the route info for connecting each input of the SIL9135A
+ * hdmi receiver to its output which eventually goes to vip.
+ * There is a one to one correspondence with sil9135a_inputs.
+ */
+static struct vip_subdev_route sil9135a_routes[] = {
+	{
+		.input = SIL9135A_INPUT_1,
+		.output = SIL9135A_OUTPUT,
+	}, {
+		.input = SIL9135A_INPUT_2,
+		.output = SIL9135A_OUTPUT,
+	},
+};
+
+/* info regarding the various subdevs connected to VIP */
+static struct vip_subdev_info vip_sdev_info[] = {
+	/* SIL9135A hdmi receiver */
+	{
+		.name = "sil9135a",
+		.grp_id = 0,
+		.num_inputs = ARRAY_SIZE(sil9135a_inputs),
+		.inputs = sil9135a_inputs,
+		.routes = sil9135a_routes,
+		.can_route = 1,
+		.board_info = {
+			I2C_BOARD_INFO("sil9135a", SIL9135A_I2C_ADDR),
+			/*
+			 * TODO: we can add some platform specific
+			 * data for HDMI receiver chip here, if needed.
+			 */
+		},
+	},
+};
+
+/*
+ * some of the VIP features cannot be programmed via standard V4L2
+ * ioctls, so we configure them here.
+ */
+static struct vip_config vip_config_info = {
+	.vsync_pol = POL_ACTIVE_LOW,
+	.hsync_pol = POL_ACTIVE_LOW,
+	.rgb_width = SIXTEEN_BIT,
+	.vdo_mode = SINGLE_PORT,
+	.pix_clk_pol = POL_ACTIVE_LOW,
+};
+
+/*
+ * a lot of VIP subdev specific params can change with a change in the
+ * EVB being used, so we need to be careful while populating these
+ * details.
+ */
+static struct vip_plat_data vip_board_specific_data = {
+	.card_name = "spear_vip",
+	.config = &vip_config_info,
+	.subdev_info = vip_sdev_info,
+	.subdev_count = ARRAY_SIZE(vip_sdev_info),
+	.i2c_adapter_id = 0,
+	.is_field_end_gpio_based = 1,
+	.gpio_for_frame_end_intr = PLGPIO_100, /* I2S_OUT_DATA_3 */
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *hdmi_rx_pb_pmx_devs[] = {
 };
@@ -299,6 +408,7 @@ static struct amba_device *hdmi_rx_pb_add_adevs[] __initdata = {
 };
 
 static struct platform_device *hdmi_rx_pb_add_pdevs[] __initdata = {
+	&spear1340_vip_device,
 };
 
 /* SPI devices to be removed */
@@ -317,6 +427,9 @@ static struct i2c_dev_info *hdmi_rx_pb_add_i2c_devs[] __initdata = {
 
 static void __init hdmi_rx_pb_init(void)
 {
+	/* set vip plat data */
+	vip_set_plat_data(&spear1340_vip_device,
+				&vip_board_specific_data);
 }
 
 
