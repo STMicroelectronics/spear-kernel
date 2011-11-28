@@ -263,6 +263,17 @@ config VIDEO_SAA6588
 	  To compile this driver as a module, choose M here: the
 	  module will be called saa6588.
 
+comment "HDMI Receivers"
+
+config VIDEO_SIL9135A
+	tristate "Silicon Image 9135A HDMI Receiver"
+	depends on VIDEO_V4L2 && I2C
+	---help---
+	  Support for the Silicon Image SIL9125A HDMI Receiver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called sil9135a.
+
 comment "Video decoders"
 
 config VIDEO_ADV7180
