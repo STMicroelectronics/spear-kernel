@@ -231,28 +231,34 @@ extern struct pmx_mode spear320_small_printers_mode;
 extern struct pmx_mode spear320s_extended_mode;
 
 /* pad mux devices */
-extern struct pmx_dev spear320_pmx_clcd;
+extern struct pmx_dev spear320_pmx_can0;
+extern struct pmx_dev spear320_pmx_can1;
 extern struct pmx_dev spear320_pmx_emi;
-extern struct pmx_dev spear320_pmx_fsmc;
-extern struct pmx_dev spear320_pmx_spp;
-extern struct pmx_dev spear320_pmx_sdhci;
 extern struct pmx_dev spear320_pmx_i2s;
-extern struct pmx_dev spear320_pmx_uart1;
-extern struct pmx_dev spear320_pmx_uart1_modem;
-extern struct pmx_dev spear320_pmx_uart2;
-extern struct pmx_dev spear320_pmx_touchscreen;
-extern struct pmx_dev spear320_pmx_can;
+extern struct pmx_dev spear320_pmx_i2c1[];
+extern struct pmx_dev spear320_pmx_mii1_2[];
+extern struct pmx_dev spear320_pmx_pwm0_1[];
+extern struct pmx_dev spear320_pmx_pwm2[];
+extern struct pmx_dev spear320_pmx_pwm3[];
+extern struct pmx_dev spear320_pmx_sdhci[];
 extern struct pmx_dev spear320_pmx_sdhci_led;
-extern struct pmx_dev spear320_pmx_pwm0;
-extern struct pmx_dev spear320_pmx_pwm1;
-extern struct pmx_dev spear320_pmx_pwm2;
-extern struct pmx_dev spear320_pmx_pwm3;
-extern struct pmx_dev spear320_pmx_ssp1;
-extern struct pmx_dev spear320_pmx_ssp2;
-extern struct pmx_dev spear320_pmx_mii1;
-extern struct pmx_dev spear320_pmx_smii0;
-extern struct pmx_dev spear320_pmx_smii1;
-extern struct pmx_dev spear320_pmx_i2c1;
+extern struct pmx_dev spear320_pmx_ssp1[];
+extern struct pmx_dev spear320_pmx_ssp2[];
+extern struct pmx_dev spear320_pmx_touchscreen;
+extern struct pmx_dev spear320_pmx_uart1;
+extern struct pmx_dev spear320_pmx_uart1_modem[];
+extern struct pmx_dev spear320_pmx_uart2;
+
+extern struct pmx_dev spear320s_pmx_clcd;
+extern struct pmx_dev spear320s_pmx_fsmc;
+extern struct pmx_dev spear320s_pmx_i2c2[];
+extern struct pmx_dev spear320s_pmx_mii2;
+extern struct pmx_dev spear320s_pmx_rs485;
+extern struct pmx_dev spear320s_pmx_spp;
+extern struct pmx_dev spear320s_pmx_uart3[];
+extern struct pmx_dev spear320s_pmx_uart4[];
+extern struct pmx_dev spear320s_pmx_uart5[];
+extern struct pmx_dev spear320s_pmx_uart6[];
 
 /* Add spear320 machine function declarations here */
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev

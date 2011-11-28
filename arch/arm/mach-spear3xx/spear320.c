@@ -70,38 +70,128 @@ struct pmx_mode spear320s_extended_mode = {
 /* Pad multiplexing for CLCD device */
 static struct pmx_mux_reg pmx_clcd_mux[] = {
 	{
-		.mask = 0x0,
-		.value = 0,
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_69_MASK,
+		.value = SPEAR320S_PMX_CLCD_PL_69_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_70_MASK | SPEAR320S_PMX_PL_71_72_MASK |
+			SPEAR320S_PMX_PL_73_MASK | SPEAR320S_PMX_PL_74_MASK |
+			SPEAR320S_PMX_PL_75_76_MASK |
+			SPEAR320S_PMX_PL_77_78_79_MASK,
+		.value = SPEAR320S_PMX_CLCD_PL_70_VAL |
+			SPEAR320S_PMX_CLCD_PL_71_72_VAL |
+			SPEAR320S_PMX_CLCD_PL_73_VAL |
+			SPEAR320S_PMX_CLCD_PL_74_VAL |
+			SPEAR320S_PMX_CLCD_PL_75_76_VAL |
+			SPEAR320S_PMX_CLCD_PL_77_78_79_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_80_TO_85_MASK |
+			SPEAR320S_PMX_PL_86_87_MASK |
+			SPEAR320S_PMX_PL_88_89_MASK,
+		.value = SPEAR320S_PMX_CLCD_PL_80_TO_85_VAL |
+			SPEAR320S_PMX_CLCD_PL_86_87_VAL |
+			SPEAR320S_PMX_CLCD_PL_88_89_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_90_91_MASK |
+			SPEAR320S_PMX_PL_92_93_MASK |
+			SPEAR320S_PMX_PL_94_95_MASK |
+			SPEAR320S_PMX_PL_96_97_MASK | SPEAR320S_PMX_PL_98_MASK,
+		.value = SPEAR320S_PMX_CLCD_PL_90_91_VAL |
+			SPEAR320S_PMX_CLCD_PL_92_93_VAL |
+			SPEAR320S_PMX_CLCD_PL_94_95_VAL |
+			SPEAR320S_PMX_CLCD_PL_96_97_VAL |
+			SPEAR320S_PMX_CLCD_PL_98_VAL,
 	},
 };
 
 static struct pmx_dev_mode pmx_clcd_modes[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE,
+		.ids = SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_clcd_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_clcd_mux),
 	},
 };
 
-struct pmx_dev spear320_pmx_clcd = {
+struct pmx_dev spear320s_pmx_clcd = {
 	.name = "clcd",
 	.modes = pmx_clcd_modes,
 	.mode_count = ARRAY_SIZE(pmx_clcd_modes),
 };
 
 /* Pad multiplexing for EMI (Parallel NOR flash) device */
-static struct pmx_mux_reg pmx_emi_mux[] = {
+static struct pmx_mux_reg pmx_emi_mux1[] = {
 	{
 		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
 		.value = 0,
 	},
 };
 
+static struct pmx_mux_reg pmx_emi_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_46_47_MASK |
+			SPEAR320S_PMX_PL_48_49_MASK,
+		.value = SPEAR320S_PMX_FSMC_EMI_PL_46_47_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_48_49_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_50_51_MASK |
+			SPEAR320S_PMX_PL_52_53_MASK |
+			SPEAR320S_PMX_PL_54_55_56_MASK |
+			SPEAR320S_PMX_PL_58_59_MASK,
+		.value = SPEAR320S_PMX_EMI_PL_50_51_VAL |
+			SPEAR320S_PMX_EMI_PL_52_53_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_54_55_56_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_58_59_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_69_MASK,
+		.value = SPEAR320S_PMX_EMI_PL_69_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_70_MASK | SPEAR320S_PMX_PL_71_72_MASK |
+			SPEAR320S_PMX_PL_73_MASK | SPEAR320S_PMX_PL_74_MASK |
+			SPEAR320S_PMX_PL_75_76_MASK |
+			SPEAR320S_PMX_PL_77_78_79_MASK,
+		.value = SPEAR320S_PMX_FSMC_EMI_PL_70_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_71_72_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_73_VAL |
+			SPEAR320S_PMX_EMI_PL_74_VAL |
+			SPEAR320S_PMX_EMI_PL_75_76_VAL |
+			SPEAR320S_PMX_EMI_PL_77_78_79_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_80_TO_85_MASK |
+			SPEAR320S_PMX_PL_86_87_MASK |
+			SPEAR320S_PMX_PL_88_89_MASK,
+		.value = SPEAR320S_PMX_EMI_PL_80_TO_85_VAL |
+			SPEAR320S_PMX_EMI_PL_86_87_VAL |
+			SPEAR320S_PMX_EMI_PL_88_89_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_90_91_MASK |
+			SPEAR320S_PMX_PL_92_93_MASK |
+			SPEAR320S_PMX_PL_94_95_MASK |
+			SPEAR320S_PMX_PL_96_97_MASK,
+		.value = SPEAR320S_PMX_EMI1_PL_90_91_VAL |
+			SPEAR320S_PMX_EMI1_PL_92_93_VAL |
+			SPEAR320S_PMX_EMI1_PL_94_95_VAL |
+			SPEAR320S_PMX_EMI1_PL_96_97_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_emi_modes[] = {
 	{
-		.ids = AUTO_EXP_MODE,
-		.mux_regs = pmx_emi_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_mux),
+		.ids = AUTO_EXP_MODE | SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_emi_mux1,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_mux1),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_emi_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_emi_ext_mux),
 	},
 };
 
@@ -114,20 +204,47 @@ struct pmx_dev spear320_pmx_emi = {
 /* Pad multiplexing for FSMC (NAND flash) device */
 static struct pmx_mux_reg pmx_fsmc_mux[] = {
 	{
-		.mask = 0x0,
-		.value = 0,
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_46_47_MASK |
+			SPEAR320S_PMX_PL_48_49_MASK,
+		.value = SPEAR320S_PMX_FSMC_EMI_PL_46_47_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_48_49_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_52_53_MASK |
+			SPEAR320S_PMX_PL_54_55_56_MASK |
+			SPEAR320S_PMX_PL_57_MASK | SPEAR320S_PMX_PL_58_59_MASK,
+		.value = SPEAR320S_PMX_FSMC_PL_52_53_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_54_55_56_VAL |
+			SPEAR320S_PMX_FSMC_PL_57_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_58_59_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_60_MASK |
+			SPEAR320S_PMX_PL_61_TO_64_MASK |
+			SPEAR320S_PMX_PL_65_TO_68_MASK,
+		.value = SPEAR320S_PMX_FSMC_PL_60_VAL |
+			SPEAR320S_PMX_FSMC_PL_61_TO_64_VAL |
+			SPEAR320S_PMX_FSMC_PL_65_TO_68_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_70_MASK | SPEAR320S_PMX_PL_71_72_MASK |
+			SPEAR320S_PMX_PL_73_MASK,
+		.value = SPEAR320S_PMX_FSMC_EMI_PL_70_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_71_72_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_73_VAL,
 	},
 };
 
 static struct pmx_dev_mode pmx_fsmc_modes[] = {
 	{
-		.ids = ALL_LEGACY_MODES,
+		.ids = SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_fsmc_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_mux),
 	},
 };
 
-struct pmx_dev spear320_pmx_fsmc = {
+struct pmx_dev spear320s_pmx_fsmc = {
 	.name = "fsmc",
 	.modes = pmx_fsmc_modes,
 	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
@@ -136,20 +253,37 @@ struct pmx_dev spear320_pmx_fsmc = {
 /* Pad multiplexing for SPP device */
 static struct pmx_mux_reg pmx_spp_mux[] = {
 	{
-		.mask = 0x0,
-		.value = 0,
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_69_MASK,
+		.value = SPEAR320S_PMX_SPP_PL_69_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_70_MASK | SPEAR320S_PMX_PL_71_72_MASK |
+			SPEAR320S_PMX_PL_73_MASK | SPEAR320S_PMX_PL_74_MASK |
+			SPEAR320S_PMX_PL_75_76_MASK |
+			SPEAR320S_PMX_PL_77_78_79_MASK,
+		.value = SPEAR320S_PMX_SPP_PL_70_VAL |
+			SPEAR320S_PMX_SPP_PL_71_72_VAL |
+			SPEAR320S_PMX_SPP_PL_73_VAL |
+			SPEAR320S_PMX_SPP_PL_74_VAL |
+			SPEAR320S_PMX_SPP_PL_75_76_VAL |
+			SPEAR320S_PMX_SPP_PL_77_78_79_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_80_TO_85_MASK,
+		.value = SPEAR320S_PMX_SPP_PL_80_TO_85_VAL,
 	},
 };
 
 static struct pmx_dev_mode pmx_spp_modes[] = {
 	{
-		.ids = SMALL_PRINTERS_MODE,
+		.ids = SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_spp_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_spp_mux),
 	},
 };
 
-struct pmx_dev spear320_pmx_spp = {
+struct pmx_dev spear320s_pmx_spp = {
 	.name = "spp",
 	.modes = pmx_spp_modes,
 	.mode_count = ARRAY_SIZE(pmx_spp_modes),
@@ -163,19 +297,100 @@ static struct pmx_mux_reg pmx_sdhci_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_sdhci_modes[] = {
+static struct pmx_mux_reg pmx_sdhci_ext_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |
-			SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_sdhci_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_43_MASK | SPEAR320S_PMX_PL_44_45_MASK |
+			SPEAR320S_PMX_PL_46_47_MASK |
+			SPEAR320S_PMX_PL_48_49_MASK,
+		.value = SPEAR320S_PMX_SDHCI_PL_43_VAL |
+			SPEAR320S_PMX_SDHCI_PL_44_45_VAL |
+			SPEAR320S_PMX_SDHCI_PL_46_47_VAL |
+			SPEAR320S_PMX_SDHCI_PL_48_49_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_50_MASK,
+		.value = SPEAR320S_PMX_SDHCI_PL_50_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_99_MASK,
+		.value = SPEAR320S_PMX_SDHCI_PL_99_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_PL_100_101_MASK,
+		.value = SPEAR320S_PMX_SDHCI_PL_100_101_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_sdhci = {
-	.name = "sdhci",
-	.modes = pmx_sdhci_modes,
-	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
+static struct pmx_mux_reg pmx_sdhci_cd_12_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_12_MASK,
+		.value = SPEAR320S_PMX_SDHCI_CD_PL_12_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SDHCI_CD_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SDHCI_CD_PORT_12_VAL,
+	}, {
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_sdhci_cd_51_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_51_MASK,
+		.value = SPEAR320S_PMX_SDHCI_CD_PL_51_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SDHCI_CD_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SDHCI_CD_PORT_51_VAL,
+	},
+};
+
+#define pmx_sdhci_common_modes						\
+	{								\
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |		\
+			SMALL_PRINTERS_MODE | SPEAR320S_EXTENDED_MODE,	\
+		.mux_regs = pmx_sdhci_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),		\
+	}, {								\
+		.ids = SPEAR320S_EXTENDED_MODE,				\
+		.mux_regs = pmx_sdhci_ext_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_ext_mux),		\
+	}
+
+static struct pmx_dev_mode pmx_sdhci_modes[][3] = {
+	{
+		/* select pin 51 for cd */
+		pmx_sdhci_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_sdhci_cd_12_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_cd_12_mux),
+		},
+	}, {
+		/* select pin 12 for cd */
+		pmx_sdhci_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_sdhci_cd_51_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_cd_51_mux),
+		},
+	}
+};
+
+struct pmx_dev spear320_pmx_sdhci[] = {
+	{
+		.name = "sdhci, cd-51",
+		.modes = pmx_sdhci_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_sdhci_modes[0]),
+	}, {
+		.name = "sdhci, cd-12",
+		.modes = pmx_sdhci_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_sdhci_modes[1]),
+	},
 };
 
 /* Pad multiplexing for I2S device */
@@ -186,11 +401,30 @@ static struct pmx_mux_reg pmx_i2s_mux[] = {
 	},
 };
 
+static struct pmx_mux_reg pmx_i2s_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_35_MASK | SPEAR320S_PMX_PL_39_MASK,
+		.value = SPEAR320S_PMX_I2S_REF_CLK_PL_35_VAL |
+			SPEAR320S_PMX_I2S_PL_39_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_40_MASK | SPEAR320S_PMX_PL_41_42_MASK,
+		.value = SPEAR320S_PMX_I2S_PL_40_VAL |
+			SPEAR320S_PMX_I2S_PL_41_42_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_i2s_modes[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |
+			SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_i2s_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_i2s_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_i2s_ext_mux),
 	},
 };
 
@@ -208,11 +442,23 @@ static struct pmx_mux_reg pmx_uart1_mux[] = {
 	},
 };
 
+static struct pmx_mux_reg pmx_uart1_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_28_29_MASK,
+		.value = SPEAR320S_PMX_UART1_PL_28_29_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_uart1_modes[] = {
 	{
-		.ids = ALL_LEGACY_MODES,
+		.ids = ALL_LEGACY_MODES | SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_uart1_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_uart1_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_ext_mux),
 	},
 };
 
@@ -239,22 +485,154 @@ static struct pmx_mux_reg pmx_uart1_modem_smallpri_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_uart1_modem_modes[] = {
+static struct pmx_mux_reg pmx_uart1_modem_ext_2_7_mux[] = {
 	{
-		.ids = AUTO_EXP_MODE,
-		.mux_regs = pmx_uart1_modem_autoexp_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_autoexp_mux),
+		.mask = PMX_UART0_MASK | PMX_I2C_MASK | PMX_SSP_MASK,
+		.value = 0,
 	}, {
-		.ids = SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_uart1_modem_smallpri_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_smallpri_mux),
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_2_3_MASK | SPEAR320S_PMX_PL_6_7_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_2_3_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_4_5_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_6_7_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART1_ENH_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PORT_3_TO_5_7_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_uart1_modem = {
-	.name = "uart1_modem",
-	.modes = pmx_uart1_modem_modes,
-	.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes),
+static struct pmx_mux_reg pmx_uart1_modem_ext_31_36_mux[] = {
+	{
+		.mask = PMX_GPIO_PIN3_MASK | PMX_GPIO_PIN4_MASK |
+			PMX_GPIO_PIN5_MASK | PMX_SSP_CS_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_31_MASK | SPEAR320S_PMX_PL_32_33_MASK |
+			SPEAR320S_PMX_PL_34_MASK | SPEAR320S_PMX_PL_35_MASK |
+			SPEAR320S_PMX_PL_36_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_31_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_32_33_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_34_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_35_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_36_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART1_ENH_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PORT_32_TO_34_36_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart1_modem_ext_34_45_mux[] = {
+	{
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK |
+			PMX_SSP_CS_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_34_MASK | SPEAR320S_PMX_PL_35_MASK |
+			SPEAR320S_PMX_PL_36_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_34_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_35_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_36_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_43_MASK | SPEAR320S_PMX_PL_44_45_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_43_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_44_45_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART1_ENH_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PORT_44_45_34_36_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart1_modem_ext_80_85_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_80_TO_85_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_80_TO_85_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_43_MASK | SPEAR320S_PMX_PL_44_45_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PL_43_VAL |
+			SPEAR320S_PMX_UART1_ENH_PL_44_45_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART1_ENH_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART1_ENH_PORT_81_TO_85_VAL,
+	},
+};
+
+#define pmx_uart1_modem_common_modes					\
+	{								\
+		.ids = AUTO_EXP_MODE,					\
+		.mux_regs = pmx_uart1_modem_autoexp_mux,		\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_autoexp_mux),	\
+	}, {								\
+		.ids = SMALL_PRINTERS_MODE,				\
+		.mux_regs = pmx_uart1_modem_smallpri_mux,		\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_smallpri_mux),\
+	}
+
+static struct pmx_dev_mode pmx_uart1_modem_modes[][3] = {
+	{
+		/* Select signals on pins 2-7 */
+		pmx_uart1_modem_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart1_modem_ext_2_7_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart1_modem_ext_2_7_mux),
+		},
+	}, {
+		/* Select signals on pins 31_36 */
+		pmx_uart1_modem_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart1_modem_ext_31_36_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_uart1_modem_ext_31_36_mux),
+		},
+	}, {
+		/* Select signals on pins 34_45 */
+		pmx_uart1_modem_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart1_modem_ext_34_45_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_uart1_modem_ext_34_45_mux),
+		},
+	}, {
+		/* Select signals on pins 80_85 */
+		pmx_uart1_modem_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart1_modem_ext_80_85_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_uart1_modem_ext_80_85_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_uart1_modem[] = {
+	{
+		.name = "uart1_modem-2-7",
+		.modes = pmx_uart1_modem_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes[0]),
+	}, {
+		.name = "uart1_modem-31-36",
+		.modes = pmx_uart1_modem_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes[1]),
+	}, {
+		.name = "uart1_modem-34-45",
+		.modes = pmx_uart1_modem_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes[2]),
+	}, {
+		.name = "uart1_modem-80-85",
+		.modes = pmx_uart1_modem_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_uart1_modem_modes[3]),
+	},
 };
 
 /* Pad multiplexing for UART2 device */
@@ -265,11 +643,23 @@ static struct pmx_mux_reg pmx_uart2_mux[] = {
 	},
 };
 
+static struct pmx_mux_reg pmx_uart2_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_0_1_MASK,
+		.value = SPEAR320S_PMX_UART2_PL_0_1_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_uart2_modes[] = {
 	{
-		.ids = ALL_LEGACY_MODES,
+		.ids = ALL_LEGACY_MODES | SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_uart2_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_uart2_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_uart2_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_uart2_ext_mux),
 	},
 };
 
@@ -277,6 +667,537 @@ struct pmx_dev spear320_pmx_uart2 = {
 	.name = "uart2",
 	.modes = pmx_uart2_modes,
 	.mode_count = ARRAY_SIZE(pmx_uart2_modes),
+};
+
+/* Pad multiplexing for uart3 device */
+static struct pmx_mux_reg pmx_uart3_ext_8_9_mux[] = {
+	{
+		.mask = PMX_SSP_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_8_9_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_8_9_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_8_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_15_16_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_15_16_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_15_16_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_15_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_41_42_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_41_42_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_41_42_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_41_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_52_53_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_52_53_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_52_53_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_52_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_73_74_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_73_MASK | SPEAR320S_PMX_PL_74_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_73_VAL |
+			SPEAR320S_PMX_UART3_PL_74_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_73_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_94_95_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_94_95_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_94_95_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_94_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart3_ext_98_99_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_98_MASK | SPEAR320S_PMX_PL_99_MASK,
+		.value = SPEAR320S_PMX_UART3_PL_98_VAL |
+			SPEAR320S_PMX_UART3_PL_99_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART3_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART3_PORT_99_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart3_modes[][1] = {
+	{
+		/* Select signals on pins 8_9 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_8_9_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_8_9_mux),
+		},
+	}, {
+		/* Select signals on pins 15_16 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_15_16_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_15_16_mux),
+		},
+	}, {
+		/* Select signals on pins 41_42 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_41_42_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_41_42_mux),
+		},
+	}, {
+		/* Select signals on pins 52_53 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_52_53_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_52_53_mux),
+		},
+	}, {
+		/* Select signals on pins 73_74 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_73_74_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_73_74_mux),
+		},
+	}, {
+		/* Select signals on pins 94_95 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_94_95_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_94_95_mux),
+		},
+	}, {
+		/* Select signals on pins 98_99_ */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart3_ext_98_99_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart3_ext_98_99_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320s_pmx_uart3[] = {
+	{
+		.name = "uart3-8_9",
+		.modes = pmx_uart3_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[0]),
+	}, {
+		.name = "uart3-15_16",
+		.modes = pmx_uart3_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[1]),
+	}, {
+		.name = "uart3-41_42",
+		.modes = pmx_uart3_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[2]),
+	}, {
+		.name = "uart3-52_53",
+		.modes = pmx_uart3_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[3]),
+	}, {
+		.name = "uart3-73_74",
+		.modes = pmx_uart3_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[4]),
+	}, {
+		.name = "uart3-94_95",
+		.modes = pmx_uart3_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[4]),
+	}, {
+		.name = "uart3-98_99_",
+		.modes = pmx_uart3_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart3_modes[4]),
+	},
+};
+
+/* Pad multiplexing for uart4 device */
+static struct pmx_mux_reg pmx_uart4_ext_6_7_mux[] = {
+	{
+		.mask = PMX_SSP_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_6_7_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_6_7_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PORT_6_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart4_ext_13_14_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_13_14_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_13_14_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PORT_13_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart4_ext_39_40_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_39_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_39_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_40_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_40_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PORT_39_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart4_ext_71_72_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_71_72_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_71_72_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PORT_71_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart4_ext_92_93_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_92_93_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_92_93_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PORT_92_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart4_ext_100_101_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_PL_100_101_MASK |
+			SPEAR320S_PMX_UART4_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART4_PL_100_101_VAL |
+			SPEAR320S_PMX_UART4_PORT_101_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart4_modes[][1] = {
+	{
+		/* Select signals on pins 6_7 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_6_7_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_6_7_mux),
+		},
+	}, {
+		/* Select signals on pins 13_14 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_13_14_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_13_14_mux),
+		},
+	}, {
+		/* Select signals on pins 39_40 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_39_40_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_39_40_mux),
+		},
+	}, {
+		/* Select signals on pins 71_72 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_71_72_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_71_72_mux),
+		},
+	}, {
+		/* Select signals on pins 92_93 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_92_93_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_92_93_mux),
+		},
+	}, {
+		/* Select signals on pins 100_101_ */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart4_ext_100_101_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_100_101_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320s_pmx_uart4[] = {
+	{
+		.name = "uart4-6_7",
+		.modes = pmx_uart4_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[0]),
+	}, {
+		.name = "uart4-13_14",
+		.modes = pmx_uart4_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[1]),
+	}, {
+		.name = "uart4-39_40",
+		.modes = pmx_uart4_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[2]),
+	}, {
+		.name = "uart4-71_72",
+		.modes = pmx_uart4_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
+	}, {
+		.name = "uart4-92_93",
+		.modes = pmx_uart4_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
+	}, {
+		.name = "uart4-100_101_",
+		.modes = pmx_uart4_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
+	},
+};
+
+/* Pad multiplexing for uart5 device */
+static struct pmx_mux_reg pmx_uart5_ext_4_5_mux[] = {
+	{
+		.mask = PMX_I2C_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_4_5_MASK,
+		.value = SPEAR320S_PMX_UART5_PL_4_5_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART5_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART5_PORT_4_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart5_ext_37_38_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_37_38_MASK,
+		.value = SPEAR320S_PMX_UART5_PL_37_38_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART5_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART5_PORT_37_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart5_ext_69_70_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_69_MASK,
+		.value = SPEAR320S_PMX_UART5_PL_69_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_70_MASK,
+		.value = SPEAR320S_PMX_UART5_PL_70_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART5_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART5_PORT_69_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart5_ext_90_91_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_90_91_MASK,
+		.value = SPEAR320S_PMX_UART5_PL_90_91_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART5_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART5_PORT_90_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart5_modes[][1] = {
+	{
+		/* Select signals on pins 4_5 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart5_ext_4_5_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart5_ext_4_5_mux),
+		},
+	}, {
+		/* Select signals on pins 37_38 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart5_ext_37_38_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart5_ext_37_38_mux),
+		},
+	}, {
+		/* Select signals on pins 69_70 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart5_ext_69_70_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart5_ext_69_70_mux),
+		},
+	}, {
+		/* Select signals on pins 90_91 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart5_ext_90_91_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart5_ext_90_91_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320s_pmx_uart5[] = {
+	{
+		.name = "uart5-4_5",
+		.modes = pmx_uart5_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_uart5_modes[0]),
+	}, {
+		.name = "uart5-37_38",
+		.modes = pmx_uart5_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_uart5_modes[2]),
+	}, {
+		.name = "uart5-69_70",
+		.modes = pmx_uart5_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart5_modes[4]),
+	}, {
+		.name = "uart5-90_91",
+		.modes = pmx_uart5_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart5_modes[4]),
+	},
+};
+
+/* Pad multiplexing for uart6 device */
+static struct pmx_mux_reg pmx_uart6_ext_2_3_mux[] = {
+	{
+		.mask = PMX_UART0_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_2_3_MASK,
+		.value = SPEAR320S_PMX_UART6_PL_2_3_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART6_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART6_PORT_2_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_uart6_ext_88_89_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_88_89_MASK,
+		.value = SPEAR320S_PMX_UART6_PL_88_89_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_UART6_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_UART6_PORT_88_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_uart6_modes[][1] = {
+	{
+		/* Select signals on pins 2_3 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart6_ext_2_3_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart6_ext_2_3_mux),
+		},
+	}, {
+		/* Select signals on pins 88_89 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_uart6_ext_88_89_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_uart6_ext_88_89_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320s_pmx_uart6[] = {
+	{
+		.name = "uart6-2_3",
+		.modes = pmx_uart6_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_uart6_modes[0]),
+	}, {
+		.name = "uart6-88_89",
+		.modes = pmx_uart6_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_uart6_modes[4]),
+	},
+};
+
+/* UART - RS485 pmx */
+static struct pmx_mux_reg pmx_rs485_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_77_78_79_MASK,
+		.value = SPEAR320S_PMX_RS485_PL_77_78_79_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_rs485_modes[] = {
+	{
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_rs485_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_rs485_mux),
+	},
+};
+
+struct pmx_dev spear320s_pmx_rs485 = {
+	.name = "rs485",
+	.modes = pmx_rs485_modes,
+	.mode_count = ARRAY_SIZE(pmx_rs485_modes),
 };
 
 /* Pad multiplexing for Touchscreen device */
@@ -287,11 +1208,30 @@ static struct pmx_mux_reg pmx_touchscreen_mux[] = {
 	},
 };
 
+static struct pmx_mux_reg pmx_touchscreen_ext_mux[] = {
+	{
+		.mask = PMX_I2C_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_5_MASK,
+		.value = SPEAR320S_PMX_TOUCH_Y_PL_5_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_36_MASK,
+		.value = SPEAR320S_PMX_TOUCH_X_PL_36_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_touchscreen_modes[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE,
+		.ids = AUTO_NET_SMII_MODE | SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_touchscreen_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_touchscreen_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_touchscreen_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_touchscreen_ext_mux),
 	},
 };
 
@@ -302,26 +1242,72 @@ struct pmx_dev spear320_pmx_touchscreen = {
 };
 
 /* Pad multiplexing for CAN device */
-static struct pmx_mux_reg pmx_can_mux[] = {
+static struct pmx_mux_reg pmx_can0_mux[] = {
 	{
-		.mask = PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK |
-			PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
+		.mask = PMX_GPIO_PIN4_MASK | PMX_GPIO_PIN5_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_dev_mode pmx_can_modes[] = {
+static struct pmx_mux_reg pmx_can0_ext_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE | AUTO_EXP_MODE,
-		.mux_regs = pmx_can_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_can_mux),
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_32_33_MASK,
+		.value = SPEAR320S_PMX_CAN0_PL_32_33_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_can = {
-	.name = "can",
-	.modes = pmx_can_modes,
-	.mode_count = ARRAY_SIZE(pmx_can_modes),
+static struct pmx_dev_mode pmx_can0_modes[] = {
+	{
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE | AUTO_EXP_MODE |
+			SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_can0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_can0_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_can0_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_can0_ext_mux),
+	},
+};
+
+struct pmx_dev spear320_pmx_can0 = {
+	.name = "can0",
+	.modes = pmx_can0_modes,
+	.mode_count = ARRAY_SIZE(pmx_can0_modes),
+};
+
+static struct pmx_mux_reg pmx_can1_mux[] = {
+	{
+		.mask = PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK,
+		.value = 0,
+	},
+};
+
+static struct pmx_mux_reg pmx_can1_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_30_31_MASK,
+		.value = SPEAR320S_PMX_CAN1_PL_30_31_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_can1_modes[] = {
+	{
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE | AUTO_EXP_MODE |
+			SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_can1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_can1_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_can1_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_can1_ext_mux),
+	},
+};
+
+struct pmx_dev spear320_pmx_can1 = {
+	.name = "can1",
+	.modes = pmx_can1_modes,
+	.mode_count = ARRAY_SIZE(pmx_can1_modes),
 };
 
 /* Pad multiplexing for SDHCI LED device */
@@ -332,11 +1318,24 @@ static struct pmx_mux_reg pmx_sdhci_led_mux[] = {
 	},
 };
 
+static struct pmx_mux_reg pmx_sdhci_led_ext_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_34_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_34_VAL,
+	},
+};
+
 static struct pmx_dev_mode pmx_sdhci_led_modes[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE |
+			SPEAR320S_EXTENDED_MODE,
 		.mux_regs = pmx_sdhci_led_mux,
 		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_led_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_sdhci_led_ext_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_led_ext_mux),
 	},
 };
 
@@ -346,70 +1345,200 @@ struct pmx_dev spear320_pmx_sdhci_led = {
 	.mode_count = ARRAY_SIZE(pmx_sdhci_led_modes),
 };
 
-/* Pad multiplexing for PWM0 device */
-static struct pmx_mux_reg pmx_pwm0_net_mux[] = {
+/* Pad multiplexing for PWM0_1 device */
+static struct pmx_mux_reg pmx_pwm0_1_net_mux[] = {
 	{
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_mux_reg pmx_pwm0_autoexpsmallpri_mux[] = {
+static struct pmx_mux_reg pmx_pwm0_1_autoexpsmallpri_mux[] = {
 	{
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_dev_mode pmx_pwm0_modes[] = {
+static struct pmx_mux_reg pmx_pwm0_1_pin_8_9_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mux_regs = pmx_pwm0_net_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_net_mux),
+		.mask = PMX_SSP_MASK,
+		.value = 0,
 	}, {
-		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_pwm0_autoexpsmallpri_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_autoexpsmallpri_mux),
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_8_9_MASK,
+		.value = SPEAR320S_PMX_PWM_0_1_PL_8_9_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_pwm0 = {
-	.name = "pwm0",
-	.modes = pmx_pwm0_modes,
-	.mode_count = ARRAY_SIZE(pmx_pwm0_modes),
+static struct pmx_mux_reg pmx_pwm0_1_pin_14_15_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_14_MASK | SPEAR320S_PMX_PL_15_MASK,
+		.value = SPEAR320S_PMX_PWM1_PL_14_VAL |
+			SPEAR320S_PMX_PWM0_PL_15_VAL,
+	},
 };
 
-/* Pad multiplexing for PWM1 device */
-static struct pmx_mux_reg pmx_pwm1_net_mux[] = {
+static struct pmx_mux_reg pmx_pwm0_1_pin_30_31_mux[] = {
+	{
+		.mask = PMX_GPIO_PIN2_MASK | PMX_GPIO_PIN3_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_30_MASK | SPEAR320S_PMX_PL_31_MASK,
+		.value = SPEAR320S_PMX_PWM1_EXT_PL_30_VAL |
+			SPEAR320S_PMX_PWM0_EXT_PL_31_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm0_1_pin_37_38_mux[] = {
 	{
 		.mask = PMX_UART0_MODEM_MASK,
 		.value = 0,
-	},
-};
-
-static struct pmx_mux_reg pmx_pwm1_autoexpsmallpri_mux[] = {
-	{
-		.mask = PMX_MII_MASK,
-		.value = 0,
-	},
-};
-
-static struct pmx_dev_mode pmx_pwm1_modes[] = {
-	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mux_regs = pmx_pwm1_net_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm1_net_mux),
 	}, {
-		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_pwm1_autoexpsmallpri_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm1_autoexpsmallpri_mux),
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_37_38_MASK,
+		.value = SPEAR320S_PMX_PWM0_1_PL_37_38_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_pwm1 = {
-	.name = "pwm1",
-	.modes = pmx_pwm1_modes,
-	.mode_count = ARRAY_SIZE(pmx_pwm1_modes),
+static struct pmx_mux_reg pmx_pwm0_1_pin_42_43_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK | PMX_TIMER_1_2_MASK ,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_42_MASK | SPEAR320S_PMX_PL_43_MASK,
+		.value = SPEAR320S_PMX_PWM1_PL_42_VAL |
+			SPEAR320S_PMX_PWM0_PL_43_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm0_1_pin_59_60_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_59_MASK,
+		.value = SPEAR320S_PMX_PWM1_PL_59_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_60_MASK,
+		.value = SPEAR320S_PMX_PWM0_PL_60_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm0_1_pin_88_89_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_88_89_MASK,
+		.value = SPEAR320S_PMX_PWM0_1_PL_88_89_VAL,
+	},
+};
+
+#define pmx_pwm0_1_common_modes					\
+	{							\
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,	\
+		.mux_regs = pmx_pwm0_1_net_mux,			\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_net_mux),	\
+	}, {							\
+		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,	\
+		.mux_regs = pmx_pwm0_1_autoexpsmallpri_mux,	\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_autoexpsmallpri_mux), \
+	}
+
+static struct pmx_dev_mode pmx_pwm0_1_modes[][3] = {
+	{
+		/* pin_8_9 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_8_9_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_8_9_mux),
+		},
+	}, {
+		/* pin_14_15 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_14_15_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_14_15_mux),
+		},
+	}, {
+		/* pin_30_31 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_30_31_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_30_31_mux),
+		},
+	}, {
+		/* pin_37_38 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_37_38_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_37_38_mux),
+		},
+	}, {
+		/* pin_42_43 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_42_43_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_42_43_mux),
+		},
+	}, {
+		/* pin_59_60 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_59_60_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_59_60_mux),
+		},
+	}, {
+		/* pin_88_89 */
+		pmx_pwm0_1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm0_1_pin_88_89_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm0_1_pin_88_89_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_pwm0_1[] = {
+	{
+		.name = "pwm0_1_pin_8_9",
+		.modes = pmx_pwm0_1_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[0]),
+	}, {
+		.name = "pwm0_1_pin_14_15",
+		.modes = pmx_pwm0_1_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[1]),
+	}, {
+		.name = "pwm0_1_pin_30_31",
+		.modes = pmx_pwm0_1_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[2]),
+	}, {
+		.name = "pwm0_1_pin_37_38",
+		.modes = pmx_pwm0_1_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[3]),
+	}, {
+		.name = "pwm0_1_pin_42_43",
+		.modes = pmx_pwm0_1_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[4]),
+	}, {
+		.name = "pwm0_1_pin_59_60",
+		.modes = pmx_pwm0_1_modes[5],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[5]),
+	}, {
+		.name = "pwm0_1_pin_88_89",
+		.modes = pmx_pwm0_1_modes[6],
+		.mode_count = ARRAY_SIZE(pmx_pwm0_1_modes[6]),
+	},
 };
 
 /* Pad multiplexing for PWM2 device */
@@ -427,22 +1556,178 @@ static struct pmx_mux_reg pmx_pwm2_autoexpsmallpri_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_pwm2_modes[] = {
+static struct pmx_mux_reg pmx_pwm2_pin_7_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,
-		.mux_regs = pmx_pwm2_net_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_net_mux),
+		.mask = PMX_SSP_MASK,
+		.value = 0,
 	}, {
-		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_pwm2_autoexpsmallpri_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_autoexpsmallpri_mux),
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_7_MASK,
+		.value = SPEAR320S_PMX_PWM_2_PL_7_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_pwm2 = {
-	.name = "pwm2",
-	.modes = pmx_pwm2_modes,
-	.mode_count = ARRAY_SIZE(pmx_pwm2_modes),
+static struct pmx_mux_reg pmx_pwm2_pin_13_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_13_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_13_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_pin_29_mux[] = {
+	{
+		.mask = PMX_GPIO_PIN1_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_29_MASK,
+		.value = SPEAR320S_PMX_PWM_2_PL_29_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_pin_34_mux[] = {
+	{
+		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_34_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_34_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_pin_41_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_41_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_41_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_pin_58_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_58_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_58_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm2_pin_87_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_87_MASK,
+		.value = SPEAR320S_PMX_PWM2_PL_87_VAL,
+	},
+};
+
+#define pmx_pwm2_common_modes						\
+	{								\
+		.ids = AUTO_NET_SMII_MODE | AUTO_NET_MII_MODE,		\
+		.mux_regs = pmx_pwm2_net_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_net_mux),		\
+	}, {								\
+		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE,		\
+		.mux_regs = pmx_pwm2_autoexpsmallpri_mux,		\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_autoexpsmallpri_mux),\
+	}
+
+static struct pmx_dev_mode pmx_pwm2_modes[][3] = {
+	{
+		/* pin_7 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_7_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_7_mux),
+		},
+	}, {
+		/* pin_13 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_13_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_13_mux),
+		},
+	}, {
+		/* pin_29 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_29_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_29_mux),
+		},
+	}, {
+		/* pin_34 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_34_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_34_mux),
+		},
+	}, {
+		/* pin_41 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_41_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_41_mux),
+		},
+	}, {
+		/* pin_58 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_58_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_58_mux),
+		},
+	}, {
+		/* pin_87 */
+		pmx_pwm2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm2_pin_87_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm2_pin_87_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_pwm2[] = {
+	{
+		.name = "pwm2_pin_7",
+		.modes = pmx_pwm2_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[0]),
+	}, {
+		.name = "pwm2_pin_13",
+		.modes = pmx_pwm2_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[1]),
+	}, {
+		.name = "pwm2_pin_29",
+		.modes = pmx_pwm2_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[2]),
+	}, {
+		.name = "pwm2_pin_34",
+		.modes = pmx_pwm2_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[3]),
+	}, {
+		.name = "pwm2_pin_41",
+		.modes = pmx_pwm2_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[4]),
+	}, {
+		.name = "pwm2_pin_58",
+		.modes = pmx_pwm2_modes[5],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[5]),
+	}, {
+		.name = "pwm2_pin_87",
+		.modes = pmx_pwm2_modes[6],
+		.mode_count = ARRAY_SIZE(pmx_pwm2_modes[6]),
+	},
 };
 
 /* Pad multiplexing for PWM3 device */
@@ -453,18 +1738,152 @@ static struct pmx_mux_reg pmx_pwm3_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_pwm3_modes[] = {
+static struct pmx_mux_reg pmx_pwm3_pin_6_mux[] = {
 	{
-		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE | AUTO_NET_SMII_MODE,
-		.mux_regs = pmx_pwm3_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_mux),
+		.mask = PMX_SSP_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_6_MASK,
+		.value = SPEAR320S_PMX_PWM_3_PL_6_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_pwm3 = {
-	.name = "pwm3",
-	.modes = pmx_pwm3_modes,
-	.mode_count = ARRAY_SIZE(pmx_pwm3_modes),
+static struct pmx_mux_reg pmx_pwm3_pin_12_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_12_MASK,
+		.value = SPEAR320S_PMX_PWM3_PL_12_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm3_pin_28_mux[] = {
+	{
+		.mask = PMX_GPIO_PIN0_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_28_MASK,
+		.value = SPEAR320S_PMX_PWM_3_PL_28_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm3_pin_40_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_40_MASK,
+		.value = SPEAR320S_PMX_PWM3_PL_40_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm3_pin_57_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_57_MASK,
+		.value = SPEAR320S_PMX_PWM3_PL_57_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_pwm3_pin_86_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_86_MASK,
+		.value = SPEAR320S_PMX_PWM3_PL_86_VAL,
+	},
+};
+
+#define pmx_pwm3_common_modes						\
+	{								\
+		.ids = AUTO_EXP_MODE | SMALL_PRINTERS_MODE |		\
+			AUTO_NET_SMII_MODE,				\
+		.mux_regs = pmx_pwm3_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_mux),		\
+	}
+
+static struct pmx_dev_mode pmx_pwm3_modes[][3] = {
+	{
+		/* pin_6 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_6_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_6_mux),
+		},
+	}, {
+		/* pin_12 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_12_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_12_mux),
+		},
+	}, {
+		/* pin_28 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_28_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_28_mux),
+		},
+	}, {
+		/* pin_40 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_40_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_40_mux),
+		},
+	}, {
+		/* pin_57 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_57_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_57_mux),
+		},
+	}, {
+		/* pin_86 */
+		pmx_pwm3_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_pwm3_pin_86_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_pwm3_pin_86_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_pwm3[] = {
+	{
+		.name = "pwm3_pin_6",
+		.modes = pmx_pwm3_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[0]),
+	}, {
+		.name = "pwm3_pin_12",
+		.modes = pmx_pwm3_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[1]),
+	}, {
+		.name = "pwm3_pin_28",
+		.modes = pmx_pwm3_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[2]),
+	}, {
+		.name = "pwm3_pin_40",
+		.modes = pmx_pwm3_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[3]),
+	}, {
+		.name = "pwm3_pin_57",
+		.modes = pmx_pwm3_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[4]),
+	}, {
+		.name = "pwm3_pin_86",
+		.modes = pmx_pwm3_modes[5],
+		.mode_count = ARRAY_SIZE(pmx_pwm3_modes[5]),
+	},
 };
 
 /* Pad multiplexing for SSP1 device */
@@ -475,18 +1894,165 @@ static struct pmx_mux_reg pmx_ssp1_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_ssp1_modes[] = {
+static struct pmx_mux_reg pmx_ssp1_ext_17_20_mux[] = {
 	{
-		.ids = SMALL_PRINTERS_MODE | AUTO_NET_SMII_MODE,
-		.mux_regs = pmx_ssp1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp1_mux),
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_17_18_MASK | SPEAR320S_PMX_PL_19_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_17_18_19_20_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_20_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_17_18_19_20_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP1_PORT_17_TO_20_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_ssp1 = {
-	.name = "ssp1",
-	.modes = pmx_ssp1_modes,
-	.mode_count = ARRAY_SIZE(pmx_ssp1_modes),
+static struct pmx_mux_reg pmx_ssp1_ext_36_39_mux[] = {
+	{
+		.mask = PMX_UART0_MODEM_MASK | PMX_SSP_CS_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_36_MASK | SPEAR320S_PMX_PL_37_38_MASK |
+			SPEAR320S_PMX_PL_39_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_36_VAL |
+			SPEAR320S_PMX_SSP1_PL_37_38_VAL |
+			SPEAR320S_PMX_SSP1_PL_39_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP1_PORT_36_TO_39_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_ssp1_ext_48_51_mux[] = {
+	{
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_48_49_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_48_49_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
+		.mask = SPEAR320S_PMX_PL_50_51_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_50_51_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP1_PORT_48_TO_51_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_ssp1_ext_65_68_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_65_TO_68_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_65_TO_68_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP1_PORT_65_TO_68_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_ssp1_ext_94_97_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_94_95_MASK |
+			SPEAR320S_PMX_PL_96_97_MASK,
+		.value = SPEAR320S_PMX_SSP1_PL_94_95_VAL |
+			SPEAR320S_PMX_SSP1_PL_96_97_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP1_PORT_94_TO_97_VAL,
+	},
+};
+
+#define pmx_ssp1_common_modes						\
+	{								\
+		.ids = SMALL_PRINTERS_MODE | AUTO_NET_SMII_MODE,	\
+		.mux_regs = pmx_ssp1_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp1_mux),		\
+	}
+
+static struct pmx_dev_mode pmx_ssp1_modes[][2] = {
+	{
+		/* Select signals on pins 17-20 */
+		pmx_ssp1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp1_ext_17_20_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp1_ext_17_20_mux),
+		},
+	}, {
+		/* Select signals on pins 36-39 */
+		pmx_ssp1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp1_ext_36_39_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_ssp1_ext_36_39_mux),
+		},
+	}, {
+		/* Select signals on pins 48-51 */
+		pmx_ssp1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp1_ext_48_51_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_ssp1_ext_48_51_mux),
+		},
+	}, {
+		/* Select signals on pins 65-68 */
+		pmx_ssp1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp1_ext_65_68_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_ssp1_ext_65_68_mux),
+		},
+	}, {
+		/* Select signals on pins 94-97 */
+		pmx_ssp1_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp1_ext_94_97_mux,
+			.mux_reg_cnt =
+				ARRAY_SIZE(pmx_ssp1_ext_94_97_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_ssp1[] = {
+	{
+		.name = "ssp1-17-20",
+		.modes = pmx_ssp1_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_ssp1_modes[0]),
+	}, {
+		.name = "ssp1-36-39",
+		.modes = pmx_ssp1_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_ssp1_modes[1]),
+	}, {
+		.name = "ssp1-48-51",
+		.modes = pmx_ssp1_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_ssp1_modes[2]),
+	}, {
+		.name = "ssp1-65-68",
+		.modes = pmx_ssp1_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_ssp1_modes[3]),
+	}, {
+		.name = "ssp1-94-97",
+		.modes = pmx_ssp1_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_ssp1_modes[4]),
+	},
 };
 
 /* Pad multiplexing for SSP2 device */
@@ -497,106 +2063,481 @@ static struct pmx_mux_reg pmx_ssp2_mux[] = {
 	},
 };
 
-static struct pmx_dev_mode pmx_ssp2_modes[] = {
+static struct pmx_mux_reg pmx_ssp2_ext_13_16_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE,
-		.mux_regs = pmx_ssp2_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_mux),
-	},
-};
-
-struct pmx_dev spear320_pmx_ssp2 = {
-	.name = "ssp2",
-	.modes = pmx_ssp2_modes,
-	.mode_count = ARRAY_SIZE(pmx_ssp2_modes),
-};
-
-/* Pad multiplexing for mii1 device */
-static struct pmx_mux_reg pmx_mii1_mux[] = {
-	{
-		.mask = 0x0,
+		.mask = PMX_MII_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_13_14_MASK |
+			SPEAR320S_PMX_PL_15_16_MASK,
+		.value = SPEAR320S_PMX_SSP2_PL_13_14_15_16_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP2_PORT_13_TO_16_VAL,
 	},
 };
 
-static struct pmx_dev_mode pmx_mii1_modes[] = {
+static struct pmx_mux_reg pmx_ssp2_ext_32_35_mux[] = {
 	{
-		.ids = AUTO_NET_MII_MODE,
-		.mux_regs = pmx_mii1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_mii1_mux),
+		.mask = PMX_SSP_CS_MASK | PMX_GPIO_PIN4_MASK |
+			PMX_GPIO_PIN5_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
+		.mask = SPEAR320S_PMX_PL_32_33_MASK | SPEAR320S_PMX_PL_34_MASK |
+			SPEAR320S_PMX_PL_35_MASK,
+		.value = SPEAR320S_PMX_SSP2_PL_32_33_VAL |
+			SPEAR320S_PMX_SSP2_PL_34_VAL |
+			SPEAR320S_PMX_SSP2_PL_35_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP2_PORT_32_TO_35_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_mii1 = {
-	.name = "mii1",
-	.modes = pmx_mii1_modes,
-	.mode_count = ARRAY_SIZE(pmx_mii1_modes),
+static struct pmx_mux_reg pmx_ssp2_ext_44_47_mux[] = {
+	{
+		.mask = PMX_TIMER_1_2_MASK | PMX_TIMER_3_4_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_44_45_MASK |
+			SPEAR320S_PMX_PL_46_47_MASK,
+		.value = SPEAR320S_PMX_SSP2_PL_44_45_VAL |
+			SPEAR320S_PMX_SSP2_PL_46_47_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP2_PORT_44_TO_47_VAL,
+	},
 };
 
-/* Pad multiplexing for smii0 device */
-static struct pmx_mux_reg pmx_smii0_mux[] = {
+static struct pmx_mux_reg pmx_ssp2_ext_61_64_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_60_69_REG,
+		.mask = SPEAR320S_PMX_PL_61_TO_64_MASK,
+		.value = SPEAR320S_PMX_SSP2_PL_61_TO_64_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP2_PORT_61_TO_64_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_ssp2_ext_90_93_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_90_91_MASK |
+			SPEAR320S_PMX_PL_92_93_MASK,
+		.value = SPEAR320S_PMX_SSP2_PL_90_91_VAL |
+			SPEAR320S_PMX_SSP2_PL_92_93_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_SSP2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_SSP2_PORT_90_TO_93_VAL,
+	},
+};
+
+#define pmx_ssp2_common_modes						\
+	{								\
+		.ids = AUTO_NET_SMII_MODE,				\
+		.mux_regs = pmx_ssp2_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_mux),		\
+	}
+
+static struct pmx_dev_mode pmx_ssp2_modes[][2] = {
+	{
+		/* Select signals on pins 13-16 */
+		pmx_ssp2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp2_ext_13_16_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_ext_13_16_mux),
+		},
+	}, {
+		/* Select signals on pins 32-35 */
+		pmx_ssp2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp2_ext_32_35_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_ext_32_35_mux),
+		},
+	}, {
+		/* Select signals on pins 44-47 */
+		pmx_ssp2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp2_ext_44_47_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_ext_44_47_mux),
+		},
+	}, {
+		/* Select signals on pins 61-64 */
+		pmx_ssp2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp2_ext_61_64_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_ext_61_64_mux),
+		},
+	}, {
+		/* Select signals on pins 90-93 */
+		pmx_ssp2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_ssp2_ext_90_93_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_ssp2_ext_90_93_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_ssp2[] = {
+	{
+		.name = "ssp2-13-16",
+		.modes = pmx_ssp2_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_ssp2_modes[0]),
+	}, {
+		.name = "ssp2-32-35",
+		.modes = pmx_ssp2_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_ssp2_modes[1]),
+	}, {
+		.name = "ssp2-44-47",
+		.modes = pmx_ssp2_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_ssp2_modes[2]),
+	}, {
+		.name = "ssp2-61-64",
+		.modes = pmx_ssp2_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_ssp2_modes[3]),
+	}, {
+		.name = "ssp2-90-93",
+		.modes = pmx_ssp2_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_ssp2_modes[4]),
+	},
+};
+
+/* Pad multiplexing for cadence mii2 as mii device */
+static struct pmx_mux_reg pmx_mii2_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_80_89_REG,
+		.mask = SPEAR320S_PMX_PL_80_TO_85_MASK |
+			SPEAR320S_PMX_PL_86_87_MASK |
+			SPEAR320S_PMX_PL_88_89_MASK,
+		.value = SPEAR320S_PMX_MII2_PL_80_TO_85_VAL |
+			SPEAR320S_PMX_MII2_PL_86_87_VAL |
+			SPEAR320S_PMX_MII2_PL_88_89_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_90_91_MASK |
+			SPEAR320S_PMX_PL_92_93_MASK |
+			SPEAR320S_PMX_PL_94_95_MASK |
+			SPEAR320S_PMX_PL_96_97_MASK,
+		.value = SPEAR320S_PMX_MII2_PL_90_91_VAL |
+			SPEAR320S_PMX_MII2_PL_92_93_VAL |
+			SPEAR320S_PMX_MII2_PL_94_95_VAL |
+			SPEAR320S_PMX_MII2_PL_96_97_VAL,
+	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_MAC_MODE_MASK << SPEAR320S_MAC2_MODE_SHIFT,
+		.value = SPEAR320S_MAC_MODE_MII << SPEAR320S_MAC2_MODE_SHIFT,
+	},
+};
+
+static struct pmx_dev_mode pmx_mii2_modes[] = {
+	{
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_mii2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_mii2_mux),
+	},
+};
+
+struct pmx_dev spear320s_pmx_mii2 = {
+	.name = "mii2",
+	.modes = pmx_mii2_modes,
+	.mode_count = ARRAY_SIZE(pmx_mii2_modes),
+};
+
+/* Pad multiplexing for cadence mii 1_2 as smii or rmii device */
+static struct pmx_mux_reg pmx_mii1_2_mux[] = {
 	{
 		.mask = PMX_MII_MASK,
 		.value = 0,
 	},
 };
 
-static struct pmx_dev_mode pmx_smii0_modes[] = {
+static struct pmx_mux_reg pmx_smii1_2_ext_mux[] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | AUTO_EXP_MODE | SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_smii0_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_smii0_mux),
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_10_11_MASK,
+		.value = SPEAR320S_PMX_SMII_PL_10_11_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_21_TO_27_MASK,
+		.value = SPEAR320S_PMX_SMII_PL_21_TO_27_VAL,
+	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_MAC_MODE_MASK << SPEAR320S_MAC2_MODE_SHIFT,
+		.value = SPEAR320S_MAC_MODE_SMII << SPEAR320S_MAC2_MODE_SHIFT,
 	},
 };
 
-struct pmx_dev spear320_pmx_smii0 = {
-	.name = "smii0",
-	.modes = pmx_smii0_modes,
-	.mode_count = ARRAY_SIZE(pmx_smii0_modes),
-};
-
-/* Pad multiplexing for smii1 device */
-static struct pmx_mux_reg pmx_smii1_mux[] = {
+static struct pmx_mux_reg pmx_rmii1_2_ext_mux[] = {
 	{
-		.mask = PMX_MII_MASK,
-		.value = 0,
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_10_11_MASK |
+			SPEAR320S_PMX_PL_13_14_MASK |
+			SPEAR320S_PMX_PL_15_16_MASK |
+			SPEAR320S_PMX_PL_17_18_MASK | SPEAR320S_PMX_PL_19_MASK,
+		.value = SPEAR320S_PMX_RMII_PL_10_11_VAL |
+			SPEAR320S_PMX_RMII_PL_13_14_VAL |
+			SPEAR320S_PMX_RMII_PL_15_16_VAL |
+			SPEAR320S_PMX_RMII_PL_17_18_VAL |
+			SPEAR320S_PMX_RMII_PL_19_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_20_MASK |
+			SPEAR320S_PMX_PL_21_TO_27_MASK,
+		.value = SPEAR320S_PMX_RMII_PL_20_VAL |
+			SPEAR320S_PMX_RMII_PL_21_TO_27_VAL,
+	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_MAC_MODE_MASK << SPEAR320S_MAC2_MODE_SHIFT,
+		.value = SPEAR320S_MAC_MODE_RMII << SPEAR320S_MAC2_MODE_SHIFT,
 	},
 };
 
-static struct pmx_dev_mode pmx_smii1_modes[] = {
+#define pmx_mii1_2_common_modes						\
+	{								\
+		.ids = AUTO_NET_SMII_MODE | AUTO_EXP_MODE |		\
+			SMALL_PRINTERS_MODE | SPEAR320S_EXTENDED_MODE,	\
+		.mux_regs = pmx_mii1_2_mux,				\
+		.mux_reg_cnt = ARRAY_SIZE(pmx_mii1_2_mux),		\
+	}
+
+static struct pmx_dev_mode pmx_mii1_2_modes[][2] = {
 	{
-		.ids = AUTO_NET_SMII_MODE | SMALL_PRINTERS_MODE,
-		.mux_regs = pmx_smii1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_smii1_mux),
+		/* configure as smii */
+		pmx_mii1_2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_smii1_2_ext_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_smii1_2_ext_mux),
+		},
+	}, {
+		/* configure as rmii */
+		pmx_mii1_2_common_modes,
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_rmii1_2_ext_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_rmii1_2_ext_mux),
+		},
 	},
 };
 
-struct pmx_dev spear320_pmx_smii1 = {
-	.name = "smii1",
-	.modes = pmx_smii1_modes,
-	.mode_count = ARRAY_SIZE(pmx_smii1_modes),
+struct pmx_dev spear320_pmx_mii1_2[] = {
+	{
+		.name = "smii1_2",
+		.modes = pmx_mii1_2_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_mii1_2_modes[0]),
+	}, {
+		.name = "rmii1_2",
+		.modes = pmx_mii1_2_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_mii1_2_modes[1]),
+	},
 };
 
 /* Pad multiplexing for i2c1 device */
-static struct pmx_mux_reg pmx_i2c1_mux[] = {
+static struct pmx_mux_reg pmx_i2c1_ext_8_9_mux[] = {
 	{
-		.mask = 0x0,
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_8_9_MASK,
+		.value = SPEAR320S_PMX_I2C1_PL_8_9_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C1_PORT_8_9_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_i2c1_ext_98_99_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_98_MASK |
+			SPEAR320S_PMX_PL_99_MASK,
+		.value = SPEAR320S_PMX_I2C1_PL_98_VAL |
+			SPEAR320S_PMX_I2C1_PL_99_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C1_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C1_PORT_98_99_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c1_modes[][1] = {
+	{
+		/* Select signals on pins 8-9 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c1_ext_8_9_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c1_ext_8_9_mux),
+		},
+	}, {
+		/* Select signals on pins 98-99 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c1_ext_98_99_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c1_ext_98_99_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320_pmx_i2c1[] = {
+	{
+		.name = "i2c1-8-9",
+		.modes = pmx_i2c1_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_i2c1_modes[0]),
+	}, {
+		.name = "i2c1-98_99",
+		.modes = pmx_i2c1_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_i2c1_modes[1]),
+	},
+};
+
+/* Pad multiplexing for i2c2 device */
+static struct pmx_mux_reg pmx_i2c2_ext_0_1_mux[] = {
+	{
+		.mask = PMX_FIRDA_MASK,
 		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_0_1_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_0_1_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C2_PORT_0_1_VAL,
 	},
 };
 
-static struct pmx_dev_mode pmx_i2c1_modes[] = {
+static struct pmx_mux_reg pmx_i2c2_ext_2_3_mux[] = {
 	{
-		.ids = AUTO_EXP_MODE,
-		.mux_regs = pmx_i2c1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_i2c1_mux),
+		.mask = PMX_UART0_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_0_9_REG,
+		.mask = SPEAR320S_PMX_PL_2_3_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_2_3_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C2_PORT_2_3_VAL,
 	},
 };
 
-struct pmx_dev spear320_pmx_i2c1 = {
-	.name = "i2c1",
-	.modes = pmx_i2c1_modes,
-	.mode_count = ARRAY_SIZE(pmx_i2c1_modes),
+static struct pmx_mux_reg pmx_i2c2_ext_19_20_mux[] = {
+	{
+		.mask = PMX_MII_MASK,
+		.value = 0,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_10_19_REG,
+		.mask = SPEAR320S_PMX_PL_19_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_19_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_PAD_20_29_REG,
+		.mask = SPEAR320S_PMX_PL_20_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_20_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C2_PORT_19_20_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_i2c2_ext_75_76_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
+		.mask = SPEAR320S_PMX_PL_75_76_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_75_76_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C2_PORT_75_76_VAL,
+	},
+};
+
+static struct pmx_mux_reg pmx_i2c2_ext_96_97_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_90_99_REG,
+		.mask = SPEAR320S_PMX_PL_96_97_MASK,
+		.value = SPEAR320S_PMX_I2C2_PL_96_97_VAL,
+	}, {
+		.address = SPEAR320S_IP_SEL_MIX_PAD_REG,
+		.mask = SPEAR320S_PMX_I2C2_PORT_SEL_MASK,
+		.value = SPEAR320S_PMX_I2C2_PORT_96_97_VAL,
+	},
+};
+
+static struct pmx_dev_mode pmx_i2c2_modes[][1] = {
+	{
+		/* Select signals on pins 0_1 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c2_ext_0_1_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c2_ext_0_1_mux),
+		},
+	}, {
+		/* Select signals on pins 2_3 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c2_ext_2_3_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c2_ext_2_3_mux),
+		},
+	}, {
+		/* Select signals on pins 19_20 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c2_ext_19_20_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c2_ext_19_20_mux),
+		},
+	}, {
+		/* Select signals on pins 75_76 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c2_ext_75_76_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c2_ext_75_76_mux),
+		},
+	}, {
+		/* Select signals on pins 96_97 */
+		{
+			.ids = SPEAR320S_EXTENDED_MODE,
+			.mux_regs = pmx_i2c2_ext_96_97_mux,
+			.mux_reg_cnt = ARRAY_SIZE(pmx_i2c2_ext_96_97_mux),
+		},
+	},
+};
+
+struct pmx_dev spear320s_pmx_i2c2[] = {
+	{
+		.name = "i2c2-0_1",
+		.modes = pmx_i2c2_modes[0],
+		.mode_count = ARRAY_SIZE(pmx_i2c2_modes[0]),
+	}, {
+		.name = "i2c2-2_3",
+		.modes = pmx_i2c2_modes[1],
+		.mode_count = ARRAY_SIZE(pmx_i2c2_modes[1]),
+	}, {
+		.name = "i2c2-19_20",
+		.modes = pmx_i2c2_modes[2],
+		.mode_count = ARRAY_SIZE(pmx_i2c2_modes[2]),
+	}, {
+		.name = "i2c2-75_76",
+		.modes = pmx_i2c2_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_i2c2_modes[3]),
+	}, {
+		.name = "i2c2-96_97",
+		.modes = pmx_i2c2_modes[4],
+		.mode_count = ARRAY_SIZE(pmx_i2c2_modes[4]),
+	},
 };
 
 /* pmx driver structure */

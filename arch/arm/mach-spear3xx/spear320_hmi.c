@@ -102,16 +102,15 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear3xx_pmx_uart0,
 
 	/* hmi specific devices */
-	&spear320_pmx_fsmc,
-	&spear320_pmx_sdhci,
+	&spear320_pmx_sdhci[0],
 	&spear320_pmx_i2s,
 	&spear320_pmx_uart1,
 	&spear320_pmx_uart2,
-	&spear320_pmx_can,
-	&spear320_pmx_pwm0,
-	&spear320_pmx_pwm1,
-	&spear320_pmx_pwm2,
-	&spear320_pmx_mii1,
+	&spear320_pmx_can0,
+	&spear320_pmx_can1,
+	&spear320_pmx_pwm0_1[0],
+	&spear320_pmx_pwm2[0],
+	&spear320s_pmx_mii2,
 	&spear3xx_pmx_plgpio_37_42,
 };
 
