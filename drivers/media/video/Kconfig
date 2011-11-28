@@ -536,6 +536,15 @@ config VIDEO_VIU
 	  Say Y here if you want to enable VIU device on MPC5121e Rev2+.
 	  In doubt, say N.
 
+config VIDEO_SPEAR_VIP
+	tristate "SPEAr Video Input Parallel Port"
+	depends on VIDEO_DEV && ARCH_SPEAR13XX
+	select VIDEOBUF_DMA_CONTIG
+	---help---
+	  This is a v4l2 driver for the ST SPEAr video input parallel port.
+	  Say Y here if you want to enable VIP device on SPEAr boards.
+	  In doubt, say N.
+
 config VIDEO_VIVI
 	tristate "Virtual Video Driver"
 	depends on VIDEO_DEV && VIDEO_V4L2 && !SPARC32 && !SPARC64
