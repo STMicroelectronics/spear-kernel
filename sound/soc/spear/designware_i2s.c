@@ -320,9 +320,9 @@ dw_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		dev->active++;
 		i2s_start(dev, substream);
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
