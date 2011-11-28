@@ -1735,7 +1735,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "spear_camif.3",		.clk = &cam3_clk},
 	{.dev_id = "plgpio",			.clk = &plgpio_clk},
 	{.dev_id = "pwm",			.clk = &pwm_clk},
-	{.dev_id = "video_input_port",		.clk = &video_input_port_clk},
+	{.dev_id = "spear_vip",			.clk = &video_input_port_clk},
 	{.con_id = "adc_synth_clk",		.clk = &adc_synth_clk},
 	{.dev_id = "adc",			.clk = &adc_clk},
 

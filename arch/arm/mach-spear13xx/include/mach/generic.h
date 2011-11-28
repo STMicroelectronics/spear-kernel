@@ -304,13 +304,13 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK		0x00400000
 #define SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK		0x00800000
 #define SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK		0x02000000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK		0xFC200000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK		0x0000000F
-#define SPEAR1340_PMX_VIDEO_IN_REG2_MASK			0x00001EF0
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK		0x007FE100
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK		0xFF800000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK		0x00000003
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK		0x00001FFC
+#define SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK			0xFC200000
+#define SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK			0x0000000F
+#define SPEAR1340_PMX_VIP_REG2_MASK				0x00001EF0
+#define SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK			0x007FE100
+#define SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK			0xFF800000
+#define SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK			0x00000003
+#define SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK			0x00001FFC
 #define SPEAR1340_PMX_SMI_REG3_MASK				0x0021E000
 #define SPEAR1340_PMX_SSP0_REG3_MASK				0x001E0000
 #define SPEAR1340_PMX_TS_AND_SSP0_CS2_REG3_MASK			0x00400000
@@ -361,16 +361,16 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable PWM0 */
 #define SPEAR1340_PMX_SSP0_CS1_MASK		(1 << 5)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM3_MASK			(1 << 6)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM2_MASK			(1 << 7)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM1_MASK			(1 << 8)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM0_MASK			(1 << 9)
 
 /* Write 0 to enable TS */
@@ -400,10 +400,10 @@ extern struct pmx_dev spear1340_pmx_pwm1;
 extern struct pmx_dev spear1340_pmx_pwm2;
 extern struct pmx_dev spear1340_pmx_pwm3;
 extern struct pmx_dev spear1340_pmx_ssp0_cs1;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam0;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam1;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam2;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam3;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam0;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam1;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam2;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam3;
 extern struct pmx_dev spear1340_pmx_cam0;
 extern struct pmx_dev spear1340_pmx_cam1;
 extern struct pmx_dev spear1340_pmx_cam2;

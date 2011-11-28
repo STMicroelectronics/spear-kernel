@@ -457,126 +457,126 @@ struct pmx_dev spear1340_pmx_ssp0_cs1 = {
 	.mode_count = ARRAY_SIZE(pmx_ssp0_cs1_modes),
 };
 
-/* pad multiplexing for video_in_mux_cam0 (disables cam0) device */
-static struct pmx_mux_reg pmx_video_in_mux_cam0_mux[] = {
+/* pad multiplexing for vip_mux_cam0 (disables cam0) device */
+static struct pmx_mux_reg pmx_vip_mux_cam0_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM0_MASK,
 		.value = 0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_REG2_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_video_in_mux_cam0_modes[] = {
+static struct pmx_dev_mode pmx_vip_mux_cam0_modes[] = {
 	{
-		.mux_regs = pmx_video_in_mux_cam0_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam0_mux),
+		.mux_regs = pmx_vip_mux_cam0_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_vip_mux_cam0_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_video_in_mux_cam0 = {
-	.name = "video_in_mux_cam0",
-	.modes = pmx_video_in_mux_cam0_modes,
-	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam0_modes),
+struct pmx_dev spear1340_pmx_vip_mux_cam0 = {
+	.name = "vip_mux_cam0",
+	.modes = pmx_vip_mux_cam0_modes,
+	.mode_count = ARRAY_SIZE(pmx_vip_mux_cam0_modes),
 };
 
-/* pad multiplexing for video_in_mux_cam1 (disables cam1) device */
-static struct pmx_mux_reg pmx_video_in_mux_cam1_mux[] = {
+/* pad multiplexing for vip_mux_cam1 (disables cam1) device */
+static struct pmx_mux_reg pmx_vip_mux_cam1_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM1_MASK,
 		.value = 0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_video_in_mux_cam1_modes[] = {
+static struct pmx_dev_mode pmx_vip_mux_cam1_modes[] = {
 	{
-		.mux_regs = pmx_video_in_mux_cam1_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam1_mux),
+		.mux_regs = pmx_vip_mux_cam1_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_vip_mux_cam1_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_video_in_mux_cam1 = {
-	.name = "video_in_mux_cam1",
-	.modes = pmx_video_in_mux_cam1_modes,
-	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam1_modes),
+struct pmx_dev spear1340_pmx_vip_mux_cam1 = {
+	.name = "vip_mux_cam1",
+	.modes = pmx_vip_mux_cam1_modes,
+	.mode_count = ARRAY_SIZE(pmx_vip_mux_cam1_modes),
 };
 
-/* pad multiplexing for video_in_mux_cam2 (disables cam2) device */
-static struct pmx_mux_reg pmx_video_in_mux_cam2_mux[] = {
+/* pad multiplexing for vip_mux_cam2 (disables cam2) device */
+static struct pmx_mux_reg pmx_vip_mux_cam2_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM2_MASK,
 		.value = 0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_video_in_mux_cam2_modes[] = {
+static struct pmx_dev_mode pmx_vip_mux_cam2_modes[] = {
 	{
-		.mux_regs = pmx_video_in_mux_cam2_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam2_mux),
+		.mux_regs = pmx_vip_mux_cam2_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_vip_mux_cam2_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_video_in_mux_cam2 = {
-	.name = "video_in_mux_cam2",
-	.modes = pmx_video_in_mux_cam2_modes,
-	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam2_modes),
+struct pmx_dev spear1340_pmx_vip_mux_cam2 = {
+	.name = "vip_mux_cam2",
+	.modes = pmx_vip_mux_cam2_modes,
+	.mode_count = ARRAY_SIZE(pmx_vip_mux_cam2_modes),
 };
 
-/* pad multiplexing for video_in_mux_cam3 (disables cam3) device */
-static struct pmx_mux_reg pmx_video_in_mux_cam3_mux[] = {
+/* pad multiplexing for vip_mux_cam3 (disables cam3) device */
+static struct pmx_mux_reg pmx_vip_mux_cam3_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
 		.mask = SPEAR1340_PMX_CAM3_MASK,
 		.value = 0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_1,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_REG2_MASK |
-			SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_REG2_MASK |
+			SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK,
 	},
 };
 
-static struct pmx_dev_mode pmx_video_in_mux_cam3_modes[] = {
+static struct pmx_dev_mode pmx_vip_mux_cam3_modes[] = {
 	{
-		.mux_regs = pmx_video_in_mux_cam3_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_video_in_mux_cam3_mux),
+		.mux_regs = pmx_vip_mux_cam3_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_vip_mux_cam3_mux),
 	},
 };
 
-struct pmx_dev spear1340_pmx_video_in_mux_cam3 = {
-	.name = "video_in_mux_cam3",
-	.modes = pmx_video_in_mux_cam3_modes,
-	.mode_count = ARRAY_SIZE(pmx_video_in_mux_cam3_modes),
+struct pmx_dev spear1340_pmx_vip_mux_cam3 = {
+	.name = "vip_mux_cam3",
+	.modes = pmx_vip_mux_cam3_modes,
+	.mode_count = ARRAY_SIZE(pmx_vip_mux_cam3_modes),
 };
 
 /* pad multiplexing for cam3 device */
@@ -587,12 +587,12 @@ static struct pmx_mux_reg pmx_cam3_mux[] = {
 		.value = SPEAR1340_PMX_CAM3_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_1,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK,
 	},
 };
 
@@ -617,8 +617,8 @@ static struct pmx_mux_reg pmx_cam2_mux[] = {
 		.value = SPEAR1340_PMX_CAM2_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK,
 	},
 };
 
@@ -643,12 +643,12 @@ static struct pmx_mux_reg pmx_cam1_mux[] = {
 		.value = SPEAR1340_PMX_CAM1_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK,
 	},
 };
 
@@ -673,8 +673,8 @@ static struct pmx_mux_reg pmx_cam0_mux[] = {
 		.value = SPEAR1340_PMX_CAM0_MASK,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
-		.value = SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK,
+		.mask = SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK,
+		.value = SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK,
 	},
 };
 
