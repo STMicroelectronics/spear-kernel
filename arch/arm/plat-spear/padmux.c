@@ -100,11 +100,6 @@ int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 	if (!count)
 		return -EINVAL;
 
-	if (!pmx->active_mode) {
-		printk(KERN_ERR "pmx active_mode is not set\n");
-		return -EAGAIN;
-	}
-
 	for (i = 0, j = 0; i < count; i++) {
 		if (!devs[i]->name || !devs[i]->modes) {
 			printk(KERN_ERR "padmux: dev name or modes is null\n");
@@ -115,7 +110,8 @@ int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 
 		/* Enable dev for all struct modes which support current mode */
 		for (j = 0; j < devs[i]->mode_count; j++) {
-			if (devs[i]->modes[j].ids & pmx->active_mode->id) {
+			if (!pmx->active_mode || (devs[i]->modes[j].ids &
+						pmx->active_mode->id)) {
 				found = true;
 				enable_dev_for_mode(&devs[i]->modes[j]);
 			}
