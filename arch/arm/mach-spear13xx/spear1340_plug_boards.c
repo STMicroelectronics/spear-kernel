@@ -30,6 +30,8 @@
  * - vga:
  * - sata: It is not a separate physical plug board but a board
  *   configuration
+ * - pcie: It is not a separate physical plug board but a board
+ *   configuration. sata and pcie are muxed and cannot be used together.
  *
  * Plug boards details can be found at:
  * https://codex.cro.st.com/plugins/docman/?group_id=1309&action=show&id=164214
@@ -69,6 +71,7 @@
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
+#include <mach/spear_pcie.h>
 
 /* name of an individual plug-board is limited to 10 chars */
 #define PB_NAME_LIMIT	10
@@ -540,6 +543,53 @@ static void __init sata_pb_init(void)
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
 }
 
+/*
+ * Definitions specific to PCIe configuration
+ * This is an exception as PCIe is not a separate plug board but is a
+ * change in normal evaulation board for supporting PCIe.
+ */
+/* padmux devices to enable */
+static struct pmx_dev *pcie_pb_pmx_devs[] = {
+	&spear1340_pmx_pcie,
+};
+
+/* Amba and platform devices to be removed, added previously by evb board */
+static struct amba_device *pcie_pb_rm_adevs[] __initdata = {
+};
+
+static struct platform_device *pcie_pb_rm_pdevs[] __initdata = {
+	&spear1340_sata0_device,
+};
+
+/* Amba and platform devices to be added */
+static struct amba_device *pcie_pb_add_adevs[] __initdata = {
+};
+
+static struct platform_device *pcie_pb_add_pdevs[] __initdata = {
+	&spear13xx_pcie_host0_device,
+};
+
+/* SPI devices to be removed */
+static struct spi_board_info *pcie_pb_rm_spi_devs[] __initdata = {
+};
+/* SPI devices to be added */
+static struct spi_board_info *pcie_pb_add_spi_devs[] __initdata = {
+};
+
+/* I2C devices to be removed */
+static struct i2c_dev_info *pcie_pb_rm_i2c_devs[] __initdata = {
+};
+/* I2C devices to be added */
+static struct i2c_dev_info *pcie_pb_add_i2c_devs[] __initdata = {
+};
+
+static void __init pcie_pb_init(void)
+{
+#ifdef CONFIG_SPEAR_PCIE_REV370
+	spear1340_pcie_board_init(&spear13xx_pcie_host0_device.dev);
+#endif
+}
+
 static int __init spear1340_pb_select(char *boards)
 {
 	strcpy(spear1340_plug_board, boards);
@@ -573,6 +623,8 @@ static int make_pb_list(struct list_head *pb_list)
 			INIT_PB(vga, pb);
 		} else if (!strcmp(pb_name, "sata")) {
 			INIT_PB(sata, pb);
+		} else if (!strcmp(pb_name, "pcie")) {
+			INIT_PB(pcie, pb);
 		} else {
 			pr_err("Invalid plug board requested: %s\n", pb_name);
 			goto release_pb;
