@@ -36,7 +36,6 @@
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
-#include <mach/spear_pcie.h>
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 /* Variable specifying which plug boards are requested */
@@ -182,7 +181,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_clcd_gpio_pd,
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
-	&spear1340_pmx_pcie,
+	&spear1340_pmx_sata,
 
 	/* Keep this entry at the bottom of table to override earlier setting */
 	&spear1340_pmx_plgpios,
@@ -215,7 +214,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcm_device,
-	&spear13xx_pcie_host0_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
@@ -233,6 +231,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_phy0_device,
 	&spear1340_plgpio_device,
 	&spear1340_otg_device,
+	&spear1340_sata0_device,
 	&spear1340_thermal_device,
 };
 
@@ -446,18 +445,6 @@ static struct spi_board_info *spi_board[] __initdata = {
 	&spear1340_evb_spi_spidev,
 };
 
-#ifdef CONFIG_SPEAR_PCIE_REV370
-/* This function is needed for board specific PCIe initilization */
-static void __init spear1340_pcie_board_init(void)
-{
-	void *plat_data;
-
-	plat_data = dev_get_platdata(&spear13xx_pcie_host0_device.dev);
-	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
-}
-#endif
-
-
 static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
 {
@@ -512,10 +499,6 @@ static void __init spear1340_evb_init(void)
 	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
-#endif
-
-#ifdef CONFIG_SPEAR_PCIE_REV370
-	spear1340_pcie_board_init();
 #endif
 
 	/* call spear1340 machine init function */
