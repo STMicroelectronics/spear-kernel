@@ -28,6 +28,7 @@
 #include <mach/hardware.h>
 #include <mach/spdif_out.h>
 #include <mach/spear1340_misc_regs.h>
+#include <mach/spear_pcie.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -2397,6 +2398,17 @@ static int spdif_out_clk_init(void)
 		return ret;
 
 	return clk_set_parent_sys("spdif-out", NULL, "gen_synth2_clk", NULL);
+}
+#endif
+
+#ifdef CONFIG_SPEAR_PCIE_REV370
+/* This function is needed for board specific PCIe initilization */
+void __init spear1340_pcie_board_init(struct device *dev)
+{
+	void *plat_data;
+
+	plat_data = dev_get_platdata(dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
 }
 #endif
 

@@ -623,6 +623,7 @@ void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
+void __init spear1340_pcie_board_init(struct device *dev);
 void config_clcd_gpio_pads(bool);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
