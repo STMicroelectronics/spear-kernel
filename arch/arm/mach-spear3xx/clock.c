@@ -1079,6 +1079,7 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "c_can_platform.1",	.clk = &can1_clk},
 	{ .dev_id = "ssp-pl022.1",	.clk = &ssp1_clk},
 	{ .dev_id = "ssp-pl022.2",	.clk = &ssp2_clk},
+	{ .con_id = "uart1_2_pclk",     .clk = &spear320_uart1_2_pclk},
 	{ .dev_id = "uart1",		.clk = &spear320_uart1_clk},
 	{ .dev_id = "uart2",		.clk = &spear320_uart2_clk},
 #endif
