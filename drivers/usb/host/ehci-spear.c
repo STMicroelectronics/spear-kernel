@@ -14,9 +14,13 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 
+#define MAX_PORT	4
+
 struct spear_ehci {
 	struct ehci_hcd ehci;
 	struct clk *clk;
+	u32 configured;
+	u32 port_status[MAX_PORT];
 };
 
 #define to_spear_ehci(hcd)	(struct spear_ehci *)hcd_to_ehci(hcd)
@@ -89,6 +93,48 @@ static const struct hc_driver ehci_spear_hc_driver = {
 	.port_handed_over		= ehci_port_handed_over,
 	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
+
+#ifdef CONFIG_PM
+static int ehci_spear_drv_suspend(struct device *dev)
+{
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	struct spear_ehci *ehci_p = to_spear_ehci(hcd);
+	int	port = HCS_N_PORTS(ehci->hcs_params);
+
+	BUG_ON(port > MAX_PORT);
+
+	ehci_p->configured = ehci_readl(ehci, &ehci->regs->configured_flag);
+	while (port--) {
+		ehci_p->port_status[port] =
+			ehci_readl(ehci, &ehci->regs->port_status[port]);
+	}
+
+	return 0;
+}
+
+static int ehci_spear_drv_resume(struct device *dev)
+{
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	struct spear_ehci *ehci_p = to_spear_ehci(hcd);
+	int	port = HCS_N_PORTS(ehci->hcs_params);
+
+	ehci_writel(ehci, ehci_p->configured, &ehci->regs->configured_flag);
+	while (port--) {
+		ehci_writel(ehci, ehci_p->port_status[port] & PORT_POWER,
+				&ehci->regs->port_status[port]);
+		mdelay(100);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops ehci_spear_pm_ops = {
+	.suspend = ehci_spear_drv_suspend,
+	.resume = ehci_spear_drv_resume,
+};
+#endif /* CONFIG_PM */
 
 static int spear_ehci_hcd_drv_probe(struct platform_device *pdev)
 {
@@ -205,7 +251,10 @@ static struct platform_driver spear_ehci_hcd_driver = {
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver		= {
 		.name = "spear-ehci",
-		.bus = &platform_bus_type
+		.bus = &platform_bus_type,
+#ifdef CONFIG_PM
+		.pm = &ehci_spear_pm_ops,
+#endif
 	}
 };
 
