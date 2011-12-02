@@ -83,6 +83,9 @@
 /* Overlay Window DMA Current Addr Register 1 */
 #define DB9000_OWDCAR1	(0x620)
 
+/* Multiple Memory Reads Request Register */
+#define DB9000_MRR	(0xFFC)
+
 /* Control Register 1, Offset 0x000 */
 /* LCD Controller Enable */
 #define DB9000_CR1_ENB	(1 << 0)
@@ -271,5 +274,12 @@
 
 /* PWM Duty Cycle Register, Offset 0x038 */
 #define DB9000_PWMDCR_DCR(x)	((x) & 0xff)
+
+/* Multiple Memory Reads Request Register, offset 0xFFC */
+#define DB9000_MRR_MRR(x)	(((x) & 0x3) << 0)
+#define DB9000_MRR_DEAR_MRR(x)	((x) & 0xFFFFFFFC)
+#define DB9000_MRR_OUTST_0	0x0
+#define DB9000_MRR_OUTST_2	0x1
+#define DB9000_MRR_OUTST_4	0x2
 
 #endif /* __DB9000_REGS_H */
