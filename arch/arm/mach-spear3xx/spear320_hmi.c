@@ -62,7 +62,7 @@ static struct macb_base_data hmi_macb_data = {
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
 };
 
-static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
+static struct stmpe_ts_platform_data stmpe811_ts_pdata = {
 	.sample_time = 4, /* 80 clocks */
 	.mod_12b = 1, /* 12 bit */
 	.ref_sel = 0, /* Internal */
@@ -74,7 +74,7 @@ static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
 	.i_drive = 1, /* 50 to 80 mA */
 };
 
-static struct stmpe_platform_data stmpe610_pdata = {
+static struct stmpe_platform_data stmpe811_pdata = {
 	.id = 0,
 	.blocks = STMPE_BLOCK_TOUCHSCREEN | STMPE_BLOCK_GPIO,
 	.irq_base = SPEAR320_STMPE_INT_BASE,
@@ -83,13 +83,13 @@ static struct stmpe_platform_data stmpe610_pdata = {
 	.autosleep = false,
 	.irq_over_gpio = true,
 	.irq_gpio = PLGPIO_40,
-	.ts = &stmpe610_ts_pdata,
+	.ts = &stmpe811_ts_pdata,
 };
 
 static struct i2c_board_info __initdata i2c_board_info[] = {
 	{
-		I2C_BOARD_INFO("stmpe610", 0x41),
-		.platform_data = &stmpe610_pdata,
+		I2C_BOARD_INFO("stmpe811", 0x41),
+		.platform_data = &stmpe811_pdata,
 	},
 };
 
