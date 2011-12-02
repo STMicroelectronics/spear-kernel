@@ -885,12 +885,8 @@ static struct frac_synth_rate_tbl clcd_rtbl[] = {
 	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x04A12}, /* 108 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x0378E}, /* 144 Mhz , for vc01div4 = 250 MHz*/
-	/*
-	 * TODO : 1080p should work on 148 Mhz. But we see lots of
-	 * flickering at 148 Mhz.So, commenting this entry till we
-	 * resolve this issue
-	 */
-	/* {.div = 0x0360D}, */ /* 148 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0360D}, /* 148 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x035E0}, /* 148.5 MHz, for vc01div4 = 250 MHz*/
 };
 
 /* clcd fractional synthesizer clock */
