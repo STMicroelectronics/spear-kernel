@@ -880,6 +880,7 @@ static struct frac_synth_rate_tbl clcd_rtbl[] = {
 	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
 	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
 	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x07BA0}, /* 65 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
 	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
