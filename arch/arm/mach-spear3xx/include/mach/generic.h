@@ -223,6 +223,13 @@ extern struct platform_device spear320_pwm_device;
 extern struct platform_device spear320_sdhci_device;
 extern struct platform_device spear320_spp_device;
 
+extern struct amba_device spear320s_uart3_device;
+extern struct amba_device spear320s_uart4_device;
+extern struct amba_device spear320s_uart5_device;
+extern struct amba_device spear320s_uart6_device;
+extern struct amba_device spear320s_rs485_device;
+extern struct platform_device spear320s_i2c2_device;
+
 /* pad mux modes */
 extern struct pmx_mode spear320_auto_net_smii_mode;
 extern struct pmx_mode spear320_auto_net_mii_mode;

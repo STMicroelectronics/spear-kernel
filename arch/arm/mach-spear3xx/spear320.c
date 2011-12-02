@@ -2810,7 +2810,7 @@ static struct amba_pl011_data uart_data[] = {
 	},
 };
 
-/* uart1 device registeration */
+/* uart devices registeration */
 struct amba_device spear320_uart1_device = {
 	.dev = {
 		.init_name = "uart1",
@@ -2824,7 +2824,6 @@ struct amba_device spear320_uart1_device = {
 	.irq = {SPEAR320_VIRQ_UART1, NO_IRQ},
 };
 
-/* uart2 device registeration */
 struct amba_device spear320_uart2_device = {
 	.dev = {
 		.init_name = "uart2",
@@ -2836,6 +2835,56 @@ struct amba_device spear320_uart2_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {SPEAR320_VIRQ_UART2, NO_IRQ},
+};
+
+struct amba_device spear320s_uart3_device = {
+	.dev.init_name = "uart3",
+	.res = {
+		.start = SPEAR320S_UART3_BASE,
+		.end = SPEAR320S_UART3_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR320S_VIRQ_UART3, NO_IRQ},
+};
+
+struct amba_device spear320s_uart4_device = {
+	.dev.init_name = "uart4",
+	.res = {
+		.start = SPEAR320S_UART4_BASE,
+		.end = SPEAR320S_UART4_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR320S_VIRQ_UART4, NO_IRQ},
+};
+
+struct amba_device spear320s_uart5_device = {
+	.dev.init_name = "uart5",
+	.res = {
+		.start = SPEAR320S_UART5_BASE,
+		.end = SPEAR320S_UART5_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR320S_VIRQ_UART5, NO_IRQ},
+};
+
+struct amba_device spear320s_uart6_device = {
+	.dev.init_name = "uart6",
+	.res = {
+		.start = SPEAR320S_UART6_BASE,
+		.end = SPEAR320S_UART6_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR320S_VIRQ_UART6, NO_IRQ},
+};
+
+struct amba_device spear320s_rs485_device = {
+	.dev.init_name = "rs485",
+	.res = {
+		.start = SPEAR320S_RS485_BASE,
+		.end = SPEAR320S_RS485_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR320S_VIRQ_RS485, NO_IRQ},
 };
 
 /* CAN device registeration */
@@ -2956,7 +3005,7 @@ struct platform_device spear320_eth_macb1_smii = {
 	.num_resources = ARRAY_SIZE(macb1_smii_resources),
 };
 
-/* i2c1 device registeration */
+/* i2c device registeration */
 static struct resource i2c1_resources[] = {
 	{
 		.start = SPEAR320_I2C_BASE,
@@ -2976,6 +3025,27 @@ struct platform_device spear320_i2c1_device = {
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
+};
+
+static struct resource i2c2_resources[] = {
+	{
+		.start = SPEAR320S_I2C2_BASE,
+		.end = SPEAR320S_I2C2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR320S_VIRQ_I2C2,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear320s_i2c2_device = {
+	.name = "i2c_designware",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(i2c2_resources),
+	.resource = i2c2_resources,
 };
 
 /* nand device registeration */
