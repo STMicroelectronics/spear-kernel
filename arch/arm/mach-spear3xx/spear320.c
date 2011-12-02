@@ -3207,6 +3207,30 @@ static struct shirq_dev_config shirq_intrcomm_ras_config[] = {
 		.virq = SPEAR320_VIRQ_I2C1,
 		.status_mask = SPEAR320_I2C1_IRQ_MASK,
 		.clear_mask = SPEAR320_I2C1_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_I2C2,
+		.status_mask = SPEAR320S_I2C2_IRQ_MASK,
+		.clear_mask = SPEAR320S_I2C2_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_UART3,
+		.status_mask = SPEAR320S_UART3_IRQ_MASK,
+		.clear_mask = SPEAR320S_UART3_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_UART4,
+		.status_mask = SPEAR320S_UART4_IRQ_MASK,
+		.clear_mask = SPEAR320S_UART4_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_UART5,
+		.status_mask = SPEAR320S_UART5_IRQ_MASK,
+		.clear_mask = SPEAR320S_UART5_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_UART6,
+		.status_mask = SPEAR320S_UART6_IRQ_MASK,
+		.clear_mask = SPEAR320S_UART6_IRQ_MASK,
+	}, {
+		.virq = SPEAR320S_VIRQ_RS485,
+		.status_mask = SPEAR320S_RS485_IRQ_MASK,
+		.clear_mask = SPEAR320S_RS485_IRQ_MASK,
 	},
 };
 
