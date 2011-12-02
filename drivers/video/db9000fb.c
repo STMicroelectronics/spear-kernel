@@ -656,7 +656,11 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	if (fbi->reg_dbar != next_frame_address) {
 		lcd_writel(fbi, DB9000_DBAR, next_frame_address);
 		lcd_writel(fbi, DB9000_DEAR, next_frame_address +
-				fbi->video_mem_size_used);
+			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS));
+		lcd_writel(fbi, DB9000_MRR,
+			DB9000_MRR_DEAR_MRR(next_frame_address +
+			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS)) |
+			DB9000_MRR_MRR(DB9000_MRR_OUTST_4));
 		/*
 		 * Force waiting till the current buffer is completely drawn by
 		 * video controller
@@ -977,9 +981,15 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
-	fbi->reg_dear = fbi->reg_dbar + fbi->video_mem_size_used;
+	fbi->reg_dear = fbi->reg_dbar +
+		(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS);
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
+
+	/* configure MRR to 4 outstanding requests */
+	lcd_writel(fbi, DB9000_MRR,
+		DB9000_MRR_DEAR_MRR(fbi->reg_dear) |
+		DB9000_MRR_MRR(DB9000_MRR_OUTST_4));
 
 	/* enable BAU event for IRQ */
 	isr = lcd_readl(fbi, DB9000_ISR);
@@ -988,7 +998,8 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_BAU);
 
 	lcd_writel(fbi, DB9000_CR1,
-		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE);
+		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE |
+		DB9000_CR1_DEE);
 
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
@@ -1019,7 +1030,8 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 		dbar = lcd_readl(fbi, DB9000_DBAR);
 		if (dbar != fbi->reg_dbar) {
 			fbi->reg_dbar = dbar;
-			fbi->reg_dear = dbar + fbi->video_mem_size_used;
+			fbi->reg_dear = dbar + (fbi->video_mem_size_used /
+				NUM_OF_FRAMEBUFFERS);
 			complete(&fbi->vsync_notifier);
 		}
 	}
@@ -1795,8 +1807,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fbi->video_mem_size_used =
 			video_buf_size + (fbi->palette_size * 2);
 	if (fbi->reg_dear == 0)
-		fbi->reg_dear = fbi->video_mem_size_used +
-			fbi->fb.fix.smem_start;
+		fbi->reg_dear = (fbi->video_mem_size_used /
+			NUM_OF_FRAMEBUFFERS) + fbi->fb.fix.smem_start;
 
 	 /* Ok, now enable the LCD controller */
 	set_ctrlr_state(fbi, C_ENABLE);
