@@ -793,7 +793,7 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		clk_set_rate(fbi->clk, clk_rate);
 	fbi->reg_htr =
 	/* horizontal sync width */
-		DB9000_HTR_HSW((var->hsync_len) - 1) |
+		DB9000_HTR_HSW(var->hsync_len) |
 	/* horizontal back porch */
 		DB9000_HTR_HBP(var->left_margin) |
 	/* Pixels per line  */
