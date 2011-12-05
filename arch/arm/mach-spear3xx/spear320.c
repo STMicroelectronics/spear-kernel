@@ -3340,6 +3340,7 @@ static void c_can_enable_bugfix(struct platform_device *c_can)
 #define ENABLE_MEM_CLK		0x1
 void macb_init_board_info(struct platform_device *pdev, void *data)
 {
+	struct clk *amem_clk;
 	u32 tmp;
 
 	macb_set_plat_data(pdev, data);
@@ -3360,8 +3361,16 @@ void macb_init_board_info(struct platform_device *pdev, void *data)
 	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
 
 	/* Enable memory Port-1 clock */
-	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, VA_AMEM_CLK_CFG);
+	amem_clk = clk_get(NULL, "amem_clk");
+	if (IS_ERR(amem_clk)) {
+		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
+		return;
+	}
+
+	if (clk_enable(amem_clk)) {
+		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
+		clk_put(amem_clk);
+	}
 }
 
 /*

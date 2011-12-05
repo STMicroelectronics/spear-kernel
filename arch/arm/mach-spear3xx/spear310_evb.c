@@ -218,11 +218,20 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #define ENABLE_MEM_CLK	1
 static void macb_enable_mem_clk(void)
 {
-	u32 tmp;
+	struct clk *amem_clk;
 
 	/* Enable memory Port-1 clock */
-	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, VA_AMEM_CLK_CFG);
+	amem_clk = clk_get(NULL, "amem_clk");
+	if (IS_ERR(amem_clk)) {
+		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
+		return;
+	}
+
+	if (clk_enable(amem_clk)) {
+		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
+		clk_put(amem_clk);
+		return;
+	}
 
 	/*
 	 * Program the pad strengths of PLGPIO to drive the IO's
