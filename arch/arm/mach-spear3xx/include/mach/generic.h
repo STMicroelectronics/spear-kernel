@@ -271,6 +271,7 @@ extern struct pmx_dev spear320s_pmx_uart6[];
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 		**pmx_devs, u8 pmx_dev_count);
 void __init spear320_map_io(void);
+void macb_init_board_info(struct platform_device *pdev, void *data);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;

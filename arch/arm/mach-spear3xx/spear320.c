@@ -26,6 +26,7 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
 
 /* modes */
@@ -3334,6 +3335,33 @@ static void c_can_enable_bugfix(struct platform_device *c_can)
 	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
 
 	pdata->is_quirk_required = 1;
+}
+
+#define ENABLE_MEM_CLK		0x1
+void macb_init_board_info(struct platform_device *pdev, void *data)
+{
+	u32 tmp;
+
+	macb_set_plat_data(pdev, data);
+	/*
+	 * Select the MDIO Muxed configuration for the MII interface.
+	 * The RAS control register should have the following cfg
+	 * For SMII-0 interface
+	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
+	 *
+	 * For SMII-1/MII interface
+	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
+	 *
+	 * This needs to be done at run time. At present the SMII
+	 * interfaces are not functional, hence has been kept static for
+	 * the MII interface only.
+	 */
+	tmp = readl(IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG))) | (1 << MII_ENB);
+	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
+
+	/* Enable memory Port-1 clock */
+	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
+	writel(tmp, VA_AMEM_CLK_CFG);
 }
 
 /*
