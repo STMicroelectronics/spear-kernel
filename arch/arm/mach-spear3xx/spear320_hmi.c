@@ -4,7 +4,7 @@
  * SPEAr320 Human Machine Interface board source file
  *
  * Copyright (C) 2011 ST Microelectronics
- * Viresh Kumar<viresh.kumar@st.com>
+ * Viresh Kumar <viresh.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -18,8 +18,6 @@
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
-#include <linux/phy.h>
-#include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <plat/adc.h>
@@ -30,29 +28,6 @@
 #include <mach/hardware.h>
 #include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
-
-/* ethernet phy device */
-static struct plat_stmmacphy_data phy_private_data = {
-	.bus_id = 0,
-	.phy_addr = -1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
-};
-
-static struct resource phy_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-static struct platform_device hmi_phy_device = {
-	.name = "stmmacphy",
-	.id = -1,
-	.num_resources = 1,
-	.resource = &phy_resources,
-	.dev.platform_data = &phy_private_data,
-};
 
 /* Ethernet Private data */
 static struct macb_base_data hmi_macb_data = {
@@ -82,7 +57,7 @@ static struct stmpe_platform_data stmpe811_pdata = {
 	.irq_invert_polarity = false,
 	.autosleep = false,
 	.irq_over_gpio = true,
-	.irq_gpio = PLGPIO_40,
+	.irq_gpio = PLGPIO_70,
 	.ts = &stmpe811_ts_pdata,
 };
 
@@ -98,34 +73,32 @@ static struct pmx_dev *pmx_devs[] = {
 	/* spear3xx specific devices */
 	&spear3xx_pmx_i2c,
 	&spear3xx_pmx_ssp,
-	&spear3xx_pmx_mii,
 	&spear3xx_pmx_uart0,
 
 	/* hmi specific devices */
-	&spear320_pmx_sdhci[0],
-	&spear320_pmx_i2s,
-	&spear320_pmx_uart1,
-	&spear320_pmx_uart2,
 	&spear320_pmx_can0,
 	&spear320_pmx_can1,
-	&spear320_pmx_pwm0_1[0],
-	&spear320_pmx_pwm2[0],
-	&spear320s_pmx_mii2,
+	&spear320s_pmx_clcd,
+	&spear320s_pmx_fsmc,
+	&spear320_pmx_i2s,
+	&spear320_pmx_pwm0_1[3],
+	&spear320_pmx_pwm2[3],
+	&spear320_pmx_sdhci[1],
+	&spear320_pmx_uart1,
+	&spear320_pmx_uart2,
+	&spear320_pmx_mii1_2[1],
 	&spear3xx_pmx_plgpio_37_42,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_dma_device,
-	&spear3xx_gpio_device,
 	&spear3xx_ssp0_device,
 	&spear3xx_uart_device,
 	&spear3xx_wdt_device,
 
 	/* hmi specific devices */
 	&spear320_clcd_device,
-	&spear320_ssp_device[0],
-	&spear320_ssp_device[1],
 	&spear320_uart1_device,
 	&spear320_uart2_device,
 };
@@ -134,7 +107,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_adc_device,
 	&spear3xx_ehci_device,
-	&spear3xx_eth_device,
 	&spear3xx_i2c_device,
 	&spear3xx_jpeg_device,
 	&spear3xx_ohci0_device,
@@ -146,9 +118,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear320_can0_device,
 	&spear320_can1_device,
 	&spear320_eth_macb1_mii_device,
-	&spear320_i2c1_device,
 	&spear320_nand_device,
-	&hmi_phy_device,
 	&spear320_plgpio_device,
 	&spear320_pwm_device,
 	&spear320_sdhci_device,
@@ -210,7 +180,7 @@ static void __init spear320_hmi_init(void)
 	macb_init_board_info(&spear320_eth_macb1_mii_device);
 
 	/* call spear320 machine init function */
-	spear320_common_init(&spear320_auto_net_smii_mode, pmx_devs,
+	spear320_common_init(&spear320s_extended_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
 
 	/* Add Platform Devices */
