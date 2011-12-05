@@ -640,6 +640,14 @@ static struct clk apb_clk = {
 	.private_data = &apb_config,
 };
 
+/*amem clock: Must be enabled for accessing RAM from RAS peripherals */
+static struct clk amem_clk = {
+	.en_reg = VA_AMEM_CLK_CFG,
+	.en_reg_bit = AMEM_CLK_ENB,
+	.pclk = &ahb_clk,
+	.recalc = &follow_parent,
+};
+
 /* i2c clock */
 static struct clk i2c_clk = {
 	.pclk = &ahb_clk,
@@ -1122,6 +1130,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{ .con_id = "ahbmult2_clk",	.clk = &ahbmult2_clk},
 	{ .con_id = "ddr_clk",		.clk = &ddr_clk},
 	{ .con_id = "apb_clk",		.clk = &apb_clk},
+	{ .con_id = "amem_clk",		.clk = &amem_clk},
 	{ .dev_id = "i2c_designware.0",	.clk = &i2c_clk},
 	{ .dev_id = "pl080_dmac",	.clk = &dma_clk},
 	{ .dev_id = "jpeg-designware",	.clk = &jpeg_clk},
