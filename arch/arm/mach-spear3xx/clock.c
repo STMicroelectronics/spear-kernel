@@ -843,30 +843,39 @@ static struct clk i2c1_clk = {
 	.recalc = &follow_parent,
 };
 
-/* mii parent clocks: smii for 320, rmii for 320s */
-static struct pclk_info mii_pclk_info[] = {
+/* smii external pad clock */
+static struct clk smii_125m_pad = {
+	.flags = ALWAYS_ENABLED,
+	.rate = 125000000,
+};
+
+/* mii parent clocks: smii for 320 */
+static struct pclk_info smii_pclk_info[] = {
 	{
+		.pclk = &smii_125m_pad,
+		.pclk_val = SMII_PCLK_VAL_PAD,
+	}, {
 		.pclk = &pll2_clk,
-		.pclk_val = MII_PCLK_VAL_PLL2,
+		.pclk_val = SMII_PCLK_VAL_PLL2,
 	}, {
 		.pclk = &ras_synth0_clk,
-		.pclk_val = MII_PCLK_VAL_SYNTH0,
+		.pclk_val = SMII_PCLK_VAL_SYNTH0,
 	},
 };
 
 /* mii parent select structure */
-static struct pclk_sel mii_pclk_sel = {
-	.pclk_info = mii_pclk_info,
-	.pclk_count = ARRAY_SIZE(mii_pclk_info),
+static struct pclk_sel smii_pclk_sel = {
+	.pclk_info = smii_pclk_info,
+	.pclk_count = ARRAY_SIZE(smii_pclk_info),
 	.pclk_sel_reg = VA_SPEAR320_CONTROL_REG,
-	.pclk_sel_mask = MII_PCLK_MASK,
+	.pclk_sel_mask = SMII_PCLK_MASK,
 };
 
 /* mii clock */
-static struct clk spear320_mii_clk = {
+static struct clk spear320_smii_clk = {
 	.flags = ALWAYS_ENABLED,
-	.pclk_sel = &mii_pclk_sel,
-	.pclk_sel_shift = MII_PCLK_SHIFT,
+	.pclk_sel = &smii_pclk_sel,
+	.pclk_sel_shift = SMII_PCLK_SHIFT,
 	.recalc = &follow_parent,
 };
 
@@ -1178,7 +1187,8 @@ static struct clk_lookup spear320_clk_lookups[] = {
 	{ .dev_id = "fsmc-nand",	.clk = &fsmc_clk},
 	{ .dev_id = "i2c_designware.1",	.clk = &i2c1_clk},
 	{ .con_id = "emi",		.clk = &emi_clk},
-	{ .con_id = "mii_clk",		.clk = &spear320_mii_clk},
+	{ .con_id = "smii_125m_clk",	.clk = &smii_125m_pad},
+	{ .con_id = "smii_clk",		.clk = &spear320_smii_clk},
 	{ .dev_id = "pwm",		.clk = &pwm_clk},
 	{ .dev_id = "sdhci",		.clk = &spear320_sdhci_clk},
 	{ .dev_id = "c_can_platform.0",	.clk = &can0_clk},
