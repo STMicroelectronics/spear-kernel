@@ -181,6 +181,10 @@ static struct pmx_mux_reg pmx_emi_ext_mux[] = {
 			SPEAR320S_PMX_EMI1_PL_92_93_VAL |
 			SPEAR320S_PMX_EMI1_PL_94_95_VAL |
 			SPEAR320S_PMX_EMI1_PL_96_97_VAL,
+	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
+		.value = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
 	},
 };
 
@@ -234,6 +238,10 @@ static struct pmx_mux_reg pmx_fsmc_mux[] = {
 		.value = SPEAR320S_PMX_FSMC_EMI_PL_70_VAL |
 			SPEAR320S_PMX_FSMC_EMI_PL_71_72_VAL |
 			SPEAR320S_PMX_FSMC_EMI_PL_73_VAL,
+	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
+		.value = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
 	},
 };
 
