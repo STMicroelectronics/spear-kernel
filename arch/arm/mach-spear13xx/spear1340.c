@@ -1328,7 +1328,7 @@ struct pmx_dev spear1340_pmx_sgmii = {
 static struct pmx_mux_reg pmx_pcie_mux[] = {
 	{
 		.address = SPEAR1340_PCIE_SATA_CFG,
-		.mask = SPEAR1340_PCIE_CFG_VAL,
+		.mask = SPEAR1340_SATA_PCIE_CFG_MASK,
 		.value = SPEAR1340_PCIE_CFG_VAL,
 	},
 };
@@ -1350,7 +1350,7 @@ struct pmx_dev spear1340_pmx_pcie = {
 static struct pmx_mux_reg pmx_sata_mux[] = {
 	{
 		.address = SPEAR1340_PCIE_SATA_CFG,
-		.mask = SPEAR1340_SATA_CFG_VAL,
+		.mask = SPEAR1340_SATA_PCIE_CFG_MASK,
 		.value = SPEAR1340_SATA_CFG_VAL,
 	},
 };
