@@ -300,31 +300,38 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 	struct plgpio *plgpio = get_irq_chip_data(irq);
 	int size = plgpio->grp_size ? plgpio->grp_size : 1;
 	int offset = irq - plgpio->irq_base;
+	void __iomem *reg_off;
+	unsigned int supported_type = 0, val;
 
 	if (offset >= DIV_ROUND_UP(plgpio->chip.ngpio, size))
 		return -EINVAL;
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-	if (cpu_is_spear1310() || cpu_is_spear1340()) {
-		void __iomem *reg_off = REG_OFFSET(plgpio->base,
-				plgpio->regs.eit, offset);
-		u32 val = readl(reg_off);
+	supported_type = IRQ_TYPE_EDGE_RISING;
 
-		offset = PIN_OFFSET(offset);
-		if (trigger & IRQ_TYPE_EDGE_RISING)
-			writel(val | (1 << offset), reg_off);
-		else if (trigger & IRQ_TYPE_EDGE_FALLING)
-			writel(val & ~(1 << offset), reg_off);
-		else
-			return -EINVAL;
-
-		return 0;
-	} else if (!(trigger & IRQ_TYPE_EDGE_RISING))
-		return -EINVAL;
+	if (cpu_is_spear1310() || cpu_is_spear1340())
+		supported_type |= IRQ_TYPE_EDGE_FALLING;
 #else
-	if (!(trigger & IRQ_TYPE_LEVEL_HIGH))
-		return -EINVAL;
+	if (cpu_is_spear320() && (plgpio->regs.eit != -1))
+		supported_type = IRQ_TYPE_EDGE_RISING | IRQ_TYPE_EDGE_FALLING;
+	else
+		supported_type = IRQ_TYPE_LEVEL_HIGH;
 #endif
+
+	if (!(trigger & supported_type))
+		return -EINVAL;
+
+	if (plgpio->regs.eit == -1)
+		return 0;
+
+	reg_off = REG_OFFSET(plgpio->base, plgpio->regs.eit, offset);
+	val = readl(reg_off);
+
+	offset = PIN_OFFSET(offset);
+	if (trigger & IRQ_TYPE_EDGE_RISING)
+		writel(val | (1 << offset), reg_off);
+	else
+		writel(val & ~(1 << offset), reg_off);
 
 	return 0;
 }
