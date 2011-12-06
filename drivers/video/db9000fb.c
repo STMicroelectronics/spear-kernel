@@ -1751,7 +1751,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	else
 		fbi->video_mem_size = video_buf_size;
 
-	fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
 	/* Initialize video memory */
 	addr = ioremap(fbi->frame_base, fbi->video_mem_size);
 	if (!addr) {
