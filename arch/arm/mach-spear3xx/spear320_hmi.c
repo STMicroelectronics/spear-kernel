@@ -23,6 +23,7 @@
 #include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/jpeg.h>
+#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -112,6 +113,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_ohci0_device,
 	&spear3xx_ohci1_device,
 	&spear3xx_rtc_device,
+	&spear3xx_smi_device,
 	&spear3xx_udc_device,
 
 	/* hmi specific devices */
@@ -155,6 +157,9 @@ static void __init spear320_hmi_init(void)
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320s_extended_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
+
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
