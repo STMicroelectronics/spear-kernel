@@ -660,6 +660,7 @@ static struct plgpio_platform_data plgpio_plat_data = {
 		.ie = SPEAR310_PLGPIO_IE_OFF,
 		.rdata = SPEAR310_PLGPIO_RDATA_OFF,
 		.mis = SPEAR310_PLGPIO_MIS_OFF,
+		.eit = -1,
 	},
 };
 
