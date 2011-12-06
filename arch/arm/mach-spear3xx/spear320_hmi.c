@@ -32,6 +32,7 @@
 
 /* Ethernet Private data */
 static struct macb_base_data hmi_macb_data = {
+	.is_rmii = 1,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x2,
