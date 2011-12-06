@@ -3426,6 +3426,10 @@ void __init spear320s_init(struct pmx_mode *pmx_mode)
 		/* Fix SPEAr320s specific pmx stuff */
 		pmx_driver.mode_reg.address = SPEAR320S_EXT_CTRL_REG;
 		pmx_driver.mode_reg.mask = SPEAR320S_EXTENDED_MODE_VAL;
+
+		/* Update platform data for 320s extended mode */
+		plgpio_plat_data.regs.mis = SPEAR320S_PLGPIO_MIS_OFF;
+		plgpio_plat_data.regs.eit = SPEAR320S_PLGPIO_EI_OFF;
 	} else {
 		/* Clear ext ctrl reg to select legacy modes */
 		writel(0, VA_SPEAR320S_EXT_CTRL_REG);
