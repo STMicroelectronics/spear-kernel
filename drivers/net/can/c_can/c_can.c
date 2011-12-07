@@ -955,15 +955,17 @@ static void c_can_do_tx(struct net_device *dev)
 	for (/* nix */; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
 		msg_obj_no = get_tx_echo_msg_obj(priv);
 		val = c_can_read_reg32(priv, &priv->regs->txrqst1);
-		if (!(val & (1 << msg_obj_no))) {
+		if (!(val & (1 << (msg_obj_no - 1)))) {
 			can_get_echo_skb(dev,
 					msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
 			stats->tx_bytes += priv->read_reg(priv,
 					&priv->regs->ifregs[0].msg_cntrl)
 					& IF_MCONT_DLC_MASK;
 			stats->tx_packets++;
+			c_can_inval_msg_object(dev, 0, msg_obj_no);
+		} else {
+			break;
 		}
-		c_can_inval_msg_object(dev, 0, msg_obj_no);
 	}
 
 	/* restart queue if wrap-up or if queue stalled on last pkt */
