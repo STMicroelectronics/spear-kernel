@@ -698,7 +698,7 @@ static void c_can_inval_msg_object(struct net_device *dev, int iface, int objno)
 			c_can_read_reg32(priv, &priv->regs->msgval1));
 }
 
-static inline int c_can_is_next_tx_obj_busy(struct c_can_priv *priv, int objno)
+static inline int c_can_is_tx_obj_busy(struct c_can_priv *priv, int objno)
 {
 	int val = c_can_read_reg32(priv, &priv->regs->txrqst1);
 
@@ -731,7 +731,7 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 	priv->tx_next++;
 
 	if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0) ||
-			c_can_is_next_tx_obj_busy(priv,
+			c_can_is_tx_obj_busy(priv,
 				get_tx_next_msg_obj(priv)))
 		netif_stop_queue(dev);
 
