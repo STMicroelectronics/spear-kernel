@@ -724,6 +724,14 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 
 	msg_obj_no = get_tx_next_msg_obj(priv);
 
+	/* check if this message object is still BUSY */
+	if (unlikely(c_can_is_tx_obj_busy(priv, msg_obj_no))) {
+		netif_stop_queue(dev);
+
+		netdev_err(dev, "BUG! TX buffer full when queue awake!\n");
+		return NETDEV_TX_BUSY;
+	}
+
 	/* prepare message object for transmission */
 	c_can_write_msg_object(dev, 0, frame, msg_obj_no);
 	can_put_echo_skb(skb, dev, msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
