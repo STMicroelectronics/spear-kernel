@@ -141,30 +141,6 @@
 #define IFX_WRITE_LOW_16BIT(x)	((x) & 0xFFFF)
 #define IFX_WRITE_HIGH_16BIT(x)	(((x) & 0xFFFF0000) >> 16)
 
-/*
- * message object split:
- * Do not change this unless you are sure about what you are doing.
- * Note that normally a CAN node has to receive more than transmit.
- * So, it makes sense to keep more objects for RX purpose than for
- * TX.
- */
-#define C_CAN_NO_OF_OBJECTS	32
-#define C_CAN_MSG_OBJ_RX_NUM	31
-#define C_CAN_MSG_OBJ_TX_NUM	1
-
-#define C_CAN_MSG_OBJ_RX_FIRST	1
-#define C_CAN_MSG_OBJ_RX_LAST	(C_CAN_MSG_OBJ_RX_FIRST + \
-				C_CAN_MSG_OBJ_RX_NUM - 1)
-
-#define C_CAN_MSG_OBJ_TX_FIRST	(C_CAN_MSG_OBJ_RX_LAST + 1)
-#define C_CAN_MSG_OBJ_TX_LAST	(C_CAN_MSG_OBJ_TX_FIRST + \
-				C_CAN_MSG_OBJ_TX_NUM - 1)
-
-#define C_CAN_MSG_OBJ_RX_SPLIT	25
-#define C_CAN_MSG_RX_LOW_LAST	(C_CAN_MSG_OBJ_RX_SPLIT - 1)
-
-#define C_CAN_NEXT_MSG_OBJ_MASK	(C_CAN_MSG_OBJ_TX_NUM - 1)
-
 /* status interrupt */
 #define STATUS_INTERRUPT	0x8000
 
@@ -174,9 +150,6 @@
 
 /* minimum timeout for checking BUSY status */
 #define MIN_TIMEOUT_VALUE	6
-
-/* napi related */
-#define C_CAN_NAPI_WEIGHT	C_CAN_MSG_OBJ_RX_NUM
 
 /* c_can lec values */
 enum c_can_lec_type {
@@ -213,16 +186,67 @@ static struct can_bittiming_const c_can_bittiming_const = {
 	.brp_inc = 1,
 };
 
+static inline unsigned int get_msg_obj_rx_first(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_first;
+}
+
+static inline unsigned int get_msg_obj_rx_last(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_last;
+}
+
+static inline unsigned int get_msg_obj_rx_split(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_split;
+}
+
+static inline unsigned int get_msg_obj_rx_num(const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_last(priv) - get_msg_obj_rx_first(priv) + 1;
+}
+
+static inline unsigned int get_msg_obj_rx_low_last(
+			const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_split(priv) - 1;
+}
+
+static inline unsigned int get_msg_obj_tx_num(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.tx_num;
+}
+
+static inline unsigned int get_msg_obj_tx_first(const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_last(priv) + 1;
+}
+
+static inline unsigned int get_msg_obj_tx_last(const struct c_can_priv *priv)
+{
+	return get_msg_obj_tx_first(priv) + get_msg_obj_tx_num(priv) - 1;
+}
+
+static inline unsigned int get_next_msg_obj_mask(const struct c_can_priv *priv)
+{
+	return get_msg_obj_tx_num(priv) - 1;
+}
+
 static inline int get_tx_next_msg_obj(const struct c_can_priv *priv)
 {
-	return (priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) +
-			C_CAN_MSG_OBJ_TX_FIRST;
+	return (priv->tx_next & get_next_msg_obj_mask(priv)) +
+		get_msg_obj_tx_first(priv);
 }
 
 static inline int get_tx_echo_msg_obj(const struct c_can_priv *priv)
 {
-	return (priv->tx_echo & C_CAN_NEXT_MSG_OBJ_MASK) +
-			C_CAN_MSG_OBJ_TX_FIRST;
+	return (priv->tx_echo & get_next_msg_obj_mask(priv)) +
+		get_msg_obj_tx_first(priv);
+}
+
+static inline int get_total_msg_objs(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_last + priv->devtype_data.tx_num;
 }
 
 static u32 c_can_read_reg32(struct c_can_priv *priv, void *reg)
@@ -373,7 +397,8 @@ static inline void c_can_activate_all_lower_rx_msg_obj(struct net_device *dev,
 	int i;
 	struct c_can_priv *priv = netdev_priv(dev);
 
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i <= C_CAN_MSG_RX_LOW_LAST; i++) {
+	for (i = get_msg_obj_rx_first(priv);
+			i <= get_msg_obj_rx_low_last(priv); i++) {
 		priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
 				ctrl_mask & ~(IF_MCONT_MSGLST |
 					IF_MCONT_INTPND | IF_MCONT_NEWDAT));
@@ -734,11 +759,11 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 
 	/* prepare message object for transmission */
 	c_can_write_msg_object(dev, 0, frame, msg_obj_no);
-	can_put_echo_skb(skb, dev, msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
+	can_put_echo_skb(skb, dev, msg_obj_no - get_msg_obj_tx_first(priv));
 
 	priv->tx_next++;
 
-	if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0) ||
+	if (((priv->tx_next & get_next_msg_obj_mask(priv)) == 0) ||
 			c_can_is_tx_obj_busy(priv,
 				get_tx_next_msg_obj(priv)))
 		netif_stop_queue(dev);
@@ -794,11 +819,11 @@ static void c_can_configure_msg_objects(struct net_device *dev)
 	struct c_can_priv *priv = netdev_priv(dev);
 
 	/* first invalidate all message objects */
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i <= C_CAN_NO_OF_OBJECTS; i++)
+	for (i = get_msg_obj_rx_first(priv); i <= get_total_msg_objs(priv); i++)
 		c_can_inval_msg_object(dev, 0, i);
 
 	/* setup receive message objects */
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i < C_CAN_MSG_OBJ_RX_LAST; i++)
+	for (i = get_msg_obj_rx_first(priv); i < get_msg_obj_rx_last(priv); i++)
 		c_can_setup_receive_object(dev, 0, i, 0, 0,
 			(IF_MCONT_RXIE | IF_MCONT_UMASK) & ~IF_MCONT_EOB);
 
@@ -808,8 +833,8 @@ static void c_can_configure_msg_objects(struct net_device *dev)
 		 * set the EoB bit for the 31st message object and mark it as
 		 * busy
 		 */
-		c_can_setup_receive_object(dev, 0, C_CAN_MSG_OBJ_RX_LAST, 0, 0,
-				IF_MCONT_NEWDAT | IF_MCONT_EOB |
+		c_can_setup_receive_object(dev, 0, get_msg_obj_rx_last(priv),
+				0, 0, IF_MCONT_NEWDAT | IF_MCONT_EOB |
 				IF_MCONT_RXIE | IF_MCONT_UMASK);
 
 		/*
@@ -819,8 +844,9 @@ static void c_can_configure_msg_objects(struct net_device *dev)
 		 */
 		dummy_read_msgobj_one(dev);
 	} else {
-		c_can_setup_receive_object(dev, 0, C_CAN_MSG_OBJ_RX_LAST, 0, 0,
-				IF_MCONT_EOB | IF_MCONT_RXIE | IF_MCONT_UMASK);
+		c_can_setup_receive_object(dev, 0, get_msg_obj_rx_last(priv),
+				0, 0, IF_MCONT_EOB | IF_MCONT_RXIE |
+				IF_MCONT_UMASK);
 	}
 }
 
@@ -957,7 +983,7 @@ static void c_can_do_tx(struct net_device *dev)
 		val = c_can_read_reg32(priv, &priv->regs->txrqst1);
 		if (!(val & (1 << (msg_obj_no - 1)))) {
 			can_get_echo_skb(dev,
-					msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
+				msg_obj_no - get_msg_obj_tx_first(priv));
 			stats->tx_bytes += priv->read_reg(priv,
 					&priv->regs->ifregs[0].msg_cntrl)
 					& IF_MCONT_DLC_MASK;
@@ -969,8 +995,8 @@ static void c_can_do_tx(struct net_device *dev)
 	}
 
 	/* restart queue if wrap-up or if queue stalled on last pkt */
-	if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) != 0) ||
-			((priv->tx_echo & C_CAN_NEXT_MSG_OBJ_MASK) == 0))
+	if (((priv->tx_next & get_next_msg_obj_mask(priv)) != 0) ||
+			((priv->tx_echo & get_next_msg_obj_mask(priv)) == 0))
 		netif_wake_queue(dev);
 }
 
@@ -981,19 +1007,19 @@ static void c_can_do_tx(struct net_device *dev)
  * object it finds free (starting with the lowest). Bits NEWDAT and
  * INTPND are set for this message object indicating that a new message
  * has arrived. To work-around this issue, we keep two groups of message
- * objects whose partitioning is defined by C_CAN_MSG_OBJ_RX_SPLIT.
+ * objects whose partitioning is defined by get_msg_obj_rx_split(priv).
  *
  * To ensure in-order frame reception we use the following
  * approach while re-activating a message object to receive further
  * frames:
  * - if the current message object number is lower than
- *   C_CAN_MSG_RX_LOW_LAST, do not clear the NEWDAT bit while clearing
+ *   get_msg_obj_rx_low_last(priv), do not clear the NEWDAT bit while clearing
  *   the INTPND bit.
  * - if the current message object number is equal to
- *   C_CAN_MSG_RX_LOW_LAST then clear the NEWDAT bit of all lower
+ *   get_msg_obj_rx_low_last(priv) then clear the NEWDAT bit of all lower
  *   receive message objects.
  * - if the current message object number is greater than
- *   C_CAN_MSG_RX_LOW_LAST then clear the NEWDAT bit of
+ *   get_msg_obj_rx_low_last(priv) then clear the NEWDAT bit of
  *   only this message object.
  */
 static int c_can_do_rx_poll(struct net_device *dev, int quota)
@@ -1008,11 +1034,12 @@ static int c_can_do_rx_poll(struct net_device *dev, int quota)
 	priv->rx_flag = 0;
 
 again:
-	for (obj = find_next_bit(addr, C_CAN_MSG_OBJ_RX_LAST, priv->rx_next);
-			obj < C_CAN_MSG_OBJ_RX_LAST && quota > 0;
+	for (obj = find_next_bit(addr, get_msg_obj_rx_last(priv),
+				priv->rx_next);
+			obj < get_msg_obj_rx_last(priv) && quota > 0;
 			val = c_can_read_reg32(priv, &priv->regs->intpnd1),
 			newdat = c_can_read_reg32(priv, &priv->regs->newdat1),
-			obj = find_next_bit(addr, C_CAN_MSG_OBJ_RX_LAST,
+			obj = find_next_bit(addr, get_msg_obj_rx_last(priv),
 				++priv->rx_next)) {
 		priv->rx_flag = 1;
 
@@ -1056,14 +1083,14 @@ again:
 		/* read the data from the message object */
 		c_can_read_msg_object(dev, 0, msg_ctrl_save, obj + 1);
 
-		if ((obj + 1) == C_CAN_MSG_RX_LOW_LAST)
+		if ((obj + 1) == get_msg_obj_rx_low_last(priv))
 			/* activate all lower message objects */
 			c_can_activate_all_lower_rx_msg_obj(dev,
 					0, msg_ctrl_save);
-		else if ((obj + 1) < C_CAN_MSG_RX_LOW_LAST)
+		else if ((obj + 1) < get_msg_obj_rx_low_last(priv))
 			c_can_mark_rx_msg_obj(dev, 0,
 					msg_ctrl_save, obj + 1);
-		else if ((obj + 1) > C_CAN_MSG_RX_LOW_LAST)
+		else if ((obj + 1) > get_msg_obj_rx_low_last(priv))
 			/* activate this msg obj */
 			c_can_activate_rx_msg_obj(dev, 0,
 					msg_ctrl_save, obj + 1);
@@ -1074,8 +1101,8 @@ again:
 	}
 
 	/* upper group completed, look again in lower */
-	if (priv->rx_next > C_CAN_MSG_RX_LOW_LAST &&
-		quota > 0 && obj >= C_CAN_MSG_OBJ_RX_LAST &&
+	if (priv->rx_next > get_msg_obj_rx_low_last(priv) &&
+		quota > 0 && obj >= get_msg_obj_rx_last(priv) &&
 		!(priv->rx_flag)) {
 		priv->rx_next = 0;
 		goto again;
@@ -1086,9 +1113,9 @@ again:
 	 * no further packets are expected, as we have to wrap back to
 	 * message object 1
 	 */
-	if (priv->rx_next == C_CAN_MSG_RX_LOW_LAST &&
+	if (priv->rx_next == get_msg_obj_rx_low_last(priv) &&
 		quota > 0 &&
-		obj >= C_CAN_MSG_OBJ_RX_LAST &&
+		obj >= get_msg_obj_rx_last(priv) &&
 		!(priv->rx_flag)) {
 		priv->rx_next = 0;
 		goto again;
@@ -1098,7 +1125,7 @@ again:
 	 * corner case checking:
 	 * insure we never go out of bounds
 	 */
-	if (priv->rx_next >= C_CAN_MSG_OBJ_RX_LAST && quota > 0) {
+	if (priv->rx_next >= get_msg_obj_rx_last(priv) && quota > 0) {
 		priv->rx_next = 0;
 		goto again;
 	}
@@ -1318,12 +1345,12 @@ static int c_can_poll(struct napi_struct *napi, int quota)
 		lec_type = c_can_has_and_handle_berr(priv);
 		if (lec_type)
 			work_done += c_can_handle_bus_err(dev, lec_type);
-	} else if ((irqstatus >= C_CAN_MSG_OBJ_RX_FIRST) &&
-			(irqstatus <= C_CAN_MSG_OBJ_RX_LAST)) {
+	} else if ((irqstatus >= get_msg_obj_rx_first(priv)) &&
+			(irqstatus <= get_msg_obj_rx_last(priv))) {
 		/* handle events corresponding to receive message objects */
 		work_done += c_can_do_rx_poll(dev, (quota - work_done));
-	} else if ((irqstatus >= C_CAN_MSG_OBJ_TX_FIRST) &&
-			(irqstatus <= C_CAN_MSG_OBJ_TX_LAST)) {
+	} else if ((irqstatus >= get_msg_obj_tx_first(priv)) &&
+			(irqstatus <= get_msg_obj_tx_last(priv))) {
 		/* handle events corresponding to transmit message objects */
 		c_can_do_tx(dev);
 
@@ -1413,17 +1440,17 @@ static int c_can_close(struct net_device *dev)
 	return 0;
 }
 
-struct net_device *alloc_c_can_dev(void)
+struct net_device *alloc_c_can_dev(unsigned int echo_count)
 {
 	struct net_device *dev;
 	struct c_can_priv *priv;
 
-	dev = alloc_candev(sizeof(struct c_can_priv), C_CAN_MSG_OBJ_TX_NUM);
+	dev = alloc_candev(sizeof(struct c_can_priv), echo_count);
 	if (!dev)
 		return NULL;
 
 	priv = netdev_priv(dev);
-	netif_napi_add(dev, &priv->napi, c_can_poll, C_CAN_NAPI_WEIGHT);
+	netif_napi_add(dev, &priv->napi, c_can_poll, get_msg_obj_rx_num(priv));
 
 	priv->dev = dev;
 	priv->can.bittiming_const = &c_can_bittiming_const;

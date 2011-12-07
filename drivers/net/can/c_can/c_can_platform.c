@@ -39,6 +39,28 @@
 #include "c_can.h"
 
 /*
+ * message object split:
+ * Do not change this unless you are sure about what you are doing.
+ * Note that normally a CAN node has to receive more than transmit.
+ * So, it makes sense to keep more objects for RX purpose than for
+ * TX.
+ */
+static const struct c_can_devtype_data c_can_devtype_data[] __devinitconst = {
+	[C_CAN_DEVTYPE_SPEA320] = {
+		.rx_first = 1,
+		.rx_split = 25,
+		.rx_last = 31,
+		.tx_num = 1,
+	},
+	[C_CAN_DEVTYPE_SPEA320S] = {
+		.rx_first = 1,
+		.rx_split = 20,
+		.rx_last = 26,
+		.tx_num = 6,
+	},
+};
+
+/*
  * 16-bit c_can registers can be arranged differently in the memory
  * architecture of different implementations. For example: 16-bit
  * registers can be aligned to a 16-bit boundary or 32-bit boundary etc.
@@ -121,6 +143,8 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	struct c_can_priv *priv;
 	struct c_can_platform_data *pdata;
 	struct resource *mem, *irq;
+	const struct c_can_devtype_data *devtype_data;
+	enum c_can_devtype devtype;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif
@@ -162,8 +186,14 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit_release_mem;
 	}
 
+	/* get the soc-id from the platform data */
+	pdata = pdev->dev.platform_data;
+	devtype = pdata->is_quirk_required ?
+		C_CAN_DEVTYPE_SPEA320 : C_CAN_DEVTYPE_SPEA320S;
+	devtype_data = &c_can_devtype_data[devtype];
+
 	/* allocate the c_can device */
-	dev = alloc_c_can_dev();
+	dev = alloc_c_can_dev(devtype_data->tx_num);
 	if (!dev) {
 		ret = -ENOMEM;
 		goto exit_iounmap;
@@ -171,16 +201,16 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 
 	priv = netdev_priv(dev);
 
+	priv->is_quirk_required = pdata->is_quirk_required;
+	priv->devtype_data.type = devtype;
+	priv->devtype_data = *devtype_data;
+
 	dev->irq = irq->start;
 	priv->regs = addr;
 #ifdef CONFIG_HAVE_CLK
 	priv->can.clock.freq = clk_get_rate(clk);
 	priv->priv = clk;
 #endif
-
-	/* get the soc-id from the platform data */
-	pdata = pdev->dev.platform_data;
-	priv->is_quirk_required = pdata->is_quirk_required;
 
 	switch (mem->flags & IORESOURCE_MEM_TYPE_MASK) {
 	case IORESOURCE_MEM_32BIT:
