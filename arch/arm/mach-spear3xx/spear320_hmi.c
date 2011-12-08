@@ -55,11 +55,11 @@ static struct stmpe_platform_data stmpe811_pdata = {
 	.id = 0,
 	.blocks = STMPE_BLOCK_TOUCHSCREEN | STMPE_BLOCK_GPIO,
 	.irq_base = SPEAR320_STMPE_INT_BASE,
-	.irq_trigger = IRQ_TYPE_LEVEL_HIGH,
+	.irq_trigger = IRQ_TYPE_EDGE_FALLING,
 	.irq_invert_polarity = false,
 	.autosleep = false,
 	.irq_over_gpio = true,
-	.irq_gpio = PLGPIO_70,
+	.irq_gpio = BASIC_GPIO_1,
 	.ts = &stmpe811_ts_pdata,
 };
 
@@ -73,6 +73,8 @@ static struct i2c_board_info __initdata i2c_board_info[] = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear3xx specific devices */
+	&spear3xx_pmx_gpio_pin0,
+	&spear3xx_pmx_gpio_pin1,
 	&spear3xx_pmx_i2c,
 	&spear3xx_pmx_ssp,
 	&spear3xx_pmx_uart0,
@@ -86,7 +88,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear320_pmx_pwm0_1[3],
 	&spear320_pmx_pwm2[3],
 	&spear320_pmx_sdhci[1],
-	&spear320_pmx_uart1,
 	&spear320_pmx_uart2,
 	&spear320_pmx_mii1_2[1],
 	&spear3xx_pmx_plgpio_37_42,
@@ -95,6 +96,7 @@ static struct pmx_dev *pmx_devs[] = {
 static struct amba_device *amba_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_dma_device,
+	&spear3xx_gpio_device,
 	&spear3xx_ssp0_device,
 	&spear3xx_uart_device,
 	&spear3xx_wdt_device,
