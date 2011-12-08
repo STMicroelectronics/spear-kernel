@@ -102,11 +102,11 @@
 		pb->rm_adevs = pb_name##_pb_rm_adevs;			\
 		pb->add_adevs = pb_name##_pb_add_adevs;			\
 		pb->rm_pdevs = pb_name##_pb_rm_pdevs;			\
+		pb->add_pdevs = pb_name##_pb_add_pdevs;			\
 		pb->rm_spi_devs = pb_name##_pb_rm_spi_devs;		\
 		pb->add_spi_devs = pb_name##_pb_add_spi_devs;		\
 		pb->rm_i2c_devs = pb_name##_pb_rm_i2c_devs;		\
 		pb->add_i2c_devs = pb_name##_pb_add_i2c_devs;		\
-		pb->add_pdevs = pb_name##_pb_add_pdevs;			\
 		pb->pmx_cnt = ARRAY_SIZE(pb_name##_pb_pmx_devs);	\
 		pb->rm_acnt = ARRAY_SIZE(pb_name##_pb_rm_adevs);	\
 		pb->add_acnt = ARRAY_SIZE(pb_name##_pb_add_adevs);	\
