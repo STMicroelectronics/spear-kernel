@@ -14,13 +14,9 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 
-#define MAX_PORT	4
-
 struct spear_ehci {
 	struct ehci_hcd ehci;
 	struct clk *clk;
-	u32 configured;
-	u32 port_status[MAX_PORT];
 };
 
 #define to_spear_ehci(hcd)	(struct spear_ehci *)hcd_to_ehci(hcd)
@@ -99,34 +95,57 @@ static int ehci_spear_drv_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct spear_ehci *ehci_p = to_spear_ehci(hcd);
-	int	port = HCS_N_PORTS(ehci->hcs_params);
+	unsigned long		flags;
+	int			rc = 0;
 
-	BUG_ON(port > MAX_PORT);
+	if (time_before(jiffies, ehci->next_statechange))
+		msleep(10);
 
-	ehci_p->configured = ehci_readl(ehci, &ehci->regs->configured_flag);
-	while (port--) {
-		ehci_p->port_status[port] =
-			ehci_readl(ehci, &ehci->regs->port_status[port]);
-	}
+	/*
+	 * Root hub was already suspended. Disable irq emission and
+	 * mark HW unaccessible. The PM and USB cores make sure that
+	 * the root hub is either suspended or stopped.
+	 */
+	spin_lock_irqsave(&ehci->lock, flags);
+	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
+	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
+	spin_unlock_irqrestore(&ehci->lock, flags);
 
-	return 0;
+	return rc;
 }
 
 static int ehci_spear_drv_resume(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	struct spear_ehci *ehci_p = to_spear_ehci(hcd);
-	int	port = HCS_N_PORTS(ehci->hcs_params);
 
-	ehci_writel(ehci, ehci_p->configured, &ehci->regs->configured_flag);
-	while (port--) {
-		ehci_writel(ehci, ehci_p->port_status[port] & PORT_POWER,
-				&ehci->regs->port_status[port]);
-		mdelay(100);
-	}
+	if (time_before(jiffies, ehci->next_statechange))
+		msleep(100);
 
+	usb_root_hub_lost_power(hcd->self.root_hub);
+
+	/*
+	 * Else reset, to cope with power loss or flush-to-storage
+	 * style "resume" having let BIOS kick in during reboot.
+	 */
+	(void) ehci_halt(ehci);
+	(void) ehci_reset(ehci);
+
+	/* emptying the schedule aborts any urbs */
+	spin_lock_irq(&ehci->lock);
+	if (ehci->reclaim)
+		end_unlink_async(ehci);
+	ehci_work(ehci);
+	spin_unlock_irq(&ehci->lock);
+
+	ehci_writel(ehci, ehci->command, &ehci->regs->command);
+	ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
+	ehci_readl(ehci, &ehci->regs->command);	/* unblock posted writes */
+
+	/* here we "know" root ports should always stay powered */
+	ehci_port_power(ehci, 1);
+
+	hcd->state = HC_STATE_SUSPENDED;
 	return 0;
 }
 
