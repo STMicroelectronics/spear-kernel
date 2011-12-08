@@ -851,7 +851,8 @@ int __init spear1340_pb_init(struct plug_board_info *pb_info)
 	list_for_each_entry(pb, &pb_list, node) {
 		pr_debug("%s: Initializing plug board\n", pb->name);
 
-		pb->pb_init();
+		if (pb->pb_init)
+			pb->pb_init();
 	}
 
 	list_for_each_entry(pb, &pb_list, node) {
