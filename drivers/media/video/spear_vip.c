@@ -2593,6 +2593,21 @@ static int __devinit vip_probe(struct platform_device *pdev)
 
 	/* clear streaming flag */
 	vip->is_streaming = 0;
+
+	/*
+	 * get the pointer for the contiguous memory pointer allocated
+	 * at boot-time and declare the region used to store the VIP
+	 * frames as contiguous with appropriate DMA mappings
+	 */
+	ret = dma_declare_coherent_memory(&pdev->dev, vip_pdata->vb_base,
+			vip_pdata->vb_base, vip_pdata->vb_size,
+			DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE);
+	if (!ret) {
+		dev_err(&pdev->dev, "Unable to declare MMAP memory.\n");
+		ret = -ENOENT;
+		goto exit_free_subdev;
+	}
+
 	return 0;
 
 exit_free_subdev:
