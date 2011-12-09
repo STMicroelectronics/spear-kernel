@@ -317,7 +317,7 @@ static struct vip_subdev_info vip_sdev_info[] = {
 static struct vip_config vip_config_info = {
 	.vsync_pol = POL_ACTIVE_LOW,
 	.hsync_pol = POL_ACTIVE_LOW,
-	.rgb_width = SIXTEEN_BIT,
+	.rgb_width = THIRTYTWO_BIT,
 	.vdo_mode = SINGLE_PORT,
 	.pix_clk_pol = POL_ACTIVE_LOW,
 };
