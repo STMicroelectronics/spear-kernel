@@ -823,9 +823,21 @@ static int vip_try_fmt_vid_cap(struct file *file, void *priv,
 	}
 
 	f->fmt.pix.field = field;
-	v4l_bound_align_image(&f->fmt.pix.width, VIP_MIN_WIDTH, VIP_MAX_WIDTH,
-			2, &f->fmt.pix.height, VIP_MIN_HEIGHT,
-			VIP_MAX_HEIGHT, 0, 0);
+
+	/* ensure image boundary sanity */
+	if (f->fmt.pix.width < VIP_MIN_WIDTH)
+		f->fmt.pix.width = VIP_MIN_WIDTH;
+
+	if (f->fmt.pix.width > VIP_MAX_WIDTH)
+		f->fmt.pix.width = VIP_MAX_WIDTH;
+
+	if (f->fmt.pix.height < VIP_MIN_HEIGHT)
+		f->fmt.pix.height = VIP_MIN_HEIGHT;
+
+	if (f->fmt.pix.height > VIP_MAX_HEIGHT)
+		f->fmt.pix.height = VIP_MAX_HEIGHT;
+
+	/* calculate bytes-per-line and image size */
 	f->fmt.pix.bytesperline =
 		(f->fmt.pix.width * fmt->depth) / 8;
 	f->fmt.pix.sizeimage =
