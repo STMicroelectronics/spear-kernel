@@ -29,6 +29,7 @@
 #include <mach/spdif_out.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
+#include <media/vip.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -2160,6 +2161,26 @@ struct platform_device spear1340_otg_device = {
 };
 
 /* video input parallel port registeration */
+static unsigned long vb_base;
+static unsigned long vb_size = VIP_TOTAL_BUFFER_SIZE;
+
+unsigned long vip_buffer_fixup(struct meminfo *mi)
+{
+	vb_base = reserve_mem(mi, ALIGN(vb_size, SZ_1M));
+	if (vb_base == ~0) {
+		pr_err("Unable to allocate videobufs in fixup\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+void vip_set_vb_base(struct vip_plat_data *pdata)
+{
+	pdata->vb_base = vb_base;
+	pdata->vb_size = vb_size;
+}
+
 static struct resource vip_resources[] = {
 	{
 		.start = SPEAR1340_VIP_BASE,
