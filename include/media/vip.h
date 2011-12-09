@@ -38,8 +38,8 @@
 #define VIP_OPTIMAL_BUFFER_CNT	(VIP_MIN_BUFFER_CNT + 1)
 #define VIP_OPTIMAL_BUFFER_SIZE	(VIP_MAX_WIDTH * VIP_MAX_HEIGHT * \
 				VIP_MAX_BYTES_PER_PIXEL)
-#define VIP_TOTAL_BUFFER_SIZE	(VIP_OPTIMAL_BUFFER_CNT * \
-				VIP_OPTIMAL_BUFFER_SIZE)
+/* FIXME: limit buffer size to 8 MB for now */
+#define VIP_TOTAL_BUFFER_SIZE	(8 * 1024 * 1024)
 
 /* vip polarity settings : common for hsync, vsync and pixclk */
 enum vip_polarity {
