@@ -120,6 +120,15 @@ struct vip_standard {
 };
 
 static struct vip_standard vip_standards[] = {
+	{
+		/* SDTV format created for GE */
+		.name = "PAL_GE",
+		.width = 640,
+		.height = 480,
+		.frame_format = 0,
+		.hd_sd = 0,
+		.std_id = V4L2_STD_625_50,
+	},
 	/* HDTV formats */
 	{
 		.name = "480p59_94",
