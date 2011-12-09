@@ -351,6 +351,8 @@ static struct platform_device *hdmi_rx_pb_add_pdevs[] __initdata = {
 
 static void __init hdmi_rx_pb_init(void)
 {
+	vip_set_vb_base(&vip_board_specific_data);
+
 	/* set vip plat data */
 	vip_set_plat_data(&spear1340_vip_device,
 				&vip_board_specific_data);
