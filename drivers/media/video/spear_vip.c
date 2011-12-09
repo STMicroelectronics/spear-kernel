@@ -558,20 +558,14 @@ static int vip_buffer_setup(struct videobuf_queue *vq, unsigned int *count,
 
 	*size = vip->fmt.fmt.pix.sizeimage;
 
-	/*
-	 * since we later want to allocate space for 2 HD frames with
-	 * the max width of 1920 and heignt of 1200 pixels at boot-time,
-	 * we limit the count and the size parameters here to reflect the same.
-	 * Note that the buffer size is in bytes.
-	 * FIXME: later this should come from the platform data somehow
-	 */
+	/* check for buffer count and size sanity */
 	if (*count > VIDEO_MAX_FRAME)
 		*count = VIDEO_MAX_FRAME;
 
 	if (*count < VIP_MIN_BUFFER_CNT)
 		*count = VIP_MIN_BUFFER_CNT;
 
-	if (*size != VIP_OPTIMAL_BUFFER_SIZE)
+	if (*size >= VIP_OPTIMAL_BUFFER_SIZE)
 		*size = VIP_OPTIMAL_BUFFER_SIZE;
 
 	v4l2_dbg(1, debug_level, &vip->v4l2_dev, "count=%d, size=%d\n",
