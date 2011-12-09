@@ -191,21 +191,7 @@ static int sil9135a_enum_mbus_fmt(struct v4l2_subdev *sd, unsigned int index,
 static int sil9135a_g_mbus_fmt(struct v4l2_subdev *sd,
 			struct v4l2_mbus_framefmt *fmt)
 {
-	/* TBD : To revisit */
-	struct sil9135a_state *state = to_state(sd);
-	struct v4l2_dv_enum_preset info;
-	int err;
-
-	if (state->preset == V4L2_DV_INVALID)
-		return -EINVAL;
-	err = v4l_fill_dv_preset_info(state->preset, &info);
-	fmt->width = info.width;
-	fmt->height = info.height;
-	fmt->code = V4L2_MBUS_FMT_FIXED;
-	fmt->field = V4L2_FIELD_NONE;
-	fmt->colorspace = (state->preset <= V4L2_DV_576P50) ?
-		V4L2_COLORSPACE_SMPTE170M : V4L2_COLORSPACE_REC709;
-	return err;
+	return -ENOIOCTLCMD;
 }
 
 static int sil9135a_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
