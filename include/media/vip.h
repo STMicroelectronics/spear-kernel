@@ -12,7 +12,34 @@
 #ifndef __VIP_H
 #define __VIP_H
 
+#include <linux/i2c.h>
 #include <linux/platform_device.h>
+#include <mach/generic.h>
+
+/* vip maximum resoultion */
+/*
+ * FIXME:
+ * limit to VGA resolution for now, increase this to
+ * support HD frames later
+ */
+#define VIP_MAX_WIDTH		640
+#define VIP_MAX_HEIGHT		480
+
+/* vip minimum resolution */
+#define VIP_MIN_WIDTH		0
+#define VIP_MIN_HEIGHT		0
+
+/* vip bits-per-pixel settings */
+#define VIP_MAX_BITS_PER_PIXEL	32	/* set for 32bpp slave */
+#define VIP_MAX_BYTES_PER_PIXEL	(VIP_MAX_BITS_PER_PIXEL / 8)
+
+/* vip buffer count and size */
+#define VIP_MIN_BUFFER_CNT	3
+#define VIP_OPTIMAL_BUFFER_CNT	(VIP_MIN_BUFFER_CNT + 1)
+#define VIP_OPTIMAL_BUFFER_SIZE	(VIP_MAX_WIDTH * VIP_MAX_HEIGHT * \
+				VIP_MAX_BYTES_PER_PIXEL)
+#define VIP_TOTAL_BUFFER_SIZE	(VIP_OPTIMAL_BUFFER_CNT * \
+				VIP_OPTIMAL_BUFFER_SIZE)
 
 /* vip polarity settings : common for hsync, vsync and pixclk */
 enum vip_polarity {
@@ -90,6 +117,8 @@ struct vip_subdev_info {
  * @is_field_end_gpio_based: tells whether some gpio will be used
  *      as a source of field-end interrupt to the CPU.
  * @gpio_for_frame_end_intr: gpio available for asserting frame end
+ * @vb_base: base address of the videobuf area allocated using _fixup_
+ * @vb_size: size of the videobuf area allocated using _fixup_
  */
 struct vip_plat_data {
 	char *card_name;
@@ -99,6 +128,8 @@ struct vip_plat_data {
 	int i2c_adapter_id;
 	bool is_field_end_gpio_based;
 	int gpio_for_frame_end_intr;
+	unsigned long vb_base;
+	unsigned long vb_size;
 };
 
 static inline void vip_set_plat_data(struct platform_device *pdev,
@@ -106,5 +137,8 @@ static inline void vip_set_plat_data(struct platform_device *pdev,
 {
 	pdev->dev.platform_data = pdata;
 }
+
+unsigned long vip_buffer_fixup(struct meminfo *mi);
+void vip_set_vb_base(struct vip_plat_data *pdata);
 
 #endif /* __VIP_H */

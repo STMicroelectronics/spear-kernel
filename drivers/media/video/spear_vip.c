@@ -83,26 +83,6 @@
 #define VIP_VERSION		((VIP_MAJOR_RELEASE << 8) | \
 				VIP_MINOR_RELEASE)
 
-/* vip maximum resoultion */
-/*
- * FIXME: limit to QQCIF resolution for now,
- * until we start allocating the videobufs
- * statically
- */
-#define VIP_MAX_WIDTH		88
-#define VIP_MAX_HEIGHT		72
-
-/* FIXME: vip minimum resolution */
-#define VIP_MIN_WIDTH		0
-#define VIP_MIN_HEIGHT		0
-
-/* vip buffer count and size (see comment in vip_buffer_setup) */
-#define VIP_OPTIMAL_BUFFER_CNT	3
-#define VIP_BITS_PER_PIXEL	32	/* set for 32bpp slave */
-#define VIP_BYTES_PER_PIXEL	(VIP_BITS_PER_PIXEL / 8)
-#define VIP_OPTIMAL_BUFFER_SIZE	(VIP_MAX_WIDTH * VIP_MAX_HEIGHT * \
-				VIP_BYTES_PER_PIXEL)
-
 /* vip field end indicators */
 #define VIP_BOTTOM_FIELD_END	0
 #define VIP_TOP_FIELD_END	1
@@ -579,8 +559,8 @@ static int vip_buffer_setup(struct videobuf_queue *vq, unsigned int *count,
 	if (*count > VIDEO_MAX_FRAME)
 		*count = VIDEO_MAX_FRAME;
 
-	if (*count < VIP_OPTIMAL_BUFFER_CNT)
-		*count = VIP_OPTIMAL_BUFFER_CNT;
+	if (*count < VIP_MIN_BUFFER_CNT)
+		*count = VIP_MIN_BUFFER_CNT;
 
 	if (*size != VIP_OPTIMAL_BUFFER_SIZE)
 		*size = VIP_OPTIMAL_BUFFER_SIZE;
