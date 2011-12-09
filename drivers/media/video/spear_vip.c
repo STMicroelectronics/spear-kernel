@@ -289,6 +289,7 @@ static struct vip_fmt formats[] = {
  * @isr_count: counts the occurence of frame/field end interrupt
  * @field_off: offset where second field starts from the starting of
  *             the buffer for field separated RGB formats
+ * @pdev: pointer to parent device
  */
 struct vip {
 	struct v4l2_device v4l2_dev;
@@ -318,6 +319,7 @@ struct vip {
 	spinlock_t dma_queue_lock;
 	int isr_count;
 	u32 field_off;
+	struct device *pdev;
 };
 
 /**
@@ -943,7 +945,7 @@ static int vip_reqbufs(struct file *file, void *priv,
 	}
 
 	videobuf_queue_dma_contig_init(&vip->vq,
-				&vip_qops, NULL,
+				&vip_qops, vip->pdev,
 				&vip->irqlock, req_buf->type,
 				vip->fmt.fmt.pix.field,
 				sizeof(struct videobuf_buffer),
@@ -2443,6 +2445,7 @@ static int __devinit vip_probe(struct platform_device *pdev)
 		goto exit_release_mem;
 	}
 
+	vip->pdev = &pdev->dev;
 	vip->vip_pdata = vip_pdata;
 
 	vip->base = addr;
