@@ -61,7 +61,7 @@
 /* control register bit offsets */
 #define CTRL_VSYNC_POL_SHIFT	5
 #define CTRL_HSYNC_POL_SHIFT	4
-#define CTRL_RGB_WIDTH_SHIFT	3
+#define CTRL_RGB_WIDTH_SHIFT	2
 #define CTRL_VDO_MODE_SHIFT	1
 #define CTRL_PIXCLK_POL_SHIFT	0
 
@@ -1971,12 +1971,25 @@ static void vip_config_fifo_ovf_intr(struct vip *vip, bool enable)
 
 static void vip_set_default_reg_val(struct vip *vip)
 {
+	u8 rgb_width = 0;
 	u32 ctrl;
+
+	switch (vip->vip_pdata->config->rgb_width) {
+	case SIXTEEN_BIT:
+		rgb_width = 0;
+		break;
+	case TWENTYFOUR_BIT:
+		rgb_width = 1;
+		break;
+	case THIRTYTWO_BIT:
+		rgb_width = 2;
+		break;
+	}
 
 	/* program the control register bits */
 	ctrl = vip->vip_pdata->config->vsync_pol << CTRL_VSYNC_POL_SHIFT |
 		vip->vip_pdata->config->hsync_pol << CTRL_HSYNC_POL_SHIFT |
-		vip->vip_pdata->config->rgb_width << CTRL_RGB_WIDTH_SHIFT |
+		rgb_width << CTRL_RGB_WIDTH_SHIFT |
 		vip->vip_pdata->config->vdo_mode << CTRL_VDO_MODE_SHIFT |
 		vip->vip_pdata->config->pix_clk_pol;
 
