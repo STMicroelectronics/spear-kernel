@@ -1907,8 +1907,8 @@ static int vip_s_crop(struct file *file, void *priv,
 	 */
 	vip->fmt.fmt.pix.width = crop->c.width;
 	vip->fmt.fmt.pix.height = crop->c.height;
-	vip->fmt.fmt.pix.bytesperline =
-		vip->vip_pdata->config->rgb_width / 8;
+	vip->fmt.fmt.pix.bytesperline = vip->fmt.fmt.pix.width *
+		(vip->vip_pdata->config->rgb_width / 8);
 	vip->fmt.fmt.pix.sizeimage =
 		vip->fmt.fmt.pix.bytesperline *
 		vip->fmt.fmt.pix.height;
