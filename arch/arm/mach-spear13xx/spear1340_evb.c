@@ -36,6 +36,7 @@
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
+#include <media/vip.h>
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 /* Variable specifying which plug boards are requested */
@@ -451,6 +452,7 @@ static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
 #endif
+	vip_buffer_fixup(mi);
 }
 
 static void __init spear1340_evb_init(void)
