@@ -2596,6 +2596,8 @@ static int __devinit vip_probe(struct platform_device *pdev)
 	/* disable fifo overflow interrupt */
 	vip_config_fifo_ovf_intr(vip, DISABLE_FIFO_OVF_INTR);
 
+	/* clear streaming flag */
+	vip->is_streaming = 0;
 	return 0;
 
 exit_free_subdev:
