@@ -247,7 +247,6 @@ static void __init rgmii_pb_init(void)
 
 
 /* Definitions specific to HDMI RX plug board */
-#define hdmi_rx_pb_pmx_devs		pb_empty_array
 #define hdmi_rx_pb_rm_adevs		pb_empty_array
 #define hdmi_rx_pb_rm_pdevs		pb_empty_array
 #define hdmi_rx_pb_add_adevs		pb_empty_array
@@ -336,6 +335,14 @@ static struct vip_plat_data vip_board_specific_data = {
 	.i2c_adapter_id = 0,
 	.is_field_end_gpio_based = 1,
 	.gpio_for_frame_end_intr = PLGPIO_100, /* I2S_OUT_DATA_3 */
+};
+
+/* padmux devices to enable */
+static struct pmx_dev *hdmi_rx_pb_pmx_devs[] = {
+	&spear1340_pmx_vip_mux_cam0,
+	&spear1340_pmx_vip_mux_cam1,
+	&spear1340_pmx_vip_mux_cam2,
+	&spear1340_pmx_vip_mux_cam3,
 };
 
 static struct platform_device *hdmi_rx_pb_add_pdevs[] __initdata = {
