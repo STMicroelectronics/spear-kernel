@@ -1793,12 +1793,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_irq;
 	}
 
-	ret = db9000fb_set_par(&fbi->fb);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set parameters\n");
-		goto err_free_irq;
-	}
-
 	if ((fbi->palette_mode == PAL_STATIC) ||
 			(fbi->palette_mode == PAL_NONE))
 		fbi->video_mem_size_used = video_buf_size;
@@ -1829,6 +1823,17 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 			CPUFREQ_POLICY_NOTIFIER);
 #endif
 
+	/* Read the core version register and print it out */
+	fbi->db9000_rev = lcd_readl(fbi, DB9000_CIR);
+	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
+			__func__, fbi->db9000_rev);
+
+	ret = db9000fb_set_par(&fbi->fb);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to set parameters\n");
+		goto err_clear_plat_data;
+	}
+
 #if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
 	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
 		/* Start display and show logo on boot */
@@ -1838,11 +1843,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
-
-	/* Read the core version register and print it out */
-	fbi->db9000_rev = lcd_readl(fbi, DB9000_CIR);
-	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
-			__func__, fbi->db9000_rev);
 
 	return 0;
 
