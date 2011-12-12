@@ -25,6 +25,8 @@
 #include <linux/spear_thermal.h>
 #include <linux/thermal.h>
 
+#define MD_FACTOR	1000
+
 /* SPEAr Thermal Sensor Dev Structure */
 struct spear_thermal_dev {
 	/* pointer to base address of the thermal sensor */
@@ -44,7 +46,7 @@ static inline int thermal_get_temp(struct thermal_zone_device *thermal,
 	 * Data are ready to be read after 628 usec from POWERDOWN signal
 	 * (PDN) = 1
 	 */
-	*temp = readl(stdev->thermal_base) & 0x7F;
+	*temp = (readl(stdev->thermal_base) & 0x7F) * MD_FACTOR;
 	return 0;
 }
 
