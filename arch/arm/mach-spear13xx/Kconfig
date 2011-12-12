@@ -36,6 +36,12 @@ config MACH_SPEAR1340_EVB
 	help
 	  Supports ST SPEAr1340 Evaluation Board
 
+config MACH_TYPE_SPEAR_HURRICANE
+	bool "NComputing SPEAr Hurricane Board"
+	select CPU_SPEAR1340
+	help
+	  Supports NComputing SPEAr Hurricane Board
+
 config SPEAR1340_PLUG_BOARDS
 	bool "SPEAr1340 Plug Boards"
 	depends on MACH_SPEAR1340_EVB
