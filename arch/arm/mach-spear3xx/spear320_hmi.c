@@ -131,7 +131,7 @@ static struct platform_device *plat_devs[] __initdata = {
 
 /* sdhci board specific information */
 static struct sdhci_plat_data sdhci_plat_data = {
-	.card_power_gpio = PLGPIO_42,
+	.card_power_gpio = PLGPIO_50,
 	.power_active_high = 0,
 	.power_always_enb = 1,
 	.card_int_gpio = -1,
