@@ -372,7 +372,7 @@ static struct pmx_mux_reg pmx_sdhci_cd_51_mux[] = {
 
 static struct pmx_dev_mode pmx_sdhci_modes[][3] = {
 	{
-		/* select pin 51 for cd */
+		/* select pin 12 for cd */
 		pmx_sdhci_common_modes,
 		{
 			.ids = SPEAR320S_EXTENDED_MODE,
@@ -380,7 +380,7 @@ static struct pmx_dev_mode pmx_sdhci_modes[][3] = {
 			.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_cd_12_mux),
 		},
 	}, {
-		/* select pin 12 for cd */
+		/* select pin 51 for cd */
 		pmx_sdhci_common_modes,
 		{
 			.ids = SPEAR320S_EXTENDED_MODE,
@@ -392,11 +392,11 @@ static struct pmx_dev_mode pmx_sdhci_modes[][3] = {
 
 struct pmx_dev spear320_pmx_sdhci[] = {
 	{
-		.name = "sdhci, cd-51",
+		.name = "sdhci, cd-12",
 		.modes = pmx_sdhci_modes[0],
 		.mode_count = ARRAY_SIZE(pmx_sdhci_modes[0]),
 	}, {
-		.name = "sdhci, cd-12",
+		.name = "sdhci, cd-51",
 		.modes = pmx_sdhci_modes[1],
 		.mode_count = ARRAY_SIZE(pmx_sdhci_modes[1]),
 	},
