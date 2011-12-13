@@ -257,7 +257,7 @@ extern struct pmx_dev spear320_pmx_uart1_modem[];
 extern struct pmx_dev spear320_pmx_uart2;
 
 extern struct pmx_dev spear320s_pmx_clcd;
-extern struct pmx_dev spear320s_pmx_fsmc;
+extern struct pmx_dev spear320s_pmx_fsmc[];
 extern struct pmx_dev spear320s_pmx_i2c2[];
 extern struct pmx_dev spear320s_pmx_mii2;
 extern struct pmx_dev spear320s_pmx_rs485;

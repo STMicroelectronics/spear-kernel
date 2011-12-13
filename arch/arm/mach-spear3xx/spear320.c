@@ -207,14 +207,8 @@ struct pmx_dev spear320_pmx_emi = {
 };
 
 /* Pad multiplexing for FSMC (NAND flash) device */
-static struct pmx_mux_reg pmx_fsmc_mux[] = {
+static struct pmx_mux_reg pmx_fsmc_8bit_mux[] = {
 	{
-		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
-		.mask = SPEAR320S_PMX_PL_46_47_MASK |
-			SPEAR320S_PMX_PL_48_49_MASK,
-		.value = SPEAR320S_PMX_FSMC_EMI_PL_46_47_VAL |
-			SPEAR320S_PMX_FSMC_EMI_PL_48_49_VAL,
-	}, {
 		.address = SPEAR320S_IP_SEL_PAD_50_59_REG,
 		.mask = SPEAR320S_PMX_PL_52_53_MASK |
 			SPEAR320S_PMX_PL_54_55_56_MASK |
@@ -232,31 +226,58 @@ static struct pmx_mux_reg pmx_fsmc_mux[] = {
 			SPEAR320S_PMX_FSMC_PL_61_TO_64_VAL |
 			SPEAR320S_PMX_FSMC_PL_65_TO_68_VAL,
 	}, {
+		.address = SPEAR320S_EXT_CTRL_REG,
+		.mask = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
+		.value = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
+	},
+};
+static struct pmx_mux_reg pmx_fsmc_16bit_mux[] = {
+	{
+		.address = SPEAR320S_IP_SEL_PAD_40_49_REG,
+		.mask = SPEAR320S_PMX_PL_46_47_MASK |
+			SPEAR320S_PMX_PL_48_49_MASK,
+		.value = SPEAR320S_PMX_FSMC_EMI_PL_46_47_VAL |
+			SPEAR320S_PMX_FSMC_EMI_PL_48_49_VAL,
+	}, {
 		.address = SPEAR320S_IP_SEL_PAD_70_79_REG,
 		.mask = SPEAR320S_PMX_PL_70_MASK | SPEAR320S_PMX_PL_71_72_MASK |
 			SPEAR320S_PMX_PL_73_MASK,
 		.value = SPEAR320S_PMX_FSMC_EMI_PL_70_VAL |
 			SPEAR320S_PMX_FSMC_EMI_PL_71_72_VAL |
 			SPEAR320S_PMX_FSMC_EMI_PL_73_VAL,
-	}, {
-		.address = SPEAR320S_EXT_CTRL_REG,
-		.mask = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
-		.value = SPEAR320S_EMI_FSMC_DYNAMIC_MUX_MASK,
-	},
+	}
 };
 
-static struct pmx_dev_mode pmx_fsmc_modes[] = {
+static struct pmx_dev_mode pmx_fsmc_8bit_modes[] = {
 	{
 		.ids = SPEAR320S_EXTENDED_MODE,
-		.mux_regs = pmx_fsmc_mux,
-		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_mux),
+		.mux_regs = pmx_fsmc_8bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_8bit_mux),
 	},
 };
 
-struct pmx_dev spear320s_pmx_fsmc = {
-	.name = "fsmc",
-	.modes = pmx_fsmc_modes,
-	.mode_count = ARRAY_SIZE(pmx_fsmc_modes),
+static struct pmx_dev_mode pmx_fsmc_16bit_modes[] = {
+	{
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_fsmc_8bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_8bit_mux),
+	}, {
+		.ids = SPEAR320S_EXTENDED_MODE,
+		.mux_regs = pmx_fsmc_16bit_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_fsmc_16bit_mux),
+	},
+};
+
+struct pmx_dev spear320s_pmx_fsmc[] = {
+	{
+		.name = "fsmc - 8bit",
+		.modes = pmx_fsmc_8bit_modes,
+		.mode_count = ARRAY_SIZE(pmx_fsmc_8bit_modes),
+	}, {
+		.name = "fsmc - 16bit",
+		.modes = pmx_fsmc_16bit_modes,
+		.mode_count = ARRAY_SIZE(pmx_fsmc_16bit_modes),
+	},
 };
 
 /* Pad multiplexing for SPP device */
