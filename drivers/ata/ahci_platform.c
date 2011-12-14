@@ -264,9 +264,13 @@ err_init:
 	return ret;
 }
 
-static const struct dev_pm_ops ahci_pm_ops= {
-	.suspend = ahci_suspend,
-	.resume	= ahci_resume,
+static const struct dev_pm_ops ahci_pm_ops = {
+	.suspend_noirq = ahci_suspend,
+	.resume_noirq = ahci_resume,
+	.freeze_noirq = ahci_suspend,
+	.thaw_noirq = ahci_resume,
+	.poweroff = ahci_suspend,
+	.restore = ahci_resume,
 };
 #endif
 
