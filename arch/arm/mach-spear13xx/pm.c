@@ -102,6 +102,10 @@ static int spear_pm_sleep(suspend_state_t state)
 #endif
 	}
 
+	/* Explicit set all the power domain to on */
+	writel((readl(VA_PCM_CFG) | PCM_SET_CFG),
+		VA_PCM_CFG);
+
 	/* Resume the event timer */
 	spear_clocksource_resume();
 
