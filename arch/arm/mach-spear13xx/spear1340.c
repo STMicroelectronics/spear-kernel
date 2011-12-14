@@ -1959,6 +1959,15 @@ void sata_miphy_exit(struct device *dev)
 {
 	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
 	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+
+	/* Enable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1340_PERIP1_SW_RST) | (0x1000)),
+			VA_SPEAR1340_PERIP1_SW_RST);
+	msleep(20);
+	/* Switch off sata power domain */
+	writel((readl(VA_SPEAR1340_PCM_CFG) & (~0x800)),
+			VA_SPEAR1340_PCM_CFG);
+	msleep(20);
 }
 
 static int sata_miphy_init(struct device *dev, void __iomem *addr)
@@ -1966,6 +1975,14 @@ static int sata_miphy_init(struct device *dev, void __iomem *addr)
 	writel(SPEAR1340_SATA_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
 	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
+	/* Switch on sata power domain */
+	writel((readl(VA_SPEAR1340_PCM_CFG) | (0x800)),
+			VA_SPEAR1340_PCM_CFG);
+	msleep(20);
+	/* Disable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1340_PERIP1_SW_RST) & (~0x1000)),
+			VA_SPEAR1340_PERIP1_SW_RST);
+	msleep(20);
 
 	return 0;
 }
