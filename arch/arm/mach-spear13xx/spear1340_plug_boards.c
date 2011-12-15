@@ -417,71 +417,16 @@ static void __init hdmi_tx_pb_init(void)
 
 
 /* Definitions specific to CAM plug board with single sensor mounted */
+#define cam0_pb_pmx_devs		pb_empty_array
 #define cam0_pb_rm_adevs		pb_empty_array
 #define cam0_pb_rm_pdevs		pb_empty_array
 #define cam0_pb_add_adevs		pb_empty_array
+#define cam0_pb_add_pdevs		pb_empty_array
 #define cam0_pb_rm_spi_devs		pb_empty_array
 #define cam0_pb_add_spi_devs		pb_empty_array
 #define cam0_pb_rm_i2c_devs		pb_empty_array
 #define cam0_pb_add_i2c_devs		pb_empty_array
 #define cam0_pb_init			NULL
-
-/* padmux devices to enable */
-static struct pmx_dev *cam0_pb_pmx_devs[] = {
-	&spear1340_pmx_cam0,
-};
-
-/* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info[] = {
-	{
-		I2C_BOARD_INFO("vs6725", 0x10),
-	},
-};
-
-static struct soc_camera_link vs6725_cam0_sensor_iclink;
-
-static int vs6725_cam_power(struct device *dev, int val)
-{
-	int ret;
-	static bool gpio_avail;
-
-	if (!gpio_avail) {
-		/* Camera power: default is ON */
-		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
-		if (!ret)
-			gpio_direction_output(STMPE801_GPIO_6, 0);
-		else
-			vs6725_cam0_sensor_iclink.power = NULL;
-
-		gpio_avail = true;
-	}
-
-	/* turn on/off the CE pin for camera sensor */
-	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
-
-	return 0;
-}
-
-static struct soc_camera_link vs6725_cam0_sensor_iclink = {
-	.bus_id = 0,	/* sensor is connected to camera device 0 */
-	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
-	.board_info = &vs6725_camera_sensor_info[0],
-	.power = vs6725_cam_power,
-	.module_name = "vs6725",
-};
-
-static struct platform_device spear1340_cam0_sensor_device = {
-	.name = "soc-camera-pdrv",
-	.id = -1,
-	.dev = {
-		.platform_data = &vs6725_cam0_sensor_iclink,
-	},
-};
-
-static struct platform_device *cam0_pb_add_pdevs[] __initdata = {
-	&spear1340_camif0_device,
-	&spear1340_cam0_sensor_device,
-};
 
 
 /* Definitions specific to VGA plug board */
