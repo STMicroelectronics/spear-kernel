@@ -446,10 +446,6 @@ dw_i2s_probe(struct platform_device *pdev)
 		if (dev->play_irq < 0)
 			dev_warn(&pdev->dev, "play irq not defined\n");
 		else {
-			dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
-			dw_i2s_dai->playback.channels_max = dev->max_channel;
-			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
-			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->play_irq, dw_i2s_play_irq, 0,
 					"dw-i2s-play", dev);
 			if (ret) {
@@ -458,6 +454,11 @@ dw_i2s_probe(struct platform_device *pdev)
 				goto err_play_irq;
 			}
 		}
+
+		dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
+		dw_i2s_dai->playback.channels_max = dev->max_channel;
+		dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
+		dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 	}
 
 	if (cap & RECORD) {
@@ -466,10 +467,6 @@ dw_i2s_probe(struct platform_device *pdev)
 		if (dev->capture_irq < 0)
 			dev_warn(&pdev->dev, "record irq not defined\n");
 		else {
-			dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
-			dw_i2s_dai->capture.channels_max = dev->max_channel;
-			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
-			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->capture_irq, dw_i2s_capture_irq,
 					0, "dw-i2s-rec", dev);
 			if (ret) {
@@ -478,6 +475,11 @@ dw_i2s_probe(struct platform_device *pdev)
 				goto err_capture_irq;
 			}
 		}
+
+		dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
+		dw_i2s_dai->capture.channels_max = dev->max_channel;
+		dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
+		dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 	}
 
 	dw_i2s_dai->ops = &dw_i2s_dai_ops,
