@@ -131,7 +131,7 @@
 #define GPT_NSCALE_MASK		0xF
 
 #define VA_AMEM_CLK_CFG		(VA_MISC_BASE + 0x050)
-	#define AMEM_CLK_ENB		1
+	#define AMEM_CLK_ENB		0
 
 #define VA_EXPI_CLK_CFG		(VA_MISC_BASE + 0x054)
 #define VA_CLCD_CLK_SYNT	(VA_MISC_BASE + 0x05C)
