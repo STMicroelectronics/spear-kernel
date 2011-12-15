@@ -28,7 +28,14 @@
 
 #define PLAT_PHYS_OFFSET	0x00000000
 #define PCM_SET_WAKEUP_CFG	0xfffff
-#define PCM_SET_CFG	0x3c04
+/* Wake up Configurations */
+#define ETH_WKUP	0x10
+#define RTC_WKUP	0x8
+#define GPIO_WKUP	0x4
+#define USB_WKUP	0x2
+#define PWR_DOM_ON	0x3c00
+/* Use all Sources except USB as wake up trigger */
+#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP)
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
