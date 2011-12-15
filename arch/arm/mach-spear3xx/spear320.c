@@ -433,6 +433,9 @@ static struct pmx_mux_reg pmx_i2s_mux[] = {
 
 static struct pmx_mux_reg pmx_i2s_ext_mux[] = {
 	{
+		.mask = PMX_SSP_CS_MASK,
+		.value = 0,
+	}, {
 		.address = SPEAR320S_IP_SEL_PAD_30_39_REG,
 		.mask = SPEAR320S_PMX_PL_35_MASK | SPEAR320S_PMX_PL_39_MASK,
 		.value = SPEAR320S_PMX_I2S_REF_CLK_PL_35_VAL |
