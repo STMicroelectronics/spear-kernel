@@ -443,7 +443,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	if (cap & PLAY) {
 		dev_dbg(&pdev->dev, " SPEAr13xx: play supported\n");
 		dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
-		if (!dev->play_irq)
+		if (dev->play_irq < 0)
 			dev_warn(&pdev->dev, "play irq not defined\n");
 		else {
 			dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
@@ -463,7 +463,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	if (cap & RECORD) {
 		dev_dbg(&pdev->dev, "SPEAr13xx: record supported\n");
 		dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
-		if (!dev->capture_irq)
+		if (dev->capture_irq < 0)
 			dev_warn(&pdev->dev, "record irq not defined\n");
 		else {
 			dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
