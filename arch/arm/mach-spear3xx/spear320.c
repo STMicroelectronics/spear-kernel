@@ -3442,6 +3442,10 @@ void __init spear320_init(void)
 	/* enable bug-fix for CAN controllers */
 	c_can_enable_bugfix(&spear320_can0_device);
 	c_can_enable_bugfix(&spear320_can1_device);
+
+	if (spear_shirq_register(&shirq_ras3))
+		printk(KERN_ERR "Error registering Shared IRQ 3\n");
+
 }
 
 void __init spear320s_init(struct pmx_mode *pmx_mode)
@@ -3473,10 +3477,6 @@ void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 	ret = spear_shirq_register(&shirq_ras1);
 	if (ret)
 		printk(KERN_ERR "Error registering Shared IRQ 1\n");
-
-	ret = spear_shirq_register(&shirq_ras3);
-	if (ret)
-		printk(KERN_ERR "Error registering Shared IRQ 3\n");
 
 	ret = spear_shirq_register(&shirq_intrcomm_ras);
 	if (ret)
