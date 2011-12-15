@@ -133,7 +133,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
-	&spear320_eth_macb1_mii_device,
+	&spear320_eth1_device,
 	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
@@ -203,8 +203,7 @@ static void __init spear320_evb_init(void)
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
-	macb_init_board_info(&spear320_eth_macb1_mii_device,
-			&spear320_macb_data);
+	macb_init_board_info(&spear320_eth1_device, &spear320_macb_data);
 
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320_auto_net_mii_mode, pmx_devs,

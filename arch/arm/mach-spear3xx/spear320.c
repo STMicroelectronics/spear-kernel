@@ -2977,71 +2977,53 @@ struct platform_device spear320_emi_nor_device = {
 
 /* SPEAr320 RAS ethernet devices */
 static u64 macb0_dmamask = ~0;
-static struct resource macb0_smii_resources[] = {
+static struct resource eth0_resources[] = {
 	{
-		.start = SPEAR320_SMII0_BASE,
-		.end = SPEAR320_SMII0_BASE + SZ_8K - 1,
+		.start = SPEAR320_ETH0_BASE,
+		.end = SPEAR320_ETH0_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
-		.start = SPEAR320_VIRQ_SMII0,
+		.start = SPEAR320_VIRQ_ETH0,
 		.flags = IORESOURCE_IRQ,
 	},
 };
 
-struct platform_device spear320_eth_macb0_smii_device = {
+static u64 macb1_dmamask = ~0;
+static struct resource eth1_resources[] = {
+	{
+		.start = SPEAR320_ETH1_BASE,
+		.end = SPEAR320_ETH1_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR320_VIRQ_ETH1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+/*
+ * ETH with pdev.id == 1, will control the MDIO lines. So, we give id == 1, for
+ * ETH/ETH 1, for both 320 and 320s.
+ */
+struct platform_device spear320_eth0_device = {
 	.name = "macb",
-	.id = 1,
+	.id = 2,
 	.dev = {
 		.dma_mask = &macb0_dmamask,
 		.coherent_dma_mask = ~0,
 	},
-	.resource = macb0_smii_resources,
-	.num_resources = ARRAY_SIZE(macb0_smii_resources),
+	.resource = eth0_resources,
+	.num_resources = ARRAY_SIZE(eth0_resources),
 };
 
-static u64 macb1_dmamask = ~0;
-static struct resource macb1_mii_resources[] = {
-	{
-		.start = SPEAR320_SMII1_BASE,
-		.end = SPEAR320_SMII1_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR320_VIRQ_MII1_SMII1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear320_eth_macb1_mii_device = {
+struct platform_device spear320_eth1_device = {
 	.name = "macb",
 	.id = 1,
 	.dev = {
 		.dma_mask = &macb1_dmamask,
 		.coherent_dma_mask = ~0,
 	},
-	.resource = macb1_mii_resources,
-	.num_resources = ARRAY_SIZE(macb1_mii_resources),
-};
-
-static struct resource macb1_smii_resources[] = {
-	{
-		.start = SPEAR320_SMII1_BASE,
-		.end = SPEAR320_SMII1_BASE + SZ_8K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR320_VIRQ_MII1_SMII1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear320_eth_macb1_smii = {
-	.name = "macb",
-	.id = 2,
-	.dev = {
-		.dma_mask = &macb1_dmamask,
-		.coherent_dma_mask = ~0,
-	},
-	.resource = macb1_smii_resources,
-	.num_resources = ARRAY_SIZE(macb1_smii_resources),
+	.resource = eth1_resources,
+	.num_resources = ARRAY_SIZE(eth1_resources),
 };
 
 /* i2c device registeration */
@@ -3298,21 +3280,21 @@ static struct shirq_dev_config shirq_intrcomm_ras_config[] = {
 		.status_mask = SPEAR320_SSP2_IRQ_MASK,
 		.clear_mask = SPEAR320_SSP2_IRQ_MASK,
 	}, {
-		.virq = SPEAR320_VIRQ_SMII0,
-		.status_mask = SPEAR320_SMII0_IRQ_MASK,
-		.clear_mask = SPEAR320_SMII0_IRQ_MASK,
+		.virq = SPEAR320_VIRQ_ETH0,
+		.status_mask = SPEAR320_ETH0_IRQ_MASK,
+		.clear_mask = SPEAR320_ETH0_IRQ_MASK,
 	}, {
-		.virq = SPEAR320_VIRQ_MII1_SMII1,
-		.status_mask = SPEAR320_MII1_SMII1_IRQ_MASK,
-		.clear_mask = SPEAR320_MII1_SMII1_IRQ_MASK,
+		.virq = SPEAR320_VIRQ_ETH1,
+		.status_mask = SPEAR320_ETH1_IRQ_MASK,
+		.clear_mask = SPEAR320_ETH1_IRQ_MASK,
 	}, {
-		.virq = SPEAR320_VIRQ_WAKEUP_SMII0,
-		.status_mask = SPEAR320_WAKEUP_SMII0_IRQ_MASK,
-		.clear_mask = SPEAR320_WAKEUP_SMII0_IRQ_MASK,
+		.virq = SPEAR320_VIRQ_WAKEUP_ETH0,
+		.status_mask = SPEAR320_WAKEUP_ETH0_IRQ_MASK,
+		.clear_mask = SPEAR320_WAKEUP_ETH0_IRQ_MASK,
 	}, {
-		.virq = SPEAR320_VIRQ_WAKEUP_MII1_SMII1,
-		.status_mask = SPEAR320_WAKEUP_MII1_SMII1_IRQ_MASK,
-		.clear_mask = SPEAR320_WAKEUP_MII1_SMII1_IRQ_MASK,
+		.virq = SPEAR320_VIRQ_WAKEUP_ETH1,
+		.status_mask = SPEAR320_WAKEUP_ETH1_IRQ_MASK,
+		.clear_mask = SPEAR320_WAKEUP_ETH1_IRQ_MASK,
 	}, {
 		.virq = SPEAR320_VIRQ_I2C1,
 		.status_mask = SPEAR320_I2C1_IRQ_MASK,
@@ -3384,17 +3366,13 @@ void macb_init_board_info(struct platform_device *pdev, void *data)
 
 	macb_set_plat_data(pdev, data);
 	/*
-	 * Select the MDIO Muxed configuration for the MII interface.
+	 * Select the MDIO Muxed configuration for the ETH interface.
 	 * The RAS control register should have the following cfg
-	 * For SMII-0 interface
+	 * For ETH-0 interface
 	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
 	 *
-	 * For SMII-1/MII interface
+	 * For ETH-1/ETH interface
 	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
-	 *
-	 * This needs to be done at run time. At present the SMII
-	 * interfaces are not functional, hence has been kept static for
-	 * the MII interface only.
 	 */
 	tmp = readl(IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG))) | (1 << MII_ENB);
 	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));

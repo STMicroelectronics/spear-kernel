@@ -31,12 +31,20 @@
 #include <mach/misc_regs.h>
 
 /* Ethernet Private data */
-static struct macb_base_data hmi_macb_data = {
-	.is_rmii = 1,
-	.phy_mask = 0,
-	.gpio_num = -1,
-	.phy_addr = 0x2,
-	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+static struct macb_base_data hmi_macb_data[] = {
+	{
+		.is_rmii = 1,
+		.phy_mask = 0,
+		.gpio_num = -1,
+		.phy_addr = 0x1,
+		.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+	}, {
+		.is_rmii = 1,
+		.phy_mask = 0,
+		.gpio_num = -1,
+		.phy_addr = 0x0,
+		.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x8a},
+	},
 };
 
 static struct stmpe_ts_platform_data stmpe811_ts_pdata = {
@@ -121,7 +129,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* hmi specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
-	&spear320_eth_macb1_mii_device,
+	/* We must add macb1 before mac0, as this will control MDIO */
+	&spear320_eth1_device,
+	&spear320_eth0_device,
 	&spear320_nand_device,
 	&spear320_plgpio_device,
 	&spear320_pwm_device,
@@ -154,7 +164,8 @@ static void __init spear320_hmi_init(void)
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
-	macb_init_board_info(&spear320_eth_macb1_mii_device, &hmi_macb_data);
+	macb_set_plat_data(&spear320_eth0_device, &hmi_macb_data[0]);
+	macb_init_board_info(&spear320_eth1_device, &hmi_macb_data[1]);
 
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320s_extended_mode, pmx_devs,
