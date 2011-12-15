@@ -37,6 +37,7 @@
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
+#include <media/soc_camera.h>
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 /* Variable specifying which plug boards are requested */
@@ -53,6 +54,52 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
 #endif
+
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info = {
+	I2C_BOARD_INFO("vs6725", 0x10),
+};
+
+/* Camera power: default is ON */
+static int vs6725_cam_power(struct device *dev, int val)
+{
+	int ret;
+	static bool gpio_avail;
+
+	if (!gpio_avail) {
+
+		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
+		if (!ret) {
+			gpio_direction_output(STMPE801_GPIO_6, 0);
+		} else {
+			pr_err("gpio request fail for STMPE801_GPIO_6\n");
+			return ret;
+		}
+
+		gpio_avail = true;
+	}
+
+	/* turn on/off the CE pin for camera sensor */
+	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+
+	return 0;
+}
+
+static struct soc_camera_link vs6725_cam3_sensor_iclink = {
+	.bus_id = 3,	/* sensor is connected to camera device 3 */
+	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
+	.board_info = &vs6725_camera_sensor_info,
+	.power = vs6725_cam_power,
+	.module_name = "vs6725",
+};
+
+static struct platform_device spear1340_cam3_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = -1,
+	.dev = {
+		.platform_data = &vs6725_cam3_sensor_iclink,
+	},
+};
 
 /* Ethernet phy-0 device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
@@ -173,6 +220,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_gmac,
 	&spear1340_pmx_ssp0_cs3,
 	&spear1340_pmx_i2c0,
+	&spear1340_pmx_cam3,
 	&spear1340_pmx_cec0,
 	&spear1340_pmx_cec1,
 	&spear1340_pmx_spdif_out,
@@ -222,6 +270,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
+	&spear1340_camif3_device,
+	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
