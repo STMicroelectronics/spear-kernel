@@ -90,7 +90,6 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear320_pmx_sdhci[1],
 	&spear320_pmx_uart2,
 	&spear320_pmx_mii1_2[1],
-	&spear3xx_pmx_plgpio_37_42,
 };
 
 static struct amba_device *amba_devs[] __initdata = {
