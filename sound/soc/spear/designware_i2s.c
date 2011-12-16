@@ -50,12 +50,6 @@
 #define RFF(x)		(0x40 * x + 0x050)
 #define TFF(x)		(0x40 * x + 0x054)
 
-/* I2SDMARegisters */
-#define RXDMA		0x01C0
-#define RRXDMA		0x01C4
-#define TXDMA		0x01C8
-#define RTXDMA		0x01CC
-
 /* I2SCOMPRegisters */
 #define I2S_COMP_PARAM_2	0x01F0
 #define I2S_COMP_PARAM_1	0x01F4
