@@ -17,6 +17,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>
+#include <linux/spear_dma.h>
 #include <sound/soc.h>
 #include <mach/spdif_out.h>
 #include "spdif_out_regs.h"
@@ -24,7 +25,7 @@
 struct spdif_out_dev {
 	struct device *dev;
 	struct clk *clk;
-	void *dma_params;
+	struct dma_data dma_params;
 	void *io_base;
 };
 
@@ -37,7 +38,7 @@ static int spdif_out_startup(struct snd_pcm_substream *substream,
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return -EINVAL;
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, host->dma_params);
+	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)&host->dma_params);
 
 	ret = clk_enable(host->clk);
 	if (ret)
@@ -213,7 +214,7 @@ static int spdif_out_probe(struct platform_device *pdev)
 	pdata = dev_get_platdata(&pdev->dev);
 
 	host->dev = &pdev->dev;
-	host->dma_params = pdata->dma_params;
+	host->dma_params.data = pdata->dma_params;
 
 	dev_set_drvdata(&pdev->dev, host);
 

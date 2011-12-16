@@ -18,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
+#include <linux/spear_dma.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -75,19 +76,28 @@ static int spear13xx_pcm_prepare(struct snd_pcm_substream *substream)
 
 static int start_dma(struct spear13xx_runtime_data *prtd)
 {
+	struct dma_slave_config conf;
 	struct dma_chan *chan;
 	struct dma_async_tx_descriptor *desc;
 	struct scatterlist sg;
 	enum dma_data_direction direction;
 	dma_addr_t addr;
-
+	struct snd_soc_pcm_runtime *rtd = prtd->substream->private_data;
+	struct dma_data *dma_data =
+		snd_soc_dai_get_dma_data(rtd->cpu_dai, prtd->substream);
 	addr = prtd->dma_addr + prtd->buf_index * prtd->xfer_len;
 	if (prtd->substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		chan = prtd->dma_chan[0];
 		direction = DMA_TO_DEVICE;
+		conf.dst_addr = dma_data->addr;
+		conf.dst_maxburst = 16;
+		conf.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	} else {
 		chan = prtd->dma_chan[1];
 		direction = DMA_FROM_DEVICE;
+		conf.src_addr = dma_data->addr;
+		conf.src_maxburst = 16;
+		conf.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	}
 
 	/* Prepare sg's */
@@ -95,6 +105,9 @@ static int start_dma(struct spear13xx_runtime_data *prtd)
 	sg_set_page(&sg, pfn_to_page(PFN_DOWN(addr)), prtd->xfer_len,
 			addr & (PAGE_SIZE - 1));
 	sg_dma_address(&sg) = addr;
+
+	conf.direction = direction;
+	dmaengine_slave_config(chan, &conf);
 
 	desc = chan->device->device_prep_slave_sg(chan, &sg, 1, direction,
 			DMA_PREP_INTERRUPT);
@@ -218,22 +231,17 @@ spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
 			prtd->xfer_len);
 }
 
-static bool filter(struct dma_chan *chan, void *slave)
-{
-	chan->private = slave;
-	return true;
-}
-
 static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
 
 	int stream = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 0 : 1;
-	void *dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	struct dma_data *dma_data =
+		snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
-	prtd->dma_chan[stream] = dma_request_channel(prtd->smask, filter,
-				dma_data);
+	prtd->dma_chan[stream] = dma_request_channel(prtd->smask,
+			dma_data->filter, dma_data->data);
 	if (!prtd->dma_chan[stream])
 		return -EAGAIN;
 

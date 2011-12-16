@@ -20,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/spear_dma.h>
 #include <mach/misc_regs.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -81,8 +82,8 @@ struct dw_i2s_dev {
 
 	/* data related to DMA transfers b/w i2s and DMAC */
 	u8 swidth;
-	void *play_dma_data;
-	void *capture_dma_data;
+	struct dma_data play_dma_data;
+	struct dma_data capture_dma_data;
 };
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -273,7 +274,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
-	void *dma_data = NULL;
+	struct dma_data *dma_data = NULL;
 
 	if (!(dev->capability & RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -284,11 +285,11 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 		return -EINVAL;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		dma_data = dev->play_dma_data;
+		dma_data = &dev->play_dma_data;
 	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		dma_data = dev->capture_dma_data;
+		dma_data = &dev->capture_dma_data;
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
+	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)dma_data);
 
 	return 0;
 }
@@ -413,8 +414,13 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
-	dev->play_dma_data = pdata->play_dma_data;
-	dev->capture_dma_data = pdata->capture_dma_data;
+
+	dev->play_dma_data.data = pdata->play_dma_data;
+	dev->capture_dma_data.data = pdata->capture_dma_data;
+	dev->play_dma_data.addr = res->start + I2S_TXDMA;
+	dev->capture_dma_data.addr = res->start + I2S_RXDMA;
+	dev->play_dma_data.filter = pdata->filter;
+	dev->capture_dma_data.filter = pdata->filter;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {

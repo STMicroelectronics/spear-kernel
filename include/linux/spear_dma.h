@@ -1,5 +1,5 @@
 /*
-* linux/designware_i2s.h
+* linux/spear_dma.h
 *
 * Copyright (ST) 2011 Rajeev Kumar (rajeev-dlh.kumar@st.com)
 *
@@ -19,33 +19,15 @@
 *
 */
 
-#ifndef DESIGNWARE_I2S_H
-#define DESIGNWARE_I2S_H
+#ifndef SPEAR_DMA_H
+#define SPEAR_DMA_H
 
 #include <linux/dmaengine.h>
-#include <linux/platform_device.h>
-#include <linux/dw_dmac.h>
-#include <sound/pcm.h>
 
-struct i2s_platform_data {
-	#define PLAY	(1 << 0)
-	#define RECORD	(1 << 1)
-	unsigned int cap;
-	int channel;
-	u8 swidth;
-
-	void *play_dma_data;
-	void *capture_dma_data;
+struct dma_data {
+	void *data;
+	dma_addr_t addr;
 	bool (*filter)(struct dma_chan *chan, void *slave);
 };
 
-/* I2S DMA registers */
-#define I2S_RXDMA		0x01C0
-#define I2S_TXDMA		0x01C8
-
-#define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
-#define FOUR_CHANNEL_SUPPORT	4	/* up to 3.1 */
-#define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
-#define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
-
-#endif /* DESIGNWARE_I2S_H */
+#endif /* SPEAR_DMA_H */
