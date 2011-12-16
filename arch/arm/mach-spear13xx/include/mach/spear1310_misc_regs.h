@@ -28,6 +28,10 @@
 #define VA_SPEAR1310_SWITCH_CTR			(VA_MISC_BASE + 0x108)
 
 /* Clock Configuration Registers */
+/*
+ * Some of the individual defines (mode related) for this register is
+ * present in generic misc_regs.h as it is common across 13xx variants
+ */
 #define VA_SPEAR1310_SYS_CLK_CTRL		(VA_MISC_BASE + 0x200)
 #define VA_SPEAR1310_SYS_SW_RES			(VA_MISC_BASE + 0x204)
 #define VA_SPEAR1310_SYS_CLK_PLLTIMER		(VA_MISC_BASE + 0x208)
@@ -75,6 +79,9 @@
 	#define SPEAR1310_PLL_MODE_MASK			3
 	#define SPEAR1310_PLL_MODE_SHIFT		4
 	#define SPEAR1310_PLL_ENABLE			2
+
+	#define SPEAR1310_PLL_LOCK_SHIFT		0
+	#define SPEAR1310_PLL_LOCK_MASK			1
 
 #define VA_SPEAR1310_PLL4_FRQ			(VA_MISC_BASE + 0x23C)
 	/* PLL FRQ register masks */

@@ -666,95 +666,113 @@ unsigned int c3_AES_CBC_encrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
 #ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #endif
 
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else{
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
-	}
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else{
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
-		c3_dma_2->dma_addr,
-		C3_DRIVER_AES_IVEC_SIZE,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
+				c3_dma_2->dma_addr,
+				C3_DRIVER_AES_IVEC_SIZE,
+				prgmem);
 
-	if (input == output) {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CBC_ENC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CBC_ENC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			input_len,
-			prgmem);
-	}
+		if (input == output) {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CBC_ENC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CBC_ENC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					input_len,
+					prgmem);
+		}
 
 #else
 
-	if (flags & C3_FVE) {
-		unsigned int lba_size_swap = cpu_to_be32(lba_size);
-		struct c3_dma_t *c3_dma_lba;
-		void *p_lba_size_swap = &lba_size_swap;
-		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);
+		if (flags & C3_FVE) {
+			unsigned int lba_size_swap = cpu_to_be32(lba_size);
+			struct c3_dma_t *c3_dma_lba;
+			void *p_lba_size_swap = &lba_size_swap;
+			C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4,
+					DMA_TO_DEVICE);
 
-		AES_ENCRYPT_CBC_FVE_START(
-			key_len,
-			flags ^ C3_FVE,
-			c3_dma_1->dma_addr,
-			c3_dma_2->dma_addr,
-			c3_dma_lba->dma_addr,
-			prgmem);
-	} else {
-		AES_ENCRYPT_CBC_START(
-			key_len,
-			flags,
-			c3_dma_1->dma_addr,
-			c3_dma_2->dma_addr,
-			prgmem);
-	}
+			AES_ENCRYPT_CBC_FVE_START(
+					key_len,
+					flags ^ C3_FVE,
+					c3_dma_1->dma_addr,
+					c3_dma_2->dma_addr,
+					c3_dma_lba->dma_addr,
+					prgmem);
+		} else {
+			AES_ENCRYPT_CBC_START(
+					key_len,
+					flags,
+					c3_dma_1->dma_addr,
+					c3_dma_2->dma_addr,
+					prgmem);
+		}
 
-	if (input == output) {
-		AES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
-	}
+		if (input == output) {
+			AES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
 
 #endif
 
-	STOP(prgmem);
-	C3_END(prgmem);
-
+		STOP(prgmem);
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -789,95 +807,113 @@ unsigned int c3_AES_CBC_decrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
-#ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
-#else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
-#endif
-
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE, DMA_TO_DEVICE);
-
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
 	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
+
+#ifdef AES_CHANNEL_INFO
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+#else
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+#endif
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE,
+				DMA_TO_DEVICE);
+
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_ECB_KEY_SCHEDULE_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_ECB_KEY_SCHEDULE_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
-		c3_dma_2->dma_addr,
-		C3_DRIVER_AES_IVEC_SIZE,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
+				c3_dma_2->dma_addr,
+				C3_DRIVER_AES_IVEC_SIZE,
+				prgmem);
 
-	if (input == output) {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CBC_DEC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CBC_DEC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			input_len,
-			prgmem);
-	}
+		if (input == output) {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CBC_DEC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CBC_DEC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					input_len,
+					prgmem);
+		}
 
 #else
 
-	if (flags & C3_FVE) {
-		struct c3_dma_t *c3_dma_lba;
-		unsigned int lba_size_swap = cpu_to_be32(lba_size);
-		void *p_lba_size_swap = &lba_size_swap;
-		C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4, DMA_TO_DEVICE);
+		if (flags & C3_FVE) {
+			struct c3_dma_t *c3_dma_lba;
+			unsigned int lba_size_swap = cpu_to_be32(lba_size);
+			void *p_lba_size_swap = &lba_size_swap;
+			C3_PREPARE_DMA(c3_dma_lba, p_lba_size_swap, 4,
+					DMA_TO_DEVICE);
 
-		AES_DECRYPT_CBC_FVE_START(
-			key_len,
-			flags ^ C3_FVE,
-			c3_dma_1->dma_addr,
-			c3_dma_2->dma_addr,
-			c3_dma_lba->dma_addr,
-			prgmem);
-	} else {
-		AES_DECRYPT_CBC_START(
-			key_len,
-			flags,
-			c3_dma_1->dma_addr,
-			c3_dma_2->dma_addr,
-			prgmem);
-	}
+			AES_DECRYPT_CBC_FVE_START(
+					key_len,
+					flags ^ C3_FVE,
+					c3_dma_1->dma_addr,
+					c3_dma_2->dma_addr,
+					c3_dma_lba->dma_addr,
+					prgmem);
+		} else {
+			AES_DECRYPT_CBC_START(
+					key_len,
+					flags,
+					c3_dma_1->dma_addr,
+					c3_dma_2->dma_addr,
+					prgmem);
+		}
 
-	if (input == output) {
-		AES_DECRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_DECRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
-	}
+		if (input == output) {
+			AES_DECRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_DECRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
 
 #endif
 
-	STOP(prgmem);
-	C3_END(prgmem);
-
+		STOP(prgmem);
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -1095,73 +1131,89 @@ unsigned int c3_AES_ECB_encrypt(
 	struct c3_dma_t *c3_dma_1 = NULL;
 	struct c3_dma_t *c3_dma_2 = NULL;
 
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
 #ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #endif
 
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_2, output, input_len, DMA_FROM_DEVICE);
-	}
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_2, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	if (input == output) {
+		if (input == output) {
 
-		MPCM_EXECUTE_SD(
-			MPCM_AES_ECB_ENC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_ECB_ENC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_2->dma_addr,
-			input_len,
-			prgmem);
-	}
+			MPCM_EXECUTE_SD(
+					MPCM_AES_ECB_ENC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_ECB_ENC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_2->dma_addr,
+					input_len,
+					prgmem);
+		}
 
 #else
 
-	AES_ENCRYPT_ECB_START(
-		key_len,
-		flags,
-		c3_dma_1->dma_addr,
-		prgmem);
-	if (input == output) {
+		AES_ENCRYPT_ECB_START(
+				key_len,
+				flags,
+				c3_dma_1->dma_addr,
+				prgmem);
+		if (input == output) {
 
-		AES_ENCRYPT_ECB_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_ENCRYPT_ECB_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_2->dma_addr,
-			prgmem);
-	}
+			AES_ENCRYPT_ECB_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_ENCRYPT_ECB_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_2->dma_addr,
+					prgmem);
+		}
 #endif
 
-	STOP(prgmem);
+		STOP(prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -1192,75 +1244,92 @@ unsigned int c3_AES_ECB_decrypt(
 	struct c3_dma_t *c3_dma_1 = NULL;
 	struct c3_dma_t *c3_dma_2 = NULL;
 
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
+
 #ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #endif
 
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_2, output, input_len, DMA_FROM_DEVICE);
-	}
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_2, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_ECB_KEY_SCHEDULE_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_ECB_KEY_SCHEDULE_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	if (input == output) {
+		if (input == output) {
 
-		MPCM_EXECUTE_SD(
-			MPCM_AES_ECB_DEC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_ECB_DEC_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_2->dma_addr,
-			input_len,
-			prgmem);
+			MPCM_EXECUTE_SD(
+					MPCM_AES_ECB_DEC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_ECB_DEC_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_2->dma_addr,
+					input_len,
+					prgmem);
 
-	}
+		}
 #else
 
-	AES_DECRYPT_ECB_START(
-		key_len,
-		flags,
-		c3_dma_1->dma_addr,
-		prgmem);
-	if (input == output) {
+		AES_DECRYPT_ECB_START(
+				key_len,
+				flags,
+				c3_dma_1->dma_addr,
+				prgmem);
+		if (input == output) {
 
-		AES_DECRYPT_ECB_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_DECRYPT_ECB_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_2->dma_addr,
-			prgmem);
+			AES_DECRYPT_ECB_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_DECRYPT_ECB_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_2->dma_addr,
+					prgmem);
 
-	}
+		}
 
 #endif
 
-	STOP(
-		prgmem);
+		STOP(
+				prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -1294,81 +1363,99 @@ unsigned int c3_AES_CTR_encrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
+
 #ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #endif
 
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
-	}
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
-		c3_dma_2->dma_addr,
-		C3_DRIVER_AES_IVEC_SIZE,
-		prgmem);
-	if (input == output) {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			input_len,
-			prgmem);
-	}
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
+				c3_dma_2->dma_addr,
+				C3_DRIVER_AES_IVEC_SIZE,
+				prgmem);
+		if (input == output) {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					input_len,
+					prgmem);
+		}
 
 #else
 
-	AES_ENCRYPT_CTR_START(
-		key_len,
-		flags,
-		c3_dma_1->dma_addr,
-		c3_dma_2->dma_addr,
-		prgmem);
+		AES_ENCRYPT_CTR_START(
+				key_len,
+				flags,
+				c3_dma_1->dma_addr,
+				c3_dma_2->dma_addr,
+				prgmem);
 
-	if (input == output) {
-		AES_ENCRYPT_CTR_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_ENCRYPT_CTR_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
-	}
+		if (input == output) {
+			AES_ENCRYPT_CTR_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_ENCRYPT_CTR_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
 
 #endif
 
-	STOP(
-		prgmem);
+		STOP(
+				prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -1403,82 +1490,100 @@ unsigned int c3_AES_CTR_decrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
+
+	if ((key_len <= MIN_AES_KEY_LEN) || (key_len > MAX_AES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+
+	{
+
 #ifdef AES_CHANNEL_INFO
-	C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(AES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #else
-	C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+		C3_START(MPCM_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 #endif
 
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_AES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
-	}
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
 
 #if defined(MPCM_CHANNEL_INFO)
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
-		c3_dma_1->dma_addr,
-		key_len,
-		prgmem);
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_ECB_KEY_LOAD_PROGRAM_INDEX,
+				c3_dma_1->dma_addr,
+				key_len,
+				prgmem);
 
-	MPCM_EXECUTE_S(
-		MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
-		c3_dma_2->dma_addr,
-		C3_DRIVER_AES_IVEC_SIZE,
-		prgmem);
-	if (input == output) {
+		MPCM_EXECUTE_S(
+				MPCM_AES_CBC_CTR_INIT_IVEC_PROGRAM_INDEX,
+				c3_dma_2->dma_addr,
+				C3_DRIVER_AES_IVEC_SIZE,
+				prgmem);
+		if (input == output) {
 
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			input_len,
-			prgmem);
-	} else {
-		MPCM_EXECUTE_SD(
-			MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			input_len,
-			prgmem);
-	}
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					input_len,
+					prgmem);
+		} else {
+			MPCM_EXECUTE_SD(
+					MPCM_AES_CTR_APPEND_PROGRAM_INDEX,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					input_len,
+					prgmem);
+		}
 
 #else
 
-	AES_DECRYPT_CTR_START(
-		key_len,
-		flags,
-		c3_dma_1->dma_addr,
-		c3_dma_2->dma_addr,
-		prgmem);
+		AES_DECRYPT_CTR_START(
+				key_len,
+				flags,
+				c3_dma_1->dma_addr,
+				c3_dma_2->dma_addr,
+				prgmem);
 
-	if (input == output) {
+		if (input == output) {
 
-		AES_DECRYPT_CTR_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		AES_DECRYPT_CTR_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
-	}
+			AES_DECRYPT_CTR_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			AES_DECRYPT_CTR_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
 
 #endif
 
-	STOP(prgmem);
+		STOP(prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -1935,43 +2040,54 @@ unsigned int c3_DES_CBC_encrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
-	C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
-
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE, DMA_TO_DEVICE);
-
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
+	if ((key_len <= MIN_DES_KEY_LEN) || (key_len > MAX_DES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
 	}
 
-	DES_ENCRYPT_CBC_START(
-		key_len,
-		c3_dma_1->dma_addr,
-		c3_dma_2->dma_addr,
-		prgmem);
+	{
+		C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	if (input == output) {
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
-		DES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		DES_ENCRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
+
+		DES_ENCRYPT_CBC_START(
+				key_len,
+				c3_dma_1->dma_addr,
+				c3_dma_2->dma_addr,
+				prgmem);
+
+		if (input == output) {
+
+			DES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			DES_ENCRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+		}
+
+		STOP(prgmem);
+
+		C3_END(prgmem);
 	}
-
-	STOP(prgmem);
-
-	C3_END(prgmem);
-
 #else
 
 	return C3_ERR;
@@ -2000,43 +2116,54 @@ unsigned int c3_DES_CBC_decrypt(
 	struct c3_dma_t *c3_dma_2 = NULL;
 	struct c3_dma_t *c3_dma_3 = NULL;
 
-	C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
-
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE, DMA_TO_DEVICE);
-
-	if (input == output)
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_BIDIRECTIONAL);
-	else {
-		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-		C3_PREPARE_DMA(c3_dma_3, output, input_len, DMA_FROM_DEVICE);
+	if ((key_len <= MIN_DES_KEY_LEN) || (key_len > MAX_DES_KEY_LEN)) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
 	}
 
-	DES_DECRYPT_CBC_START(
-		key_len,
-		c3_dma_1->dma_addr,
-		c3_dma_2->dma_addr,
-		prgmem);
-	if (input == output) {
+	{
+		C3_START(DES_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-		DES_DECRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_0->dma_addr,
-			prgmem);
-	} else {
-		DES_DECRYPT_CBC_APPEND(
-			input_len,
-			c3_dma_0->dma_addr,
-			c3_dma_3->dma_addr,
-			prgmem);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_2, ivec, C3_DRIVER_DES_IVEC_SIZE,
+				DMA_TO_DEVICE);
 
+		if (input == output)
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_BIDIRECTIONAL);
+		else {
+			C3_PREPARE_DMA(c3_dma_0, input, input_len,
+					DMA_TO_DEVICE);
+			C3_PREPARE_DMA(c3_dma_3, output, input_len,
+					DMA_FROM_DEVICE);
+		}
+
+		DES_DECRYPT_CBC_START(
+				key_len,
+				c3_dma_1->dma_addr,
+				c3_dma_2->dma_addr,
+				prgmem);
+		if (input == output) {
+
+			DES_DECRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_0->dma_addr,
+					prgmem);
+		} else {
+			DES_DECRYPT_CBC_APPEND(
+					input_len,
+					c3_dma_0->dma_addr,
+					c3_dma_3->dma_addr,
+					prgmem);
+
+		}
+
+		STOP(prgmem);
+
+		C3_END(prgmem);
 	}
-
-	STOP(prgmem);
-
-	C3_END(prgmem);
-
 #else
 
 	return C3_ERR;
@@ -2484,33 +2611,45 @@ unsigned int c3_SHA1_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA1_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	C3_UH_PATCH();
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SHA1_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	STOP(prgmem);
+		C3_UH_PATCH();
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -2736,26 +2875,33 @@ unsigned int c3_SHA1_HMAC_init(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!key_len) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
+	{
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_FROM_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA1_HMAC_INIT(
-		key_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_FROM_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SHA1_HMAC_INIT(
+				key_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	STOP(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	C3_END(prgmem);
+		STOP(prgmem);
 
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -2782,32 +2928,45 @@ unsigned int c3_SHA1_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA1_HMAC_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	C3_UH_PATCH();
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SHA1_HMAC_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	STOP(prgmem);
+		C3_UH_PATCH();
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
+
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 
 #else
 
@@ -3108,33 +3267,44 @@ unsigned int c3_SHA256_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SHA256_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	C3_UH_PATCH();
+		SHA256_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		C3_UH_PATCH();
 
-	STOP(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	C3_END(prgmem);
+		STOP(prgmem);
 
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3257,26 +3427,33 @@ unsigned int c3_SHA256_HMAC_init(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!key_len) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_FROM_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA256_HMAC_INIT(
-		key_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+			       DMA_FROM_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SHA256_HMAC_INIT(
+			key_len,
+			c3_dma_1->dma_addr,
+			prgmem);
 
-	STOP(prgmem);
+		SAVE_CONTEXT(
+			c3_dma_0->dma_addr,
+			UH_CHANNEL_INFO.channel_idx,
+			prgmem);
 
-	C3_END(prgmem);
+		STOP(prgmem);
 
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3303,33 +3480,45 @@ unsigned int c3_SHA256_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_1->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA256_HMAC_APPEND(
-		input_len,
-		c3_dma_0->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, input, input_len, DMA_TO_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
 
-	C3_UH_PATCH();
+		RESTORE_CONTEXT(
+				c3_dma_1->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_1->dma_addr,
-		UH_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SHA256_HMAC_APPEND(
+				input_len,
+				c3_dma_0->dma_addr,
+				prgmem);
 
-	STOP(prgmem);
+		C3_UH_PATCH();
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_1->dma_addr,
+				UH_CHANNEL_INFO.channel_idx,
+				prgmem);
 
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3508,31 +3697,43 @@ unsigned int c3_SHA384_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA384_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		SHA384_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3650,26 +3851,32 @@ unsigned int c3_SHA384_HMAC_init(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!key_len) {
+		printk(C3_KERN_ERR "zero len key not supported\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_FROM_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_FROM_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	SHA384_HMAC_INIT(
-		key_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		SHA384_HMAC_INIT(
+				key_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		STOP(prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3695,31 +3902,43 @@ unsigned int c3_SHA384_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA384_HMAC_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		SHA384_HMAC_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -3896,31 +4115,43 @@ unsigned int c3_SHA512_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " input len is not multiple of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA512_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		SHA512_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -4038,26 +4269,32 @@ unsigned int c3_SHA512_HMAC_init(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (!key_len) {
+		printk(C3_KERN_ERR "Invalid key\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_FROM_DEVICE);
-	C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_FROM_DEVICE);
+		C3_PREPARE_DMA(c3_dma_1, key, key_len, DMA_TO_DEVICE);
 
-	SHA512_HMAC_INIT(
-		key_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		SHA512_HMAC_INIT(
+				key_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		STOP(prgmem);
 
-	C3_END(prgmem);
-
+		C3_END(prgmem);
+	}
 #else
 
 	return C3_ERR;
@@ -4083,30 +4320,43 @@ unsigned int c3_SHA512_HMAC_append(
 	struct c3_dma_t *c3_dma_0 = NULL;
 	struct c3_dma_t *c3_dma_1 = NULL;
 
-	C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback, callback_param);
+	if (input_len % 4) {
+		printk(C3_KERN_ERR " len is not module of 4\n");
+		return C3_ERR;
+	}
 
-	C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
-		       DMA_BIDIRECTIONAL);
-	C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
+	if (!input_len) {
+		printk(C3_KERN_INFO "zero len data not supported\n");
+		return C3_SKIP;
+	}
 
-	RESTORE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+	{
+		C3_START(UH2_CHANNEL_INFO.ids_idx, prgmem, callback,
+				callback_param);
 
-	SHA512_HMAC_APPEND(
-		input_len,
-		c3_dma_1->dma_addr,
-		prgmem);
+		C3_PREPARE_DMA(c3_dma_0, ctx, C3_DRIVER_DIGEST_CTX_MAX_SIZE,
+				DMA_BIDIRECTIONAL);
+		C3_PREPARE_DMA(c3_dma_1, input, input_len, DMA_TO_DEVICE);
 
-	SAVE_CONTEXT(
-		c3_dma_0->dma_addr,
-		UH2_CHANNEL_INFO.channel_idx,
-		prgmem);
+		RESTORE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
 
-	STOP(prgmem);
+		SHA512_HMAC_APPEND(
+				input_len,
+				c3_dma_1->dma_addr,
+				prgmem);
 
-	C3_END(prgmem);
+		SAVE_CONTEXT(
+				c3_dma_0->dma_addr,
+				UH2_CHANNEL_INFO.channel_idx,
+				prgmem);
+
+		STOP(prgmem);
+
+		C3_END(prgmem);
+	}
 
 #else
 

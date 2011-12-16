@@ -67,7 +67,7 @@ static inline u32 is_plgpio_set(void __iomem *base, u32 pin, u32 reg)
 	void __iomem *reg_off = REG_OFFSET(base, reg, pin);
 	u32 val = readl(reg_off);
 
-	return val & (1 << offset);
+	return !!(val & (1 << offset));
 }
 
 static inline void plgpio_reg_set(void __iomem *base, u32 pin, u32 reg)
@@ -311,18 +311,18 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 		u32 val = readl(reg_off);
 
 		offset = PIN_OFFSET(offset);
-		if (trigger == IRQ_TYPE_EDGE_RISING)
+		if (trigger & IRQ_TYPE_EDGE_RISING)
 			writel(val | (1 << offset), reg_off);
-		else if (trigger == IRQ_TYPE_EDGE_FALLING)
+		else if (trigger & IRQ_TYPE_EDGE_FALLING)
 			writel(val & ~(1 << offset), reg_off);
 		else
 			return -EINVAL;
 
 		return 0;
-	} else if (trigger != IRQ_TYPE_EDGE_RISING)
+	} else if (!(trigger & IRQ_TYPE_EDGE_RISING))
 		return -EINVAL;
 #else
-	if (trigger != IRQ_TYPE_LEVEL_HIGH)
+	if (!(trigger & IRQ_TYPE_LEVEL_HIGH))
 		return -EINVAL;
 #endif
 

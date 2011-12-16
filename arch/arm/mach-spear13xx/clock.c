@@ -79,6 +79,8 @@ static struct vco_clk_masks vco_masks = {
 	.div_p_shift = PLL_DIV_P_SHIFT,
 	.div_n_mask = PLL_DIV_N_MASK,
 	.div_n_shift = PLL_DIV_N_SHIFT,
+	.pll_lock_mask = PLL_LOCK_MASK,
+	.pll_lock_shift = PLL_LOCK_SHIFT,
 };
 /* vco1 configuration structure */
 static struct vco_clk_config vco1_config = {
@@ -111,6 +113,15 @@ static struct clk vco1_clk = {
 	.set_rate = &vco_clk_set_rate,
 	.rate_config = {vco_rtbl, ARRAY_SIZE(vco_rtbl), 6},
 	.private_data = &vco1_config,
+};
+
+/* thermal clock */
+static struct clk thermal_clk = {
+	.en_reg = VA_PERIP2_CLK_ENB,
+	.en_reg_bit = THSENS_CLK_ENB,
+	.pclk = &osc1_24m_clk,
+	.div_factor = 128,
+	.recalc = &follow_parent,
 };
 
 /* clock derived from vco1 clock */
@@ -404,10 +415,10 @@ static struct aux_clk_config uart_synth_config = {
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For VCO1div2 = 500 MHz */
-	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
-	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* 125 MHz */
+	{.xscale = 10, .yscale = 204, .eq = 0}, /* 12.29 MHz */
+	{.xscale = 4, .yscale = 21, .eq = 0}, /* 48 MHz */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* 83 MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* 125 MHz */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 250 MHz */
 };
@@ -593,8 +604,8 @@ static struct clk gmac_phy_input_clk = {
 /* gmac rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl gmac_rtbl[] = {
 	/* For gmac phy input clk */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* divided by 6 */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* divided by 4 */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* divided by 6 */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* divided by 4 */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* divided by 3 */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* divided by 2 */
 };
@@ -669,12 +680,24 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 
 /* clcd rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl clcd_rtbl[] = {
-	/* All below entries generate 58 MHz for different values of vco1div4 */
-	{.div = 0x0D8C0}, /* for vco1div4 = 393 MHz */
-	{.div = 0x0B740}, /* for vco1div4 = 332 MHz */
-	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
-	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
+	{.div = 0x14000}, /* 25 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x1284B}, /* 27 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
+	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
+	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
+	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x04A12}, /* 108 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0378E}, /* 144 Mhz , for vc01div4 = 250 MHz*/
+	/*
+	 * TODO : 1080p should work on 148 Mhz. But we see lots of
+	 * flickering at 148 Mhz.So, commenting this entry till we
+	 * resolve this issue
+	 */
+	/* {.div = 0x0360D}, */ /* 148 Mhz , for vc01div4 = 250 MHz*/
 };
+
 /* clcd fractional synthesizer clock */
 static struct clk clcd_synth_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -755,7 +778,7 @@ static struct clk clcd_clk = {
 /* i2s source clock parents */
 static struct clk i2s_src_pad_clk = {
 	.flags = ALWAYS_ENABLED,
-	.rate = 0, /* fill correct rate if available */
+	.rate = 12288000,
 };
 
 static struct pclk_info i2s_src_pclk_info[] = {
@@ -860,6 +883,7 @@ static struct clk i2s_ref_pad_clk = {
 static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
 	/* For i2s_ref_clk = 12.288MHz */
 	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 3.07 Mhz */
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
@@ -1602,6 +1626,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.dev_id = "gpio1",		.clk = &gpio1_clk},
 	{.dev_id = "keyboard",		.clk = &kbd_clk},
 	{.dev_id = "cortexa9-wdt",	.clk = &wdt_clk},
+	{.dev_id = "spear_thermal",	.clk = &thermal_clk},
 };
 
 /* array of all spear 1300 clock lookups */

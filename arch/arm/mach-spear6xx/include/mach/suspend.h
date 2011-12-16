@@ -17,15 +17,21 @@
 #include <mach/hardware.h>
 
 #ifndef __ASSEMBLER__
-extern void spear_sleep_mode(suspend_state_t state);
+extern void spear_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear_sleep_mode_sz;
+extern int spear_cpu_suspend(suspend_state_t, long);
+extern void spear_clocksource_resume(void);
+extern void spear_clocksource_suspend(void);
 #endif
 
 /* SRAM related defines*/
 #define SRAM_STACK_SCR_OFFS	0xF00
+#define SRAM_STACK_STRT_OFF     0x650
 #define SPEAR_START_SRAM	SPEAR6XX_ICM1_SRAM_BASE
+#define SPEAR_SRAM_START_PA	SPEAR_START_SRAM
 #define SPEAR_SRAM_SIZE		SZ_4K
 #define SPEAR_SRAM_SCR_REG	(SPEAR_START_SRAM + SRAM_STACK_SCR_OFFS)
+#define SPEAR_SRAM_STACK_PA     (SPEAR_START_SRAM + SRAM_STACK_STRT_OFF)
 /* SPEAr subsystem physical addresses */
 #define SYS_CTRL_BASE_PA	SPEAR6XX_ICM3_SYS_CTRL_BASE
 #define MPMC_BASE_PA		SPEAR6XX_ICM3_SDRAM_CTRL_BASE

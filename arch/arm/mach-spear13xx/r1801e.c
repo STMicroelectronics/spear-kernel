@@ -283,8 +283,6 @@ static void __init r1801e_init(void)
 	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 #ifdef CONFIG_SPEAR_PCIE_REV341
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	r1801e_pcie_board_init();
 #endif
 

@@ -16,6 +16,7 @@
  *  published by the Free Software Foundation.
  */
 
+#include <asm/setup.h>
 #include <linux/fb.h>
 #include <mach/irqs.h>
 
@@ -29,6 +30,9 @@
 
 #define NUM_OF_FRAMEBUFFERS 2
 #define PALETTE_SIZE	(128 * 4)
+#define PANEL_MAX_XRES 1920
+#define PANEL_MAX_YRES 1080
+#define PANEL_MAX_BPP 32
 /*
  * This structure describes the machine which we are running on.
  * It is set in linux/arch/arm/mach-spear13xx and used in the probe routine
@@ -64,11 +68,12 @@ struct db9000fb_mach_info {
 			cmap_static:1,
 			acceleration_enabled:1,
 			unused:28;
+	void (*clcd_mux_selection) (bool);
 
 };
 unsigned long db9000fb_get_hsync_time(struct device *dev);
 
-void __init clcd_set_plat_data(struct platform_device *pdev,
-		struct db9000fb_mach_info *data);
-unsigned long clcd_get_fb_size(struct db9000fb_mach_info *data, int dual);
+void spear13xx_panel_fixup(struct meminfo *mi);
+void spear13xx_panel_init(struct platform_device *pdev);
+int db9000fb_config_screen(struct fb_var_screeninfo *screen);
 #endif

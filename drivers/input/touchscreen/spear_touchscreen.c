@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <linux/delay.h>
+#include <linux/kthread.h>
 #include <linux/platform_device.h>
 #include <linux/input.h>
 #include <linux/module.h>
@@ -65,6 +66,7 @@ enum touch_state {
 
 /* Structure for Context of Touchscreen */
 struct ts_context {
+	bool			idle_values_set;
 	struct ts_cordinate	idle;
 	struct ts_cordinate	touched_point;
 };
@@ -214,6 +216,7 @@ static void ts_get_adc_idle_values(struct spear_ts_dev *spear_ts)
 	dev_dbg(&spear_ts->pdev->dev,
 	     "idle value of x is=%d, idle value of y is=%d\n", x_idle, y_idle);
 
+	spear_ts->ts_ctx.idle_values_set = true;
 }
 
 /**
@@ -378,36 +381,40 @@ static int ts_adc_close(struct spear_ts_dev *spear_ts)
  */
 int ts_open(struct spear_ts_dev *spear_ts)
 {
-	int status, gpio_err;
+	int status;
 
-	gpio_err = gpio_request(spear_ts->spr_ts_info->gpio_pin, "ts_gpio");
-	if (gpio_err < 0) {
+	status = gpio_request(spear_ts->spr_ts_info->gpio_pin, "ts_gpio");
+	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err gpio request=%d\n",
-				gpio_err);
-		return -1;
+				status);
+		return status;
 	}
 
-	gpio_err = gpio_direction_output(spear_ts->spr_ts_info->gpio_pin, 1);
-	if (gpio_err < 0) {
+	status = gpio_direction_output(spear_ts->spr_ts_info->gpio_pin, 1);
+	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err gpio dir set=%d\n",
-				gpio_err);
-		return -1;
+				status);
+		goto free_gpio;
 	}
 
 	/* Acquire and Configure ADC for X-Y coordinate*/
 	status = ts_adc_open(spear_ts);
 	if (status < 0) {
 		dev_err(&spear_ts->pdev->dev, "Err adc open=%d\n", status);
-		return status;
+		goto free_gpio;
 	}
 
-	ts_get_adc_idle_values(spear_ts);
+	if (spear_ts->ts_ctx.idle_values_set == false)
+		ts_get_adc_idle_values(spear_ts);
 
 	spear_ts->finger_state = IDLE;
 
 	spear_ts->ts_open_done = 1;
 
-	return 0;
+free_gpio:
+	gpio_free(spear_ts->spr_ts_info->gpio_pin);
+
+	return status;
 }
 
 /**
@@ -506,8 +513,15 @@ int spear_ts_thread(void *data)
 
 		/* Wait for completion from Timer */
 		wait_for_completion(&spear_ts->time_complete);
-		if (spear_ts->ts_open_done != 1)
-			ts_open(spear_ts);
+		if (spear_ts->ts_open_done != 1) {
+			if (ts_open(spear_ts)) {
+				spear_ts->exit_ts_thread = 1;
+				del_timer_sync(&spear_ts->timer);
+				dev_err(&spear_ts->pdev->dev, "Exit %s\n",
+						__func__);
+				continue;
+			}
+		}
 
 		ts_state_machine(spear_ts);
 
@@ -552,6 +566,7 @@ int __devinit spear_ts_probe(struct platform_device *pdev)
 {
 	struct input_dev *input_dev;
 	struct spear_ts_dev *spear_ts;
+	struct task_struct *th;
 	int err = -ENOMEM;
 
 	/* Allocating Structure for Touchscreen */
@@ -594,7 +609,13 @@ int __devinit spear_ts_probe(struct platform_device *pdev)
 	init_completion(&spear_ts->thread_exit);
 
 	spear_ts->exit_ts_thread = 0;
-	kernel_thread(spear_ts_thread, spear_ts, 0);
+
+	th = kthread_run(spear_ts_thread, spear_ts, "spear-ts");
+	if (IS_ERR(th)) {
+		dev_err(&spear_ts->pdev->dev, "Could not start thread");
+		err = PTR_ERR(th);
+		goto dev_alloc_fail;
+	}
 
 	init_timer(&spear_ts->timer);
 	spear_ts->timer.data = (unsigned long)spear_ts;

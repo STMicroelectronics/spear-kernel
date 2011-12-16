@@ -16,18 +16,13 @@
 #include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
-#include <linux/designware_i2s.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <mach/misc_regs.h>
 #include <sound/pcm.h>
-#include <sound/pcm_params.h>
-#include <sound/core.h>
-#include <sound/initval.h>
 #include <sound/soc.h>
-#include "spear13xx_pcm.h"
 
 /* common register for all channel */
 #define IER		0x000
@@ -85,19 +80,10 @@ struct dw_i2s_dev {
 	struct dw_pcm_dma_params *dma_params[2];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
-	dma_cap_mask_t smask;
-	struct dma_slaves ds;
+	u8 swidth;
+	void *play_dma_data;
+	void *capture_dma_data;
 };
-
-struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
-		dma_cap_mask_t *smask)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct dw_i2s_dev *i2s_dev = snd_soc_dai_get_drvdata(rtd->cpu_dai);
-
-	*smask = i2s_dev->smask;
-	return &i2s_dev->ds;
-}
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
 {
@@ -176,7 +162,14 @@ void i2s_start(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 		dev_err(dev->dev, "channel not supported\n");
 	}
 
-	i2s_write_reg(dev->i2s_base, CCR, 0x00);
+	/*
+	 * AD9889B has a limitation. It requires 64 SCLK per
+	 * LRCLK even for 16 bit samples
+	 */
+	if (dev->swidth == 32)
+		i2s_write_reg(dev->i2s_base, CCR, 0x10);
+	else
+		i2s_write_reg(dev->i2s_base, CCR, 0x00);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		i2s_write_reg(dev->i2s_base, ITER, 1);
@@ -280,6 +273,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
+	void *dma_data = NULL;
 
 	if (!(dev->capability & RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -289,7 +283,12 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
 		return -EINVAL;
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, dev->dma_params);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dma_data = dev->play_dma_data;
+	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		dma_data = dev->capture_dma_data;
+
+	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
 
 	return 0;
 }
@@ -308,6 +307,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 static void
 dw_i2s_shutdown(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
+	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
 
 static int
@@ -320,9 +320,9 @@ dw_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		dev->active++;
 		i2s_start(dev, substream);
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -344,6 +344,36 @@ static struct snd_soc_dai_ops dw_i2s_dai_ops = {
 	.hw_params	= dw_i2s_hw_params,
 	.trigger	= dw_i2s_trigger,
 };
+
+#ifdef CONFIG_PM
+
+static int dw_i2s_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2s_dev *i2s_dev = dev_get_drvdata(&pdev->dev);
+
+	clk_disable(i2s_dev->clk);
+	return 0;
+}
+
+static int dw_i2s_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2s_dev *i2s_dev = dev_get_drvdata(&pdev->dev);
+
+	clk_enable(i2s_dev->clk);
+	return 0;
+}
+
+static const struct dev_pm_ops dw_i2s_dev_pm_ops = {
+	.suspend = dw_i2s_suspend,
+	.resume = dw_i2s_resume,
+};
+
+#define I2S_DW_DEV_PM_OPS (&dw_i2s_dev_pm_ops)
+#else
+#define I2S_DW_DEV_PM_OPS NULL
+#endif
 
 static int
 dw_i2s_probe(struct platform_device *pdev)
@@ -380,13 +410,11 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->res = res;
 	dev->max_channel = pdata->channel;
 	dev->capability = cap;
+	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
-	dma_cap_zero(dev->smask);
-	dma_cap_set(DMA_SLAVE, dev->smask);
-	memcpy(&dev->ds, &pdata->ds, sizeof(pdata->ds));
-	dev->ds.mem2i2s_slave.tx_reg = res->start + TXDMA;
-	dev->ds.i2s2mem_slave.rx_reg = res->start + RXDMA;
+	dev->play_dma_data = pdata->play_dma_data;
+	dev->capture_dma_data = pdata->capture_dma_data;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {
@@ -514,6 +542,7 @@ static struct platform_driver dw_i2s_driver = {
 	.driver		= {
 		.name	= "designware-i2s",
 		.owner	= THIS_MODULE,
+		.pm	= I2S_DW_DEV_PM_OPS,
 	},
 };
 

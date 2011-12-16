@@ -17,8 +17,10 @@
 #include <linux/i2c.h>
 #include <linux/i2c/l3g4200d.h>
 #include <linux/irq.h>
+#include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/netdevice.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
@@ -33,9 +35,14 @@
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
-#include <mach/spear_pcie.h>
 #include <media/soc_camera.h>
+
+#ifdef CONFIG_SPEAR1340_PLUG_BOARDS
+/* Variable specifying which plug boards are requested */
+extern char spear1340_plug_board[50];
+#endif
 
 #if 0
 /* fsmc nor partition info */
@@ -47,6 +54,52 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x380000, 84 * 0x20000),
 };
 #endif
+
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info = {
+	I2C_BOARD_INFO("vs6725", 0x10),
+};
+
+/* Camera power: default is ON */
+static int vs6725_cam_power(struct device *dev, int val)
+{
+	int ret;
+	static bool gpio_avail;
+
+	if (!gpio_avail) {
+
+		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
+		if (!ret) {
+			gpio_direction_output(STMPE801_GPIO_6, 0);
+		} else {
+			pr_err("gpio request fail for STMPE801_GPIO_6\n");
+			return ret;
+		}
+
+		gpio_avail = true;
+	}
+
+	/* turn on/off the CE pin for camera sensor */
+	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+
+	return 0;
+}
+
+static struct soc_camera_link vs6725_cam3_sensor_iclink = {
+	.bus_id = 3,	/* sensor is connected to camera device 3 */
+	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
+	.board_info = &vs6725_camera_sensor_info,
+	.power = vs6725_cam_power,
+	.module_name = "vs6725",
+};
+
+static struct platform_device spear1340_cam3_sensor_device = {
+	.name = "soc-camera-pdrv",
+	.id = -1,
+	.dev = {
+		.platform_data = &vs6725_cam3_sensor_iclink,
+	},
+};
 
 /* Ethernet phy-0 device registeration */
 static struct plat_stmmacphy_data phy0_private_data = {
@@ -64,7 +117,7 @@ static struct resource phy0_resources = {
 	.flags = IORESOURCE_IRQ,
 };
 
-static struct platform_device spear1340_phy0_device = {
+struct platform_device spear1340_phy0_device = {
 	.name		= "stmmacphy",
 	.id		= 0,
 	.num_resources	= 1,
@@ -88,7 +141,11 @@ static struct platform_device spear1340_phy0_device = {
 static struct pmx_mux_reg pmx_plgpios_mux[] = {
 	{
 		.address = SPEAR1340_PAD_FUNCTION_EN_1,
-		.mask = 0x0,
+		/*
+		 * PLGPIO 12 is used for interrupt reception from
+		 * STMPE801.
+		 */
+		.mask = 0x2000,
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_2,
@@ -128,32 +185,10 @@ static struct pmx_dev_mode pmx_plgpios_modes[] = {
 	},
 };
 
-struct pmx_dev spear1340_pmx_plgpios = {
+static struct pmx_dev spear1340_pmx_plgpios = {
 	.name = "plgpios",
 	.modes = pmx_plgpios_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
-};
-
-/* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info[] = {
-	{
-		I2C_BOARD_INFO("vs6725", 0x10),
-	},
-};
-
-static struct soc_camera_link vs6725_cam_sensor_iclink = {
-	.bus_id = 3,	/* sensor is connected to cam3 */
-	.i2c_adapter_id = 0,
-	.board_info = &vs6725_camera_sensor_info[0],
-	.module_name = "vs6725",
-};
-
-struct platform_device spear1340_cam_sensor_device = {
-	.name = "soc-camera-pdrv",
-	.id = 0,
-	.dev = {
-		.platform_data = &vs6725_cam_sensor_iclink,
-	},
 };
 
 /* padmux devices to enable */
@@ -166,36 +201,36 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_pads_as_gpio,
 	&spear1340_pmx_fsmc_8bit,
 	&spear1340_pmx_keyboard_row_col,
+#if !defined(CONFIG_PM)
 	&spear1340_pmx_keyboard_col5,
+#endif
 	&spear1340_pmx_uart0_enh,
 	&spear1340_pmx_i2c1,
 	&spear1340_pmx_spdif_in,
 	&spear1340_pmx_ssp0_cs1,
+#if !defined(CONFIG_PM)
 	&spear1340_pmx_pwm2,
+#endif
 	&spear1340_pmx_pwm3,
-	&spear1340_pmx_video_in_mux_cam0,
-	&spear1340_pmx_video_in_mux_cam1,
-	&spear1340_pmx_video_in_mux_cam2,
-	&spear1340_pmx_cam3,
 	&spear1340_pmx_smi,
 	&spear1340_pmx_ssp0,
-	&spear1340_pmx_ssp0_cs2,
 	&spear1340_pmx_uart0,
-	&spear1340_pmx_uart1,
 	&spear1340_pmx_i2s_in,
 	&spear1340_pmx_i2s_out,
 	&spear1340_pmx_gmac,
 	&spear1340_pmx_ssp0_cs3,
 	&spear1340_pmx_i2c0,
+	&spear1340_pmx_cam3,
 	&spear1340_pmx_cec0,
 	&spear1340_pmx_cec1,
 	&spear1340_pmx_spdif_out,
 	&spear1340_pmx_mcif,
 	&spear1340_pmx_sdhci,
 	&spear1340_pmx_clcd,
+	&spear1340_pmx_clcd_gpio_pd,
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
-	&spear1340_pmx_pcie,
+	&spear1340_pmx_sata,
 
 	/* Keep this entry at the bottom of table to override earlier setting */
 	&spear1340_pmx_plgpios,
@@ -228,20 +263,27 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcm_device,
-	&spear13xx_pcie_host0_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
+	&spear1340_spdif_out_device,
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
 	&spear1340_camif3_device,
-	&spear1340_cam_sensor_device,
+	&spear1340_cam3_sensor_device,
+	&spear1340_cec0_device,
+	&spear1340_cec1_device,
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear1340_device_gpiokeys,
+#endif
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
 	&spear1340_phy0_device,
 	&spear1340_plgpio_device,
 	&spear1340_otg_device,
+	&spear1340_sata0_device,
+	&spear1340_thermal_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {
@@ -260,10 +302,51 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
-	.mode = KEYPAD_6x6,
+	.mode = KEYPAD_2x2,
+};
+
+/* Ethernet specific plat data */
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.pbl = 16,
+	.csum_off_engine = STMAC_TYPE_2,
+	.bugged_jumbo = 1,
+	.features = NETIF_F_HW_CSUM,
+	.pmt = 1,
 };
 
 /* Initializing platform data for spear1340 evb specific I2C devices */
+
+/* STMPE801 platform data */
+static struct stmpe_gpio_platform_data stmpe801_gpio = {
+	.gpio_base = SPEAR_STMPE801_GPIO_BASE,
+	.norequest_mask = 0,
+};
+static struct stmpe_platform_data stmpe801_pdata = {
+	.id = 0,
+	.blocks = STMPE_BLOCK_GPIO,
+	.irq_base = SPEAR_STMPE801_GPIO_INT_BASE,
+	.irq_gpio = GPIO0_4,
+	.irq_over_gpio = true,
+	.irq_trigger = IRQF_TRIGGER_FALLING,
+	.irq_invert_polarity = false,
+	.autosleep = false,
+	.gpio = &stmpe801_gpio,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_stmpe801 = {
+	I2C_BOARD_INFO("stmpe801", 0x41),
+	.platform_data = &stmpe801_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_stmpe801 = {
+	.board = &spear1340_evb_i2c_board_stmpe801,
+	.busnum = 1,
+};
+
 /* Gyroscope platform data */
 static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.poll_interval = 5,
@@ -273,14 +356,57 @@ static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.axis_map_z = 2,
 };
 
-static struct i2c_board_info __initdata i2c_board_info[] = {
+static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 	/* gyroscope board info */
-	{
-		.type = "l3g4200d_gyr",
-		.addr = 0x69,
-		.platform_data = &l3g4200d_pdata,
-	},
+	.type = "l3g4200d_gyr",
+	.addr = 0x69,
+	.platform_data = &l3g4200d_pdata,
 };
+
+struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr = {
+	.board = &spear1340_evb_i2c_board_l3g4200d_gyr,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_eeprom0 = {
+	.type = "eeprom",
+	.addr = 0x50,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_eeprom0 = {
+	.board = &spear1340_evb_i2c_board_eeprom0,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_eeprom1 = {
+	.type = "eeprom",
+	.addr = 0x51,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_eeprom1 = {
+	.board = &spear1340_evb_i2c_board_eeprom1,
+	.busnum = 0,
+};
+
+static struct i2c_board_info spear1340_evb_i2c_board_sta529 = {
+	.type = "sta529",
+	.addr = 0x1a,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_sta529 = {
+	.board = &spear1340_evb_i2c_board_sta529,
+	.busnum = 0,
+};
+
+static struct i2c_dev_info *i2c_devs[] __initdata = {
+	&spear1340_evb_i2c_stmpe801,
+	&spear1340_evb_i2c_l3g4200d_gyr,
+	&spear1340_evb_i2c_eeprom0,
+	&spear1340_evb_i2c_eeprom1,
+	&spear1340_evb_i2c_sta529,
+};
+
+/* Definitions for SPI Devices*/
 
 /* spi master's configuration routine */
 DECLARE_SPI_CS_CFG(0, VA_SPEAR1340_PERIP_CFG, SPEAR1340_SSP_CS_SEL_MASK,
@@ -336,55 +462,43 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.cs_control = spi0_ts_cs_control,
 };
 
-static struct spi_board_info __initdata spi_board_info[] = {
-	{
-		.modalias = "m25p80",
-		.controller_data = &spi0_flash_chip_info,
-		.max_speed_hz = 12000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
-		.mode = SPI_MODE_3,
-	}, {
-		.modalias = "stmpe610-spi",
-		.platform_data = &stmpe610_spi_pdata,
-		.controller_data = &spi0_ts_chip_info,
-		.max_speed_hz = 1000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS1,
-		.mode = SPI_MODE_1,
-	}, {
-		.modalias = "spidev",
-		.controller_data = &spi0_dev_chip_info,
-		.max_speed_hz = 25000000,
-		.bus_num = 0,
-		.chip_select = SPEAR1340_SSP_CS_SEL_CS2,
-		.mode = SPI_MODE_1,
-	}
+struct spi_board_info spear1340_evb_spi_m25p80 = {
+	.modalias = "m25p80",
+	.controller_data = &spi0_flash_chip_info,
+	.max_speed_hz = 12000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS0,
+	.mode = SPI_MODE_3,
+};
+struct spi_board_info spear1340_evb_spi_stmpe610 = {
+	.modalias = "stmpe610-spi",
+	.platform_data = &stmpe610_spi_pdata,
+	.controller_data = &spi0_ts_chip_info,
+	.max_speed_hz = 1000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS1,
+	.mode = SPI_MODE_1,
+};
+struct spi_board_info spear1340_evb_spi_spidev = {
+	.modalias = "spidev",
+	.controller_data = &spi0_dev_chip_info,
+	.max_speed_hz = 25000000,
+	.bus_num = 0,
+	.chip_select = SPEAR1340_SSP_CS_SEL_CS2,
+	.mode = SPI_MODE_1,
 };
 
-#ifdef CONFIG_SPEAR_PCIE_REV370
-/* This function is needed for board specific PCIe initilization */
-static void __init spear1340_pcie_board_init(void)
-{
-	void *plat_data;
-
-	plat_data = dev_get_platdata(&spear13xx_pcie_host0_device.dev);
-	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
-}
-#endif
-
+static struct spi_board_info *spi_board[] __initdata = {
+	&spear1340_evb_spi_m25p80,
+	&spear1340_evb_spi_stmpe610,
+	&spear1340_evb_spi_spidev,
+};
 
 static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	unsigned long size;
-
-	size = clcd_get_fb_size(&chimei_b101aw02_info, NUM_OF_FRAMEBUFFERS);
-	chimei_b101aw02_info.frame_buf_base =
-		reserve_mem(mi, ALIGN(size, SZ_1M));
-	if (chimei_b101aw02_info.frame_buf_base == ~0)
-		pr_err("Unable to allocate fb buffer\n");
+	spear13xx_panel_fixup(mi);
 #endif
 }
 
@@ -400,12 +514,17 @@ static void __init spear1340_evb_init(void)
 
 #if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
 	/* db9000_clcd plat data */
-	clcd_set_plat_data(&spear13xx_db9000_clcd_device,
-			&chimei_b101aw02_info);
+	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+
+	/*
+	 * SPEAr1340 has gmac configured differently. Hence set its plat
+	 * data separately.
+	 */
+	spear13xx_eth_device.dev.platform_data = &eth_data;
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
@@ -431,31 +550,37 @@ static void __init spear1340_evb_init(void)
 			FSMC_FLASH_WIDTH8);
 #endif
 
-#ifdef CONFIG_SPEAR_PCIE_REV370
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
-	spear1340_pcie_board_init();
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
-#endif
-
-#if 0
-	/* Miphy configuration for SATA */
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
-#endif
-
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
+#ifdef CONFIG_SPEAR1340_PLUG_BOARDS
+	/* Check if plug boards are requested or not */
+	if (spear1340_plug_board[0] != '\0') {
+		struct plug_board_info pb_info;
+		int ret;
+
+		pb_info.pdevs = plat_devs;
+		pb_info.pcnt = ARRAY_SIZE(plat_devs);
+		pb_info.adevs = amba_devs;
+		pb_info.acnt = ARRAY_SIZE(amba_devs);
+		pb_info.spi_devs = spi_board;
+		pb_info.spi_cnt = ARRAY_SIZE(spi_board);
+		pb_info.i2c_devs = i2c_devs;
+		pb_info.i2c_cnt = ARRAY_SIZE(i2c_devs);
+		ret = spear1340_pb_init(&pb_info);
+		if (!ret)
+			return;
+	}
+#endif
+
 	/* Register spear1340 evb board specific i2c slave devices */
-	i2c_register_board_info(0, i2c_board_info,
-				ARRAY_SIZE(i2c_board_info));
+	for (i = 0; i < ARRAY_SIZE(i2c_devs); i++)
+		i2c_register_board_info(i2c_devs[i]->busnum,
+				i2c_devs[i]->board, 1);
 
-	/* Register slave devices on the I2C buses */
-	i2c_register_default_devices();
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	/* Register SPI Board */
+	for (i = 0; i < ARRAY_SIZE(spi_board); i++)
+		spi_register_board_info(spi_board[i], 1);
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));

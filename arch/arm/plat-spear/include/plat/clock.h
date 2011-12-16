@@ -136,6 +136,8 @@ struct vco_clk_masks {
 	u32 div_p_shift;
 	u32 div_n_mask;
 	u32 div_n_shift;
+	u32 pll_lock_mask;
+	u32 pll_lock_shift;
 };
 
 struct vco_clk_config {
@@ -243,6 +245,9 @@ struct ddr_rate_tbl {
  */
 void clk_init(struct clk *dclk);
 void clk_register(struct clk_lookup *cl);
+int clk_set_parent_sys(char *dev_id, char *con_id, char *pdev_id, char
+		*pcon_id);
+int clk_set_rate_sys(char *dev_id, char *con_id, unsigned long rate);
 void recalc_root_clocks(void);
 
 /* clock recalc & set rate functions */

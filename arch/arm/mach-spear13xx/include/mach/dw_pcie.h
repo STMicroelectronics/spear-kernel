@@ -14,6 +14,7 @@
 #include <linux/pci.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
+#include <linux/clk.h>
 
 #define MAX_LINK_UP_WAIT_MS	2
 /* Max port defined can be changed if required */
@@ -41,6 +42,10 @@ struct pcie_private_ops {
 			u32 devfn, int where, int size, u32 val);
 	int (*add_port)(struct pcie_port *pp, struct platform_device *pdev);
 	int (*link_up)(void __iomem *va_app_base);
+	void (*host_init)(struct pcie_port *pp);
+	void (*host_exit)(struct pcie_port *pp);
+	int (*clk_init)(struct pcie_port *pp);
+	int (*clk_exit)(struct pcie_port *pp);
 };
 
 struct pcie_port {
@@ -64,6 +69,8 @@ struct pcie_port {
 	struct pcie_port_info	config;
 	struct list_head	next;
 	struct pcie_private_ops	ops;
+	struct clk *clk;
+	int	susp_state;
 };
 
 /* synopsis specific PCIE configuration registers*/

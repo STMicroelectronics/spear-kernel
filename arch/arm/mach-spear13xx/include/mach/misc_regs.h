@@ -40,6 +40,16 @@
 
 /* Clock Configuration Registers */
 #define VA_SYS_CLK_CTRL			(VA_MISC_BASE + 0x200)
+	#define SYS_MODE_MASK			(0x7 << 0)
+	#define SYS_MODE_DOZE			(0x1 << 0)
+	#define SYS_MODE_SLOW			(0x2 << 0)
+	#define SYS_MODE_NORMAL			(0x4 << 0)
+
+	#define SYS_MODE_STS_MASK		(0xF << 16)
+	#define SYS_MODE_STS_DOZE		(0x0 << 16)
+	#define SYS_MODE_STS_SLOW		(0xA << 16)
+	#define SYS_MODE_STS_NORMAL		(0xF << 16)
+
 #define VA_SYS_SW_RES			(VA_MISC_BASE + 0x204)
 #define VA_SYS_CLK_PLLTIMER		(VA_MISC_BASE + 0x208)
 #define VA_SYS_CLK_OSCITIMER		(VA_MISC_BASE + 0x20C)
@@ -86,6 +96,9 @@
 	#define PLL_MODE_MASK		3
 	#define PLL_MODE_SHIFT		3
 	#define PLL_ENABLE		1
+
+	#define PLL_LOCK_SHIFT		0
+	#define PLL_LOCK_MASK		1
 
 #define VA_PLL4_FRQ			(VA_MISC_BASE + 0x23C)
 	/* PLL FRQ register masks */
@@ -302,6 +315,14 @@
 	#define MCIF_SEL_XD	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_MASK	(0x3 << MCIF_SEL_SHIFT)
 	#define MCIF_SEL_SHIFT	3
+
+	#define I2S_MODE_I2S2_ONE_PORT	(0 << 0)
+	#define I2S_MODE_I2S1_ONE_PORT	(1 << 0)
+	#define I2S_MODE_I2S2_TWO_PORT	(2 << 0)
+	#define I2S_MODE_I2S1_TWO_PORT	(3 << 0)
+	#define I2S_MODE_BOTH_ONE_PORT	(4 << 0)
+	#define I2S_MODE_MASK		(7 << 0)
+
 #define VA_FSMC_CFG			(VA_MISC_BASE + 0x330)
 	/* FSMC_CFG register masks */
 	#define NAND_DEV_WIDTH16	4
@@ -349,7 +370,9 @@
 #define VA_PAD_FUNCTION_EN_3		(VA_MISC_BASE + 0x658)
 #define PAD_FUNCTION_EN_3		(SPEAR13XX_MISC_BASE + 0x658)
 #define VA_DDR_PAD_CFG			(VA_MISC_BASE + 0x65C)
+#define THSENS_CFG			(SPEAR13XX_MISC_BASE + 0x6C4)
 #define VA_THSENS_CFG			(VA_MISC_BASE + 0x6C4)
+	#define THERMAL_CONFIG_FLAGS		0x7000
 
 /* Compensation Configuration Registers */
 #define VA_COMP_1V8_2V5_3V3__1_CFG	(VA_MISC_BASE + 0x700)

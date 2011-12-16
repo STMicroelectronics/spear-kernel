@@ -197,7 +197,7 @@ config TWL6030_PWM
 
 config MFD_STMPE
 	bool "Support STMicroelectronics STMPE"
-	depends on I2C=y && GENERIC_HARDIRQS
+	depends on (I2C=y || SPI_MASTER=y) && GENERIC_HARDIRQS
 	select MFD_CORE
 	help
 	  Support for the STMPE family of I/O Expanders from
@@ -217,6 +217,23 @@ config MFD_STMPE
 		GPIO: stmpe-gpio
 		Keypad: stmpe-keypad
 		Touchscreen: stmpe-ts
+
+menu "STMPE Interface Drivers"
+depends on MFD_STMPE
+
+config STMPE_I2C
+	bool "STMPE I2C Inteface"
+	depends on I2C
+	default y
+	help
+	  This is used to enable I2C interface of STMPE
+
+config STMPE_SPI
+	bool "STMPE SPI Inteface"
+	depends on SPI_MASTER
+	help
+	  This is used to enable SPI interface of STMPE
+endmenu
 
 config MFD_TC35892
 	bool "Support Toshiba TC35892"

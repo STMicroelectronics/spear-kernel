@@ -75,6 +75,28 @@ static cycle_t clocksource_read_cycles(struct clocksource *cs)
 	return (cycle_t) readw(gpt_base + COUNT(CLKSRC));
 }
 
+#ifdef CONFIG_PM
+static u16 gpt_ctrl_reg;
+
+void spear_clocksource_suspend(void)
+{
+	/* latch the control register */
+	gpt_ctrl_reg = readw(gpt_base + CR(CLKSRC));
+	gpt_ctrl_reg &= ~CTRL_ENABLE ;
+	/* Stop the timer */
+	writew(gpt_ctrl_reg, gpt_base + CR(CLKSRC));
+}
+
+void spear_clocksource_resume(void)
+{
+	writew(0xffff, gpt_base + LOAD(CLKSRC));
+	gpt_ctrl_reg |= CTRL_ENABLE;
+	/* Restore the control register and start the timer */
+	writew(gpt_ctrl_reg, gpt_base + CR(CLKSRC));
+
+}
+#endif
+
 static struct clocksource clksrc = {
 	.name = "tmr1",
 	.rating = 200,		/* its a pretty decent clock */
@@ -83,6 +105,7 @@ static struct clocksource clksrc = {
 	.mult = 0,		/* to be computed */
 	.shift = 0,		/* to be computed */
 	.flags = CLOCK_SOURCE_IS_CONTINUOUS,
+
 };
 
 static void spear_clocksource_init(void)
@@ -149,8 +172,10 @@ static void clockevent_set_mode(enum clock_event_mode mode,
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
+		break;
 	case CLOCK_EVT_MODE_RESUME:
-
+		val |= CTRL_PRESCALER16;
+		writew(val, gpt_base + CR(CLKEVT));
 		break;
 	default:
 		pr_err("Invalid mode requested\n");

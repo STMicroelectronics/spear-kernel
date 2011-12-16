@@ -382,9 +382,10 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable CLCD */
 #define SPEAR1340_PMX_ARM_TRACE_MASK		(1 << 12)
 
-/* Write 0 to enable I2S, SSP0_CS3, CEC0, 1, SPDIFF out, CLCD */
+/* Write 0 to enable I2S, SSP0_CS2, CEC0, 1, SPDIF out, CLCD */
 #define SPEAR1340_PMX_MIPHY_DBG_MASK		(1 << 13)
 
+extern struct pmx_dev clcd_pmx_plgpios;
 extern struct pmx_dev spear1340_pmx_pads_as_gpio;
 extern struct pmx_dev spear1340_pmx_fsmc_8bit;
 extern struct pmx_dev spear1340_pmx_fsmc_16bit;
@@ -426,6 +427,7 @@ extern struct pmx_dev spear1340_pmx_sdhci;
 extern struct pmx_dev spear1340_pmx_cf;
 extern struct pmx_dev spear1340_pmx_xd;
 extern struct pmx_dev spear1340_pmx_clcd;
+extern struct pmx_dev spear1340_pmx_clcd_gpio_pd;
 extern struct pmx_dev spear1340_pmx_arm_trace;
 extern struct pmx_dev spear1340_pmx_devs_grp;
 extern struct pmx_dev spear1340_pmx_miphy_dbg;
@@ -452,6 +454,9 @@ extern struct amba_device spear13xx_uart_device;
 extern struct platform_device spear13xx_adc_device;
 extern struct platform_device spear13xx_cf_device;
 extern struct platform_device spear13xx_db9000_clcd_device;
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+extern struct platform_device spear13xx_device_gpiokeys;
+#endif
 extern struct platform_device spear13xx_dmac_device[];
 extern struct platform_device spear13xx_ehci0_device;
 extern struct platform_device spear13xx_ehci1_device;
@@ -468,6 +473,7 @@ extern struct platform_device spear13xx_pcm_device;
 extern struct platform_device spear13xx_rtc_device;
 extern struct platform_device spear13xx_sdhci_device;
 extern struct platform_device spear13xx_smi_device;
+extern struct platform_device spear13xx_thermal_device;
 extern struct platform_device spear13xx_wdt_device;
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
@@ -490,8 +496,6 @@ extern struct platform_device spear13xx_udc_device;
 extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */
-extern struct db9000fb_mach_info sharp_lcd_info;
-extern struct db9000fb_mach_info chimei_b101aw02_info;
 extern struct dw_dma_slave cf_dma_priv;
 
 /* Add spear13xx family function declarations here */
@@ -504,6 +508,7 @@ void __init spear13xx_init_irq(void);
 void __init spear13xx_init(void);
 void __init nand_mach_init(u32 busw);
 void nand_select_bank(u32 bank, u32 busw);
+void spear13xx_l2x0_init(void);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
@@ -590,21 +595,35 @@ extern struct platform_device spear1340_camif0_device;
 extern struct platform_device spear1340_camif1_device;
 extern struct platform_device spear1340_camif2_device;
 extern struct platform_device spear1340_camif3_device;
-extern struct platform_device spear1340_cam_sensor0_device;
+extern struct platform_device spear1340_cec0_device;
+extern struct platform_device spear1340_cec1_device;
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+extern struct platform_device spear1340_device_gpiokeys;
+#endif
 extern struct platform_device spear1340_i2c1_device;
 extern struct platform_device spear1340_i2s_play_device;
 extern struct platform_device spear1340_i2s_record_device;
 extern struct platform_device spear1340_nand_device;
 extern struct platform_device spear1340_otg_device;
+extern struct platform_device spear1340_phy0_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
+extern struct platform_device spear1340_spdif_out_device;
+extern struct platform_device spear1340_thermal_device;
+
+/* Add spear1340 spi devices structure declaration */
+extern struct spi_board_info spear1340_evb_spi_m25p80;
+extern struct spi_board_info spear1340_evb_spi_stmpe610;
+extern struct spi_board_info spear1340_evb_spi_spidev;
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
 void __init spear1340_map_io(void);
+void __init spear1340_pcie_board_init(struct device *dev);
+void config_clcd_gpio_pads(bool);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
 

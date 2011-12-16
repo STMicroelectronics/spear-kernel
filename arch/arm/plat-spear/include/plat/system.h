@@ -16,6 +16,7 @@
 
 #include <linux/io.h>
 #include <asm/hardware/sp810.h>
+#include <asm/proc-fns.h>
 #include <mach/hardware.h>
 
 static inline void arch_idle(void)
@@ -36,6 +37,11 @@ static inline void arch_reset(char mode, const char *cmd)
 		/* hardware reset, Use on-chip reset capability */
 		sysctl_soft_reset((void __iomem *)VA_SPEAR_SYS_CTRL_BASE);
 	}
+}
+
+static inline int arch_change_mode(int mode)
+{
+	return sysctl_change_mode((void __iomem *)VA_SPEAR_SYS_CTRL_BASE, mode);
 }
 
 #endif /* __PLAT_SYSTEM_H */

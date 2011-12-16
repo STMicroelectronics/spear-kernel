@@ -462,6 +462,13 @@ config PCH_PHUB
 	  To compile this driver as a module, choose M here: the module will
 	  be called pch_phub.
 
+config SPEAR_CEC
+       tristate "SPEAr Consumer electronics control"
+       default n
+       help
+         Support for SPEAr Consumer electrnoics control(CEC). Currently it is
+         present and tested on SPEAr Platform only.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

@@ -52,13 +52,15 @@ static struct vco_clk_masks vco_masks = {
 	.div_p_shift = PLL_DIV_P_SHIFT,
 	.div_n_mask = PLL_DIV_N_MASK,
 	.div_n_shift = PLL_DIV_N_SHIFT,
+	.pll_lock_mask = PLL_LOCK_MASK,
+	.pll_lock_shift = PLL_LOCK_SHIFT,
 };
 
 /* vco rate configuration table, in ascending order of rates */
 struct vco_rate_tbl vco_rtbl[] = {
-	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* vco 332 & pll 166 MHz */
-	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* vco 532 & pll 266 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* vco 664 & pll 332 MHz */
+	{.mode = 0, .m = 0x53, .n = 0x0F, .p = 0x1}, /* vco 332 & pll 166 MHz */
+	{.mode = 0, .m = 0x85, .n = 0x0F, .p = 0x1}, /* vco 532 & pll 266 MHz */
+	{.mode = 0, .m = 0xA6, .n = 0x0F, .p = 0x1}, /* vco 664 & pll 332 MHz */
 };
 
 /* vco1 configuration structure */
@@ -189,8 +191,8 @@ static struct aux_clk_config uart_synth_config = {
 /* aux rate configuration table, in ascending order of rates */
 struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
-	{.xscale = 1, .yscale = 8, .eq = 1}, /* 41.5 MHz */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* 83 MHz */
+	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
 };
 

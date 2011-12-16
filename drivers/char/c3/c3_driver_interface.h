@@ -49,7 +49,10 @@
 /* --------------------------------------------------------------------
  * CONSTANTS
  * ----------------------------------------------------------------- */
-
+#define MIN_AES_KEY_LEN						0
+#define MAX_AES_KEY_LEN						256
+#define MIN_DES_KEY_LEN						0
+#define MAX_DES_KEY_LEN						64
 #define C3_DRIVER_DIGEST_CTX_MAX_SIZE\
 	512
 

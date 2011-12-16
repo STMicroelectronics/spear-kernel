@@ -1,0 +1,76 @@
+Spear CEC (Consumer Electronics Control) Driver:
+
+Author
+=============
+Vipul Kumar Samar <vipulkumar.samar@st.com>
+
+Location
+============
+driver/misc/spear_cec.c
+
+Supported Chip:
+===================
+SPEAr1340
+
+Menuconfig option:
+==========================
+Device Drivers
+	Misc devices
+		SPEAr Consumer electrnoics control
+Description:
+============
+Consumer Electronics Control (CEC) is a feature designed to allow the
+user to command and control two or more CEC-enabled boxes, that are
+connected through HDMI, by using only one of their remote controls. CEC
+also allows for individual CEC-enabled devices to command and control
+each other without user intervention.
+It is a one-wire bidirectional serial bus that uses the
+industry-standard AV.link protocol to perform remote control functions.
+
+
+CEC Features:
+=============
+
+One touch play:
+	A device may be played and become the active source by the press
+of a single button.
+
+System standby:
+	Enables devices to be set on standby by the press of a single button.
+
+Preset transfer:
+	A device’s presets can be auto-configured to match those of the TV.
+
+One-touch record:
+	Allows recordings to be made by the press of a single button.
+
+Timer programming:
+	Any device can program a timer recording on a recording device.
+
+System information:
+	Allows devices to auto-configure their language and country settings.
+
+Deck control:
+	Allows a device to control and interrogate a playback device.
+
+Tuner control:
+	Allows a device to control the tuner of another device.
+
+Vendor specific commands:
+	Allows vendor-defined commands to be used.
+
+OSD(On Screen Display) display:
+	Allows a device to display text using the on-screen display of the TV.
+
+Device menu control:
+	Allows a device to control the menu of another device.
+
+Routing control:
+	Enables control of CEC switches for streaming of a new source device.
+
+Remote control pass through:
+	Allows remote control commands to be passed along to other devices.
+
+Device OSD name transfer:
+	Devices may request the preferred OSD name of other devices within the
+system. CEC pins and Internal Signals.

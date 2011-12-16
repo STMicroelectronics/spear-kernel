@@ -36,6 +36,12 @@ config MACH_SPEAR1340_EVB
 	help
 	  Supports ST SPEAr1340 Evaluation Board
 
+config SPEAR1340_PLUG_BOARDS
+	bool "SPEAr1340 Plug Boards"
+	depends on MACH_SPEAR1340_EVB
+	help
+	  Supports ST SPEAr1340 Plug boards
+
 config MACH_SPEAR900_EVB
 	bool "SPEAr900 Evaluation Board"
 	select CPU_SPEAR900

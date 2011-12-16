@@ -44,8 +44,8 @@ static struct mtd_partition partition_info[] = {
 /* emi nor flash resources registeration */
 static struct resource emi_nor_resources[] = {
 	{
-		.start	= SPEAR310_EMI_MEM_0_BASE,
-		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
+		.start	= SPEAR320_EMI_MEM_0_BASE,
+		.end	= SPEAR320_EMI_MEM_0_BASE + SPEAR320_EMI_MEM_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 };

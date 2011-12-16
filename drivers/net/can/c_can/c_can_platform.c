@@ -34,6 +34,7 @@
 #include <linux/clk.h>
 
 #include <linux/can/dev.h>
+#include <linux/can/platform/c_can.h>
 
 #include "c_can.h"
 
@@ -67,16 +68,71 @@ static void c_can_plat_write_reg_aligned_to_32bit(struct c_can_priv *priv,
 	writew(val, reg + (long)reg - (long)priv->regs);
 }
 
+#ifdef CONFIG_PM
+static int c_can_plat_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct c_can_priv *priv = netdev_priv(ndev);
+
+	if (!ndev || !netif_running(ndev))
+		return 0;
+
+	netif_stop_queue(ndev);
+	netif_device_detach(ndev);
+	napi_disable(&priv->napi);
+	priv->can_stop(ndev);
+
+	return 0;
+}
+
+static int c_can_plat_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct c_can_priv *priv = netdev_priv(ndev);
+
+	if (!netif_running(ndev))
+		return 0;
+
+	priv->can_start(ndev);
+	napi_enable(&priv->napi);
+	netif_device_attach(ndev);
+	netif_start_queue(ndev);
+
+	return 0;
+}
+
+static const struct dev_pm_ops c_can_dev_pm_ops = {
+	.suspend = c_can_plat_suspend,
+	.resume = c_can_plat_resume,
+};
+
+#define C_CAN_DEV_PM_OPS (&c_can_dev_pm_ops)
+#else
+#define C_CAN_DEV_PM_OPS NULL
+#endif
+
 static int __devinit c_can_plat_probe(struct platform_device *pdev)
 {
 	int ret;
 	void __iomem *addr;
 	struct net_device *dev;
 	struct c_can_priv *priv;
+	struct c_can_platform_data *pdata;
 	struct resource *mem, *irq;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
+#endif
 
+	/* must have platform data */
+	if (!pdev || !pdev->dev.platform_data) {
+		dev_err(&pdev->dev, "missing platform data\n");
+		ret = -ENODEV;
+		goto exit;
+	}
+
+#ifdef CONFIG_HAVE_CLK
 	/* get the appropriate clk */
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
@@ -85,8 +141,6 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit;
 	}
 #endif
-
-	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!mem || (irq <= 0)) {
@@ -123,6 +177,10 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	priv->can.clock.freq = clk_get_rate(clk);
 	priv->priv = clk;
 #endif
+
+	/* get the soc-id from the platform data */
+	pdata = pdev->dev.platform_data;
+	priv->is_quirk_required = pdata->is_quirk_required;
 
 	switch (mem->flags & IORESOURCE_MEM_TYPE_MASK) {
 	case IORESOURCE_MEM_32BIT:
@@ -193,6 +251,7 @@ static struct platform_driver c_can_plat_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
 		.owner = THIS_MODULE,
+		.pm = C_CAN_DEV_PM_OPS,
 	},
 	.probe = c_can_plat_probe,
 	.remove = __devexit_p(c_can_plat_remove),

@@ -104,6 +104,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
 	&spear13xx_db9000_clcd_device,
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear13xx_device_gpiokeys,
+#endif
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
@@ -123,6 +126,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
+	&spear13xx_thermal_device,
 	&spear13xx_udc_device,
 	&spear13xx_wdt_device,
 
@@ -267,13 +271,7 @@ static void spear900_evb_fixup(struct machine_desc *desc, struct tag *tags,
 		char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
-	unsigned long size;
-
-	size = clcd_get_fb_size(&chimei_b101aw02_info, NUM_OF_FRAMEBUFFERS);
-	chimei_b101aw02_info.frame_buf_base =
-		reserve_mem(mi, ALIGN(size, SZ_1M));
-	if (chimei_b101aw02_info.frame_buf_base == ~0)
-		pr_err("Unable to allocate fb buffer\n");
+	spear13xx_panel_fixup(mi);
 #endif
 }
 
@@ -289,8 +287,7 @@ static void __init spear900_evb_init(void)
 
 #if (defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE))
 	/* db9000_clcd plat data */
-	clcd_set_plat_data(&spear13xx_db9000_clcd_device,
-			&chimei_b101aw02_info);
+	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
 	/* set jpeg configurations for DMA xfers */
 	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
@@ -331,8 +328,6 @@ static void __init spear900_evb_init(void)
 	i2c_register_default_devices();
 
 #ifdef CONFIG_SPEAR_PCIE_REV341
-	/* Enable PCIE0 clk */
-	enable_pcie0_clk();
 	spear900_pcie_board_init();
 #endif
 

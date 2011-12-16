@@ -113,15 +113,22 @@ static void l2x0_cache_sync(void)
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
+static void __l2x0_flush_all(void)
+{
+	debug_writel(0x03);
+	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_CLEAN_INV_WAY);
+	cache_wait_way(l2x0_base + L2X0_CLEAN_INV_WAY, l2x0_way_mask);
+	cache_sync();
+	debug_writel(0x00);
+}
+
 static void l2x0_flush_all(void)
 {
 	unsigned long flags;
 
 	/* clean all ways */
 	spin_lock_irqsave(&l2x0_lock, flags);
-	writel_relaxed(l2x0_way_mask, l2x0_base + L2X0_CLEAN_INV_WAY);
-	cache_wait_way(l2x0_base + L2X0_CLEAN_INV_WAY, l2x0_way_mask);
-	cache_sync();
+	__l2x0_flush_all();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
@@ -257,11 +264,13 @@ static void l2x0_disable(void)
 	unsigned long flags;
 
 	spin_lock_irqsave(&l2x0_lock, flags);
-	writel(0, l2x0_base + L2X0_CTRL);
+	__l2x0_flush_all();
+	writel_relaxed(0, l2x0_base + L2X0_CTRL);
+	dsb();
 	spin_unlock_irqrestore(&l2x0_lock, flags);
 }
 
-void __init l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
+void l2x0_init(void __iomem *base, __u32 aux_val, __u32 aux_mask)
 {
 	__u32 aux;
 	__u32 cache_id;

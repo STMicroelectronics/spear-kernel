@@ -17,6 +17,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
+#include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie_rev_370.h>
 
 #define PCIE_APP_SPECIFIC_OFFSET	0x2000
@@ -357,7 +358,17 @@ static void pcie_int_init(struct pcie_port *pp)
 			| INTD_CTRL_INT, &app_reg->int_mask);
 }
 
-static void spear_pcie_host_init(struct pcie_port *pp)
+static void pcie_host_exit(struct pcie_port *pp)
+{
+	struct pcie_app_reg *app_reg =
+		(struct pcie_app_reg *)((u32)pp->va_app_base
+			+ PCIE_APP_SPECIFIC_OFFSET);
+
+	writel(0, &app_reg->app_ctrl_0);
+
+}
+
+static void pcie_host_init(struct pcie_port *pp)
 {
 	struct pcie_port_info *config = &pp->config;
 	u32 cap, val;
@@ -507,7 +518,7 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 		dev_err(&pdev->dev, "link up\n");
 	} else {
 		dev_err(&pdev->dev, "link down\n");
-		spear_pcie_host_init(pp);
+		pcie_host_init(pp);
 		pp->va_cfg0_base =
 			ioremap((u32)pp->cfg0_base, pp->config.cfg0_size);
 		if (!pp->va_cfg0_base) {
@@ -533,6 +544,20 @@ free_app_res:
 	return err;
 }
 
+static int pcie_clk_init(struct pcie_port *pp)
+{
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+
+	return 0;
+}
+
+static int pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+	return 0;
+}
+
 void spear_pcie_370_add_ops(struct pcie_port *pp)
 {
 	struct pcie_private_ops	*ops = &pp->ops;
@@ -543,4 +568,8 @@ void spear_pcie_370_add_ops(struct pcie_port *pp)
 	ops->wr_other = pcie_wr_other_conf;
 	ops->add_port = add_pcie_port;
 	ops->link_up = pcie_link_up;
+	ops->host_init = pcie_host_init;
+	ops->host_exit = pcie_host_exit;
+	ops->clk_init = pcie_clk_init;
+	ops->clk_exit = pcie_clk_exit;
 }

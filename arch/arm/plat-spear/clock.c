@@ -16,10 +16,13 @@
 #include <linux/debugfs.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/jiffies.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
+#include <linux/delay.h>
 #include <plat/clock.h>
+#include <mach/misc_regs.h>
 
 /* pointer to ddr clock structure */
 static struct clk *ddr_clk;
@@ -31,7 +34,7 @@ static LIST_HEAD(clocks);
 
 static void propagate_rate(struct clk *, int on_init);
 #ifdef CONFIG_DEBUG_FS
-static int clk_debugfs_reparent(struct clk *);
+static int clk_debugfs_reparent(struct clk *c, struct clk *old_pclk);
 #endif
 
 static int generic_clk_enable(struct clk *clk)
@@ -100,6 +103,7 @@ static struct pclk_info *pclk_info_get(struct clk *clk)
 static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 {
 	unsigned long flags;
+	struct clk *old_pclk = clk->pclk;
 
 	spin_lock_irqsave(&clocks_lock, flags);
 	list_del(&clk->sibling);
@@ -109,7 +113,7 @@ static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 	spin_unlock_irqrestore(&clocks_lock, flags);
 
 #ifdef CONFIG_DEBUG_FS
-	clk_debugfs_reparent(clk);
+	clk_debugfs_reparent(clk, old_pclk);
 #endif
 }
 
@@ -240,6 +244,22 @@ unsigned long clk_get_rate(struct clk *clk)
 EXPORT_SYMBOL(clk_get_rate);
 
 /**
+ * clk_get_parent - get the parent clock source for this clock
+ * @clk: clock source
+ *
+ * Returns struct clk corresponding to parent clock source, or
+ * valid IS_ERR() condition containing errno.
+ */
+struct clk *clk_get_parent(struct clk *clk)
+{
+	if (!clk || !clk->pclk)
+		return ERR_PTR(-ENOENT);
+
+	return clk->pclk;
+}
+EXPORT_SYMBOL(clk_get_parent);
+
+/**
  * clk_set_parent - set the parent clock source for this clock
  * @clk: clock source
  * @parent: parent clock source
@@ -302,6 +322,31 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 }
 EXPORT_SYMBOL(clk_set_parent);
 
+int clk_set_parent_sys(char *dev_id, char *con_id, char *pdev_id, char *pcon_id)
+{
+	struct clk *clk, *pclk;
+	int ret = 0;
+
+	clk = clk_get_sys(dev_id, con_id);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	pclk = clk_get_sys(pdev_id, pcon_id);
+	if (IS_ERR(pclk)) {
+		ret = PTR_ERR(pclk);
+		goto put_clk;
+	}
+
+	ret = clk_set_parent(clk, pclk);
+	clk_put(pclk);
+
+put_clk:
+	clk_put(clk);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_set_parent_sys);
+
 /**
  * clk_set_rate - set the clock rate for a clock source
  * @clk: clock source
@@ -341,6 +386,22 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	return ret;
 }
 EXPORT_SYMBOL(clk_set_rate);
+
+int clk_set_rate_sys(char *dev_id, char *con_id, unsigned long rate)
+{
+	struct clk *clk;
+	int ret = 0;
+
+	clk = clk_get_sys(dev_id, con_id);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	ret = clk_set_rate(clk, rate);
+	clk_put(clk);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_set_rate_sys);
 
 /* registers clock in platform clock framework */
 void clk_register(struct clk_lookup *cl)
@@ -632,8 +693,9 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 {
 	struct vco_rate_tbl *tbls = clk->rate_config.tbls;
 	struct vco_clk_config *config = clk->private_data;
+	struct vco_clk_masks *masks = config->masks;
 	struct clk *pll_clk, *_tmp;
-	unsigned long val, rate;
+	unsigned long val, rate, finish;
 	int i;
 
 	i = round_rate_index(clk, desired_rate, &rate);
@@ -666,30 +728,44 @@ int vco_clk_set_rate(struct clk *clk, unsigned long desired_rate)
 		return 0;
 	}
 
-	val = readl(config->mode_reg) &
-		~(config->masks->mode_mask << config->masks->mode_shift);
-	val |= (tbls[i].mode & config->masks->mode_mask) <<
-		config->masks->mode_shift;
+	/* disable PLL */
+	generic_clk_disable(clk);
+
+	val = readl(config->mode_reg);
+	val &= ~(masks->mode_mask << masks->mode_shift);
+	val |= (tbls[i].mode & masks->mode_mask) << masks->mode_shift;
 	writel(val, config->mode_reg);
 
-	val = readl(config->cfg_reg) &
-		~(config->masks->div_p_mask << config->masks->div_p_shift);
-	val |= (tbls[i].p & config->masks->div_p_mask) <<
-		config->masks->div_p_shift;
-	val &= ~(config->masks->div_n_mask << config->masks->div_n_shift);
-	val |= (tbls[i].n & config->masks->div_n_mask) <<
-		config->masks->div_n_shift;
-	val &= ~(config->masks->dith_fdbk_m_mask <<
-			config->masks->dith_fdbk_m_shift);
+	val = readl(config->cfg_reg);
+	val &= ~(masks->div_p_mask << masks->div_p_shift);
+	val |= (tbls[i].p & masks->div_p_mask) << masks->div_p_shift;
+	val &= ~(masks->div_n_mask << masks->div_n_shift);
+	val |= (tbls[i].n & masks->div_n_mask) << masks->div_n_shift;
+	val &= ~(masks->dith_fdbk_m_mask << masks->dith_fdbk_m_shift);
 	if (tbls[i].mode)
-		val |= (tbls[i].m & config->masks->dith_fdbk_m_mask) <<
-			config->masks->dith_fdbk_m_shift;
+		val |= (tbls[i].m & masks->dith_fdbk_m_mask) <<
+			masks->dith_fdbk_m_shift;
 	else
-		val |= (tbls[i].m & config->masks->norm_fdbk_m_mask) <<
-			config->masks->norm_fdbk_m_shift;
+		val |= (tbls[i].m & masks->norm_fdbk_m_mask) <<
+			masks->norm_fdbk_m_shift;
 
 	writel(val, config->cfg_reg);
 	clk->rate = rate * (1 << tbls[i].p);
+
+	/* enable PLL1 */
+	generic_clk_enable(clk);
+
+	/* wait for PLL lock */
+	finish = jiffies + HZ;
+	do {
+		val = readl(config->mode_reg);
+		val &= masks->pll_lock_mask << masks->pll_lock_shift;
+		if (val)
+			break;
+		udelay(1000);
+	} while (!time_after_eq(jiffies, finish));
+
+	BUG_ON(!val);
 
 	return 0;
 }
@@ -1139,9 +1215,12 @@ err_out:
 }
 late_initcall(clk_debugfs_init);
 
-static int clk_debugfs_reparent(struct clk *c)
+static int clk_debugfs_reparent(struct clk *c, struct clk *old_pclk)
 {
-	debugfs_remove(c->dent);
-	return clk_debugfs_register_one(c);
+	if (c->dent)
+		debugfs_rename(old_pclk->dent, c->dent, c->pclk->dent,
+				c->dent->d_iname);
+
+	return 0;
 }
 #endif /* CONFIG_DEBUG_FS */

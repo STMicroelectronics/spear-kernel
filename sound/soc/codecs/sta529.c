@@ -35,7 +35,7 @@
 static const u8 sta529_reg[STA529_CACHEREGNUM] = {
 	0x35, 0xc8, 0x50, 0x00,
 	0x00, 0x00, 0x02, 0x00,
-	0x02, 0x05, 0x32, 0x41,
+	0x02, 0x05, 0xb2, 0x41,
 	0x92, 0x41, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
@@ -57,6 +57,7 @@ static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_SINGLE("Master Playback Volume", STA529_MVOL, 0, 127, 1),
 	SOC_SINGLE("Left Playback Volume", STA529_LVOL, 0, 127, 1),
 	SOC_SINGLE("Right Playback Volume", STA529_RVOL, 0, 127, 1),
+	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
 };
 
 /* reading from register cache: sta529 register value */
@@ -160,27 +161,7 @@ static int
 spear_sta_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	int ret = -EINVAL;
-	struct clk *clk;
-
-	clk = clk_get_sys(NULL, "i2s_ref_clk");
-	if (IS_ERR(clk)) {
-		ret = PTR_ERR(clk);
-		goto err_clk;
-	}
-	if (clk_set_rate(clk, freq))
-		goto err_put_clk;
-
-	ret = clk_enable(clk);
-	if (ret < 0)
-		goto err_put_clk;
-
 	return 0;
-
-err_put_clk:
-	clk_put(clk);
-err_clk:
-	return ret;
 }
 
 static int spear_sta529_mute(struct snd_soc_dai *dai, int mute)

@@ -776,6 +776,31 @@ struct pmx_dev spear1310_pmx_sata2 = {
 };
 
 /* Add spear1310 specific devices here */
+/* ssp1 device registeration */
+static struct pl022_ssp_controller ssp1_platform_data = {
+	.bus_id = 1,
+	.enable_dma = 0,
+	/*
+	 * This is number of spi devices that can be connected to spi. This
+	 * number depends on cs lines supported by soc.
+	 */
+	.num_chipselect = 3,
+};
+
+struct amba_device spear1310_ssp1_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.init_name = "ssp-pl022.1",
+		.platform_data = &ssp1_platform_data,
+	},
+	.res = {
+		.start = SPEAR1310_SSP1_BASE,
+		.end = SPEAR1310_SSP1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	.irq = {SPEAR1310_IRQ_SSP1, NO_IRQ},
+};
+
 /* uart1 device registeration */
 struct amba_device spear1310_uart1_device = {
 	.dev = {
@@ -1183,31 +1208,6 @@ struct platform_device spear1310_rs485_1_device = {
 	.resource = rs485_1_resources,
 };
 
-/* ssp1 device registeration */
-static struct pl022_ssp_controller ssp1_platform_data = {
-	.bus_id = 1,
-	.enable_dma = 0,
-	/*
-	 * This is number of spi devices that can be connected to spi. This
-	 * number depends on cs lines supported by soc.
-	 */
-	.num_chipselect = 3,
-};
-
-struct amba_device spear1310_ssp1_device = {
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.init_name = "ssp-pl022.1",
-		.platform_data = &ssp1_platform_data,
-	},
-	.res = {
-		.start = SPEAR1310_SSP1_BASE,
-		.end = SPEAR1310_SSP1_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	.irq = {SPEAR1310_IRQ_SSP1, NO_IRQ},
-};
-
 /* SATA0 device registration */
 static struct resource sata0_resources[] = {
 	{
@@ -1348,7 +1348,7 @@ free_vco_clk:
 }
 
 /* Following will create 1310 specific static virtual/physical mappings */
-struct map_desc spear1310_io_desc[] __initdata = {
+static struct map_desc spear1310_io_desc[] __initdata = {
 	{
 		.virtual	= IO_ADDRESS(SPEAR1310_RAS_BASE),
 		.pfn		= __phys_to_pfn(SPEAR1310_RAS_BASE),

@@ -12,18 +12,56 @@
  */
 
 #include <asm/irq.h>
+#include <linux/ahci_platform.h>
 #include <linux/amba/serial.h>
 #include <linux/delay.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
+#include <linux/spear_thermal.h>
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
+#include <plat/gpio.h>
+#include <plat/clock.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/i2s.h>
+#include <mach/spdif_out.h>
 #include <mach/spear1340_misc_regs.h>
+#include <mach/spear_pcie.h>
+
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN9	9
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0,
+		.gpio = SPEAR_GPIO_BTN9,
+		.active_low = 0,
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons = spear_gpio_keys_table,
+	.nbuttons = ARRAY_SIZE(spear_gpio_keys_table),
+};
+
+struct platform_device spear1340_device_gpiokeys = {
+	.name = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+#endif
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -153,7 +191,7 @@ static struct pmx_dev_mode pmx_keyboard_row_col_modes[] = {
 	},
 };
 
-struct pmx_dev spear1340_pmx_keyboard_row_col= {
+struct pmx_dev spear1340_pmx_keyboard_row_col = {
 	.name = "keyboard_row_col",
 	.modes = pmx_keyboard_row_col_modes,
 	.mode_count = ARRAY_SIZE(pmx_keyboard_row_col_modes),
@@ -935,7 +973,11 @@ static struct pmx_mux_reg pmx_spdif_out_mux[] = {
 		.address = SPEAR1340_PAD_FUNCTION_EN_5,
 		.mask = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
 		.value = SPEAR1340_PMX_SPDIF_OUT_REG5_MASK,
-	},
+	}, {
+		.address = SPEAR1340_PERIP_CFG,
+		.mask = SPEAR1340_SPDIF_OUT_ENB_MASK,
+		.value = SPEAR1340_SPDIF_OUT_ENB_MASK,
+	}
 };
 
 static struct pmx_dev_mode pmx_spdif_out_modes[] = {
@@ -1142,7 +1184,7 @@ struct pmx_dev spear1340_pmx_arm_trace = {
 	.mode_count = ARRAY_SIZE(pmx_arm_trace_modes),
 };
 
-/* pad multiplexing for device group: I2S, SSP0_CS3, CEC0-1, SPDIFF out, CLCD */
+/* pad multiplexing for device group: I2S, SSP0_CS2, CEC0-1, SPDIF out, CLCD */
 static struct pmx_mux_reg pmx_devs_grp_mux[] = {
 	{
 		.address = SPEAR1340_PAD_SHARED_IP_EN_1,
@@ -1286,7 +1328,7 @@ struct pmx_dev spear1340_pmx_sgmii = {
 static struct pmx_mux_reg pmx_pcie_mux[] = {
 	{
 		.address = SPEAR1340_PCIE_SATA_CFG,
-		.mask = SPEAR1340_PCIE_CFG_VAL,
+		.mask = SPEAR1340_SATA_PCIE_CFG_MASK,
 		.value = SPEAR1340_PCIE_CFG_VAL,
 	},
 };
@@ -1308,7 +1350,7 @@ struct pmx_dev spear1340_pmx_pcie = {
 static struct pmx_mux_reg pmx_sata_mux[] = {
 	{
 		.address = SPEAR1340_PCIE_SATA_CFG,
-		.mask = SPEAR1340_SATA_CFG_VAL,
+		.mask = SPEAR1340_SATA_PCIE_CFG_MASK,
 		.value = SPEAR1340_SATA_CFG_VAL,
 	},
 };
@@ -1327,313 +1369,9 @@ struct pmx_dev spear1340_pmx_sata = {
 };
 
 /* Add spear1340 specific devices here */
-
-/* camera interface 0 device registeration */
-struct camif_config_data cam0_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct dw_dma_slave camif0_dma_param[] = {
-	{
-		/* odd line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_P_P2M,
-	}, {
-		/* even line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_D_P2M,
-	}
-};
-
-static struct camif_controller camif0_platform_data = {
-	.dma_filter = dw_dma_filter,
-	.dma_odd_param = &camif0_dma_param[0],
-	.dma_even_param = &camif0_dma_param[1],
-	.config = &cam0_data,
-};
-
-static struct resource camif0_resources[] = {
-	{
-		.start = SPEAR1340_CAM0_BASE,
-		.end = SPEAR1340_CAM0_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "line_end_irq",
-		.start = SPEAR1340_IRQ_CAM0_CE,
-		.flags = IORESOURCE_IRQ,
-	}, {
-		.name = "frame_start_frame_end_irq",
-		.start = SPEAR1340_IRQ_CAM0_FVE,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_camif0_device = {
-	.name = "spear_camif",
-	.id = 0,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.platform_data = &camif0_platform_data,
-	},
-	.num_resources = ARRAY_SIZE(camif0_resources),
-	.resource = camif0_resources,
-};
-
-/* camera interface 1 device registeration */
-struct camif_config_data cam1_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct dw_dma_slave camif1_dma_param[] = {
-	{
-		/* odd line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_ODD),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_P_P2M,
-	}, {
-		/* even line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_EVEN),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_D_P2M,
-	}
-};
-
-static struct camif_controller camif1_platform_data = {
-	.dma_filter = dw_dma_filter,
-	.dma_odd_param = &camif1_dma_param[0],
-	.dma_even_param = &camif1_dma_param[1],
-	.config = &cam1_data,
-};
-
-static struct resource camif1_resources[] = {
-	{
-		.start = SPEAR1340_CAM1_BASE,
-		.end = SPEAR1340_CAM1_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "line_end_irq",
-		.start = SPEAR1340_IRQ_CAM1_CE,
-		.flags = IORESOURCE_IRQ,
-	}, {
-		.name = "frame_start_frame_end_irq",
-		.start = SPEAR1340_IRQ_CAM1_FVE,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_camif1_device = {
-	.name = "spear_camif",
-	.id = 1,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.platform_data = &camif1_platform_data,
-	},
-	.num_resources = ARRAY_SIZE(camif1_resources),
-	.resource = camif1_resources,
-};
-
-/* camera interface 2 device registeration */
-struct camif_config_data cam2_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct dw_dma_slave camif2_dma_param[] = {
-	{
-		/* odd line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_ODD),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_P_P2M,
-	}, {
-		/* even line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_EVEN),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_D_P2M,
-	}
-};
-
-static struct camif_controller camif2_platform_data = {
-	.dma_filter = dw_dma_filter,
-	.dma_odd_param = &camif2_dma_param[0],
-	.dma_even_param = &camif2_dma_param[1],
-	.config = &cam2_data,
-};
-
-static struct resource camif2_resources[] = {
-	{
-		.start = SPEAR1340_CAM2_BASE,
-		.end = SPEAR1340_CAM2_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "line_end_irq",
-		.start = SPEAR1340_IRQ_CAM2_CE,
-		.flags = IORESOURCE_IRQ,
-	}, {
-		.name = "frame_start_frame_end_irq",
-		.start = SPEAR1340_IRQ_CAM2_FVE,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_camif2_device = {
-	.name = "spear_camif",
-	.id = 2,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.platform_data = &camif2_platform_data,
-	},
-	.num_resources = ARRAY_SIZE(camif2_resources),
-	.resource = camif2_resources,
-};
-
-/* camera interface 3 device registeration */
-struct camif_config_data cam3_data = {
-	.sync_type = EXTERNAL_SYNC,
-	.vsync_polarity = ACTIVE_LOW,
-	.hsync_polarity = ACTIVE_LOW,
-	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
-	.capture_mode = VIDEO_MODE_ALL_FRAMES,
-	.burst_size = BURST_SIZE_256,
-	.channel = EVEN_CHANNEL,
-};
-
-struct dw_dma_slave camif3_dma_param[] = {
-	{
-		/* odd line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_ODD),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_P_P2M,
-	}, {
-		/* even line */
-		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
-		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_EVEN),
-		.cfg_lo = 0,
-		.src_master = SPEAR1340_DMA_MASTER_CAM,
-		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_256,
-		.dst_msize = DW_DMA_MSIZE_256,
-		.fc = DW_DMA_FC_D_P2M,
-	}
-};
-
-static struct camif_controller camif3_platform_data = {
-	.dma_filter = dw_dma_filter,
-	.dma_odd_param = &camif3_dma_param[0],
-	.dma_even_param = &camif3_dma_param[1],
-	.config = &cam3_data,
-};
-
-static struct resource camif3_resources[] = {
-	{
-		.start = SPEAR1340_CAM3_BASE,
-		.end = SPEAR1340_CAM3_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.name = "line_end_irq",
-		.start = SPEAR1340_IRQ_CAM3_CE,
-		.flags = IORESOURCE_IRQ,
-	}, {
-		.name = "frame_start_frame_end_irq",
-		.start = SPEAR1340_IRQ_CAM3_FVE,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear1340_camif3_device = {
-	.name = "spear_camif",
-	.id = 3,
-	.dev = {
-		.coherent_dma_mask = ~0,
-		.platform_data = &camif3_platform_data,
-	},
-	.num_resources = ARRAY_SIZE(camif3_resources),
-	.resource = camif3_resources,
-};
-
+/* Add Amba Devices */
 /* uart device registeration */
-struct dw_dma_slave uart1_dma_param[] = {
+static struct dw_dma_slave uart1_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -1679,6 +1417,349 @@ struct amba_device spear1340_uart1_device = {
 		.flags = IORESOURCE_MEM,
 	},
 	.irq = {SPEAR1340_IRQ_UART1, NO_IRQ},
+};
+
+/* Add Platform Devices */
+/* camera interface 0 device registeration */
+static struct camif_config_data cam0_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+};
+
+static struct dw_dma_slave camif0_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif0_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif0_dma_param[0],
+	.dma_even_param = &camif0_dma_param[1],
+	.config = &cam0_data,
+};
+
+static struct resource camif0_resources[] = {
+	{
+		.start = SPEAR1340_CAM0_BASE,
+		.end = SPEAR1340_CAM0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM0_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM0_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif0_device = {
+	.name = "spear_camif",
+	.id = 0,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif0_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif0_resources),
+	.resource = camif0_resources,
+};
+
+/* camera interface 1 device registeration */
+static struct camif_config_data cam1_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+};
+
+static struct dw_dma_slave camif1_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif1_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif1_dma_param[0],
+	.dma_even_param = &camif1_dma_param[1],
+	.config = &cam1_data,
+};
+
+static struct resource camif1_resources[] = {
+	{
+		.start = SPEAR1340_CAM1_BASE,
+		.end = SPEAR1340_CAM1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM1_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM1_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif1_device = {
+	.name = "spear_camif",
+	.id = 1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif1_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif1_resources),
+	.resource = camif1_resources,
+};
+
+/* camera interface 2 device registeration */
+static struct camif_config_data cam2_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+};
+
+static struct dw_dma_slave camif2_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif2_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif2_dma_param[0],
+	.dma_even_param = &camif2_dma_param[1],
+	.config = &cam2_data,
+};
+
+static struct resource camif2_resources[] = {
+	{
+		.start = SPEAR1340_CAM2_BASE,
+		.end = SPEAR1340_CAM2_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM2_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM2_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif2_device = {
+	.name = "spear_camif",
+	.id = 2,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif2_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif2_resources),
+	.resource = camif2_resources,
+};
+
+/* camera interface 3 device registeration */
+static struct camif_config_data cam3_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.transform = YUVCbYCrY,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+};
+
+static struct dw_dma_slave camif3_dma_param[] = {
+	{
+		/* odd line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_P_P2M,
+	}, {
+		/* even line */
+		.dma_dev = &spear13xx_dmac_device[1].dev,
+		.tx_reg = 0,
+		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
+		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+		.src_msize = DW_DMA_MSIZE_64,
+		.dst_msize = DW_DMA_MSIZE_64,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct camif_controller camif3_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif3_dma_param[0],
+	.dma_even_param = &camif3_dma_param[1],
+	.config = &cam3_data,
+};
+
+static struct resource camif3_resources[] = {
+	{
+		.start = SPEAR1340_CAM3_BASE,
+		.end = SPEAR1340_CAM3_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "line_end_irq",
+		.start = SPEAR1340_IRQ_CAM3_CE,
+		.flags = IORESOURCE_IRQ,
+	}, {
+		.name = "frame_start_frame_end_irq",
+		.start = SPEAR1340_IRQ_CAM3_FVE,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_camif3_device = {
+	.name = "spear_camif",
+	.id = 3,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &camif3_platform_data,
+	},
+	.num_resources = ARRAY_SIZE(camif3_resources),
+	.resource = camif3_resources,
+};
+
+/* CEC device registration */
+static struct resource cec0_resources[] = {
+	{
+		.start = SPEAR1340_CEC0_BASE,
+		.end = SPEAR1340_CEC0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_CEC0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_cec0_device = {
+	.name = "spear_cec",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(cec0_resources),
+	.resource = cec0_resources,
+};
+
+/* CEC1 device registration */
+static struct resource cec1_resources[] = {
+	{
+		.start = SPEAR1340_CEC1_BASE,
+		.end = SPEAR1340_CEC1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_CEC1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_cec1_device = {
+	.name = "spear_cec",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(cec1_resources),
+	.resource = cec1_resources,
 };
 
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
@@ -1730,20 +1811,25 @@ struct platform_device spear1340_i2c1_device = {
 };
 
 /* i2s:play device registration */
-static struct i2s_platform_data i2s_data[] = {
-	{
-		.cap = PLAY,
-		.channel = 8,
-		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-				SPEAR1340_DMA_REQ_I2S_TX,
-				SPEAR1340_DMA_REQ_I2S_RX),
-	}, {
-		.cap = RECORD,
-		.channel = 8,
-		.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-				SPEAR1340_DMA_REQ_I2S_TX,
-				SPEAR1340_DMA_REQ_I2S_RX),
-	},
+static struct dw_dma_slave i2s_play_dma_data = {
+	/* Play */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.tx_reg = SPEAR1340_I2S_PLAY_BASE + I2S_TXDMA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_I2S_TX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_I2S_PLAY,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_M2P,
+};
+
+static struct i2s_platform_data i2s_play_data = {
+	.cap = PLAY,
+	.channel = 8,
+	.play_dma_data = &i2s_play_dma_data,
+	.swidth = 16,
 };
 
 static struct resource i2s_play_resources[] = {
@@ -1764,13 +1850,34 @@ struct platform_device spear1340_i2s_play_device = {
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data[0],
+		.platform_data = &i2s_play_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s_play_resources),
 	.resource = i2s_play_resources,
 };
 
 /* i2s:record device registeration */
+static struct dw_dma_slave i2s_capture_dma_data = {
+	/* Record */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.rx_reg = SPEAR1340_I2S_REC_BASE + I2S_RXDMA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_I2S_RX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_I2S_REC,
+	.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_P2M,
+};
+
+static struct i2s_platform_data i2s_capture_data = {
+	.cap = RECORD,
+	.channel = 8,
+	.capture_dma_data = &i2s_capture_dma_data,
+	.swidth = 16,
+};
+
 static struct resource i2s_record_resources[] = {
 	{
 		.start	= SPEAR1340_I2S_REC_BASE,
@@ -1788,7 +1895,7 @@ struct platform_device spear1340_i2s_record_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data[1],
+		.platform_data = &i2s_capture_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s_record_resources),
 	.resource = i2s_record_resources,
@@ -1848,6 +1955,38 @@ struct platform_device spear1340_pwm_device = {
 };
 
 /* SATA device registration */
+void sata_miphy_exit(struct device *dev)
+{
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+
+	/* Enable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1340_PERIP1_SW_RST) | (0x1000)),
+			VA_SPEAR1340_PERIP1_SW_RST);
+	msleep(20);
+	/* Switch off sata power domain */
+	writel((readl(VA_SPEAR1340_PCM_CFG) & (~0x800)),
+			VA_SPEAR1340_PCM_CFG);
+	msleep(20);
+}
+
+static int sata_miphy_init(struct device *dev, void __iomem *addr)
+{
+	writel(SPEAR1340_SATA_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+	/* Switch on sata power domain */
+	writel((readl(VA_SPEAR1340_PCM_CFG) | (0x800)),
+			VA_SPEAR1340_PCM_CFG);
+	msleep(20);
+	/* Disable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1340_PERIP1_SW_RST) & (~0x1000)),
+			VA_SPEAR1340_PERIP1_SW_RST);
+	msleep(20);
+
+	return 0;
+}
+
 static struct resource sata_resources[] = {
 	{
 		.start = SPEAR1340_SATA_BASE,
@@ -1859,6 +1998,11 @@ static struct resource sata_resources[] = {
 	},
 };
 
+static struct ahci_platform_data sata_pdata = {
+	.init = sata_miphy_init,
+	.exit = sata_miphy_exit,
+};
+
 static u64 ahci_dmamask = DMA_BIT_MASK(32);
 
 struct platform_device spear1340_sata0_device = {
@@ -1867,9 +2011,71 @@ struct platform_device spear1340_sata0_device = {
 	.num_resources = ARRAY_SIZE(sata_resources),
 	.resource = sata_resources,
 	.dev = {
+		.platform_data = &sata_pdata,
 		.dma_mask = &ahci_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
+};
+
+/* spdif-out device registeration */
+static struct dw_dma_slave spdif_out_dma_data = {
+	/* Play */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.tx_reg = SPEAR1340_SPDIF_OUT_BASE + SPDIF_OUT_FIFO_DATA,
+	.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_SPDIF_TX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_SPDIF,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_M2P,
+};
+
+static struct spdif_out_platform_data spdif_out_data = {
+	.dma_params = &spdif_out_dma_data,
+};
+
+static struct resource spdif_out_resources[] = {
+	{
+		.start = SPEAR1340_SPDIF_OUT_BASE,
+		.end = SPEAR1340_SPDIF_OUT_BASE + SZ_128 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_SPDIF_OUT,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_spdif_out_device = {
+	.name = "spdif-out",
+	.id = -1,
+	.dev.platform_data = &spdif_out_data,
+	.num_resources = ARRAY_SIZE(spdif_out_resources),
+	.resource = spdif_out_resources,
+};
+
+/* SPEAr Thermal Sensor Platform Data for 1340 */
+static struct resource spear1340_thermal_resources[] = {
+	{
+		.start = SPEAR1340_THSENS_CFG,
+		.end = SPEAR1340_THSENS_CFG + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct spear_thermal_pdata spear1340_thermal_pdata = {
+	.thermal_flags = SPEAR1340_THERMAL_CONFIG_FLAGS,
+};
+
+struct platform_device spear1340_thermal_device = {
+	.name = "spear_thermal",
+	.id = -1,
+	.dev = {
+		.platform_data = &spear1340_thermal_pdata,
+	},
+	.num_resources = ARRAY_SIZE(spear1340_thermal_resources),
+	.resource = spear1340_thermal_resources,
 };
 
 static int spear1340_otg_phy_init(void)
@@ -1953,7 +2159,7 @@ static struct resource otg_resources[] = {
 	},
 };
 
-struct dwc_otg_plat_data otg_platform_data = {
+static struct dwc_otg_plat_data otg_platform_data = {
 	.phy_init = spear1340_otg_phy_init,
 	.param_init = spear1340_otg_param_init,
 };
@@ -1971,6 +2177,257 @@ struct platform_device spear1340_otg_device = {
 	.resource = otg_resources,
 };
 
+static int spear1340_sys_clk_init(void)
+{
+	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;
+	int ret = 0;
+	const char *sys_clk_src[] = {
+		"sys_synth_clk",
+		"pll1_clk",
+		"pll2_clk",
+		"pll3_clk",
+	};
+	const char *ahb_clk_src[] = {
+		"amba_synth_clk",
+		"cpu_clk_div3",
+	};
+
+	/*
+	 * If we need to run cpu at 600 MHz we need to have an alternate
+	 * pll (other than pll1)
+	 * So,
+	 * pll1 - would be used to feed all synthesizers and AHB
+	 * (through AHB synthesizer)
+	 * pll2 - would feed gmac (for 125 MHz)
+	 * pll3 - would be used to feed cpu
+	 *
+	 * Note: I2S which was using PLL3 as the source clock is
+	 * impacted by this. The possibility is to use an external
+	 * oscillator (not preset on board as of now) for I2S.
+	 */
+	sys_pclk = clk_get(NULL, sys_clk_src[3]);
+	if (IS_ERR(sys_pclk)) {
+		ret = PTR_ERR(sys_pclk);
+		goto fail_get_sys_pclk;
+	}
+
+	/* Get the amba synthesizer as the clock source for ahb clock */
+	ahb_pclk = clk_get(NULL, ahb_clk_src[0]);
+	if (IS_ERR(ahb_pclk)) {
+		ret = PTR_ERR(ahb_pclk);
+		goto fail_get_ahb_pclk;
+	}
+
+	/* Get the system clock */
+	sys_clk = clk_get(NULL, "sys_clk");
+	if (IS_ERR(sys_clk)) {
+		ret = PTR_ERR(sys_clk);
+		goto fail_get_sysclk;
+	}
+
+	/* Get the ahb clock */
+	ahb_clk = clk_get(NULL, "ahb_clk");
+	if (IS_ERR(ahb_clk)) {
+		ret = PTR_ERR(ahb_clk);
+		goto fail_get_ahb_clk;
+	}
+
+	if (clk_set_rate(sys_pclk, 1200000000)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set system clock rate\n");
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_set_rate(ahb_pclk, 166000000)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB rate\n");
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_enable(sys_pclk)) {
+		ret = -ENODEV;
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_enable(ahb_pclk)) {
+		ret = -ENODEV;
+		goto fail_en_sys_clk;
+	}
+
+	/* Set the amba synth as parent for ahb clk */
+	if (clk_set_parent(ahb_clk, ahb_pclk)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB parent\n");
+		goto fail_ahb_set_parent;
+	}
+
+	/* Set the sys synth as parent for sys clk */
+	if (clk_set_parent(sys_clk, sys_pclk)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set sys clk parent\n");
+		goto fail_sys_set_parent;
+	}
+
+	/* put back all the clocks */
+	goto fail_sys_set_rate;
+
+fail_sys_set_parent:
+fail_ahb_set_parent:
+	clk_disable(ahb_pclk);
+fail_en_sys_clk:
+	clk_disable(sys_pclk);
+fail_sys_set_rate:
+	clk_put(ahb_clk);
+fail_get_ahb_clk:
+	clk_put(sys_clk);
+fail_get_sysclk:
+	clk_put(ahb_pclk);
+fail_get_ahb_pclk:
+	clk_put(sys_pclk);
+fail_get_sys_pclk:
+	return ret;
+}
+
+/* gpio Configure in pull-down mode for clcd */
+static struct pmx_mux_reg gpio_pd_mux[] = {
+	{
+		.address = SPEAR1340_PAD_PU_CFG_5,
+		.mask = 0xFFFFFC00,
+		.value = 0XFFFFFC00,
+	}, {
+		.address = SPEAR1340_PAD_PU_CFG_6,
+		.mask = 0xFFFFFFFF,
+		.value = 0XFFFFFFFF,
+	}, {
+		.address = SPEAR1340_PAD_PD_CFG_5,
+		.mask = 0xFFFFFC00,
+		.value = ~0XFFFFFC00,
+	}, {
+		.address = SPEAR1340_PAD_PD_CFG_6,
+		.mask = 0xFFFFFFFF,
+		.value = ~0XFFFFFFFF,
+	},
+};
+
+static struct pmx_dev_mode gpio_pd_modes[] = {
+	{
+		.mux_regs = gpio_pd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(gpio_pd_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_clcd_gpio_pd = {
+	.name = "gpio",
+	.modes = gpio_pd_modes,
+	.mode_count = ARRAY_SIZE(gpio_pd_modes),
+};
+
+/* clcd/gpio pad selection */
+static struct pmx_mux_reg clcd_plgpios_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_5,
+		.mask = 0xFFFFF800,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_6,
+		.mask = 0xFFFFFFFF,
+	}, {
+		.address = SPEAR1340_PAD_FUNCTION_EN_7,
+		.mask = 0x00000001,
+	},
+
+};
+
+static struct pmx_dev_mode clcd_plgpios_modes[] = {
+	{
+		.mux_regs = clcd_plgpios_mux,
+		.mux_reg_cnt = ARRAY_SIZE(clcd_plgpios_mux),
+	},
+};
+
+struct pmx_dev clcd_pmx_plgpios = {
+	.name = "clcd",
+	.modes = clcd_plgpios_modes,
+	.mode_count = ARRAY_SIZE(clcd_plgpios_modes),
+};
+
+static struct pmx_dev *clcd_pmx_devs[] = {
+	&clcd_pmx_plgpios,
+};
+
+static struct gpio_req_list clcd_gpio_list[] = {
+	{
+		.start = PLGPIO_138,
+		.end = PLGPIO_191,
+	},
+};
+
+/* padmux devices to enable */
+static void config_clcd_pads(struct pmx_dev **devs, u8 count, bool on)
+{
+	struct pmx_mux_reg *mux_reg;
+	int ret, i, j, k;
+
+	/*
+	 * Some pmx structures will be used to set/reset register for clcd pmx
+	 * registers. Set register to make pads as clcd signals if on is true
+	 * else reset to make pads as gpio.
+	 */
+	for (i = 0; i < count; i++) {
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+				mux_reg = &devs[i]->modes[j].mux_regs[k];
+				mux_reg->value = on ? mux_reg->mask : 0x0;
+			}
+		}
+	}
+
+	ret = pmx_devs_enable(devs, count);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+/* Switch pads to plgpio or clcd now */
+void config_clcd_gpio_pads(bool on)
+{
+	int ret;
+	static bool gpio_avail;
+
+	if (!gpio_avail) {
+		ret = request_gpio(clcd_gpio_list, GPIOF_IN,
+				ARRAY_SIZE(clcd_gpio_list));
+		if (ret)
+			pr_err("clcd request for gpio is failed. err no:%d\n",
+					ret);
+
+		gpio_avail = true;
+	}
+
+	config_clcd_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
+}
+
+#ifdef CONFIG_SND_SPEAR_SPDIF_OUT
+static int spdif_out_clk_init(void)
+{
+	int ret;
+
+	ret = clk_set_parent_sys("gen_synth2_clk", NULL, NULL, "vco1div4_clk");
+	if (ret)
+		return ret;
+
+	return clk_set_parent_sys("spdif-out", NULL, "gen_synth2_clk", NULL);
+}
+#endif
+
+#ifdef CONFIG_SPEAR_PCIE_REV370
+/* This function is needed for board specific PCIe initilization */
+void __init spear1340_pcie_board_init(struct device *dev)
+{
+	void *plat_data;
+
+	plat_data = dev_get_platdata(dev);
+	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
+}
+#endif
 
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count)
@@ -1979,6 +2436,18 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 
 	/* call spear13xx family common init function */
 	spear13xx_init();
+
+	/* call spear1340 system clock init function */
+	ret = spear1340_sys_clk_init();
+	if (ret)
+		pr_err("SPEAr1340: sysclock init failed, err no: %d\n", ret);
+
+#ifdef CONFIG_SND_SPEAR_SPDIF_OUT
+	/* call spdif clock init */
+	ret = spdif_out_clk_init();
+	if (ret)
+		pr_err("SPEAr1340: spdif clock init failed, err no: %d\n", ret);
+#endif
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;

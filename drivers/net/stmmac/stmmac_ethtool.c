@@ -335,6 +335,7 @@ static int stmmac_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 	u32 support = WAKE_MAGIC;
+	int wakeup_dev_stat = 0;
 
 	if (!device_can_wakeup(priv->device))
 		return -EINVAL;
@@ -343,7 +344,14 @@ static int stmmac_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 		return -EINVAL;
 
 	if (wol->wolopts) {
-		if (!device_set_wakeup_enable(priv->device, 1)) {
+		wakeup_dev_stat = device_set_wakeup_enable(priv->device, 1);
+		/*
+		 * Check if the wake up source has been registered.
+		 * The wake up irq should only be set for the first time
+		 * initializations.
+		 */
+		if (!wakeup_dev_stat || (wakeup_dev_stat == -EEXIST &&
+					priv->irq_wake == 0)) {
 			pr_info("stmmac: wakeup enable\n");
 			if (!enable_irq_wake(priv->wol_irq))
 				priv->irq_wake = 1;

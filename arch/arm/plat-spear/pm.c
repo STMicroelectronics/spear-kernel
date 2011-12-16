@@ -16,22 +16,37 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <asm/cacheflush.h>
-#include <mach/irqs.h>
 #include <mach/suspend.h>
+
+#define PLAT_PHYS_OFFSET	0x00000000
 
 static void (*saved_idle)(void);
 
 static int spear_pm_sleep(suspend_state_t state)
 {
-	void (*spear_sram_sleep)(suspend_state_t state) = NULL;
+
+	/* Suspend the event timer */
+	spear_clocksource_suspend();
+	/* Move the cpu into suspend */
+	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
+	/* Resume the event timer */
+	spear_clocksource_resume();
+	return 0;
+}
+/*
+ * This function call is made post the CPU suspend is done.
+ */
+void spear_sys_suspend(suspend_state_t state)
+{
+	void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk)
+			= NULL;
 
 	/* Copy the Sleep code on to the SRAM*/
 	spear_sram_sleep = memcpy((void *)IO_ADDRESS(SPEAR_START_SRAM),
 			(void *)spear_sleep_mode, spear_sleep_mode_sz);
 	flush_cache_all();
 	/* Jump to the suspend routines in sram */
-	spear_sram_sleep(state);
-	return 0;
+	spear_sram_sleep(state, (unsigned long *)(virt_to_phys(cpu_resume)));
 }
 
 /*
@@ -89,7 +104,7 @@ static int __init spear_pm_init(void)
 {
 
 	/* In case the suspend code size is more than sram size return */
-	if (spear_sleep_mode_sz > (SPEAR_SRAM_SIZE))
+	if (spear_sleep_mode_sz > SPEAR_SRAM_SIZE)
 		return	-ENOMEM;
 
 	suspend_set_ops(&spear_pm_ops);

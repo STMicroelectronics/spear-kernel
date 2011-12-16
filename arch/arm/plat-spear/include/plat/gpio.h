@@ -69,4 +69,24 @@ struct plgpio_platform_data {
 	struct plgpio_regs regs;
 };
 
+struct gpio_req_list {
+	int start;
+	int end;
+};
+
+static inline int request_gpio(struct gpio_req_list *gpio_list,
+		unsigned long flags, int cnt)
+{
+	int i, j, err;
+
+	for (j = 0; j < cnt; j++) {
+		for (i = gpio_list[j].start; i <= gpio_list[j].end; i++) {
+			err = gpio_request_one(i, flags, "gpio");
+			if (err)
+				pr_err("GPIO request is fail %d", i);
+		}
+	}
+	return 0;
+}
+
 #endif /* __PLAT_GPIO_H */

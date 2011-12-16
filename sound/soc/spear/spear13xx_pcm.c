@@ -11,35 +11,22 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/designware_i2s.h>
 #include <linux/module.h>
+#include <linux/dmaengine.h>
+#include <linux/dma-mapping.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
-#include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <mach/dma.h>
 #include "spear13xx_pcm.h"
-
-static u64 spear13xx_pcm_dmamask = 0xFFFFFFFF;
 
 struct snd_pcm_hardware spear13xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
-	.formats = (SNDRV_PCM_FMTBIT_S16_LE),
-	.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |
-			SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 |
-			SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
-			SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
-			SNDRV_PCM_RATE_KNOT),
-	.rate_min = 8000,
-	.rate_max = 96000,
-	.channels_min = 2,
-	.channels_max = 8,
 	.buffer_bytes_max = 16 * 1024, /* max buffer size */
 	.period_bytes_min = 2 * 1024, /* 1 msec data minimum period size */
 	.period_bytes_max = 2 * 1024, /* maximum period size */
@@ -53,15 +40,11 @@ static void pcm_dma_complete(void *arg);
 static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct spear13xx_runtime_data *prtd = runtime->private_data;
-	int ret;
-
-	ret = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(params));
+	int ret = snd_pcm_lib_malloc_pages(substream,
+					params_buffer_bytes(params));
 	if (ret < 0)
 		return ret;
 
-	prtd->substream = substream;
 	return 0;
 }
 
@@ -243,21 +226,16 @@ static bool filter(struct dma_chan *chan, void *slave)
 
 static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
-	dma_cap_mask_t smask;
-	struct dma_slaves *ds = substream_to_ds(substream, &smask);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		prtd->dma_chan[0] = dma_request_channel(smask, filter,
-				&ds->mem2i2s_slave);
-		if (!prtd->dma_chan[0])
-			return -EAGAIN;
-	} else {
-		prtd->dma_chan[1] = dma_request_channel(smask, filter,
-				&ds->i2s2mem_slave);
-		if (!prtd->dma_chan[1])
-			return -EAGAIN;
-	}
+	int stream = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 0 : 1;
+	void *dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	prtd->dma_chan[stream] = dma_request_channel(prtd->smask, filter,
+				dma_data);
+	if (!prtd->dma_chan[stream])
+		return -EAGAIN;
 
 	return 0;
 }
@@ -297,13 +275,17 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 
 	spin_lock_init(&prtd->lock);
 	substream->runtime->private_data = prtd;
+	prtd->substream = substream;
+	dma_cap_zero(prtd->smask);
+	dma_cap_set(DMA_SLAVE, prtd->smask);
 
 	ret = pcm_alloc_dma_chan(substream);
 	if (ret) {
-		dev_err(&prtd->dev, "pcm:Failed to get dma channels\n");
+		dev_err(substream->pcm->card->dev,
+				"pcm:Failed to get dma channels\n");
 		kfree(prtd);
-
 	}
+
 	return 0;
 }
 
@@ -313,6 +295,7 @@ static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 
 	pcm_dma_free_chan(substream);
 	kfree(prtd);
+
 	return 0;
 }
 
@@ -374,7 +357,7 @@ static void spear13xx_pcm_free(struct snd_pcm *pcm)
 			continue;
 
 		buf = &substream->dma_buffer;
-		if (!buf->area)
+		if (!buf && !buf->area)
 			continue;
 
 		dma_free_writecombine(pcm->card->dev, buf->bytes,
@@ -382,6 +365,8 @@ static void spear13xx_pcm_free(struct snd_pcm *pcm)
 		buf->area = NULL;
 	}
 }
+
+static u64 spear13xx_pcm_dmamask = DMA_BIT_MASK(32);
 
 static int spear13xx_pcm_new(struct snd_card *card,
 		struct snd_soc_dai *dai, struct snd_pcm *pcm)
@@ -391,7 +376,7 @@ static int spear13xx_pcm_new(struct snd_card *card,
 	if (!card->dev->dma_mask)
 		card->dev->dma_mask = &spear13xx_pcm_dmamask;
 	if (!card->dev->coherent_dma_mask)
-		card->dev->coherent_dma_mask = 0xFFFFFFFF;
+		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
 	if (dai->driver->playback.channels_min) {
 		ret = spear13xx_pcm_preallocate_dma_buffer(pcm,

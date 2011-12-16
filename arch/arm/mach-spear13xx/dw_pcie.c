@@ -679,6 +679,43 @@ static struct hw_pci pci = {
 	.map_irq	= pcie_map_irq,
 };
 
+#ifdef CONFIG_PM
+int spear_pcie_suspend(void)
+{
+	struct pcie_port *pp;
+	int i;
+
+	for (i = 0; i < pci.nr_controllers; i++) {
+		pp = controller_to_port(i);
+		if (pp->ops.link_up(pp->va_app_base)) {
+			pp->ops.host_exit(pp);
+			pp->ops.clk_exit(pp);
+			pp->susp_state = 1;
+		}
+	}
+
+	return 0;
+}
+
+int spear_pcie_resume(void)
+{
+	struct pcie_port *pp;
+	int i;
+
+	for (i = 0; i < pci.nr_controllers; i++) {
+		pp = controller_to_port(i);
+		if (pp->susp_state) {
+			pp->ops.clk_init(pp);
+			pp->susp_state = 0;
+			if (!pp->ops.link_up(pp->va_app_base))
+				pp->ops.host_init(pp);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static int __init pcie_probe(struct platform_device *pdev)
 {
 	int err;
@@ -697,18 +734,6 @@ static int __init pcie_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(clk)) {
-		dev_err(&pdev->dev, "couldn't get clk for pcie\n");
-		err = -EINVAL;
-		goto free_mem;
-	}
-	if (clk_enable(clk)) {
-		dev_err(&pdev->dev, "couldn't enable clk for pcie\n");
-		err = -EINVAL;
-		goto clk_put;
-	}
-
 	memcpy(&pp->config, pdev->dev.platform_data, (sizeof(pp->config)));
 
 	switch (pp->config.vendor) {
@@ -725,7 +750,25 @@ static int __init pcie_probe(struct platform_device *pdev)
 	default:
 		dev_err(&pdev->dev, "ops not defined for this vendor\n");
 		err = -EINVAL;
-		goto clk_disable;
+		goto free_mem;
+	}
+
+	if (pp->ops.clk_init(pp)) {
+		err = -EINVAL;
+		goto free_mem;
+	}
+
+	clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(clk)) {
+		dev_err(&pdev->dev, "couldn't get clk for pcie\n");
+		err = PTR_ERR(clk);;
+		goto free_mem;
+	}
+
+	if (clk_enable(clk)) {
+		dev_err(&pdev->dev, "couldn't enable clk for pcie\n");
+		err = -EINVAL;
+		goto clk_put;
 	}
 
 	if (!pp->ops.add_port(pp, pdev)) {
@@ -734,8 +777,6 @@ static int __init pcie_probe(struct platform_device *pdev)
 		list_add_tail(&pp->next, &pcie_port_list);
 		return 0;
 	}
-clk_disable:
-	clk_disable(clk);
 clk_put:
 	clk_put(clk);
 free_mem:
@@ -753,9 +794,12 @@ static struct platform_driver pcie_driver = {
 static int __init pcie_init(void)
 {
 	INIT_LIST_HEAD(&pcie_port_list);
-	platform_driver_probe(&pcie_driver, pcie_probe);
-	pci_common_init(&pci);
-	pr_info("pcie init successful\n");
+	platform_driver_register(&pcie_driver);
+	if (pci.nr_controllers) {
+		pci_common_init(&pci);
+		pr_info("pcie init successful\n");
+	}
+
 	return 0;
 }
 subsys_initcall(pcie_init);

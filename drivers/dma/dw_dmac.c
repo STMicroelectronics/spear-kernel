@@ -62,7 +62,7 @@
  * made configurable somehow; preferably, the clients (at least the
  * ones using slave transfers) should be able to give us a hint.
  */
-#define NR_DESCS_PER_CHANNEL	64
+#define NR_DESCS_PER_CHANNEL	2048
 
 /*----------------------------------------------------------------------*/
 
@@ -165,6 +165,38 @@ dwc_assign_cookie(struct dw_dma_chan *dwc, struct dw_desc *desc)
 	return cookie;
 }
 
+static void dwc_initialize(struct dw_dma_chan *dwc)
+{
+	struct dw_dma *dw = to_dw_dma(dwc->chan.device);
+	struct dw_dma_slave *dws = dwc->chan.private;
+	u32 cfghi = DWC_CFGH_FIFO_MODE;
+	u32 cfglo = DWC_CFGL_CH_PRIOR(dwc->priority);
+
+	if (dwc->initialized == true)
+		return;
+
+	if (dws) {
+		/*
+		 * We need controller-specific data to set up slave
+		 * transfers.
+		 */
+		BUG_ON(!dws->dma_dev || dws->dma_dev != dw->dma.dev);
+
+		cfghi = dws->cfg_hi;
+		cfglo |= dws->cfg_lo & ~DWC_CFGL_CH_PRIOR_MASK;
+	}
+
+	channel_writel(dwc, CFG_LO, cfglo);
+	channel_writel(dwc, CFG_HI, cfghi);
+
+	/* Enable interrupts */
+	channel_set_bit(dw, MASK.XFER, dwc->mask);
+	/* channel_set_bit(dw, MASK.BLOCK, dwc->mask); */
+	channel_set_bit(dw, MASK.ERROR, dwc->mask);
+
+	dwc->initialized = true;
+}
+
 /*----------------------------------------------------------------------*/
 
 /* Called with dwc->lock held and bh disabled */
@@ -187,6 +219,8 @@ static void dwc_dostart(struct dw_dma_chan *dwc, struct dw_desc *first)
 		/* The tasklet will hopefully advance the queue... */
 		return;
 	}
+
+	dwc_initialize(dwc);
 
 	channel_writel(dwc, LLP, first->txd.phys);
 	channel_writel(dwc, CTL_LO,
@@ -732,8 +766,14 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 
 			mem = sg_phys(sg);
 			len = sg_dma_len(sg);
-			mem_width = 2;
-			if (unlikely(mem & 3 || len & 3))
+
+			if (!((mem | len) & 7))
+				mem_width = 3;
+			else if (!((mem | len) & 3))
+				mem_width = 2;
+			else if (!((mem | len) & 1))
+				mem_width = 1;
+			else
 				mem_width = 0;
 
 slave_sg_todev_fill_desc:
@@ -790,8 +830,14 @@ slave_sg_todev_fill_desc:
 
 			mem = sg_phys(sg);
 			len = sg_dma_len(sg);
-			mem_width = 2;
-			if (unlikely(mem & 3 || len & 3))
+
+			if (!((mem | len) & 7))
+				mem_width = 3;
+			else if (!((mem | len) & 3))
+				mem_width = 2;
+			else if (!((mem | len) & 1))
+				mem_width = 1;
+			else
 				mem_width = 0;
 
 slave_sg_fromdev_fill_desc:
@@ -958,10 +1004,7 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 	struct dw_dma_chan	*dwc = to_dw_dma_chan(chan);
 	struct dw_dma		*dw = to_dw_dma(chan->device);
 	struct dw_desc		*desc;
-	struct dw_dma_slave	*dws;
 	int			i;
-	u32			cfghi;
-	u32			cfglo;
 	unsigned long		flags;
 
 	dev_vdbg(chan2dev(chan), "alloc_chan_resources\n");
@@ -973,26 +1016,6 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 	}
 
 	dwc->completed = chan->cookie = 1;
-
-	cfghi = DWC_CFGH_FIFO_MODE;
-	cfglo = 0;
-
-	dws = chan->private;
-	if (dws) {
-		/*
-		 * We need controller-specific data to set up slave
-		 * transfers.
-		 */
-		BUG_ON(!dws->dma_dev || dws->dma_dev != dw->dma.dev);
-
-		cfghi = dws->cfg_hi;
-		cfglo = dws->cfg_lo & ~DWC_CFGL_CH_PRIOR_MASK;
-	}
-
-	cfglo |= DWC_CFGL_CH_PRIOR(dwc->priority);
-
-	channel_writel(dwc, CFG_LO, cfglo);
-	channel_writel(dwc, CFG_HI, cfghi);
 
 	/*
 	 * NOTE: some controllers may have additional features that we
@@ -1025,11 +1048,6 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 		i = ++dwc->descs_allocated;
 	}
 
-	/* Enable interrupts */
-	channel_set_bit(dw, MASK.XFER, dwc->mask);
-	/* channel_set_bit(dw, MASK.BLOCK, dwc->mask); */
-	channel_set_bit(dw, MASK.ERROR, dwc->mask);
-
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	dev_dbg(chan2dev(chan),
@@ -1057,6 +1075,7 @@ static void dwc_free_chan_resources(struct dma_chan *chan)
 	spin_lock_irqsave(&dwc->lock, flags);
 	list_splice_init(&dwc->free_list, &list);
 	dwc->descs_allocated = 0;
+	dwc->initialized = false;
 
 	/* Disable interrupts */
 	channel_clear_bit(dw, MASK.XFER, dwc->mask);
@@ -1334,9 +1353,14 @@ EXPORT_SYMBOL(dw_dma_cyclic_free);
 
 static void dw_dma_off(struct dw_dma *dw)
 {
+	int i;
+
 	dma_writel(dw, CFG, 0);
 	while (dma_readl(dw, CFG) & DW_CFG_DMA_EN)
 		cpu_relax();
+
+	for (i = 0; i < dw->dma.chancnt; i++)
+		dw->chan[i].initialized = false;
 }
 
 static int __init dw_probe(struct platform_device *pdev)
@@ -1526,6 +1550,7 @@ static int dw_suspend_noirq(struct device *dev)
 
 	dw_dma_off(platform_get_drvdata(pdev));
 	clk_disable(dw->clk);
+
 	return 0;
 }
 

@@ -28,6 +28,7 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
+#define SCU_CTRL	0x00
 /*
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
@@ -74,10 +75,21 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
+static void wakeup_secondary(void);
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
+	u32 scu_ctrl;
 
+	scu_ctrl = __raw_readl(scu_base_addr() + SCU_CTRL);
+	/* Already not enabled */
+	if (!(scu_ctrl & 1)) {
+		scu_ctrl |= 1;
+		__raw_writel(scu_ctrl, scu_base_addr() + SCU_CTRL);
+		flush_cache_all();
+	}
+
+	wakeup_secondary();
 	/*
 	 * set synchronisation state between this boot processor
 	 * and the secondary one
@@ -94,6 +106,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 */
 	pen_release = cpu;
 	flush_cache_all();
+	outer_flush_all();
 
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
@@ -113,11 +126,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	return pen_release != -1 ? -ENOSYS : 0;
 }
 
-static void __init wakeup_secondary(void)
+static void wakeup_secondary(void)
 {
 	/* nobody is to be released from the pen yet */
 	pen_release = -1;
-
 	/*
 	 * Write the address of secondary startup into the system-wide
 	 * location (presently it is in SRAM). The BootMonitor waits

@@ -46,7 +46,7 @@ static int dwmac1000_dma_init(void __iomem *ioaddr, int pbl, u32 dma_tx,
 	if (limit < 0)
 		return -EBUSY;
 
-	value = DMA_BUS_MODE_FB | /* DMA_BUS_MODE_4PBL |*/
+	value = DMA_BUS_MODE_FB | DMA_BUS_MODE_4PBL |
 	    ((pbl << DMA_BUS_MODE_PBL_SHIFT) |
 	     (pbl << DMA_BUS_MODE_RPBL_SHIFT));
 
@@ -54,6 +54,19 @@ static int dwmac1000_dma_init(void __iomem *ioaddr, int pbl, u32 dma_tx,
 	value |= DMA_BUS_MODE_DA;	/* Rx has priority over tx */
 #endif
 	writel(value, ioaddr + DMA_BUS_MODE);
+	/*
+	 * We need to program DMA_AXI_BUS_MODE for supported bursts in
+	 * case DMA_BUS_MODE_FB mode is selected
+	 *
+	 * Note: This is applicable only for revision GMACv3.61a. For
+	 * older version this register is reserved and shall have no
+	 * effect.
+	 * Further we directly write 0xFF to this register. This would
+	 * ensure that all bursts supported by platform is set and those
+	 * which are not supported would remain ineffective.
+	 */
+	if (value & DMA_BUS_MODE_FB)
+		writel(0xFF, ioaddr + DMA_AXI_BUS_MODE);
 
 	/* Mask interrupts by writing to CSR7 */
 	writel(DMA_INTR_DEFAULT_MASK, ioaddr + DMA_INTR_ENA);

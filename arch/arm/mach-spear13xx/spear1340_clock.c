@@ -79,6 +79,8 @@ static struct vco_clk_masks vco_masks = {
 	.div_p_shift = SPEAR1340_PLL_DIV_P_SHIFT,
 	.div_n_mask = SPEAR1340_PLL_DIV_N_MASK,
 	.div_n_shift = SPEAR1340_PLL_DIV_N_SHIFT,
+	.pll_lock_mask = SPEAR1340_PLL_LOCK_MASK,
+	.pll_lock_shift = SPEAR1340_PLL_LOCK_SHIFT,
 };
 /* vco1 configuration structure */
 static struct vco_clk_config vco1_config = {
@@ -97,6 +99,7 @@ static struct vco_rate_tbl vco_rtbl[] = {
 	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x1}, /* vco 1328, pll 664 MHz */
 	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x1}, /* vco 1600, pll 800 MHz */
 	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x0}, /* vco 1, pll 1 GHz */
+	{.mode = 0, .m = 0x96, .n = 0x06, .p = 0x0}, /* vco 1200, pll 1200 MHz */
 };
 
 /* vco1 clock */
@@ -113,6 +116,15 @@ static struct clk vco1_clk = {
 	.private_data = &vco1_config,
 };
 
+/* thermal clock */
+static struct clk thermal_clk = {
+	.en_reg = VA_SPEAR1340_PERIP2_CLK_ENB,
+	.en_reg_bit = SPEAR1340_THSENS_CLK_ENB,
+	.pclk = &osc1_24m_clk,
+	.div_factor = 128,
+	.recalc = &follow_parent,
+};
+
 /* clock derived from vco1 clock */
 /* pll1 clock */
 static struct clk pll1_clk = {
@@ -127,6 +139,116 @@ static struct clk vco1div2_clk = {
 	.pclk = &vco1_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
+};
+
+/*
+ * Synthesizer Clock derived from vcodiv2. This clock is one of the
+ * possible clocks to feed cpu directly.
+ * We can program this synthesizer to make cpu run on different clock
+ * frequencies.
+ * Following table provides configuration values to let cpu run on 200,
+ * 250, 332, 400 or 500 MHz considering different possibilites of input
+ * (vco1div2) clock.
+ *
+ * --------------------------------------------------------------------
+ * vco1div2(Mhz)	fout(Mhz)	cpuclk = fout/2		div
+ * --------------------------------------------------------------------
+ * 400			200		100			0x04000
+ * 400			250		125			0x03333
+ * 400			332		166			0x0268D
+ * 400			400		200			0x02000
+ * --------------------------------------------------------------------
+ * 500			200		100			0x05000
+ * 500			250		125			0x04000
+ * 500			332		166			0x03031
+ * 500			400		200			0x02800
+ * 500			500		250			0x02000
+ * --------------------------------------------------------------------
+ * 664			200		100			0x06a38
+ * 664			250		125			0x054FD
+ * 664			332		166			0x04000
+ * 664			400		200			0x0351E
+ * 664			500		250			0x02A7E
+ * --------------------------------------------------------------------
+ * 800			200		100			0x08000
+ * 800			250		125			0x06666
+ * 800			332		166			0x04D18
+ * 800			400		200			0x04000
+ * 800			500		250			0x03333
+ * --------------------------------------------------------------------
+ * sys rate configuration table is in descending order of divisor.
+ */
+static struct frac_synth_rate_tbl sys_synth_rtbl[] = {
+	{.div = 0x08000},
+	{.div = 0x06a38},
+	{.div = 0x06666},
+	{.div = 0x054FD},
+	{.div = 0x05000},
+	{.div = 0x04D18},
+	{.div = 0x04000},
+	{.div = 0x0351E},
+	{.div = 0x03333},
+	{.div = 0x03031},
+	{.div = 0x02A7E},
+	{.div = 0x02800},
+	{.div = 0x0268D},
+	{.div = 0x02000},
+};
+
+/* common fractional synthesizer masks */
+static struct frac_synth_masks frac_synth_masks = {
+	.div_factor_mask = SPEAR1340_FRAC_SYNT_DIV_FACTOR_MASK,
+	.div_factor_shift = SPEAR1340_FRAC_SYNT_DIV_FACTOR_SHIFT,
+};
+
+/* system synthesizer clock definitions */
+static struct frac_synth_clk_config sys_synth_config = {
+	.synth_reg = VA_SPEAR1340_SYS_CLK_SYNT,
+	.masks = &frac_synth_masks,
+};
+
+/* sys synth clock */
+static struct clk sys_synth_clk = {
+	.flags = SYSTEM_CLK,
+	.en_reg = VA_SPEAR1340_SYS_CLK_SYNT,
+	.en_reg_bit = SPEAR1340_FRAC_SYNT_ENB,
+	.pclk = &vco1div2_clk,
+	.calc_rate = &frac_synth_calc_rate,
+	.recalc = &frac_synth_clk_recalc,
+	.set_rate = &frac_synth_clk_set_rate,
+	.rate_config = {sys_synth_rtbl, ARRAY_SIZE(sys_synth_rtbl), 8},
+	.private_data = &sys_synth_config,
+};
+
+/*
+ * All below entries generate 166 MHz for
+ * different values of vco1div2
+ */
+static struct frac_synth_rate_tbl amba_synth_rtbl[] = {
+	{.div = 0x06062}, /* for vco1div2 = 500 MHz */
+	{.div = 0x04D1B}, /* for vco1div2 = 400 MHz */
+	{.div = 0x04000}, /* for vco1div2 = 332 MHz */
+	{.div = 0x03031}, /* for vco1div2 = 250 MHz */
+	{.div = 0x0268D}, /* for vco1div2 = 200 MHz */
+};
+
+/* amba synth clock definitions */
+static struct frac_synth_clk_config amba_synth_config = {
+	.synth_reg = VA_SPEAR1340_AMBA_CLK_SYNT,
+	.masks = &frac_synth_masks,
+};
+
+/* sys synth clock */
+static struct clk amba_synth_clk = {
+	.flags = SYSTEM_CLK,
+	.en_reg = VA_SPEAR1340_AMBA_CLK_SYNT,
+	.en_reg_bit = SPEAR1340_FRAC_SYNT_ENB,
+	.pclk = &vco1div2_clk,
+	.calc_rate = &frac_synth_calc_rate,
+	.recalc = &frac_synth_clk_recalc,
+	.set_rate = &frac_synth_clk_set_rate,
+	.rate_config = {amba_synth_rtbl, ARRAY_SIZE(amba_synth_rtbl), 0},
+	.private_data = &amba_synth_config,
 };
 
 /* vco1div4 clock */
@@ -146,7 +268,7 @@ static struct vco_clk_config vco2_config = {
 
 /* vco2 clock */
 static struct clk vco2_clk = {
-	.flags = SYSTEM_CLK,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = SPEAR1340_PLL2_CLK_SHIFT,
 	.en_reg = VA_SPEAR1340_PLL2_CTR,
@@ -183,7 +305,7 @@ static struct vco_clk_config vco3_config = {
 
 /* vco3 clock */
 static struct clk vco3_clk = {
-	.flags = SYSTEM_CLK,
+	.flags = ENABLED_ON_INIT | SYSTEM_CLK,
 	.pclk_sel = &vco_pclk_sel,
 	.pclk_sel_shift = SPEAR1340_PLL3_CLK_SHIFT,
 	.en_reg = VA_SPEAR1340_PLL3_CTR,
@@ -275,27 +397,83 @@ static struct clk ddr_clk = {
 	.private_data = &ddr_rate_tbl,
 };
 
+static struct pclk_info sys_pclk_info[] = {
+	{
+		.pclk = &pll1_clk,
+		.pclk_val = SPEAR1340_SCLK_SRC_PLL1,
+	}, {
+		.pclk = &sys_synth_clk,
+		.pclk_val = SPEAR1340_SCLK_SRC_SYNT,
+	}, {
+		.pclk = &pll2_clk,
+		.pclk_val = SPEAR1340_SCLK_SRC_PLL2,
+	}, {
+		.pclk = &pll3_clk,
+		.pclk_val = SPEAR1340_SCLK_SRC_PLL3,
+	},
+};
+
+static struct pclk_sel sys_pclk_sel = {
+	.pclk_info = sys_pclk_info,
+	.pclk_count = ARRAY_SIZE(sys_pclk_info),
+	.pclk_sel_reg = VA_SPEAR1340_SYS_CLK_CTRL,
+	.pclk_sel_mask = SPEAR1340_SCLK_SRC_SEL_MASK,
+};
+
+/* sys clock */
+static struct clk sys_clk = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk_sel = &sys_pclk_sel,
+	.pclk_sel_shift = SPEAR1340_SCLK_SRC_SEL_SHIFT,
+	.recalc = &follow_parent,
+};
+
 /* cpu clock */
 static struct clk cpu_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll1_clk,
+	.pclk = &sys_clk,
 	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
+/* cpu clock div3*/
+static struct clk cpu_clk_div3 = {
+	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
+	.pclk = &cpu_clk,
+	.div_factor = 3,
+	.recalc = &follow_parent,
+};
+
 /* ahb clock */
+static struct pclk_info ahb_pclk_info[] = {
+	{
+		.pclk = &cpu_clk_div3,
+		.pclk_val = SPEAR1340_HCLK_SRC_CPU,
+	}, {
+		.pclk = &amba_synth_clk,
+		.pclk_val = SPEAR1340_HCLK_SRC_SYNT,
+	},
+};
+
+static struct pclk_sel ahb_pclk_sel = {
+	.pclk_info = ahb_pclk_info,
+	.pclk_count = ARRAY_SIZE(ahb_pclk_info),
+	.pclk_sel_reg = VA_SPEAR1340_SYS_CLK_CTRL,
+	.pclk_sel_mask = SPEAR1340_HCLK_SRC_SEL_MASK,
+};
+
 static struct clk ahb_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll1_clk,
-	.div_factor = 6,
+	.pclk_sel = &ahb_pclk_sel,
+	.pclk_sel_shift = SPEAR1340_HCLK_SRC_SEL_SHIFT,
 	.recalc = &follow_parent,
 };
 
 /* apb clock */
 static struct clk apb_clk = {
 	.flags = ALWAYS_ENABLED | SYSTEM_CLK,
-	.pclk = &pll1_clk,
-	.div_factor = 12,
+	.pclk = &ahb_clk,
+	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
@@ -378,10 +556,10 @@ static struct aux_clk_masks aux_masks = {
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For VCO1div2 = 500 MHz */
-	{.xscale = 5, .yscale = 204, .eq = 1}, /* 12.29 MHz */
-	{.xscale = 2, .yscale = 21, .eq = 1}, /* 48 MHz */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* 83 MHz */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* 125 MHz */
+	{.xscale = 10, .yscale = 204, .eq = 0}, /* 12.29 MHz */
+	{.xscale = 4, .yscale = 21, .eq = 0}, /* 48 MHz */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* 83 MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* 125 MHz */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 250 MHz */
 };
@@ -626,8 +804,8 @@ static struct clk gmac_phy_input_clk = {
 /* gmac rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl gmac_rtbl[] = {
 	/* For gmac phy input clk */
-	{.xscale = 1, .yscale = 6, .eq = 1}, /* divided by 6 */
-	{.xscale = 1, .yscale = 4, .eq = 1}, /* divided by 4 */
+	{.xscale = 2, .yscale = 6, .eq = 0}, /* divided by 6 */
+	{.xscale = 2, .yscale = 4, .eq = 0}, /* divided by 4 */
 	{.xscale = 1, .yscale = 3, .eq = 1}, /* divided by 3 */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* divided by 2 */
 };
@@ -670,15 +848,10 @@ static struct clk gmac_phy0_clk = {
 	.recalc = &follow_parent,
 };
 
-/* clcd fractional synthesizers masks */
-static struct frac_synth_masks clcd_masks = {
-	.div_factor_mask = SPEAR1340_FRAC_SYNT_DIV_FACTOR_MASK,
-	.div_factor_shift = SPEAR1340_FRAC_SYNT_DIV_FACTOR_SHIFT,
-};
-
+/* clcd fractional synthesizers definition */
 static struct frac_synth_clk_config clcd_synth_config = {
 	.synth_reg = VA_SPEAR1340_CLCD_CLK_SYNT,
-	.masks = &clcd_masks,
+	.masks = &frac_synth_masks,
 };
 
 /* clcd fractional synthesizer parents */
@@ -702,12 +875,21 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 
 /* clcd rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl clcd_rtbl[] = {
-	/* All below entries generate 58 MHz for different values of vco1div4 */
-	{.div = 0x0D8C0}, /* for vco1div4 = 393 MHz */
-	{.div = 0x0B740}, /* for vco1div4 = 332 MHz */
-	{.div = 0x08A00}, /* for vco1div4 = 250 MHz */
-	{.div = 0x06E60}, /* for vco1div4 = 200 MHz */
+	{.div = 0x14000}, /* 25 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x1284B}, /* 27 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
+	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
+	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x07BA0}, /* 65 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
+	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x04A12}, /* 108 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0378E}, /* 144 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x0360D}, /* 148 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x035E0}, /* 148.5 MHz, for vc01div4 = 250 MHz*/
 };
+
 /* clcd fractional synthesizer clock */
 static struct clk clcd_synth_clk = {
 	.en_reg = VA_SPEAR1340_CLCD_CLK_SYNT,
@@ -789,7 +971,7 @@ static struct clk clcd_clk = {
 /* i2s source clock parents */
 static struct clk i2s_src_pad_clk = {
 	.flags = ALWAYS_ENABLED,
-	.rate = 0, /* fill correct rate if available */
+	.rate = 12288000,
 };
 
 static struct pclk_info i2s_src_pclk_info[] = {
@@ -894,6 +1076,7 @@ static struct clk i2s_ref_pad_clk = {
 static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
 	/* For i2s_ref_clk = 12.288MHz */
 	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 3.07 Mhz */
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
@@ -1143,30 +1326,25 @@ static struct clk kbd_clk = {
 	.recalc = &follow_parent,
 };
 
-/* GEN fractional synthesizers masks */
-static struct frac_synth_masks gen_synth_masks = {
-	.div_factor_mask = SPEAR1340_FRAC_SYNT_DIV_FACTOR_MASK,
-	.div_factor_shift = SPEAR1340_FRAC_SYNT_DIV_FACTOR_SHIFT,
-};
-
+/* general fractional synthesizers definitions */
 static struct frac_synth_clk_config gen_synth0_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT0,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth1_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT1,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth2_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT2,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 static struct frac_synth_clk_config gen_synth3_config = {
 	.synth_reg = VA_SPEAR1340_GEN_CLK_SYNT3,
-	.masks = &gen_synth_masks,
+	.masks = &frac_synth_masks,
 };
 
 /* GEN Fractional Synthesizer parents */
@@ -1215,8 +1393,12 @@ static struct pclk_sel gen_synth2_3_pclk_sel = {
 /* GEN rate configuration table, in ascending order of rates */
 static struct frac_synth_rate_tbl gen_rtbl[] = {
 	/* For vco1div4 = 250 MHz */
+	{.div = 0x1624E}, /* 22.5792 MHz */
+	{.div = 0x14585}, /* 24.576 MHz */
 	{.div = 0x14000}, /* 25 MHz */
+	{.div = 0x0B127}, /* 45.1584 MHz */
 	{.div = 0x0A000}, /* 50 MHz */
+	{.div = 0x061A8}, /* 81.92 MHz */
 	{.div = 0x05000}, /* 100 MHz */
 	{.div = 0x02000}, /* 250 MHz */
 };
@@ -1230,7 +1412,7 @@ static struct clk gen_synth0_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth0_config,
 };
 
@@ -1243,7 +1425,7 @@ static struct clk gen_synth1_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth1_config,
 };
 
@@ -1256,7 +1438,7 @@ static struct clk gen_synth2_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth2_config,
 };
 
@@ -1269,7 +1451,7 @@ static struct clk gen_synth3_clk = {
 	.calc_rate = &frac_synth_calc_rate,
 	.recalc = &frac_synth_clk_recalc,
 	.set_rate = &frac_synth_clk_set_rate,
-	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 1},
+	.rate_config = {gen_rtbl, ARRAY_SIZE(gen_rtbl), 4},
 	.private_data = &gen_synth3_config,
 };
 
@@ -1460,9 +1642,21 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.con_id = "vco2div2_clk",		.clk = &vco2div2_clk},
 	{.con_id = "vco3div2_clk",		.clk = &vco3div2_clk},
 
+	/* System synth clk */
+	{.con_id = "sys_synth_clk",		.clk = &sys_synth_clk},
+	{.con_id = "amba_synth_clk",		.clk = &amba_synth_clk},
+
 	/* clock derived from pll1 clk */
 	{.con_id = "ddr_clk",			.clk = &ddr_clk},
+
+	/* sys clk */
+	{.con_id = "sys_clk",			.clk = &sys_clk},
+
+	/* clock derived from sys clk */
 	{.con_id = "cpu_clk",			.clk = &cpu_clk},
+
+	/* clock derived from cpu clock */
+	{.con_id = "cpu_clk_div3",		.clk = &cpu_clk_div3},
 	{.con_id = "ahb_clk",			.clk = &ahb_clk},
 	{.con_id = "apb_clk",			.clk = &apb_clk},
 
@@ -1491,8 +1685,8 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.con_id = "i2s_sclk_clk",		.clk = &i2s_sclk_clk},
 
 	/* cec clks */
-	{.dev_id = "cec.0",			.clk = &cec0_clk},
-	{.dev_id = "cec.1",			.clk = &cec1_clk},
+	{.dev_id = "spear_cec.0",		.clk = &cec0_clk},
+	{.dev_id = "spear_cec.1",		.clk = &cec1_clk},
 
 	/* clocks having multiple parent source from above clocks */
 	{.dev_id = "clcd_pixel_clk",		.clk = &clcd_pixel_clk},
@@ -1507,7 +1701,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "arasan_cf",			.clk = &cfxd_clk},
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
 	{.dev_id = "mali",			.clk = &mali_clk},
-	{.dev_id = "spdif_out",			.clk = &spdif_out_clk},
+	{.dev_id = "spdif-out",			.clk = &spdif_out_clk},
 	{.dev_id = "spdif_in",			.clk = &spdif_in_clk},
 	{.dev_id = "video_dec",			.clk = &video_dec_clk},
 	{.dev_id = "video_enc",			.clk = &video_enc_clk},
@@ -1550,6 +1744,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "gpio1",			.clk = &gpio1_clk},
 	{.dev_id = "keyboard",			.clk = &kbd_clk},
 	{.dev_id = "cortexa9-wdt",		.clk = &wdt_clk},
+	{.dev_id = "spear_thermal",		.clk = &thermal_clk},
 };
 
 /* machine clk init */

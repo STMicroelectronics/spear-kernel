@@ -35,11 +35,13 @@ struct dw_dma_platform_data {
  * @DMA_SLAVE_WIDTH_8BIT: Do 8-bit slave register accesses
  * @DMA_SLAVE_WIDTH_16BIT: Do 16-bit slave register accesses
  * @DMA_SLAVE_WIDTH_32BIT: Do 32-bit slave register accesses
+ * @DMA_SLAVE_WIDTH_64BIT: Do 64-bit slave register accesses
  */
 enum dw_dma_slave_width {
 	DW_DMA_SLAVE_WIDTH_8BIT,
 	DW_DMA_SLAVE_WIDTH_16BIT,
 	DW_DMA_SLAVE_WIDTH_32BIT,
+	DW_DMA_SLAVE_WIDTH_64BIT,
 };
 
 /* bursts size */

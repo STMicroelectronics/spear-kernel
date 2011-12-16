@@ -26,25 +26,24 @@
 #include <linux/dw_dmac.h>
 #include <sound/pcm.h>
 
-struct dma_slaves {
-	struct dw_dma_slave mem2i2s_slave;
-	struct dw_dma_slave i2s2mem_slave;
-};
-
 struct i2s_platform_data {
 	#define PLAY	(1 << 0)
 	#define RECORD	(1 << 1)
 	unsigned int cap;
 	int channel;
-	struct dma_slaves ds;
+	u8 swidth;
+
+	void *play_dma_data;
+	void *capture_dma_data;
 };
+
+/* I2S DMA registers */
+#define I2S_RXDMA		0x01C0
+#define I2S_TXDMA		0x01C8
 
 #define TWO_CHANNEL_SUPPORT	2	/* up to 2.0 */
 #define FOUR_CHANNEL_SUPPORT	4	/* up to 3.1 */
 #define SIX_CHANNEL_SUPPORT	6	/* up to 5.1 */
 #define EIGHT_CHANNEL_SUPPORT	8	/* up to 7.1 */
-
-struct dma_slaves *substream_to_ds(struct snd_pcm_substream *substream,
-		dma_cap_mask_t *smask);
 
 #endif /* DESIGNWARE_I2S_H */

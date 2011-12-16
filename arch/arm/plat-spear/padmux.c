@@ -70,7 +70,7 @@ static int pmx_mode_set(struct pmx_mode *mode)
  * In case of conflicts last peripheral enabled will remain present.
  * Returns -ve on Err otherwise 0
  */
-static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
+int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 {
 	u32 val, i;
 	u32 *address;
@@ -121,10 +121,6 @@ static int pmx_devs_enable(struct pmx_dev **devs, u8 count)
 
 		devs[i]->is_active = true;
 	}
-	kfree(pmx);
-
-	/* this will ensure that multiplexing can't be changed now */
-	pmx = (struct pmx *)-1;
 
 	return 0;
 }

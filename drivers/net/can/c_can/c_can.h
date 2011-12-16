@@ -72,13 +72,15 @@ struct c_can_priv {
 	u16 (*read_reg) (struct c_can_priv *priv, void *reg);
 	void (*write_reg) (struct c_can_priv *priv, void *reg, u16 val);
 	struct c_can_regs __iomem *regs;
+	bool is_quirk_required;
 	unsigned long irq_flags; /* for request_irq() */
 	unsigned int tx_next;
 	unsigned int tx_echo;
+	unsigned int rx_next;
+	unsigned int rx_flag;
 	void *priv;		/* for board-specific data */
-	bool tx_ok_odd;		/* Tx ODD OK flag */
-	bool tx_ok_even;	/* Tx EVEN OK flag */
-	u32 count;
+	void (*can_stop)(struct net_device *dev);
+	void (*can_start)(struct net_device *dev);
 };
 
 struct net_device *alloc_c_can_dev(void);

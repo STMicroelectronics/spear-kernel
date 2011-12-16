@@ -51,6 +51,20 @@
 #define	STMMAC_CLK_RANGE_250_300M	5	/* MDC = Clk/122 */
 u32 *mac1_bus;
 
+static int stmmac_mdio_busy_wait(unsigned long ioaddr, unsigned int mii_addr)
+{
+	unsigned long finish = jiffies + 3 * HZ;
+
+	do {
+		if (readl(ioaddr + mii_addr) & MII_BUSY)
+			cpu_relax();
+		else
+			return 0;
+	} while (!time_after_eq(jiffies, finish));
+
+	return -EBUSY;
+}
+
 static int stmmac_get_mac_clk(struct stmmac_priv *priv)
 {
 	u32 clk_rate = clk_get_rate(priv->stmmac_clk);
@@ -122,9 +136,13 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 			((phyreg << 6) & (0x000007C0)));
 	regValue |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
-	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
+		return -EBUSY;
+
 	writel(regValue, ioaddr + mii_address);
-	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
+
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
+		return -EBUSY;
 
 	/* Read the data from the MII data register */
 	data = (int)readl(ioaddr + mii_data);
@@ -176,17 +194,14 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 
 	value |= MII_BUSY | ((priv->mii_clk_csr & 7) << 2);
 
-	/* Wait until any existing MII operation is complete */
-	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
+		return -EBUSY;
 
 	/* Set the MII address register to write */
 	writel(phydata, ioaddr + mii_data);
 	writel(value, ioaddr + mii_address);
 
-	/* Wait until any existing MII operation is complete */
-	do {} while (((readl(ioaddr + mii_address)) & MII_BUSY) == 1);
-
-	return 0;
+	return stmmac_mdio_busy_wait(ioaddr, mii_address);
 }
 
 /**

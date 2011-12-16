@@ -129,6 +129,42 @@ static struct nand_ecclayout fsmc_ecc4_256_layout = {
 };
 
 /*
+ * ECC4 layout for NAND of pagesize 4096 bytes & OOBsize 224 bytes. 13*8 bytes
+ * of OOB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block & 118
+ * bytes are free for use.
+ */
+static struct nand_ecclayout fsmc_ecc4_224_layout = {
+	.eccbytes = 104,
+	.eccpos = {  2,   3,   4,   5,   6,   7,   8,
+		9,  10,  11,  12,  13,  14,
+		18,  19,  20,  21,  22,  23,  24,
+		25,  26,  27,  28,  29,  30,
+		34,  35,  36,  37,  38,  39,  40,
+		41,  42,  43,  44,  45,  46,
+		50,  51,  52,  53,  54,  55,  56,
+		57,  58,  59,  60,  61,  62,
+		66,  67,  68,  69,  70,  71,  72,
+		73,  74,  75,  76,  77,  78,
+		82,  83,  84,  85,  86,  87,  88,
+		89,  90,  91,  92,  93,  94,
+		98,  99, 100, 101, 102, 103, 104,
+		105, 106, 107, 108, 109, 110,
+		114, 115, 116, 117, 118, 119, 120,
+		121, 122, 123, 124, 125, 126
+	},
+	.oobfree = {
+		{.offset = 15, .length = 3},
+		{.offset = 31, .length = 3},
+		{.offset = 47, .length = 3},
+		{.offset = 63, .length = 3},
+		{.offset = 79, .length = 3},
+		{.offset = 95, .length = 3},
+		{.offset = 111, .length = 3},
+		{.offset = 127, .length = 97}
+	}
+};
+
+/*
  * ECC4 layout for NAND of pagesize 4096 bytes & OOBsize 128 bytes. 13*8 bytes
  * of OOB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block & 22
  * bytes are free for use.
@@ -258,6 +294,18 @@ static struct mtd_partition partition_info_128KB_blk[] = {
 	PARTITION("U-Boot", 0x80000, 12 * 0x20000),
 	PARTITION("Kernel", 0x200000, 48 * 0x20000),
 	PARTITION("Root File System", 0x800000, 0),
+};
+
+/*
+ * Default partition layout for large page(> 512 bytes) devices with
+ * erase block size equal to 1024KB.
+ * Size for "Root file system" is updated in driver based on actual device size
+ */
+static struct mtd_partition partition_info_1024KB_blk[] = {
+	PARTITION("X-loader", 0, 4 * 0x100000),
+	PARTITION("U-Boot", 0x400000, 2 * 0x100000),
+	PARTITION("Kernel", 0x600000, 4 * 0x100000),
+	PARTITION("Root File System", 0xA00000, 0),
 };
 
 #ifdef CONFIG_MTD_CMDLINE_PARTS
@@ -565,7 +613,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 /*
- * fsmc_correct_data
+ * fsmc_bch8_correct_data
  * @mtd:	mtd info structure
  * @dat:	buffer of read data
  * @read_ecc:	ecc read from device spare area
@@ -574,14 +622,14 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
  * calc_ecc is a 104 bit information containing maximum of 8 error
  * offset informations of 13 bits each in 512 bytes of read data.
  */
-static int fsmc_correct_data(struct mtd_info *mtd, uint8_t *dat,
+static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 			     uint8_t *read_ecc, uint8_t *calc_ecc)
 {
 	struct fsmc_nand_data *host = container_of(mtd,
 					struct fsmc_nand_data, mtd);
 	struct fsmc_regs *regs = host->regs_va;
 	unsigned int bank = host->bank;
-	uint16_t err_idx[8];
+	uint32_t err_idx[8];
 	uint64_t ecc_data[2];
 	uint32_t num_err, i;
 
@@ -609,7 +657,7 @@ static int fsmc_correct_data(struct mtd_info *mtd, uint8_t *dat,
 
 	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
 
-	if (num_err == 0xF)
+	if (num_err > 8)
 		return -EBADMSG;
 
 	i = 0;
@@ -758,7 +806,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
 		nand->ecc.calculate = fsmc_read_hwecc_ecc4;
-		nand->ecc.correct = fsmc_correct_data;
+		nand->ecc.correct = fsmc_bch8_correct_data;
 		nand->ecc.bytes = 13;
 	} else {
 		nand->ecc.calculate = fsmc_read_hwecc_ecc1;
@@ -787,6 +835,10 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			break;
 		case 128:
 			nand->ecc.layout = &fsmc_ecc4_128_layout;
+			host->ecc_place = &fsmc_ecc4_lp_place;
+			break;
+		case 224:
+			nand->ecc.layout = &fsmc_ecc4_224_layout;
 			host->ecc_place = &fsmc_ecc4_lp_place;
 			break;
 		case 256:
@@ -865,10 +917,23 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			case 0x10000000:
 			case 0x20000000:
 			case 0x40000000:
-				host->partitions = partition_info_128KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_128KB_blk) /
-					sizeof(struct mtd_partition);
+			case 0x80000000:
+				switch (host->mtd.erasesize) {
+				case 0x100000:
+					host->partitions = partition_info_1024KB_blk;
+					host->nr_partitions =
+						sizeof(partition_info_1024KB_blk) /
+						sizeof(struct mtd_partition);
+					break;
+				case 0x20000:
+					host->partitions = partition_info_128KB_blk;
+					host->nr_partitions =
+						sizeof(partition_info_128KB_blk) /
+						sizeof(struct mtd_partition);
+					break;
+				default:
+					break;
+				}
 				break;
 			default:
 				ret = -ENXIO;

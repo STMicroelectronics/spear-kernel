@@ -10,6 +10,7 @@
  * License version 2. This program is licensed "as is" without any
  * warranty of any kind, whether express or implied.
  */
+#define pr_fmt(fmt) "spear13xx: " fmt
 
 #include <linux/types.h>
 #include <linux/amba/pl022.h>
@@ -23,6 +24,7 @@
 #include <linux/io.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/netdevice.h>
+#include <linux/spear_thermal.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
@@ -30,14 +32,47 @@
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <plat/clock.h>
 #include <plat/udc.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/i2s.h>
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
+
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN7	7
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0,
+		.gpio = SPEAR_GPIO_BTN7,
+		.active_low = 0,
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons = spear_gpio_keys_table,
+	.nbuttons = ARRAY_SIZE(spear_gpio_keys_table),
+};
+
+struct platform_device spear13xx_device_gpiokeys = {
+	.name = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+#endif
 
 /* Add spear13xx machines common devices here */
 /* common dw_dma filter routine to be used by peripherals */
@@ -52,6 +87,29 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 		return false;
 	}
 }
+
+/* SPEAr Thermal Sensor Platform Data */
+static struct resource spear13xx_thermal_resources[] = {
+	{
+		.start = THSENS_CFG,
+		.end = THSENS_CFG + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct spear_thermal_pdata spear13xx_thermal_pdata = {
+	.thermal_flags = THERMAL_CONFIG_FLAGS,
+};
+
+struct platform_device spear13xx_thermal_device = {
+	.name = "spear_thermal",
+	.id = -1,
+	.dev = {
+		.platform_data = &spear13xx_thermal_pdata,
+	},
+	.num_resources = ARRAY_SIZE(spear13xx_thermal_resources),
+	.resource = spear13xx_thermal_resources,
+};
 
 /* gpio device registeration */
 static struct pl061_platform_data gpio_plat_data[] = {
@@ -93,7 +151,7 @@ struct amba_device spear13xx_gpio_device[] = {
 /* ssp device registeration */
 #if 0
 #define SSP_DR(base)		(base + 0x008)
-struct dw_dma_slave ssp_dma_param[] = {
+static struct dw_dma_slave ssp_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -157,7 +215,7 @@ struct amba_device spear13xx_ssp_device = {
 /* uart device registeration */
 /* As uart0 is used for console, so disable DMA here */
 #if 0
-struct dw_dma_slave uart_dma_param[] = {
+static struct dw_dma_slave uart_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -260,7 +318,7 @@ struct platform_device spear13xx_cf_device = {
 };
 
 /* dmac device registeration */
-struct dw_dma_platform_data dmac_plat_data = {
+static struct dw_dma_platform_data dmac_plat_data = {
 	.nr_channels = 8,
 	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
 	.chan_priority = CHAN_PRIORITY_DESCENDING,
@@ -318,7 +376,7 @@ static struct plat_stmmacenet_data ether_platform_data = {
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_coe = 1,
-	.pbl = 32,
+	.pbl = 8,
 	.csum_off_engine = STMAC_TYPE_2,
 	.bugged_jumbo = 1,
 	.features = NETIF_F_HW_CSUM,
@@ -755,16 +813,43 @@ struct platform_device spear13xx_pcie_host0_device = {
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
-
-static struct i2s_platform_data i2s_data = {
-	.cap = PLAY | RECORD,
-	.channel = 4,
-	.ds = I2S_DS(&spear13xx_dmac_device[0].dev,
-			SPEAR13XX_DMA_REQ_I2S_TX,
-			SPEAR13XX_DMA_REQ_I2S_RX),
+/* i2s0 device registeration */
+static struct dw_dma_slave i2s0_dma_data[] = {
+	{
+		/* Play */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR13XX_I2S0_BASE + I2S_TXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = 0,
+		.dst_master = 1,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Record */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR13XX_I2S0_BASE + I2S_RXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = 1,
+		.dst_master = 0,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_P2M,
+	}
 };
 
-/* i2s0 device registeration */
+static struct i2s_platform_data i2s0_data = {
+	.cap = PLAY | RECORD,
+	.channel = 4,
+	.swidth = 16,
+	.play_dma_data = &i2s0_dma_data[0],
+	.capture_dma_data = &i2s0_dma_data[1],
+};
+
 static struct resource i2s0_resources[] = {
 	{
 		.start	= SPEAR13XX_I2S0_BASE,
@@ -787,13 +872,48 @@ struct platform_device spear13xx_i2s0_device = {
 	.id = 0,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data,
+		.platform_data = &i2s0_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s0_resources),
 	.resource = i2s0_resources,
 };
 
 /* i2s1 device registeration */
+static struct dw_dma_slave i2s1_dma_data[] = {
+	{
+		/* Play */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.tx_reg = SPEAR13XX_I2S1_BASE + I2S_TXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = 0,
+		.dst_master = 1,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_M2P,
+	}, {
+		/* Record */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.rx_reg = SPEAR13XX_I2S1_BASE + I2S_RXDMA,
+		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = 1,
+		.dst_master = 0,
+		.src_msize = DW_DMA_MSIZE_16,
+		.dst_msize = DW_DMA_MSIZE_16,
+		.fc = DW_DMA_FC_D_P2M,
+	}
+};
+
+static struct i2s_platform_data i2s1_data = {
+	.cap = PLAY | RECORD,
+	.channel = 4,
+	.play_dma_data = &i2s1_dma_data[0],
+	.capture_dma_data = &i2s1_dma_data[1],
+};
+
 static struct resource i2s1_resources[] = {
 	{
 		.start	= SPEAR13XX_I2S1_BASE,
@@ -816,7 +936,7 @@ struct platform_device spear13xx_i2s1_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &i2s_data,
+		.platform_data = &i2s1_data,
 	},
 	.num_resources = ARRAY_SIZE(i2s1_resources),
 	.resource = i2s1_resources,
@@ -970,35 +1090,6 @@ struct platform_device spear13xx_udc_device = {
 };
 #endif
 
-#ifdef CONFIG_PCIEPORTBUS
-/* PCIE0 clock always needs to be enabled if any of the three PCIE port
- * have to be used. So call this function from the board initilization
- * file. Ideally , all controller should have been independent from
- * others with respect to clock.
- */
-int enable_pcie0_clk(void)
-{
-	struct clk *clk;
-	/*
-	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
-	 * should have been enabled. But Controler does not work
-	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
-	 */
-	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
-	clk = clk_get_sys("dw_pcie.0", NULL);
-	if (IS_ERR(clk)) {
-		pr_err("%s:couldn't get clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-	if (clk_enable(clk)) {
-		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-
-	return 0;
-}
-#endif
-
 static void dmac_setup(void)
 {
 	/*
@@ -1025,7 +1116,7 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 	};
 	const char *input_clk_src[] = {
 		"pll2_clk",
-		"gmii_125m_pad",
+		"gmii_125m_pad_clk",
 		"osc3_25m_clk",
 	};
 
@@ -1095,8 +1186,8 @@ fail_get_input_pclk:
 #ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
-	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk,
-		*i2s_ref_clk, *i2s_sclk_clk;
+	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk;
+	struct clk *i2s_ref_clk, *i2s_sclk_clk, *i2s_src_pad_clk;
 
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
 	if (IS_ERR(i2s_src_clk)) {
@@ -1134,33 +1225,59 @@ static void i2s_clk_init(void)
 		goto put_sclk_clk;
 	}
 
-	if (clk_set_parent(i2s_src_clk, pll3_clk)) {
-		pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
-				__func__);
+	i2s_src_pad_clk = clk_get_sys(NULL, "i2s_src_pad_clk");
+	if (IS_ERR(i2s_src_pad_clk)) {
+		pr_err("%s:couldn't get i2s_src_pad_clk\n", __func__);
 		goto put_ref_pad_clk;
 	}
 
-	if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
-		goto put_ref_pad_clk;
+	if (cpu_is_spear1340()) {
+		if (clk_set_parent(i2s_src_clk, i2s_src_pad_clk)) {
+			pr_err("%s:set_parent pad clk to i2s_src_clk fail\n",
+					__func__);
+			goto put_src_pad_clk;
+		}
 
-	if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
-		goto put_ref_pad_clk;
+		if (clk_set_parent(i2s_ref_clk, i2s_src_clk)) {
+			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
+					__func__);
+			goto put_src_pad_clk;
+		}
+	} else {
+		if (clk_set_parent(i2s_src_clk, pll3_clk)) {
+			pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
+					__func__);
+			goto put_src_pad_clk;
+		}
 
-	if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
-		pr_err("%s:set_parent prs1_clk of ref_clk fail\n", __func__);
-		goto put_ref_pad_clk;
+		if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
+			goto put_src_pad_clk;
+
+		if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
+			goto put_src_pad_clk;
+
+		if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
+			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
+					__func__);
+			goto put_src_pad_clk;
+		}
 	}
 
 	if (clk_enable(i2s_ref_pad_clk)) {
 		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
-		goto put_ref_pad_clk;
+		goto put_src_pad_clk;
 	}
 
 	if (clk_enable(i2s_sclk_clk)) {
 		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-		goto put_ref_pad_clk;
+		goto put_src_pad_clk;
 	}
 
+	if (clk_enable(i2s_ref_clk))
+		pr_err("%s:enabling i2s_ref_clk\n", __func__);
+
+put_src_pad_clk:
+	clk_put(i2s_src_pad_clk);
 put_ref_pad_clk:
 	clk_put(i2s_ref_pad_clk);
 put_sclk_clk:
@@ -1176,8 +1293,7 @@ put_src_clk:
 }
 #endif
 
-/* Do spear13xx familiy common initialization part here */
-void __init spear13xx_init(void)
+void spear13xx_l2x0_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
 	/*
@@ -1195,6 +1311,14 @@ void __init spear13xx_init(void)
 			+ L2X0_PREFETCH_CTRL);
 
 	if (cpu_is_spear1340() || cpu_is_spear1310()) {
+		/*
+		 * Program following latencies in order to make
+		 * SPEAr1340 work at 600 MHz
+		 */
+		writel_relaxed(0x221, __io_address(SPEAR13XX_L2CC_BASE)
+				+ L2X0_TAG_LATENCY_CTRL);
+		writel_relaxed(0x441, __io_address(SPEAR13XX_L2CC_BASE)
+				+ L2X0_DATA_LATENCY_CTRL);
 		l2x0_init(__io_address(SPEAR13XX_L2CC_BASE), 0x70A60001,
 				0xfe00ffff);
 	} else {
@@ -1202,6 +1326,14 @@ void __init spear13xx_init(void)
 				0xfe00ffff);
 	}
 #endif
+}
+
+/* Do spear13xx familiy common initialization part here */
+void spear13xx_init(void)
+{
+	int ret;
+
+	spear13xx_l2x0_init();
 
 #ifdef CONFIG_SND_SOC_STA529
 	i2s_clk_init();
@@ -1213,6 +1345,10 @@ void __init spear13xx_init(void)
 	if (!cpu_is_spear1340() && !cpu_is_spear1310())
 		set_udc_plat_data(&spear13xx_udc_device);
 #endif
+
+	ret = clk_set_rate_sys("sdhci", NULL, 50000000);
+	if (ret)
+		pr_err("clk_set_rate failed for sdhci: %d\n", ret);
 }
 
 /* This will initialize vic */
@@ -1237,7 +1373,7 @@ unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
 }
 
 /* Following will create static virtual/physical mappings */
-struct map_desc spear13xx_io_desc[] __initdata = {
+static struct map_desc spear13xx_io_desc[] __initdata = {
 	{
 		.virtual	= IO_ADDRESS(SPEAR13XX_UART_BASE),
 		.pfn		= __phys_to_pfn(SPEAR13XX_UART_BASE),

@@ -23,6 +23,12 @@ config MACH_SPEAR320_EVB
 	help
 	  Supports ST SPEAr320 Evaluation Board
 
+config MACH_SPEAR320_HMI
+	bool "SPEAr320 Human Machine Interface Board (HMI)"
+	select CPU_SPEAR320
+	help
+	  Supports ST SPEAr320 Human Machine Interface Board
+
 endmenu
 
 config CPU_SPEAR300

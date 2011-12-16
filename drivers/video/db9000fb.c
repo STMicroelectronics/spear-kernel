@@ -57,6 +57,7 @@
 #include <mach/bitfield.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
+#include <mach/generic.h>
 
 /*
  * Complain if VAR is out of range.
@@ -655,7 +656,11 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	if (fbi->reg_dbar != next_frame_address) {
 		lcd_writel(fbi, DB9000_DBAR, next_frame_address);
 		lcd_writel(fbi, DB9000_DEAR, next_frame_address +
-				fbi->video_mem_size_used);
+			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS));
+		lcd_writel(fbi, DB9000_MRR,
+			DB9000_MRR_DEAR_MRR(next_frame_address +
+			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS)) |
+			DB9000_MRR_MRR(DB9000_MRR_OUTST_4));
 		/*
 		 * Force waiting till the current buffer is completely drawn by
 		 * video controller
@@ -766,6 +771,17 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 static void setup_parallel_timing(struct db9000fb_info *fbi,
 				  struct fb_var_screeninfo *var)
 {
+	u32 x_res, y_res, clk_rate;
+	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
+
+	x_res = var->xres + var->hsync_len + var->left_margin
+		+ var->right_margin;
+	y_res = var->yres + var->vsync_len + var->upper_margin
+		+ var->lower_margin;
+	clk_rate = x_res * y_res * inf->modes->mode.refresh;
+
+	pr_debug("Clock value is %x", clk_rate);
+
 	if (!(fbi->reg_pctr & DB9000_PCTR_PCI)) {
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
@@ -774,11 +790,9 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 			set_hsync_time(fbi, pcd);
 		}
 	} else
-		clk_set_rate(fbi->clk, 58000000);
-
+		clk_set_rate(fbi->clk, clk_rate);
 	fbi->reg_htr =
 	/* horizontal sync width */
-/*	DB9000_HTR_HSW((var->hsync_len) - 1) | */
 		DB9000_HTR_HSW(var->hsync_len) |
 	/* horizontal back porch */
 		DB9000_HTR_HBP(var->left_margin) |
@@ -786,6 +800,15 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		DB9000_HTR_PPL((var->xres)/16) |
 	/* Horizontal Front Porch */
 		DB9000_HTR_HFP(var->right_margin);
+
+	/* Vertical and Horizontal Timing Extension write */
+	if (fbi->db9000_rev >= DB9000_REVISION_1_14) {
+		fbi->reg_hvter =
+			DB9000_HVTER_HFPE(var->right_margin) |
+			DB9000_HVTER_HBPE(var->left_margin) |
+			DB9000_HVTER_VFPE(var->lower_margin) |
+			DB9000_HVTER_VBPE(var->upper_margin);
+	}
 
 	fbi->reg_vtr1 =
 		DB9000_VTR1_VBP(var->upper_margin) |
@@ -884,6 +907,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_HTR) != fbi->reg_htr) ||
 		(lcd_readl(fbi, DB9000_VTR1) != fbi->reg_vtr1) ||
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
+		(lcd_readl(fbi, DB9000_HVTER) != fbi->reg_hvter) ||
 		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 
@@ -912,8 +936,11 @@ static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
 	lcd_writel(fbi, DB9000_CR1, fbi->reg_cr1);
 }
 
-static void db9000fb_setup_gpio(struct db9000fb_info *fbi)
+static void db9000fb_setup_gpio(struct db9000fb_info *fbi, bool on)
 {
+	/* gpio or clcd pad selection */
+	if (fbi->setup_gpio)
+		fbi->setup_gpio(on);
 }
 
 static void db9000fb_enable_controller(struct db9000fb_info *fbi)
@@ -922,6 +949,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	u32 val;
 	unsigned int isr;
 	unsigned int imr;
+	int ret = 0;
 
 	pr_debug("db9000fb: Enabling LCD controller\n");
 	pr_debug("reg_cr1: 0x%08x\n", (unsigned int) fbi->reg_cr1);
@@ -931,7 +959,13 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	pr_debug("reg_pctr: 0x%08x\n", (unsigned int) fbi->reg_pctr);
 
 	/* enable LCD controller clock */
-	clk_enable(fbi->clk);
+	ret = clk_enable(fbi->clk);
+	if (ret) {
+		ret = PTR_ERR(fbi->clk);
+		clk_put(fbi->clk);
+		kfree(fbi);
+		return;
+	}
 
 	/* Write into the palette memory */
 	if (fbi->palette_size > 0) {
@@ -943,12 +977,19 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_HTR, fbi->reg_htr);
 	lcd_writel(fbi, DB9000_VTR1, fbi->reg_vtr1);
 	lcd_writel(fbi, DB9000_VTR2, fbi->reg_vtr2);
+	lcd_writel(fbi, DB9000_HVTER, fbi->reg_hvter);
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
-	fbi->reg_dear = fbi->reg_dbar + fbi->video_mem_size_used;
+	fbi->reg_dear = fbi->reg_dbar +
+		(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS);
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
+
+	/* configure MRR to 4 outstanding requests */
+	lcd_writel(fbi, DB9000_MRR,
+		DB9000_MRR_DEAR_MRR(fbi->reg_dear) |
+		DB9000_MRR_MRR(DB9000_MRR_OUTST_4));
 
 	/* enable BAU event for IRQ */
 	isr = lcd_readl(fbi, DB9000_ISR);
@@ -957,7 +998,9 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_BAU);
 
 	lcd_writel(fbi, DB9000_CR1,
-		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE);
+		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE |
+		DB9000_CR1_DEE);
+
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
 	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
@@ -980,21 +1023,22 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 {
 	struct db9000fb_info *fbi = dev_id;
 	unsigned int isr = lcd_readl(fbi, DB9000_ISR);
-	unsigned int ivr;
+	unsigned int imr;
 	u32 dbar;
 
 	if (isr & DB9000_ISR_BAU) { /*DMA Base Address Register Update to DCAR*/
 		dbar = lcd_readl(fbi, DB9000_DBAR);
 		if (dbar != fbi->reg_dbar) {
 			fbi->reg_dbar = dbar;
-			fbi->reg_dear = dbar + fbi->video_mem_size_used;
+			fbi->reg_dear = dbar + (fbi->video_mem_size_used /
+				NUM_OF_FRAMEBUFFERS);
 			complete(&fbi->vsync_notifier);
 		}
 	}
 
 	if (isr & DB9000_ISR_LDD) {
-		ivr = lcd_readl(fbi, DB9000_IVR);
-		lcd_writel(fbi, DB9000_IVR, ivr | DB9000_ISR_LDD);
+		imr = lcd_readl(fbi, DB9000_IMR);
+		lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_LDDM);
 		complete(&fbi->disable_done);
 	}
 	lcd_writel(fbi, DB9000_ISR, isr);
@@ -1026,6 +1070,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state != C_DISABLE && old_state != C_DISABLE_PM) {
 			db9000fb_lcd_power(fbi, 0);
+			db9000fb_setup_gpio(fbi, false);
 			fbi->state = state;
 			db9000fb_disable_controller(fbi);
 		}
@@ -1040,6 +1085,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			fbi->state = state;
 			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
+			db9000fb_setup_gpio(fbi, false);
 			if (old_state != C_DISABLE_CLKCHANGE)
 				db9000fb_disable_controller(fbi);
 		}
@@ -1052,6 +1098,8 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state == C_DISABLE_CLKCHANGE) {
 			fbi->state = C_ENABLE;
+			db9000fb_setup_gpio(fbi, true);
+			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 			/* TODO __db9000fb_lcd_power(fbi, 1); */
 		}
@@ -1065,9 +1113,10 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 */
 		if (old_state == C_ENABLE) {
 			db9000fb_lcd_power(fbi, 0);
-			db9000fb_setup_gpio(fbi);
+			db9000fb_setup_gpio(fbi, false);
 			db9000fb_disable_controller(fbi);
 			msleep(100);
+			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 		}
@@ -1091,7 +1140,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		if (old_state != C_ENABLE) {
 
 			fbi->state = C_ENABLE;
-			db9000fb_setup_gpio(fbi);
+			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
 			db9000fb_backlight_power(fbi, 1);
@@ -1223,8 +1272,6 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 {
 	struct db9000fb_info *fbi;
-	void *addr;
-	unsigned int status = 0;
 	struct db9000fb_mach_info *inf = dev->platform_data;
 
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
@@ -1239,7 +1286,6 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->dev = dev;
 	fbi->clk = clk_get(dev, NULL);
 	if (IS_ERR(fbi->clk)) {
-		status = PTR_ERR(fbi->clk);
 		kfree(fbi);
 		return NULL;
 	}
@@ -1264,7 +1310,6 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->fb.flags		= FBINFO_DEFAULT;
 	fbi->fb.node		= -1;
 
-	addr = fbi;
 	fbi->palette_mode = PAL_STATIC;
 
 	fbi->state		= C_STARTUP;
@@ -1642,7 +1687,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	int irq, ret;
 	int video_buf_size = 0;
 	int bits_per_pixel = 0;
-	uint32_t db9000_reg;
 	char __iomem *addr;
 	inf = pdev->dev.platform_data;
 	ret = -EBUSY;
@@ -1694,11 +1738,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_fbi;
 	}
 
-	/* Read the core version register and print it out */
-	db9000_reg = lcd_readl(fbi, DB9000_CIR);
-	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
-			__func__, db9000_reg);
-
 	bits_per_pixel = inf->modes->bpp;
 	if ((inf->modes->bpp == 24) &&
 			((inf->modes->cr1 & DB9000_CR1_FBP) == 0))
@@ -1706,6 +1745,11 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	video_buf_size = ((inf->modes->mode.xres) *
 			(inf->modes->mode.yres) *
 			(bits_per_pixel) / 8) * NUM_OF_FRAMEBUFFERS;
+
+	if (inf->modes->bpp < 16)
+		fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
+	else
+		fbi->video_mem_size = video_buf_size;
 
 	fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
 	/* Initialize video memory */
@@ -1720,6 +1764,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	fbi->fb.fix.smem_len = fbi->video_mem_size;
 	fbi->fb.var.height = fbi->fb.var.yres;
 	fbi->fb.var.width = fbi->fb.var.xres;
+	fbi->setup_gpio = inf->clcd_mux_selection;
 	/* Clear the screen */
 	memset((char *)fbi->fb.screen_base, 0, fbi->fb.fix.smem_len);
 
@@ -1749,12 +1794,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_irq;
 	}
 
-	ret = db9000fb_set_par(&fbi->fb);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to set parameters\n");
-		goto err_free_irq;
-	}
-
 	if ((fbi->palette_mode == PAL_STATIC) ||
 			(fbi->palette_mode == PAL_NONE))
 		fbi->video_mem_size_used = video_buf_size;
@@ -1762,8 +1801,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fbi->video_mem_size_used =
 			video_buf_size + (fbi->palette_size * 2);
 	if (fbi->reg_dear == 0)
-		fbi->reg_dear = fbi->video_mem_size_used +
-			fbi->fb.fix.smem_start;
+		fbi->reg_dear = (fbi->video_mem_size_used /
+			NUM_OF_FRAMEBUFFERS) + fbi->fb.fix.smem_start;
 
 	 /* Ok, now enable the LCD controller */
 	set_ctrlr_state(fbi, C_ENABLE);
@@ -1785,6 +1824,17 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 			CPUFREQ_POLICY_NOTIFIER);
 #endif
 
+	/* Read the core version register and print it out */
+	fbi->db9000_rev = lcd_readl(fbi, DB9000_CIR);
+	dev_info(&pdev->dev, "%s: Core ID reg: 0x%08X\n",
+			__func__, fbi->db9000_rev);
+
+	ret = db9000fb_set_par(&fbi->fb);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to set parameters\n");
+		goto err_clear_plat_data;
+	}
+
 #if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
 	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
 		/* Start display and show logo on boot */
@@ -1794,6 +1844,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
+
 	return 0;
 
 err_clear_plat_data:
@@ -1829,7 +1880,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	info = &fbi->fb;
 
 	unregister_framebuffer(info);
-
+	db9000fb_setup_gpio(fbi, false);
 	db9000fb_disable_controller(fbi);
 	complete_and_exit(&fbi->vsync_notifier, 0);
 

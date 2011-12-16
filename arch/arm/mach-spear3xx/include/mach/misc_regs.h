@@ -33,6 +33,9 @@
 #define PLL_MODE_DITH_DSB	2
 #define PLL_MODE_DITH_SSB	3
 
+#define PLL_LOCK_SHIFT		0
+#define PLL_LOCK_MASK		1
+
 #define VA_PLL2_FRQ		(VA_MISC_BASE + 0x018)
 /* PLL FRQ register masks */
 #define PLL_DIV_N_SHIFT		0

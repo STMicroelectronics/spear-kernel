@@ -49,6 +49,8 @@
 #define DB9000_DFBAR	(0x03C)
 /* DMA Frame Descriptor Last Address Register */
 #define DB9000_DFLAR	(0x040)
+/* DMA Horizontal and Vertical Timing Extension Register */
+#define DB9000_HVTER	(0x044)
 /* Core Identification Register */
 #define DB9000_CIR	(0x1FC)
 /* Palette Data Words */
@@ -80,6 +82,9 @@
 #define DB9000_OWDBAR1	(0x61C)
 /* Overlay Window DMA Current Addr Register 1 */
 #define DB9000_OWDCAR1	(0x620)
+
+/* Multiple Memory Reads Request Register */
+#define DB9000_MRR	(0xFFC)
 
 /* Control Register 1, Offset 0x000 */
 /* LCD Controller Enable */
@@ -156,6 +161,33 @@
 #define DB9000_VTR1_VFP(x)	(((x) & 0xff) << 8)
 /* Vertical Back Porch */
 #define DB9000_VTR1_VBP(x)	(((x) & 0xff) << 16)
+
+/* Vertical and Horizontal Timing Extension Register, Offset 0x044 */
+/* Horizontal Front Porch Extension */
+#define DB9000_HVTER_HFPE(x)	((((x) >> 8) & 0x3) << 0)
+/* Horizontal Back Porch Extension */
+#define DB9000_HVTER_HBPE(x)	((((x) >> 8) & 0x3) << 4)
+/* Vertical Front Porch Extension */
+#define DB9000_HVTER_VFPE(x)	((((x) >> 8) & 0x3) << 8)
+/* Vertical Back Porch Extension */
+#define DB9000_HVTER_VBPE(x)	((((x) >> 8) & 0x3) << 12)
+
+/* DB9000 Revisions */
+#define DB9000_REVISION_1_0		(0x00)
+#define DB9000_REVISION_1_1		(0x01)
+#define DB9000_REVISION_1_2		(0x02)
+#define DB9000_REVISION_1_3		(0x03)
+#define DB9000_REVISION_1_4		(0x04)
+#define DB9000_REVISION_1_5		(0x05)
+#define DB9000_REVISION_1_6		(0x06)
+#define DB9000_REVISION_1_7		(0x07)
+#define DB9000_REVISION_1_8		(0x08)
+#define DB9000_REVISION_1_9		(0x09)
+#define DB9000_REVISION_1_10		(0x0A)
+#define DB9000_REVISION_1_11		(0x0B)
+#define DB9000_REVISION_1_12		(0x0C)
+#define DB9000_REVISION_1_13		(0x0D)
+#define DB9000_REVISION_1_14		(0x0E)
 
 /* Vertical Timing Register 2, Offset 0x010 */
 /* Lines Per Panel */
@@ -242,5 +274,12 @@
 
 /* PWM Duty Cycle Register, Offset 0x038 */
 #define DB9000_PWMDCR_DCR(x)	((x) & 0xff)
+
+/* Multiple Memory Reads Request Register, offset 0xFFC */
+#define DB9000_MRR_MRR(x)	(((x) & 0x3) << 0)
+#define DB9000_MRR_DEAR_MRR(x)	((x) & 0xFFFFFFFC)
+#define DB9000_MRR_OUTST_0	0x0
+#define DB9000_MRR_OUTST_2	0x1
+#define DB9000_MRR_OUTST_4	0x2
 
 #endif /* __DB9000_REGS_H */

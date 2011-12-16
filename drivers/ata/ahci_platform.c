@@ -197,11 +197,91 @@ static int __devexit ahci_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int ahci_suspend(struct device *dev)
+{
+	int ret = 0;
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	struct ahci_platform_data *pdata = dev->platform_data;
+
+	ret = ata_host_suspend(host, PMSG_SUSPEND);
+	if (ret) {
+		dev_err(dev, "can't suspend host\n");
+		return ret;
+	}
+
+	ret = ahci_reset_controller(host);
+	if (ret) {
+		dev_err(dev, "can't reset host controller\n");
+		return ret;
+	}
+
+	if (pdata->exit)
+		pdata->exit(dev);
+
+#ifdef CONFIG_HAVE_CLK
+	clk_disable(hpriv->clk);
+#endif
+
+	return ret;
+}
+
+static int ahci_resume(struct device *dev)
+{
+	int ret = 0;
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	struct ahci_platform_data *pdata = dev->platform_data;
+
+#ifdef CONFIG_HAVE_CLK
+	clk_enable(hpriv->clk);
+#endif
+	if (pdata->init) {
+		ret = pdata->init(dev, hpriv->mmio);
+		if (ret) {
+			dev_err(dev, "platform init failed on resume\n");
+			goto err_init;
+		}
+	}
+
+	ret = ahci_reset_controller(host);
+	if (ret) {
+		dev_err(dev, "ahci reset controller failed\n");
+		goto err_reset;
+	}
+
+	ahci_init_controller(host);
+	ata_host_resume(host);
+
+	return ret;
+err_reset:
+	pdata->exit(dev);
+err_init:
+#ifdef CONFIG_HAVE_CLK
+	clk_disable(hpriv->clk);
+#endif
+	return ret;
+}
+
+static const struct dev_pm_ops ahci_pm_ops = {
+	.suspend_noirq = ahci_suspend,
+	.resume_noirq = ahci_resume,
+	.freeze_noirq = ahci_suspend,
+	.thaw_noirq = ahci_resume,
+	.poweroff = ahci_suspend,
+	.restore = ahci_resume,
+};
+#endif
+
 static struct platform_driver ahci_driver = {
 	.remove = __devexit_p(ahci_remove),
 	.driver = {
 		.name = "ahci",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm = &ahci_pm_ops,
+#endif
 	},
 };
 
