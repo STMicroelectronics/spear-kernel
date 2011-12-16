@@ -1,7 +1,7 @@
 /*
- * ALSA PCM interface for ST spear Processor
+ * ALSA PCM interface for ST SPEAr Processors
  *
- * sound/soc/spear/spear13xx_pcm.h
+ * sound/soc/spear/spear_pcm.h
  *
  * Copyright (C) 2011 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
@@ -11,10 +11,10 @@
  * warranty of any kind, whether express or implied.
  */
 
-#ifndef SPEAR13XX_PCM_H
-#define SPEAR13XX_PCM_H
+#ifndef SPEAR_PCM_H
+#define SPEAR_PCM_H
 
-struct spear13xx_runtime_data {
+struct spear_runtime_data {
 	struct dma_chan *dma_chan[2];
 	spinlock_t lock;
 	struct snd_pcm_substream *substream;

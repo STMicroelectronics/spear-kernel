@@ -1,10 +1,10 @@
-config SND_SPEAR13XX_EVM
-	tristate "SoC Audio support for SPEAr13XX EVM"
+config SND_SPEAR_EVM
+	tristate "SoC Audio support for SPEAr EVM"
 	select SND_DESIGNWARE_I2S
 	select SND_SOC_STA529
 	select SND_SPEAR_SOC
 	help
-	 Say Y if you want to add support for SoC audio on SPEAr13XX
+	 Say Y if you want to add support for SoC audio on SPEAr
 	 platform
 
 config SND_SPEAR1340_EVM

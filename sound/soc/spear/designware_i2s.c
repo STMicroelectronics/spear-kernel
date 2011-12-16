@@ -1,5 +1,5 @@
 /*
- * ALSA SoC I2S Audio Layer for ST SPEAr13xx processor
+ * ALSA SoC I2S Audio Layer for ST SPEAr processors
  *
  * sound/soc/spear/designware_i2s.c
  *
@@ -447,7 +447,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	}
 
 	if (cap & PLAY) {
-		dev_dbg(&pdev->dev, " SPEAr13xx: play supported\n");
+		dev_dbg(&pdev->dev, " SPEAr: play supported\n");
 		dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
 		if (dev->play_irq < 0)
 			dev_warn(&pdev->dev, "play irq not defined\n");
@@ -468,7 +468,7 @@ dw_i2s_probe(struct platform_device *pdev)
 	}
 
 	if (cap & RECORD) {
-		dev_dbg(&pdev->dev, "SPEAr13xx: record supported\n");
+		dev_dbg(&pdev->dev, "SPEAr: record supported\n");
 		dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
 		if (dev->capture_irq < 0)
 			dev_warn(&pdev->dev, "record irq not defined\n");

@@ -1,7 +1,7 @@
 /*
- * ALSA PCM interface for ST spear Processor
+ * ALSA PCM interface for ST SPEAr Processors
  *
- * sound/soc/spear/spear13xx_pcm.c
+ * sound/soc/spear/spear_pcm.c
  *
  * Copyright (C) 2011 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
@@ -22,9 +22,9 @@
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
-#include "spear13xx_pcm.h"
+#include "spear_pcm.h"
 
-struct snd_pcm_hardware spear13xx_pcm_hardware = {
+struct snd_pcm_hardware spear_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
@@ -38,7 +38,7 @@ struct snd_pcm_hardware spear13xx_pcm_hardware = {
 
 static void pcm_dma_complete(void *arg);
 
-static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
+static int spear_pcm_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
 	int ret = snd_pcm_lib_malloc_pages(substream,
@@ -49,15 +49,15 @@ static int spear13xx_pcm_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int spear13xx_pcm_hw_free(struct snd_pcm_substream *substream)
+static int spear_pcm_hw_free(struct snd_pcm_substream *substream)
 {
 	return snd_pcm_lib_free_pages(substream);
 }
 
-static int spear13xx_pcm_prepare(struct snd_pcm_substream *substream)
+static int spear_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct spear13xx_runtime_data *prtd = runtime->private_data;
+	struct spear_runtime_data *prtd = runtime->private_data;
 	unsigned long flags;
 
 	spin_lock_irqsave(&prtd->lock, flags);
@@ -74,7 +74,7 @@ static int spear13xx_pcm_prepare(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int start_dma(struct spear13xx_runtime_data *prtd)
+static int start_dma(struct spear_runtime_data *prtd)
 {
 	struct dma_slave_config conf;
 	struct dma_chan *chan;
@@ -123,7 +123,7 @@ static int start_dma(struct spear13xx_runtime_data *prtd)
 	return 0;
 }
 
-static void pcm_dma_xfer(struct spear13xx_runtime_data *prtd,
+static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 		bool from_callback)
 {
 	struct snd_pcm_substream *substream = prtd->substream;
@@ -170,7 +170,7 @@ static void pcm_dma_xfer(struct spear13xx_runtime_data *prtd,
 
 static void pcm_dma_complete(void *arg)
 {
-	struct spear13xx_runtime_data *prtd = arg;
+	struct spear_runtime_data *prtd = arg;
 	unsigned long flags;
 
 	spin_lock_irqsave(&prtd->lock, flags);
@@ -181,9 +181,9 @@ static void pcm_dma_complete(void *arg)
 		pcm_dma_xfer(prtd, true);
 }
 
-static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct spear_runtime_data *prtd = substream->runtime->private_data;
 	struct dma_chan *chan;
 	unsigned long flags;
 	int ret = 0;
@@ -223,9 +223,9 @@ static int spear13xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 }
 
 static snd_pcm_uframes_t
-spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
+spear_pcm_pointer(struct snd_pcm_substream *substream)
 {
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct spear_runtime_data *prtd = substream->runtime->private_data;
 
 	return bytes_to_frames(substream->runtime, prtd->buf_index *
 			prtd->xfer_len);
@@ -234,7 +234,7 @@ spear13xx_pcm_pointer(struct snd_pcm_substream *substream)
 static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct spear_runtime_data *prtd = substream->runtime->private_data;
 
 	int stream = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 0 : 1;
 	struct dma_data *dma_data =
@@ -250,7 +250,7 @@ static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 
 static void pcm_dma_free_chan(struct snd_pcm_substream *substream)
 {
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct spear_runtime_data *prtd = substream->runtime->private_data;
 	struct dma_chan *chan;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -262,12 +262,12 @@ static void pcm_dma_free_chan(struct snd_pcm_substream *substream)
 	dma_release_channel(chan);
 }
 
-static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
+static int spear_pcm_open(struct snd_pcm_substream *substream)
 {
-	struct spear13xx_runtime_data *prtd;
+	struct spear_runtime_data *prtd;
 	int ret;
 
-	ret = snd_soc_set_runtime_hwparams(substream, &spear13xx_pcm_hardware);
+	ret = snd_soc_set_runtime_hwparams(substream, &spear_pcm_hardware);
 	if (ret)
 		return ret;
 
@@ -297,9 +297,9 @@ static int spear13xx_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
+static int spear_pcm_close(struct snd_pcm_substream *substream)
 {
-	struct spear13xx_runtime_data *prtd = substream->runtime->private_data;
+	struct spear_runtime_data *prtd = substream->runtime->private_data;
 
 	pcm_dma_free_chan(substream);
 	kfree(prtd);
@@ -307,7 +307,7 @@ static int spear13xx_pcm_close(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int spear13xx_pcm_mmap(struct snd_pcm_substream *substream,
+static int spear_pcm_mmap(struct snd_pcm_substream *substream,
 		struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -317,20 +317,20 @@ static int spear13xx_pcm_mmap(struct snd_pcm_substream *substream,
 			runtime->dma_bytes);
 }
 
-static struct snd_pcm_ops spear13xx_pcm_ops = {
-	.open		= spear13xx_pcm_open,
-	.close		= spear13xx_pcm_close,
+static struct snd_pcm_ops spear_pcm_ops = {
+	.open		= spear_pcm_open,
+	.close		= spear_pcm_close,
 	.ioctl		= snd_pcm_lib_ioctl,
-	.hw_params	= spear13xx_pcm_hw_params,
-	.hw_free	= spear13xx_pcm_hw_free,
-	.prepare	= spear13xx_pcm_prepare,
-	.trigger	= spear13xx_pcm_trigger,
-	.pointer	= spear13xx_pcm_pointer,
-	.mmap		= spear13xx_pcm_mmap,
+	.hw_params	= spear_pcm_hw_params,
+	.hw_free	= spear_pcm_hw_free,
+	.prepare	= spear_pcm_prepare,
+	.trigger	= spear_pcm_trigger,
+	.pointer	= spear_pcm_pointer,
+	.mmap		= spear_pcm_mmap,
 };
 
 static int
-spear13xx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream,
+spear_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream,
 		size_t size)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
@@ -353,7 +353,7 @@ spear13xx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream,
 	return 0;
 }
 
-static void spear13xx_pcm_free(struct snd_pcm *pcm)
+static void spear_pcm_free(struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
@@ -374,30 +374,30 @@ static void spear13xx_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
-static u64 spear13xx_pcm_dmamask = DMA_BIT_MASK(32);
+static u64 spear_pcm_dmamask = DMA_BIT_MASK(32);
 
-static int spear13xx_pcm_new(struct snd_card *card,
+static int spear_pcm_new(struct snd_card *card,
 		struct snd_soc_dai *dai, struct snd_pcm *pcm)
 {
 	int ret;
 
 	if (!card->dev->dma_mask)
-		card->dev->dma_mask = &spear13xx_pcm_dmamask;
+		card->dev->dma_mask = &spear_pcm_dmamask;
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
 	if (dai->driver->playback.channels_min) {
-		ret = spear13xx_pcm_preallocate_dma_buffer(pcm,
+		ret = spear_pcm_preallocate_dma_buffer(pcm,
 				SNDRV_PCM_STREAM_PLAYBACK,
-				spear13xx_pcm_hardware.buffer_bytes_max);
+				spear_pcm_hardware.buffer_bytes_max);
 		if (ret)
 			return ret;
 	}
 
 	if (dai->driver->capture.channels_min) {
-		ret = spear13xx_pcm_preallocate_dma_buffer(pcm,
+		ret = spear_pcm_preallocate_dma_buffer(pcm,
 				SNDRV_PCM_STREAM_CAPTURE,
-				spear13xx_pcm_hardware.buffer_bytes_max);
+				spear_pcm_hardware.buffer_bytes_max);
 		if (ret)
 			return ret;
 	}
@@ -405,45 +405,45 @@ static int spear13xx_pcm_new(struct snd_card *card,
 	return 0;
 }
 
-struct snd_soc_platform_driver spear13xx_soc_platform = {
-	.ops		=	&spear13xx_pcm_ops,
-	.pcm_new	=	spear13xx_pcm_new,
-	.pcm_free	=	spear13xx_pcm_free,
+struct snd_soc_platform_driver spear_soc_platform = {
+	.ops		=	&spear_pcm_ops,
+	.pcm_new	=	spear_pcm_new,
+	.pcm_free	=	spear_pcm_free,
 };
 
-static int __devinit spear13xx_soc_platform_probe(struct platform_device *pdev)
+static int __devinit spear_soc_platform_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_platform(&pdev->dev, &spear13xx_soc_platform);
+	return snd_soc_register_platform(&pdev->dev, &spear_soc_platform);
 }
 
-static int __devexit spear13xx_soc_platform_remove(struct platform_device *pdev)
+static int __devexit spear_soc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 
 	return 0;
 }
 
-static struct platform_driver spear13xx_pcm_driver = {
+static struct platform_driver spear_pcm_driver = {
 	.driver = {
 		.name = "spear-pcm-audio",
 		.owner = THIS_MODULE,
 	},
 
-	.probe = spear13xx_soc_platform_probe,
-	.remove = __devexit_p(spear13xx_soc_platform_remove),
+	.probe = spear_soc_platform_probe,
+	.remove = __devexit_p(spear_soc_platform_remove),
 };
-static int __init snd_spear13xx_pcm_init(void)
+static int __init snd_spear_pcm_init(void)
 {
-	return platform_driver_register(&spear13xx_pcm_driver);
+	return platform_driver_register(&spear_pcm_driver);
 }
-module_init(snd_spear13xx_pcm_init);
+module_init(snd_spear_pcm_init);
 
-static void __exit snd_spear13xx_pcm_exit(void)
+static void __exit snd_spear_pcm_exit(void)
 {
-	platform_driver_unregister(&spear13xx_pcm_driver);
+	platform_driver_unregister(&spear_pcm_driver);
 }
-module_exit(snd_spear13xx_pcm_exit);
+module_exit(snd_spear_pcm_exit);
 
 MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
-MODULE_DESCRIPTION("spear PCM DMA module");
+MODULE_DESCRIPTION("SPEAr PCM DMA module");
 MODULE_LICENSE("GPL");

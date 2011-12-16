@@ -1,7 +1,7 @@
 /*
- * ASoC machine driver for SPEAr13xx evaluation boards
+ * ASoC machine driver for SPEAr evaluation boards
  *
- * sound/soc/spear/spear13xx_evb.c
+ * sound/soc/spear/spear_evb.c
  *
  * Copyright (C) 2010 ST Microelectronics
  * Rajeev Kumar<rajeev-dlh.kumar@st.com>
@@ -93,13 +93,13 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-/* Audio machine driver for SPEAr13xx evb */
+/* Audio machine driver for SPEAr evb */
 static struct snd_soc_ops sta529_ops = {
 	.hw_params	= sta529_hw_params,
 };
 
-/* SPEAr13xx audio interface glue - connects codec <--> CPU <--> platform */
-static struct snd_soc_dai_link spear13xx_evb_dai[] = {
+/* SPEAr audio interface glue - connects codec <--> CPU <--> platform */
+static struct snd_soc_dai_link spear_evb_dai[] = {
 	{
 		.name		= "sta529-pcm",
 		.stream_name	= "pcm",
@@ -111,11 +111,11 @@ static struct snd_soc_dai_link spear13xx_evb_dai[] = {
 	},
 };
 
-/* SPEAr13xx audio machine driver */
-static struct snd_soc_card spear13xx_snd_card = {
-	.name		= "spear13xx-evb",
-	.dai_link	= spear13xx_evb_dai,
-	.num_links	= ARRAY_SIZE(spear13xx_evb_dai),
+/* SPEAr audio machine driver */
+static struct snd_soc_card spear_snd_card = {
+	.name		= "spear-evb",
+	.dai_link	= spear_evb_dai,
+	.num_links	= ARRAY_SIZE(spear_evb_dai),
 };
 
 /* SPEAr320s audio interface glue - connects codec <--> CPU <--> platform */
@@ -180,7 +180,7 @@ static struct platform_device *evb_snd_device;
 static struct platform_device *spdif_dit_device;
 #endif
 
-static int __init spear13xx_audio_init(void)
+static int __init spear_audio_init(void)
 {
 	int ret;
 	struct snd_soc_card *spear_soc_card;
@@ -190,7 +190,7 @@ static int __init spear13xx_audio_init(void)
 	else if (cpu_is_spear320())
 		spear_soc_card = &spear320s_snd_card;
 	else
-		spear_soc_card = &spear13xx_snd_card;
+		spear_soc_card = &spear_snd_card;
 
 #if defined(CONFIG_CPU_SPEAR1340)
 	if (cpu_is_spear1340()) {
@@ -222,14 +222,14 @@ static int __init spear13xx_audio_init(void)
 
 	return ret;
 }
-module_init(spear13xx_audio_init);
+module_init(spear_audio_init);
 
-static void __exit spear13xx_audio_exit(void)
+static void __exit spear_audio_exit(void)
 {
 	platform_device_unregister(evb_snd_device);
 }
-module_exit(spear13xx_audio_exit);
+module_exit(spear_audio_exit);
 
 MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
-MODULE_DESCRIPTION("ST SPEAr13XX EVB ASoC driver");
+MODULE_DESCRIPTION("ST SPEAr EVB ASoC driver");
 MODULE_LICENSE("GPL");
