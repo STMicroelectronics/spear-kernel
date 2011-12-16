@@ -1831,6 +1831,7 @@ static struct i2s_platform_data i2s_play_data = {
 	.channel = 8,
 	.play_dma_data = &i2s_play_dma_data,
 	.swidth = 16,
+	.filter = dw_dma_filter,
 };
 
 static struct resource i2s_play_resources[] = {

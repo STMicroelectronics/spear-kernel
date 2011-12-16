@@ -848,6 +848,7 @@ static struct i2s_platform_data i2s0_data = {
 	.swidth = 16,
 	.play_dma_data = &i2s0_dma_data[0],
 	.capture_dma_data = &i2s0_dma_data[1],
+	.filter = dw_dma_filter,
 };
 
 static struct resource i2s0_resources[] = {
@@ -912,6 +913,7 @@ static struct i2s_platform_data i2s1_data = {
 	.channel = 4,
 	.play_dma_data = &i2s1_dma_data[0],
 	.capture_dma_data = &i2s1_dma_data[1],
+	.filter = dw_dma_filter,
 };
 
 static struct resource i2s1_resources[] = {
