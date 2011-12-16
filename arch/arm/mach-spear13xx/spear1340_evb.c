@@ -460,7 +460,7 @@ static struct stmpe_platform_data stmpe610_pdata = {
 	.irq_invert_polarity = false,
 	.autosleep = false,
 	.irq_over_gpio = true,
-	.irq_gpio = GPIO1_6,
+	.irq_gpio = PLGPIO_100,
 	.ts = &stmpe610_ts_pdata,
 };
 
