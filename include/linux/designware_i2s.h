@@ -24,7 +24,6 @@
 
 #include <linux/dmaengine.h>
 #include <linux/platform_device.h>
-#include <linux/dw_dmac.h>
 #include <sound/pcm.h>
 
 struct i2s_platform_data {
