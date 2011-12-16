@@ -78,7 +78,6 @@ struct dw_i2s_dev {
 	unsigned int capability;
 	struct device *dev;
 	struct snd_soc_dai_driver *dai_driver;
-	struct dw_pcm_dma_params *dma_params[2];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
 	u8 swidth;
