@@ -15,12 +15,14 @@
 #include <linux/amba/pl08x.h>
 #include <linux/amba/serial.h>
 #include <linux/can/platform/c_can.h>
+#include <linux/designware_i2s.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
+#include <plat/clock.h>
 #include <plat/pl080.h>
 #include <plat/shirq.h>
 #include <mach/generic.h>
@@ -3069,6 +3071,40 @@ struct platform_device spear320s_i2c2_device = {
 	.resource = i2c2_resources,
 };
 
+static struct i2s_platform_data i2s_data = {
+	.cap = PLAY | RECORD,
+	.channel = 2,
+	.swidth = 32,
+	.play_dma_data = "i2s_tx",
+	.capture_dma_data = "i2s_rx",
+	.filter = pl08x_filter_id,
+};
+
+/* i2s device registeration */
+static struct resource i2s_resources[] = {
+	{
+		.start	= SPEAR320S_I2S_BASE,
+		.end	= SPEAR320S_I2S_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear320_i2s_device = {
+	.name = "designware-i2s",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &i2s_data,
+	},
+	.num_resources = ARRAY_SIZE(i2s_resources),
+	.resource = i2s_resources,
+};
+
+struct platform_device spear320_pcm_device = {
+	.name		= "spear-pcm-audio",
+	.id		= -1,
+};
+
 /* nand device registeration */
 static struct fsmc_nand_platform_data nand_platform_data;
 
@@ -3390,6 +3426,40 @@ void macb_init_board_info(struct platform_device *pdev, void *data)
 	}
 }
 
+static void i2s_clk_init(void)
+{
+	int ret;
+	struct clk *i2s_sclk_clk;
+
+	i2s_sclk_clk = clk_get(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		return;
+	}
+
+	ret = clk_set_parent_sys(NULL, "synth2_3_pclk", NULL, "pll1_clk");
+	if (ret) {
+		pr_err("%s:set_parent synth2_3_pclk of pll1_clk fail\n",
+				__func__);
+		goto put_sclk_clk;
+	}
+
+	ret = clk_set_parent_sys(NULL, "i2s_ref_clk", NULL, "ras_synth2_clk");
+	if (ret) {
+		pr_err("%s:set_parent ras_synth2_clk of i2s_ref_clk fail\n",
+				__func__);
+		goto put_sclk_clk;
+	}
+
+	if (clk_set_rate(i2s_sclk_clk, 3073000)) /* 3.072 Mhz */
+		goto put_sclk_clk;
+
+	if (clk_enable(i2s_sclk_clk))
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+put_sclk_clk:
+	clk_put(i2s_sclk_clk);
+}
+
 /*
  * retreive the SoC-id for differentiating between SPEAr320
  * and future variants of the same (for e.g. SPEAr320s)
@@ -3450,6 +3520,8 @@ void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 
 	/* call spear3xx family common init function */
 	spear3xx_init();
+
+	i2s_clk_init();
 
 	/* shared irq registration */
 	ret = spear_shirq_register(&shirq_ras1);

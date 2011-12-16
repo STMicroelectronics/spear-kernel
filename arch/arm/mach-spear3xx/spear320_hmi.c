@@ -125,14 +125,15 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear3xx_rtc_device,
 	&spear3xx_smi_device,
 	&spear3xx_udc_device,
-
 	/* hmi specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
 	/* We must add macb1 before mac0, as this will control MDIO */
 	&spear320_eth1_device,
 	&spear320_eth0_device,
+	&spear320_i2s_device,
 	&spear320_nand_device,
+	&spear320_pcm_device,
 	&spear320_plgpio_device,
 	&spear320_pwm_device,
 	&spear320_sdhci_device,
@@ -170,6 +171,9 @@ static void __init spear320_hmi_init(void)
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320s_extended_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
+
+	/* Register slave devices on the I2C buses */
+	i2c_register_default_devices();
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear3xx_smi_device);
