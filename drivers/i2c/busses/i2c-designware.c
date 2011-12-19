@@ -33,6 +33,7 @@
 #include <linux/errno.h>
 #include <linux/sched.h>
 #include <linux/err.h>
+#include <linux/i2c-designware.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
@@ -218,6 +219,7 @@ struct dw_i2c_dev {
 	struct i2c_adapter	adapter;
 	u16			tx_fifo_depth;
 	u16			rx_fifo_depth;
+	void 			(*i2c_recover_bus)(struct platform_device *);
 };
 
 static u16
@@ -522,6 +524,7 @@ static int
 i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
+	struct platform_device *pdev = to_platform_device(dev->dev);
 	int ret;
 
 	dev_dbg(dev->dev, "%s: msgs: %d\n", __func__, num);
@@ -549,6 +552,10 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = wait_for_completion_interruptible_timeout(&dev->cmd_complete, HZ);
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
+		if (dev->i2c_recover_bus) {
+			dev_info(dev->dev, "try i2c bus recovery\n");
+			dev->i2c_recover_bus(pdev);
+		}
 		i2c_dw_init(dev);
 		ret = -ETIMEDOUT;
 		goto done;
@@ -699,6 +706,7 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct dw_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
+	struct i2c_dw_pdata *pdata;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -746,6 +754,11 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		r = -EBUSY;
 		goto err_unuse_clocks;
 	}
+
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata && pdata->i2c_recover_bus)
+		dev->i2c_recover_bus = pdata->i2c_recover_bus;
+
 	{
 		u32 param1 = readl(dev->base + DW_IC_COMP_PARAM_1);
 
