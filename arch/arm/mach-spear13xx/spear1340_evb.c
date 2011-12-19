@@ -502,7 +502,10 @@ static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
 #endif
+
+#ifdef CONFIG_VIDEO_SPEAR_VIP
 	vip_buffer_fixup(mi);
+#endif
 }
 
 static void __init spear1340_evb_init(void)
