@@ -88,6 +88,7 @@ struct dw_i2c_dev {
 	u32			master_cfg;
 	unsigned int		tx_fifo_depth;
 	unsigned int		rx_fifo_depth;
++	void 			(*i2c_recover_bus)(struct platform_device *);
 };
 
 extern u32 dw_readl(struct dw_i2c_dev *dev, int offset);

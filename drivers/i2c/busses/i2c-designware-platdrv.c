@@ -54,6 +54,7 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct dw_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
+	struct i2c_dw_pdata *pdata;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -113,6 +114,11 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		r = -EBUSY;
 		goto err_unuse_clocks;
 	}
+
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata && pdata->i2c_recover_bus)
+		dev->i2c_recover_bus = pdata->i2c_recover_bus;
+
 	{
 		u32 param1 = i2c_dw_read_comp_param(dev);
 

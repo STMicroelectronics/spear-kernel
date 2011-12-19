@@ -29,6 +29,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/i2c.h>
+#include <linux/i2c-designware.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
@@ -497,6 +498,7 @@ int
 i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
+	struct platform_device *pdev = to_platform_device(dev->dev);
 	int ret;
 
 	dev_dbg(dev->dev, "%s: msgs: %d\n", __func__, num);
@@ -525,6 +527,10 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = wait_for_completion_interruptible_timeout(&dev->cmd_complete, HZ);
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
+		if (dev->i2c_recover_bus) {
+			dev_info(dev->dev, "try i2c bus recovery\n");
+			dev->i2c_recover_bus(pdev);
+		}
 		i2c_dw_init(dev);
 		ret = -ETIMEDOUT;
 		goto done;
