@@ -194,7 +194,7 @@ static int pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 }
 
 #ifdef CONFIG_PCI_MSI
-extern unsigned int *msi_data;
+extern unsigned int msi_data[];
 
 static void msi_init(struct pcie_port *pp)
 {
