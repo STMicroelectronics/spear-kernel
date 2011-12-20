@@ -1400,6 +1400,11 @@ static struct frac_synth_rate_tbl gen_rtbl[] = {
 	{.div = 0x0A000}, /* 50 MHz */
 	{.div = 0x061A8}, /* 81.92 MHz */
 	{.div = 0x05000}, /* 100 MHz */
+	{.div = 0x02800}, /* 200 MHz */
+	{.div = 0x02620}, /* 210 MHz */
+	{.div = 0x02460}, /* 220 MHz */
+	{.div = 0x022C0}, /* 230 MHz */
+	{.div = 0x02160}, /* 240 MHz */
 	{.div = 0x02000}, /* 250 MHz */
 };
 
