@@ -16,14 +16,9 @@
 #include <linux/platform_device.h>
 #include <mach/generic.h>
 
-/* vip maximum resoultion */
-/*
- * FIXME:
- * limit to VGA resolution for now, increase this to
- * support HD frames later
- */
-#define VIP_MAX_WIDTH		640
-#define VIP_MAX_HEIGHT		480
+/* vip supports HD frame */
+#define VIP_MAX_WIDTH		1920
+#define VIP_MAX_HEIGHT		1080
 
 /* vip minimum resolution */
 #define VIP_MIN_WIDTH		0
@@ -38,8 +33,8 @@
 #define VIP_OPTIMAL_BUFFER_CNT	(VIP_MIN_BUFFER_CNT + 1)
 #define VIP_OPTIMAL_BUFFER_SIZE	(VIP_MAX_WIDTH * VIP_MAX_HEIGHT * \
 				VIP_MAX_BYTES_PER_PIXEL)
-/* FIXME: limit buffer size to 8 MB for now */
-#define VIP_TOTAL_BUFFER_SIZE	(8 * 1024 * 1024)
+/* Allocated Three buffers of size 8 MB each to support 1080p */
+#define VIP_TOTAL_BUFFER_SIZE	(24 * 1024 * 1024)
 
 /* vip polarity settings : common for hsync, vsync and pixclk */
 enum vip_polarity {
