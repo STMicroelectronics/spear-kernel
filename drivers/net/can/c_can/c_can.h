@@ -92,7 +92,6 @@ struct c_can_priv {
 	bool is_quirk_required;
 	unsigned long irq_flags; /* for request_irq() */
 	unsigned int tx_next;
-	unsigned int tx_echo;
 	unsigned int rx_next;
 	unsigned int rx_flag;
 	void *priv;		/* for board-specific data */

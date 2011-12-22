@@ -227,26 +227,15 @@ static inline unsigned int get_msg_obj_tx_last(const struct c_can_priv *priv)
 	return get_msg_obj_tx_first(priv) + get_msg_obj_tx_num(priv) - 1;
 }
 
-static inline unsigned int get_next_msg_obj_mask(const struct c_can_priv *priv)
-{
-	return get_msg_obj_tx_num(priv) - 1;
-}
-
-static inline int get_tx_next_msg_obj(const struct c_can_priv *priv)
-{
-	return (priv->tx_next & get_next_msg_obj_mask(priv)) +
-		get_msg_obj_tx_first(priv);
-}
-
-static inline int get_tx_echo_msg_obj(const struct c_can_priv *priv)
-{
-	return (priv->tx_echo & get_next_msg_obj_mask(priv)) +
-		get_msg_obj_tx_first(priv);
-}
-
 static inline int get_total_msg_objs(const struct c_can_priv *priv)
 {
 	return priv->devtype_data.rx_last + priv->devtype_data.tx_num;
+}
+
+static inline int get_txrqst_mask(const struct c_can_priv *priv)
+{
+	return ((1 << get_msg_obj_tx_num(priv)) - 1) <<
+					get_msg_obj_rx_num(priv);
 }
 
 static u32 c_can_read_reg32(struct c_can_priv *priv, void *reg)
@@ -747,26 +736,28 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 	if (can_dropped_invalid_skb(dev, skb))
 		return NETDEV_TX_OK;
 
-	msg_obj_no = get_tx_next_msg_obj(priv);
+	msg_obj_no = priv->tx_next;
 
-	/* check if this message object is still BUSY */
-	if (unlikely(c_can_is_tx_obj_busy(priv, msg_obj_no))) {
-		netif_stop_queue(dev);
-
-		netdev_err(dev, "BUG! TX buffer full when queue awake!\n");
-		return NETDEV_TX_BUSY;
+	/* check for wrap */
+	if (priv->tx_next == get_msg_obj_tx_last(priv)) {
+		if (c_can_read_reg32(priv, &priv->regs->txrqst1) &
+				get_txrqst_mask(priv)) {
+			if (priv->is_quirk_required) {
+				netif_stop_queue(dev);
+				priv->tx_next = get_msg_obj_tx_first(priv);
+				return NETDEV_TX_BUSY;
+			} else {
+				netif_stop_queue(dev);
+			}
+		}
+		priv->tx_next = get_msg_obj_tx_first(priv);
+	} else {
+		priv->tx_next++;
 	}
 
 	/* prepare message object for transmission */
-	c_can_write_msg_object(dev, 0, frame, msg_obj_no);
 	can_put_echo_skb(skb, dev, msg_obj_no - get_msg_obj_tx_first(priv));
-
-	priv->tx_next++;
-
-	if (((priv->tx_next & get_next_msg_obj_mask(priv)) == 0) ||
-			c_can_is_tx_obj_busy(priv,
-				get_tx_next_msg_obj(priv)))
-		netif_stop_queue(dev);
+	c_can_write_msg_object(dev, 0, frame, msg_obj_no);
 
 	return NETDEV_TX_OK;
 }
@@ -910,8 +901,11 @@ static void c_can_start(struct net_device *dev)
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 
+	/* reset status flags */
+	priv->last_status = priv->current_status = 0;
+
 	/* reset tx helper pointers */
-	priv->tx_next = priv->tx_echo = 0;
+	priv->tx_next = get_msg_obj_tx_first(priv);
 
 	/* reset rx helper pointers */
 	priv->rx_next = 0;
@@ -960,43 +954,27 @@ static int c_can_get_berr_counter(const struct net_device *dev,
 	return 0;
 }
 
-/*
- * theory of operation:
- *
- * priv->tx_echo holds the number of the oldest can_frame put for
- * transmission into the hardware, but not yet ACKed by the CAN tx
- * complete IRQ.
- *
- * We iterate from priv->tx_echo to priv->tx_next and check if the
- * packet has been transmitted, echo it back to the CAN framework.
- * If we discover a not yet transmitted package, stop looking for more.
- */
-static void c_can_do_tx(struct net_device *dev)
+static void c_can_do_tx(struct net_device *dev, u16 irqstatus)
 {
 	u32 val;
 	u32 msg_obj_no;
 	struct c_can_priv *priv = netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 
-	for (/* nix */; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
-		msg_obj_no = get_tx_echo_msg_obj(priv);
-		val = c_can_read_reg32(priv, &priv->regs->txrqst1);
-		if (!(val & (1 << (msg_obj_no - 1)))) {
-			can_get_echo_skb(dev,
-				msg_obj_no - get_msg_obj_tx_first(priv));
-			stats->tx_bytes += priv->read_reg(priv,
-					&priv->regs->ifregs[0].msg_cntrl)
-					& IF_MCONT_DLC_MASK;
-			stats->tx_packets++;
-			c_can_inval_msg_object(dev, 0, msg_obj_no);
-		} else {
-			break;
-		}
+	msg_obj_no = irqstatus;
+	val = c_can_read_reg32(priv, &priv->regs->txrqst1);
+	if (!(val & (1 << (msg_obj_no - 1)))) {
+		can_get_echo_skb(dev,
+			msg_obj_no - get_msg_obj_tx_first(priv));
+		stats->tx_bytes += priv->read_reg(priv,
+				&priv->regs->ifregs[0].msg_cntrl)
+				& IF_MCONT_DLC_MASK;
+		stats->tx_packets++;
+		c_can_inval_msg_object(dev, 0, msg_obj_no);
 	}
 
-	/* restart queue if wrap-up or if queue stalled on last pkt */
-	if (((priv->tx_next & get_next_msg_obj_mask(priv)) != 0) ||
-			((priv->tx_echo & get_next_msg_obj_mask(priv)) == 0))
+	/* restart queue if wrap-up */
+	if (irqstatus == get_msg_obj_tx_last(priv))
 		netif_wake_queue(dev);
 }
 
@@ -1352,7 +1330,7 @@ static int c_can_poll(struct napi_struct *napi, int quota)
 	} else if ((irqstatus >= get_msg_obj_tx_first(priv)) &&
 			(irqstatus <= get_msg_obj_tx_last(priv))) {
 		/* handle events corresponding to transmit message objects */
-		c_can_do_tx(dev);
+		c_can_do_tx(dev, irqstatus);
 
 		if (priv->is_quirk_required) {
 			/*
