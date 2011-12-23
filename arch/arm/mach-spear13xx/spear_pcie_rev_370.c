@@ -420,6 +420,16 @@ static void pcie_host_init(struct pcie_port *pp)
 
 	cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
 
+	/*
+	 * this controller support only 128 bytes read size, however its
+	 * default value in capability register is 512 bytes. So force
+	 * it to 128 here.
+	 */
+
+	pcie_rd_own_conf(pp, cap + PCI_EXP_DEVCTL, 4, &val);
+	val &= ~PCI_EXP_DEVCTL_READRQ;
+	pcie_wr_own_conf(pp, cap + PCI_EXP_DEVCTL, 4, val);
+
 	/*program correct class for RC*/
 	pcie_rd_own_conf(pp, PCI_CLASS_REVISION, 4, &val);
 	val &= 0xFFFF;
