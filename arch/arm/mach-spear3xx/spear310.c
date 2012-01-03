@@ -497,7 +497,7 @@ static struct resource macb1_resources[] = {
 
 struct platform_device spear310_eth_macb1_device = {
 	.name = "macb",
-	.id = 1,
+	.id = 0,
 	.dev = {
 		.dma_mask = &macb1_dmamask,
 		.coherent_dma_mask = ~0,
@@ -520,7 +520,7 @@ static struct resource macb2_resources[] = {
 
 struct platform_device spear310_eth_macb2_device = {
 	.name = "macb",
-	.id = 2,
+	.id = 1,
 	.dev = {
 		.dma_mask = &macb2_dmamask,
 		.coherent_dma_mask = ~0,
@@ -543,7 +543,7 @@ static struct resource macb3_resources[] = {
 
 struct platform_device spear310_eth_macb3_device = {
 	.name = "macb",
-	.id = 3,
+	.id = 2,
 	.dev = {
 		.dma_mask = &macb3_dmamask,
 		.coherent_dma_mask = ~0,
@@ -566,7 +566,7 @@ static struct resource macb4_resources[] = {
 
 struct platform_device spear310_eth_macb4_device = {
 	.name = "macb",
-	.id = 4,
+	.id = 3,
 	.dev = {
 		.dma_mask = &macb4_dmamask,
 		.coherent_dma_mask = ~0,

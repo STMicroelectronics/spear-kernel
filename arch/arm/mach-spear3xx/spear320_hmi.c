@@ -130,9 +130,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* hmi specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
-	/* We must add macb1 before mac0, as this will control MDIO */
-	&spear320_eth1_device,
 	&spear320_eth0_device,
+	&spear320_eth1_device,
 	&spear320_i2s_device,
 	&spear320_nand_device,
 	&spear320_pcm_device,

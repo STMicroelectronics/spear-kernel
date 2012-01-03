@@ -3014,7 +3014,7 @@ static struct resource eth1_resources[] = {
  */
 struct platform_device spear320_eth0_device = {
 	.name = "macb",
-	.id = 2,
+	.id = 0,
 	.dev = {
 		.dma_mask = &macb0_dmamask,
 		.coherent_dma_mask = ~0,
