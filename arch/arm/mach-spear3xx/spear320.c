@@ -3400,38 +3400,6 @@ static void c_can_enable_bugfix(struct platform_device *c_can)
 	pdata->is_quirk_required = 1;
 }
 
-#define ENABLE_MEM_CLK		0x1
-void macb_init_board_info(struct platform_device *pdev, void *data)
-{
-	struct clk *amem_clk;
-	u32 tmp;
-
-	macb_set_plat_data(pdev, data);
-	/*
-	 * Select the MDIO Muxed configuration for the ETH interface.
-	 * The RAS control register should have the following cfg
-	 * For ETH-0 interface
-	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
-	 *
-	 * For ETH-1/ETH interface
-	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
-	 */
-	tmp = readl(IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG))) | (1 << MII_ENB);
-	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
-
-	/* Enable memory Port-1 clock */
-	amem_clk = clk_get(NULL, "amem_clk");
-	if (IS_ERR(amem_clk)) {
-		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
-		return;
-	}
-
-	if (clk_enable(amem_clk)) {
-		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
-		clk_put(amem_clk);
-	}
-}
-
 static void i2s_clk_init(void)
 {
 	int ret;

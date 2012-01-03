@@ -38,12 +38,14 @@ static struct macb_base_data hmi_macb_data[] = {
 		.gpio_num = -1,
 		.phy_addr = 0x1,
 		.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+		.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 	}, {
 		.is_rmii = 1,
 		.phy_mask = 0,
 		.gpio_num = -1,
 		.phy_addr = 0x0,
 		.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x8a},
+		.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 	},
 };
 
@@ -165,8 +167,9 @@ static void __init spear320_hmi_init(void)
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
+	spear3xx_macb_setup();
 	macb_set_plat_data(&spear320_eth0_device, &hmi_macb_data[0]);
-	macb_init_board_info(&spear320_eth1_device, &hmi_macb_data[1]);
+	macb_set_plat_data(&spear320_eth1_device, &hmi_macb_data[1]);
 
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320s_extended_mode, pmx_devs,

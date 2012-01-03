@@ -111,7 +111,7 @@
 	#define UART1_2_PCLK_MASK			0x1
 	#define SPEAR320_UARTX_PCLK_VAL_SYNTH1		0x0
 	#define SPEAR320_UARTX_PCLK_VAL_APB		0x1
-	#define MII_ENB					(5)
+	#define MDIO_SEL_SHIFT				(5)
 	#define AUTO_NET_SMII_MODE_VAL			(0)
 	#define AUTO_NET_MII_MODE_VAL			(1)
 	#define AUTO_EXP_MODE_VAL			(2)

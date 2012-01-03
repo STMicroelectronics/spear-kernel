@@ -78,6 +78,7 @@ static struct macb_base_data spear310_macb1_data = {
 	.gpio_num = -1,
 	.phy_addr = 0x1,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb2_data = {
@@ -85,6 +86,7 @@ static struct macb_base_data spear310_macb2_data = {
 	.gpio_num = -1,
 	.phy_addr = 0x3,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x22, 0x22, 0x22},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb3_data = {
@@ -92,6 +94,7 @@ static struct macb_base_data spear310_macb3_data = {
 	.gpio_num = -1,
 	.phy_addr = 0x5,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x34, 0x56, 0x78},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb4_data = {
@@ -99,6 +102,7 @@ static struct macb_base_data spear310_macb4_data = {
 	.gpio_num = -1,
 	.phy_addr = 0x7,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x11, 0x11, 0x11},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 /* padmux devices to enable */
@@ -215,34 +219,6 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}
 };
 
-#define ENABLE_MEM_CLK	1
-static void macb_enable_mem_clk(void)
-{
-	struct clk *amem_clk;
-
-	/* Enable memory Port-1 clock */
-	amem_clk = clk_get(NULL, "amem_clk");
-	if (IS_ERR(amem_clk)) {
-		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
-		return;
-	}
-
-	if (clk_enable(amem_clk)) {
-		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
-		clk_put(amem_clk);
-		return;
-	}
-
-	/*
-	 * Program the pad strengths of PLGPIO to drive the IO's
-	 * The Magic number being used have direct correlations
-	 * with the driving capabilities of the IO pads.
-	 */
-	writel(0x2f7bc210, VA_PLGPIO3_PAD_PRG);
-	writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
-
-}
-
 static void __init spear310_evb_init(void)
 {
 	unsigned int i;
@@ -264,7 +240,7 @@ static void __init spear310_evb_init(void)
 	i2c_register_default_devices();
 
 	/* initialize macb related data in macb plat data */
-	macb_enable_mem_clk();
+	spear3xx_macb_setup();
 	macb_set_plat_data(&spear310_eth_macb1_device, &spear310_macb1_data);
 	macb_set_plat_data(&spear310_eth_macb2_device, &spear310_macb2_data);
 	macb_set_plat_data(&spear310_eth_macb3_device, &spear310_macb3_data);

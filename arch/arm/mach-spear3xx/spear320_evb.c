@@ -79,6 +79,7 @@ static struct macb_base_data spear320_macb_data = {
 	.gpio_num = PLGPIO_76,
 	.phy_addr = 0x2,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 /* padmux devices to enable */
@@ -203,7 +204,8 @@ static void __init spear320_evb_init(void)
 	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
-	macb_init_board_info(&spear320_eth1_device, &spear320_macb_data);
+	spear3xx_macb_setup();
+	macb_set_plat_data(&spear320_eth1_device, &spear320_macb_data);
 
 	/* call spear320 machine init function */
 	spear320_common_init(&spear320_auto_net_mii_mode, pmx_devs,

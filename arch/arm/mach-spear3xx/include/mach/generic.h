@@ -56,6 +56,8 @@ void __init spear_setup_timer(void);
 void __init spear3xx_map_io(void);
 void __init spear3xx_init_irq(void);
 void __init spear3xx_init(void);
+void spear3xx_macb_plat_mdio_control(struct platform_device *pdev);
+void spear3xx_macb_setup(void);
 void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr);
 
 /* pad mux declarations */
@@ -275,7 +277,6 @@ extern struct pmx_dev spear320s_pmx_uart6[];
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 		**pmx_devs, u8 pmx_dev_count);
 void __init spear320_map_io(void);
-void macb_init_board_info(struct platform_device *pdev, void *data);
 
 /* Add misc structure declarations here */
 extern struct clcd_board clcd_plat_data;
