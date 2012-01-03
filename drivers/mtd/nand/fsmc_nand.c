@@ -633,6 +633,16 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	uint64_t ecc_data[2];
 	uint32_t num_err, i;
 
+	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
+
+	/* no bit flipping */
+	if (likely(num_err == 0))
+		return 0;
+
+	/* too many errors */
+	if (unlikely(num_err > 8))
+		return -EBADMSG;
+
 	/* The calculated ecc is actually the correction index in data */
 	memcpy(ecc_data, calc_ecc, 13);
 
@@ -645,7 +655,7 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	 * uint64_t array and error offset indexes are populated in err_idx
 	 * array
 	 */
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < num_err; i++) {
 		if (i == 4) {
 			err_idx[4] = ((ecc_data[1] & 0x1) << 12) | ecc_data[0];
 			ecc_data[1] >>= 1;
@@ -654,11 +664,6 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 		err_idx[i] = (ecc_data[i/4] & 0x1FFF);
 		ecc_data[i/4] >>= 13;
 	}
-
-	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
-
-	if (num_err > 8)
-		return -EBADMSG;
 
 	i = 0;
 	while (num_err--) {
