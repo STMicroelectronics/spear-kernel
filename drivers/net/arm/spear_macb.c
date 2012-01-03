@@ -70,8 +70,6 @@
 #define MACB_RX_INT_FLAGS	(MACB_BIT(RCOMP) | MACB_BIT(RXUBR)	\
 				 | MACB_BIT(ISR_ROVR))
 
-static u32 *mac1_bus;
-
 /*HW Timer Handlers */
 
 static void spear_chk_tmr_intr(struct macb *bp)
@@ -224,11 +222,13 @@ static int macb_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 {
 	int value;
 	struct macb *bp;
+	struct macb_base_data *pdata;
 
-	if (mac1_bus)
-		bp = (struct macb *)mac1_bus;
-	else
-		bp = bus->priv;
+	bp = bus->priv;
+	pdata = dev_get_platdata(&bp->pdev->dev);
+
+	if (pdata->plat_mdio_control)
+		pdata->plat_mdio_control(bp->pdev);
 
 	macb_writel(bp, MAN, (MACB_BF(SOF, MACB_MAN_SOF)
 			      | MACB_BF(RW, MACB_MAN_READ)
@@ -249,11 +249,14 @@ static int macb_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 		u16 value)
 {
 	struct macb *bp;
+	struct macb_base_data *pdata;
 
-	if (mac1_bus)
-		bp = (struct macb *)mac1_bus;
-	else
-		bp = bus->priv;
+	bp = bus->priv;
+	pdata = dev_get_platdata(&bp->pdev->dev);
+
+	if (pdata->plat_mdio_control)
+		pdata->plat_mdio_control(bp->pdev);
+
 	macb_writel(bp, MAN, (MACB_BF(SOF, MACB_MAN_SOF)
 			      | MACB_BF(RW, MACB_MAN_WRITE)
 			      | MACB_BF(PHYA, mii_id)
@@ -1575,9 +1578,6 @@ static int __init macb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Cannot register net device, aborting.\n");
 		goto err_out_free_gpio;
 	}
-
-	if ((pdev->id == 1))
-		mac1_bus = (u32 *)bp;
 
 	err = spear_init_hw_timer(bp);
 	if (err) {
