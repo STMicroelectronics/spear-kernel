@@ -299,7 +299,7 @@ static void __init spear310_evb_init(void)
 
 MACHINE_START(SPEAR310_EVB, "ST-SPEAR310-EVB")
 	.boot_params	=	0x00000100,
-	.map_io		=	spear3xx_map_io,
+	.map_io		=	spear310_map_io,
 	.init_irq	=	spear3xx_init_irq,
 	.timer		=	&spear3xx_timer,
 	.init_machine	=	spear310_evb_init,

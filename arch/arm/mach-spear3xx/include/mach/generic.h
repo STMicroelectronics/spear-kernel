@@ -203,6 +203,7 @@ extern struct pmx_dev spear310_pmx_tdm0;
 /* Add spear310 machine function declarations here */
 void __init spear310_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		u8 pmx_dev_count);
+void __init spear310_map_io(void);
 #endif
 
 /* spear320 declarations */
