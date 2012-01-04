@@ -158,7 +158,7 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	return ret;
 }
 
-static const struct snd_soc_dai_ops spdif_out_dai_ops = {
+static struct snd_soc_dai_ops spdif_out_dai_ops = {
 	.startup	= spdif_out_startup,
 	.shutdown	= spdif_out_shutdown,
 	.trigger	= spdif_out_trigger,
