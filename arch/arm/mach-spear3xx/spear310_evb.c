@@ -74,6 +74,7 @@ static struct platform_device spear310_phy_device = {
 };
 
 static struct macb_base_data spear310_macb1_data = {
+	.bus_id = 1,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x1,
@@ -82,6 +83,7 @@ static struct macb_base_data spear310_macb1_data = {
 };
 
 static struct macb_base_data spear310_macb2_data = {
+	.bus_id = 2,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x3,
@@ -90,6 +92,7 @@ static struct macb_base_data spear310_macb2_data = {
 };
 
 static struct macb_base_data spear310_macb3_data = {
+	.bus_id = 3,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x5,
@@ -98,6 +101,7 @@ static struct macb_base_data spear310_macb3_data = {
 };
 
 static struct macb_base_data spear310_macb4_data = {
+	.bus_id = 4,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x7,

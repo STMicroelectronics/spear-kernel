@@ -75,6 +75,7 @@ static struct platform_device spear320_phy_device = {
 
 /* Ethernet Private data */
 static struct macb_base_data spear320_macb_data = {
+	.bus_id = 1,
 	.phy_mask = 0,
 	.gpio_num = PLGPIO_76,
 	.phy_addr = 0x2,

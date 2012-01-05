@@ -33,6 +33,7 @@
 /* Ethernet Private data */
 static struct macb_base_data hmi_macb_data[] = {
 	{
+		.bus_id = 1,
 		.is_rmii = 1,
 		.phy_mask = 0,
 		.gpio_num = -1,
@@ -40,6 +41,7 @@ static struct macb_base_data hmi_macb_data[] = {
 		.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
 		.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 	}, {
+		.bus_id = 2,
 		.is_rmii = 1,
 		.phy_mask = 0,
 		.gpio_num = -1,
