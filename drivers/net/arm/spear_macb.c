@@ -394,13 +394,18 @@ static int macb_mii_init(struct macb *bp)
 	bp->mii_bus->read = &macb_mdio_read;
 	bp->mii_bus->write = &macb_mdio_write;
 	bp->mii_bus->reset = &macb_mdio_reset;
-	snprintf(bp->mii_bus->id, MII_BUS_ID_SIZE, "%x", bp->pdev->id);
 	bp->mii_bus->priv = bp;
 	bp->mii_bus->parent = &bp->dev->dev;
 	pdata = bp->pdev->dev.platform_data;
 
-	if (pdata)
+	if (pdata) {
 		bp->mii_bus->phy_mask = pdata->phy_mask;
+		snprintf(bp->mii_bus->id, MII_BUS_ID_SIZE, "%x",
+				pdata->bus_id);
+	} else {
+		snprintf(bp->mii_bus->id, MII_BUS_ID_SIZE, "%x",
+				bp->pdev->id);
+	}
 
 	bp->mii_bus->irq = kmalloc(sizeof(int)*PHY_MAX_ADDR, GFP_KERNEL);
 	if (!bp->mii_bus->irq) {

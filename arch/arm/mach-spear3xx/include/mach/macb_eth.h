@@ -18,6 +18,7 @@
 #define MAX_ADDR_LEN 32
 
 struct macb_base_data {
+	int bus_id;
 	u32 phy_mask;
 	int phy_addr;
 	u8 mac_addr[MAX_ADDR_LEN];
