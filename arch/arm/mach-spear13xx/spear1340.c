@@ -15,6 +15,12 @@
 #include <linux/ahci_platform.h>
 #include <linux/amba/serial.h>
 #include <linux/delay.h>
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+#endif
+
 #include <linux/mtd/fsmc.h>
 #include <linux/designware_i2s.h>
 #include <linux/dw_dmac.h>
@@ -30,39 +36,6 @@
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
 #include <media/vip.h>
-
-/* SPEAr GPIO Buttons Info */
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-#include <linux/gpio_keys.h>
-#include <linux/input.h>
-
-/* SPEAr GPIO Buttons definition */
-#define SPEAR_GPIO_BTN9	9
-
-static struct gpio_keys_button spear_gpio_keys_table[] = {
-	{
-		.code = BTN_0,
-		.gpio = SPEAR_GPIO_BTN9,
-		.active_low = 0,
-		.desc = "gpio-keys: BTN0",
-		.type = EV_KEY,
-		.wakeup = 1,
-		.debounce_interval = 20,
-	},
-};
-
-static struct gpio_keys_platform_data spear_gpio_keys_data = {
-	.buttons = spear_gpio_keys_table,
-	.nbuttons = ARRAY_SIZE(spear_gpio_keys_table),
-};
-
-struct platform_device spear1340_device_gpiokeys = {
-	.name = "gpio-keys",
-	.dev = {
-		.platform_data = &spear_gpio_keys_data,
-	},
-};
-#endif
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -1762,6 +1735,36 @@ struct platform_device spear1340_cec1_device = {
 	.num_resources = ARRAY_SIZE(cec1_resources),
 	.resource = cec1_resources,
 };
+
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN9	9
+
+static struct gpio_keys_button spear_gpio_keys_table[] = {
+	{
+		.code = BTN_0,
+		.gpio = SPEAR_GPIO_BTN9,
+		.active_low = 0,
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data spear_gpio_keys_data = {
+	.buttons = spear_gpio_keys_table,
+	.nbuttons = ARRAY_SIZE(spear_gpio_keys_table),
+};
+
+struct platform_device spear1340_gpiokeys_device = {
+	.name = "gpio-keys",
+	.dev = {
+		.platform_data = &spear_gpio_keys_data,
+	},
+};
+#endif
 
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
 	.select_bank = nand_select_bank,

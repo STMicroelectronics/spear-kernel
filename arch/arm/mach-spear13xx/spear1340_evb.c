@@ -275,7 +275,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-	&spear1340_device_gpiokeys,
+	&spear1340_gpiokeys_device,
 #endif
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
