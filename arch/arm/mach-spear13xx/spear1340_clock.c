@@ -1516,8 +1516,8 @@ static struct pclk_info spdif_in_pclk_info[] = {
 		.pclk = &pll2_clk,
 		.pclk_val = SPEAR1340_SPDIF_IN_PLL2_VAL,
 	}, {
-		.pclk = &gen_synth0_clk,
-		.pclk_val = SPEAR1340_SPDIF_IN_GSYNT0_VAL,
+		.pclk = &gen_synth3_clk,
+		.pclk_val = SPEAR1340_SPDIF_IN_GSYNT3_VAL,
 	},
 };
 
