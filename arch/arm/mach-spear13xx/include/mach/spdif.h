@@ -16,10 +16,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#ifndef MACH_SPDIF_OUT_H
-#define MACH_SPDIF_OUT_H
+#ifndef MACH_SPDIF_H
+#define MACH_SPDIF_H
 
-struct spdif_out_platform_data {
+struct spdif_platform_data {
 	/* DMA params */
 	void *dma_params;
 	bool (*filter)(struct dma_chan *chan, void *slave);
@@ -27,4 +27,4 @@ struct spdif_out_platform_data {
 
 #define SPDIF_OUT_FIFO_DATA	0x04
 
-#endif /* MACH_SPDIF_OUT_H */
+#endif /* MACH_SPDIF_H */

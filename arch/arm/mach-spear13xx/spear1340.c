@@ -32,7 +32,7 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/spdif_out.h>
+#include <mach/spdif.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
 #include <media/vip.h>
@@ -2037,7 +2037,7 @@ static struct dw_dma_slave spdif_out_dma_data = {
 	.fc = DW_DMA_FC_D_M2P,
 };
 
-static struct spdif_out_platform_data spdif_out_data = {
+static struct spdif_platform_data spdif_out_data = {
 	.dma_params = &spdif_out_dma_data,
 	.filter = dw_dma_filter,
 };

@@ -19,7 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/spear_dma.h>
 #include <sound/soc.h>
-#include <mach/spdif_out.h>
+#include <mach/spdif.h>
 #include "spdif_out_regs.h"
 
 struct spdif_out_dev {
@@ -180,7 +180,7 @@ struct snd_soc_dai_driver spdif_out_dai = {
 static int spdif_out_probe(struct platform_device *pdev)
 {
 	struct spdif_out_dev *host;
-	struct spdif_out_platform_data *pdata;
+	struct spdif_platform_data *pdata;
 	struct resource *res;
 	int ret;
 
