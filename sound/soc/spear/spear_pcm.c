@@ -62,13 +62,12 @@ static int spear_pcm_prepare(struct snd_pcm_substream *substream)
 
 	spin_lock_irqsave(&prtd->lock, flags);
 	prtd->dma_addr = runtime->dma_addr;
-	prtd->buffer_bytes = snd_pcm_lib_buffer_bytes(substream);
-	prtd->period_bytes = snd_pcm_lib_period_bytes(substream);
 
 	prtd->buf_index = 0;
 	prtd->dmacount = 0;
-	prtd->xfer_len = prtd->period_bytes;
-	prtd->xfer_cnt = prtd->buffer_bytes / prtd->period_bytes;
+	prtd->xfer_len = snd_pcm_lib_period_bytes(substream);
+	prtd->xfer_cnt = snd_pcm_lib_buffer_bytes(substream) / prtd->xfer_len;
+
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	return 0;
