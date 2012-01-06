@@ -1880,6 +1880,7 @@ static struct i2s_platform_data i2s_capture_data = {
 	.channel = 8,
 	.capture_dma_data = &i2s_capture_dma_data,
 	.swidth = 16,
+	.filter = dw_dma_filter,
 };
 
 static struct resource i2s_record_resources[] = {
@@ -2038,6 +2039,7 @@ static struct dw_dma_slave spdif_out_dma_data = {
 
 static struct spdif_out_platform_data spdif_out_data = {
 	.dma_params = &spdif_out_dma_data,
+	.filter = dw_dma_filter,
 };
 
 static struct resource spdif_out_resources[] = {
