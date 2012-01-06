@@ -609,6 +609,7 @@ extern struct platform_device spear1340_phy0_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
+extern struct platform_device spear1340_spdif_in_device;
 extern struct platform_device spear1340_spdif_out_device;
 extern struct platform_device spear1340_thermal_device;
 extern struct platform_device spear1340_vip_device;

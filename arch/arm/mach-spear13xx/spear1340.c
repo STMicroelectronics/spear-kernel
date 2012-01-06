@@ -2022,6 +2022,45 @@ struct platform_device spear1340_sata0_device = {
 	},
 };
 
+/* spdif-in device registeration */
+static struct dw_dma_slave spdif_in_dma_data = {
+	/* Record */
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.rx_reg = SPEAR1340_SPDIF_IN_FIFO_BASE,
+	.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
+	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_SPDIF_RX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_SPDIF,
+	.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
+	.src_msize = DW_DMA_MSIZE_16,
+	.dst_msize = DW_DMA_MSIZE_16,
+	.fc = DW_DMA_FC_D_P2M,
+};
+
+static struct spdif_platform_data spdif_in_data = {
+	.dma_params = &spdif_in_dma_data,
+	.filter = dw_dma_filter,
+};
+
+static struct resource spdif_in_resources[] = {
+	{
+		.start = SPEAR1340_SPDIF_IN_BASE,
+		.end = SPEAR1340_SPDIF_IN_BASE + SZ_128 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_SPDIF_IN,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_spdif_in_device = {
+	.name = "spdif-in",
+	.id = -1,
+	.dev.platform_data = &spdif_in_data,
+	.num_resources = ARRAY_SIZE(spdif_in_resources),
+	.resource = spdif_in_resources,
+};
+
 /* spdif-out device registeration */
 static struct dw_dma_slave spdif_out_dma_data = {
 	/* Play */
