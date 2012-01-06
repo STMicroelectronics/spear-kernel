@@ -23,7 +23,6 @@
 #include "spdif_out_regs.h"
 
 struct spdif_out_dev {
-	struct device *dev;
 	struct clk *clk;
 	struct dma_data dma_params;
 	void *io_base;
@@ -213,7 +212,6 @@ static int spdif_out_probe(struct platform_device *pdev)
 
 	pdata = dev_get_platdata(&pdev->dev);
 
-	host->dev = &pdev->dev;
 	host->dma_params.data = pdata->dma_params;
 	host->dma_params.filter = pdata->filter;
 
