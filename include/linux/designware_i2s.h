@@ -23,8 +23,7 @@
 #define DESIGNWARE_I2S_H
 
 #include <linux/dmaengine.h>
-#include <linux/platform_device.h>
-#include <sound/pcm.h>
+#include <linux/types.h>
 
 struct i2s_platform_data {
 	#define PLAY	(1 << 0)

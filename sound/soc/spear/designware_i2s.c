@@ -12,7 +12,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/delay.h>
 #include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
@@ -21,7 +20,6 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/spear_dma.h>
-#include <mach/misc_regs.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 
