@@ -2454,6 +2454,24 @@ void config_clcd_gpio_pads(bool on)
 	config_clcd_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
 }
 
+#ifdef CONFIG_SND_SPEAR_SPDIF_IN
+static int spdif_in_clk_init(void)
+{
+	int ret;
+
+	ret = clk_set_parent_sys("gen_synth3_clk", NULL, NULL, "vco1div4_clk");
+	if (ret)
+		return ret;
+
+	ret = clk_set_parent_sys("spdif-in", NULL, "gen_synth3_clk", NULL);
+	if (ret)
+		return ret;
+
+	/* Set SPDIF IN for a fixed clock = 200 MHz */
+	return clk_set_rate_sys("spdif-in", NULL, 200000000);
+}
+#endif
+
 #ifdef CONFIG_SND_SPEAR_SPDIF_OUT
 static int spdif_out_clk_init(void)
 {
@@ -2491,11 +2509,20 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 	if (ret)
 		pr_err("SPEAr1340: sysclock init failed, err no: %d\n", ret);
 
+#ifdef CONFIG_SND_SPEAR_SPDIF_IN
+	/* call spdif in clock init */
+	ret = spdif_in_clk_init();
+	if (ret)
+		pr_err("SPEAr1340: spdif in clock init failed, err no: %d\n",
+				ret);
+#endif
+
 #ifdef CONFIG_SND_SPEAR_SPDIF_OUT
-	/* call spdif clock init */
+	/* call spdif out clock init */
 	ret = spdif_out_clk_init();
 	if (ret)
-		pr_err("SPEAr1340: spdif clock init failed, err no: %d\n", ret);
+		pr_err("SPEAr1340: spdif out clock init failed, err no: %d\n",
+				ret);
 #endif
 
 	/* pmx initialization */
