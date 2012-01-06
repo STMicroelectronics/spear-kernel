@@ -25,7 +25,8 @@
 MODULE_LICENSE("GPL");
 
 #define STUB_RATES	SNDRV_PCM_RATE_8000_192000
-#define STUB_FORMATS	SNDRV_PCM_FMTBIT_S16_LE
+#define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
+			SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE)
 
 static struct snd_soc_codec_driver soc_codec_spdif_dir;
 
