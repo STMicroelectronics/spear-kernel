@@ -173,7 +173,7 @@ struct snd_soc_dai_driver spdif_out_dai = {
 				 SNDRV_PCM_RATE_192000),
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
-	.ops = &spdif_out_dai_ops,
+	.ops = (struct snd_soc_dai_ops *)&spdif_out_dai_ops,
 };
 
 static int spdif_out_probe(struct platform_device *pdev)
