@@ -215,6 +215,7 @@ static int spdif_out_probe(struct platform_device *pdev)
 
 	host->dev = &pdev->dev;
 	host->dma_params.data = pdata->dma_params;
+	host->dma_params.filter = pdata->filter;
 
 	dev_set_drvdata(&pdev->dev, host);
 
