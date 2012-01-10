@@ -24,7 +24,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-subdev.h>
 
-/* resolutons */
+/* supported resolutions */
 #define UXGA_WIDTH	1600
 #define UXGA_HEIGHT	1200
 #define SXGA_WIDTH	1280
@@ -314,7 +314,7 @@
 #define FLASH_MODE			0x0240
 #define FLASH_RECOMMENDED		0x0248
 /* vs6725 anti-vignettte registers */
-#define DISABLE				0x0260
+#define AV_DISABLE				0x0260
 /* vs6725 special effect control registers */
 #define NEGATIVE			0x02C0
 #define SOLARISING			0x02C1
@@ -977,19 +977,20 @@ static struct regval_list vs6725_patch1[] = {
 	{0xe000, 0x01},
 	/* reset the MCU */
 	{0xffff, 0x00},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list vs6725_patch2[] = {
 	{0xc234, 0x01}, /* Core_Reg enable */
-	{0xd900, 0x06}, /* DCTRL */
-	{0xd904, 0x00}, /* YCBCR SETUP: no swap */
-	{0xda30, 0xFE}, /* PCLK_SETUP: CLK out the data at -ve edge */
-	{0xda10, 0x0d}, /* VSYNC Active HI, as per VESA specs */
-	{0xda0c, 0x0d}, /* HSYNC Active HI, as per VESA specs */
-	{0x0074, 0x01}, /* Set Divider to 1 */
-	{0x0030, 0x10}, /* Set Output Clock DeRating Factor to 16 */
+	{OPF_DCTRL, 0x06}, /* DCTRL */
+	{OPF_YCBCR_SETUP, 0x00}, /* YCBCR SETUP: no swap */
+	{OIF_PCLK_SETUP, 0xFE}, /* PCLK_SETUP: CLK out the data at -ve edge */
+	{OIF_VSYNC_SETUP, 0x0d}, /* VSYNC Active HI, as per VESA specs */
+	{OIF_HSYNC_SETUP, 0x0d}, /* HSYNC Active HI, as per VESA specs */
+	{E_DIV, 0x01}, /* Set Divider to 1 */
+	{MAX_DERATING, 0x10}, /* Set Output Clock DeRating Factor to 16 */
 
 	/* ExposureAlgorithmControls: fpMinimumDesiredExposureTime_us */
 	{0x0124, 0x47},
@@ -1012,8 +1013,8 @@ static struct regval_list vs6725_patch2[] = {
 	{0xC345, 0xda}, /* line_length_req {LSB} */
 
 	/* ExposureAlgorithmControls */
-	{0x012E, 0x40},	/* fpDigitalGainCeiling (2.5-> 0x4080) MSB */
-	{0x012F, 0x80},	/* fpDigitalGainCeiling (2.5-> 0x4080} LSB */
+	{DIGITAL_GAIN_CEILING_HI, 0x40}, /* (2.5-> 0x4080) MSB */
+	{DIGITAL_GAIN_CEILING_LO, 0x80}, /* (2.5-> 0x4080} LSB */
 
 	/* ArcticControl */
 	{0x02d0, 0x00},	/* fInhibitAutomaticMode {VPIP_FALSE} */
@@ -1123,7 +1124,7 @@ static struct regval_list vs6725_patch2[] = {
 	 * Excursion: 271
 	 * MidPoint*2: 239
 	 */
-	{0x0046, 0x02},	/* CE0_OutputCoderControls TransformType_YCbCr_Custom */
+	{PIPE0_DATA_FORMAT, 0x02},	/* CE0_TransformType_YCbCr_Custom */
 	{0x0420, 0x01},	/* CE0_CoderOutputSignalRange uwLumaExcursion MSB */
 	{0x0421, 0x0f},	/* CE0_CoderOutputSignalRange uwLumaExcursion LSB */
 	{0x0422, 0x00},	/* CE0_CoderOutputSignalRange uwLumaMidpointTimes MSB */
@@ -1139,7 +1140,7 @@ static struct regval_list vs6725_patch2[] = {
 	 * Excursion: 271
 	 * MidPoint*2: 239
 	 */
-	{0x0056, 0x02},	/* CE1_OutputCoderControls TransformType_YCbCr_Custom */
+	{PIPE1_DATA_FORMAT, 0x02},	/* CE1_TransformType_YCbCr_Custom */
 	{0x0430, 0x01},	/* CE1_CoderOutputSignalRange uwLumaExcursion MSB */
 	{0x0431, 0x0f},	/* CE1_CoderOutputSignalRange uwLumaExcursion LSB */
 	{0x0432, 0x00},	/* CE1_CoderOutputSignalRange uwLumaMidpointTimes MSB */
@@ -1197,8 +1198,8 @@ static struct regval_list default_non_gui[] = {
 };
 
 static struct regval_list default_streaming[] = {
-	{0x00b5, 7},	/* bUserMinimumFrameRate_Hz */
-	{0x00b6, 30},	/* bUserMaximumFrameRate_Hz */
+	{USR_MIN_FRAME_RATE, 7},	/* bUserMinimumFrameRate_Hz */
+	{USR_MAX_FRAME_RATE, 30},	/* bUserMaximumFrameRate_Hz */
 
 	/* end of array */
 	{0x0000, 0x00},
@@ -1206,62 +1207,68 @@ static struct regval_list default_streaming[] = {
 
 static struct regval_list default_color[] = {
 	/* Pipe0 - VF - GammaR, G, B - 16 */
-	{0x0049, 16},
-	{0x004a, 16},
-	{0x004b, 16},
+	{PIPE0_GAMMA_R, 16},
+	{PIPE0_GAMMA_G, 16},
+	{PIPE0_GAMMA_B, 16},
 	/* Pipe1 - VF - GammaR, G, B - 16 */
-	{0x0059, 16},
-	{0x005a, 16},
-	{0x005b, 16},
+	{PIPE1_GAMMA_R, 16},
+	{PIPE1_GAMMA_G, 16},
+	{PIPE1_GAMMA_B, 16},
 	/* Set Contrast */
-	{0x0060, 115},
+	{CONTRAST, 115},
 	/* Set Colour Saturation */
-	{0x0061, 100},
+	{COLOR_SATURATION, 100},
 	/* Set Brightness */
-	{0x0062, 105},
+	{BRIGHTNESS, 105},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_exposure_ctrl[] = {
 	/* Set Anti-Flicker */
-	{0x017C, 0x4b},	/* FlickerDetect fpFlickerFrequency (100) {MSB} */
-	{0x017D, 0x20},	/* FlickerDetect fpFlickerFrequency (100) {LSB} */
+	{FLICKER_FREQ_HI, 0x4b},	/* fpFlickerFrequency (100) {MSB} */
+	{FLICKER_FREQ_LO, 0x20},	/* fpFlickerFrequency (100) {LSB} */
 	/* Set Exposure */
-	{0x00f1, 0x00},	/* ExposureControls bMetering {ExposureMetering_flat} */
-	{0x00f8, 0xFF},	/* ExposureControls iExposureCompensation */
+	{METERING, 0x00},		/* ExposureMetering_flat */
+	{EXP_COMPENSATION, 0xFF},	/* iExposureCompensation */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_sharpness[] = {
 	{0x0297, 40},	/* bUserPeakLoThresh */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_orientation[] = {
-	{0x0063, 0},	/* fHorizontalMirror */
-	{0x0064, 0},	/* fVerticalFlip */
+	{HORI_MIRROR, 0},	/* fHorizontalMirror */
+	{VERT_FLIP, 0},		/* fVerticalFlip */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_analog_binnining_off[] = {
 	/* Red gain */
-	{0x181, 0x80},
+	{MANU_RED_GAIN, 0x80},
 	/* Green gain */
-	{0x182, 0x80},
+	{MANU_GREEN_GAIN, 0x80},
 	/* Blue gain */
-	{0x183, 0x80},
+	{MANU_BLUE_GAIN, 0x80},
 	/* White balance mode */
-	{0x180, 0x1},
+	{WB_CTL_MODE, 0x1},
 	/* Applying sharpness default for stream 1 */
-	{0x4c, 0x5},
+	{PIPE0_PEAKING_GAIN, 0x5},
 	/* Applying sharpness default for stream 2 */
-	{0x5c, 0xf},
+	{PIPE1_PEAKING_GAIN, 0xf},
 	/* Magnification factor */
-	{0x21, 0x0}, {0x22, 0x1},
+	{ZOOM_SIZE_HI, 0x0},
+	{ZOOM_SIZE_LO, 0x1},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
@@ -1271,46 +1278,49 @@ static struct regval_list default_analog_binnining_off[] = {
 	{0xc344, 0x07}, /* line length 2010 for normal mode */
 	{0xc345, 0xda},
 	{0x0201, 0x00}, /* DarkCalMode_LeakyOffset */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_auto_frame_rate_on[] = {
 	/* Set sensor mode (HiRes or LoRes) */
-	{0x40, 0x0},
-	{0x50, 0x0},
-	/* View/Live setup */
-	{0x13, 0x0},
+	{PIPE0_SENSOR_MODE, 0x0},
+	{PIPE1_SENSOR_MODE, 0x0},
+	/* View/Live setup - Disabled */
+	{VIEW_LIVE_EN, 0x0},
 	/* Image size setup - pipe 0 */
-	{0x41, 0x9},	/* custom size, 512*512 */
-	{0x42, 0x2},	/* uwManualHSize_hi */
-	{0x43, 0x0},	/* uwManualHSize_lo */
-	{0x44, 0x2},	/* uwManualVSize_hi */
-	{0x45, 0x0},	/* uwManualVSize_lo */
+	{PIPE0_IMAGE_SIZE, 0x9},	/* custom size, 512*512 */
+	{PIPE0_MANUAL_HS_HI, 0x2},	/* uwManualHSize_hi */
+	{PIPE0_MANUAL_HS_LO, 0x0},	/* uwManualHSize_lo */
+	{PIPE0_MANUAL_VS_HI, 0x2},	/* uwManualVSize_hi */
+	{PIPE0_MANUAL_VS_LO, 0x0},	/* uwManualVSize_lo */
 	/* Image size setup - pipe 1 */
-	{0x51, 0x0},
+	{PIPE1_IMAGE_SIZE, 0x0},
 	/* Data format (stream 0) */
-	{0x46, 0x2},	/* DataFormat_YCbCr_Custom */
+	{PIPE0_DATA_FORMAT, 0x2},	/* DataFormat_YCbCr_Custom */
 	/* Data format (stream 1) */
-	{0x56, 0x2},
+	{PIPE1_DATA_FORMAT, 0x2},
 	/* Active pipe setup */
-	{0x12, 0x0},	/* PIPE_0 is active pipe */
+	{ACTIVE_PIPE_BANK, 0x0},	/* PIPE_0 is active pipe */
 	/* Manual frame rate */
-	{0x0090, 0x0},	/* uwDesiredFrameRate_Num_hi */
-	{0x0091, 0xF},	/* uwDesiredFrameRate_Num_lo, 15 fps */
-	{0x0092, 0x1},	/* bDesiredFrameRate_Den */
-	{0x00B0, 0x0},	/* bMode {1=Frame Rate Mode Manual} */
+	{DES_FRAME_RATE_NUM_HI, 0x0},	/* uwDesiredFrameRate_Num_hi */
+	{DES_FRAME_RATE_NUM_LO, 0xF},	/* uwDesiredFrameRate_Num_lo, 15 fps */
+	{DES_FRAME_RATE_DEN, 0x1},	/* bDesiredFrameRate_Den */
+	{AUTO_FRAME_MODE, 0x0},	/* bMode {1=Frame Rate Mode Manual} */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_bayer_off[] = {
 	/* White Balance Disabled */
-	{0x180, 1},	/* Manual WB */
+	{WB_CTL_MODE, 1},	/* Manual WB */
 	/* AV Enable */
-	{0x0260, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
+	{AV_DISABLE, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
 	/* Enable Arctic */
-	{0x02d1, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
+	{0x02d1, 0x00},		/* AntiVignetteControl fDisable {VPIP_FALSE} */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
@@ -1447,93 +1457,93 @@ static struct regval_list default_pre_run_setup[] = {
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters0
 	 */
-	{0x3b0, 0xb6},	/* iHorizontalOffsetR	-74 */
-	{0x3b1, 0xf2},	/* iVerticalOffsetR	-14 */
-	{0x3b2, 0x3c},	/* iR2RCoefficient	 60 */
-	{0x3b3, 0xc4},	/* iR4RCoefficient	-60 */
-	{0x3b4, 0x0},	/* iHorizontalOffsetGR	0 */
-	{0x3b5, 0xdc},	/* iVerticalOffsetGR	-36 */
-	{0x3b6, 0x29},	/* iR2GRCoefficient	41 */
-	{0x3b7, 0xb8},	/* iR4GRCoefficient	-72 */
-	{0x3b8, 0xc2},	/* iHorizontalOffsetGB	-62 */
-	{0x3b9, 0xe0},	/* iVerticalOffsetGB	-32 */
-	{0x3ba, 0x26},	/* iR2GBCoefficient	38 */
-	{0x3bb, 0xc4},	/* iR4GBCoefficient	-60 */
-	{0x3bc, 0xf8},	/* iHorizontalOffsetB	-8 */
-	{0x3bd, 0xd2},	/* iVerticalOffsetB	-46 */
-	{0x3be, 0x22},	/* iR2BCoefficient	34 */
-	{0x3bf, 0xc2},	/* iR4BCoefficient	-62 */
-	{0x348, 0x43},	/* bUnityOffset_GR	67 */
-	{0x349, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03b0, 0xb6},	/* iHorizontalOffsetR	-74 */
+	{0x03b1, 0xf2},	/* iVerticalOffsetR	-14 */
+	{0x03b2, 0x3c},	/* iR2RCoefficient	 60 */
+	{0x03b3, 0xc4},	/* iR4RCoefficient	-60 */
+	{0x03b4, 0x0},	/* iHorizontalOffsetGR	0 */
+	{0x03b5, 0xdc},	/* iVerticalOffsetGR	-36 */
+	{0x03b6, 0x29},	/* iR2GRCoefficient	41 */
+	{0x03b7, 0xb8},	/* iR4GRCoefficient	-72 */
+	{0x03b8, 0xc2},	/* iHorizontalOffsetGB	-62 */
+	{0x03b9, 0xe0},	/* iVerticalOffsetGB	-32 */
+	{0x03ba, 0x26},	/* iR2GBCoefficient	38 */
+	{0x03bb, 0xc4},	/* iR4GBCoefficient	-60 */
+	{0x03bc, 0xf8},	/* iHorizontalOffsetB	-8 */
+	{0x03bd, 0xd2},	/* iVerticalOffsetB	-46 */
+	{0x03be, 0x22},	/* iR2BCoefficient	34 */
+	{0x03bf, 0xc2},	/* iR4BCoefficient	-62 */
+	{0x0348, 0x43},	/* bUnityOffset_GR	67 */
+	{0x0349, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters1
 	 */
-	{0x3c0, 0xb0},	/* iHorizontalOffsetR	-80 */
-	{0x3c1, 0xf0},	/* iVerticalOffsetR	-16 */
-	{0x3c2, 0x2e},	/* iR2RCoefficient	 46 */
-	{0x3c3, 0xd0},	/* iR4RCoefficient	-48 */
-	{0x3c4, 0x6},	/* iHorizontalOffsetGR	 6 */
-	{0x3c5, 0xdc},	/* iVerticalOffsetGR	-36 */
-	{0x3c6, 0x24},	/* iR2GRCoefficient	 36 */
-	{0x3c7, 0xc3},	/* iR4GRCoefficient	-61 */
-	{0x3c8, 0xbc},	/* iHorizontalOffsetGB	-68 */
-	{0x3c9, 0xe2},	/* iVerticalOffsetGB	-30 */
-	{0x3ca, 0x21},	/* iR2GBCoefficient	 33 */
-	{0x3cb, 0xcd},	/* iR4GBCoefficient	-51 */
-	{0x3cc, 0x2},	/* iHorizontalOffsetB	 2 */
-	{0x3cd, 0xda},	/* iVerticalOffsetB	-38 */
-	{0x3ce, 0x1e},	/* iR2BCoefficient	 30 */
-	{0x3cf, 0xca},	/* iR4BCoefficient	-54 */
-	{0x34a, 0x43},	/* bUnityOffset_GR	 67 */
-	{0x34b, 0x40},	/* bUnityOffset_GB	 64 */
+	{0x03c0, 0xb0},	/* iHorizontalOffsetR	-80 */
+	{0x03c1, 0xf0},	/* iVerticalOffsetR	-16 */
+	{0x03c2, 0x2e},	/* iR2RCoefficient	 46 */
+	{0x03c3, 0xd0},	/* iR4RCoefficient	-48 */
+	{0x03c4, 0x6},	/* iHorizontalOffsetGR	 6 */
+	{0x03c5, 0xdc},	/* iVerticalOffsetGR	-36 */
+	{0x03c6, 0x24},	/* iR2GRCoefficient	 36 */
+	{0x03c7, 0xc3},	/* iR4GRCoefficient	-61 */
+	{0x03c8, 0xbc},	/* iHorizontalOffsetGB	-68 */
+	{0x03c9, 0xe2},	/* iVerticalOffsetGB	-30 */
+	{0x03ca, 0x21},	/* iR2GBCoefficient	 33 */
+	{0x03cb, 0xcd},	/* iR4GBCoefficient	-51 */
+	{0x03cc, 0x2},	/* iHorizontalOffsetB	 2 */
+	{0x03cd, 0xda},	/* iVerticalOffsetB	-38 */
+	{0x03ce, 0x1e},	/* iR2BCoefficient	 30 */
+	{0x03cf, 0xca},	/* iR4BCoefficient	-54 */
+	{0x034a, 0x43},	/* bUnityOffset_GR	 67 */
+	{0x034b, 0x40},	/* bUnityOffset_GB	 64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters2
 	 */
-	{0x3d0, 0xb0},	/* iHorizontalOffsetR	-80 */
-	{0x3d1, 0xea},	/* iVerticalOffsetR	-22 */
-	{0x3d2, 0x2d},	/* iR2RCoefficient	45 */
-	{0x3d3, 0xc7},	/* iR4RCoefficient	-57 */
-	{0x3d4, 0xa},	/* iHorizontalOffsetGR	10 */
-	{0x3d5, 0xd6},	/* iVerticalOffsetGR	-42 */
-	{0x3d6, 0x23},	/* iR2GRCoefficient	35 */
-	{0x3d7, 0xc4},	/* iR4GRCoefficient	-60 */
-	{0x3d8, 0xc0},	/* iHorizontalOffsetGB	-64 */
-	{0x3d9, 0xda},	/* iVerticalOffsetGB	-38 */
-	{0x3da, 0x20},	/* iR2GBCoefficient	32 */
-	{0x3db, 0xcc},	/* iR4GBCoefficient	-52 */
-	{0x3dc, 0x12},	/* iHorizontalOffsetB	18 */
-	{0x3dd, 0xd6},	/* iVerticalOffsetB	-42 */
-	{0x3de, 0x1d},	/* iR2BCoefficient	29 */
-	{0x3df, 0xcd},	/* iR4BCoefficient	-51 */
-	{0x34c, 0x43},	/* bUnityOffset_GR	67 */
-	{0x34d, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03d0, 0xb0},	/* iHorizontalOffsetR	-80 */
+	{0x03d1, 0xea},	/* iVerticalOffsetR	-22 */
+	{0x03d2, 0x2d},	/* iR2RCoefficient	45 */
+	{0x03d3, 0xc7},	/* iR4RCoefficient	-57 */
+	{0x03d4, 0xa},	/* iHorizontalOffsetGR	10 */
+	{0x03d5, 0xd6},	/* iVerticalOffsetGR	-42 */
+	{0x03d6, 0x23},	/* iR2GRCoefficient	35 */
+	{0x03d7, 0xc4},	/* iR4GRCoefficient	-60 */
+	{0x03d8, 0xc0},	/* iHorizontalOffsetGB	-64 */
+	{0x03d9, 0xda},	/* iVerticalOffsetGB	-38 */
+	{0x03da, 0x20},	/* iR2GBCoefficient	32 */
+	{0x03db, 0xcc},	/* iR4GBCoefficient	-52 */
+	{0x03dc, 0x12},	/* iHorizontalOffsetB	18 */
+	{0x03dd, 0xd6},	/* iVerticalOffsetB	-42 */
+	{0x03de, 0x1d},	/* iR2BCoefficient	29 */
+	{0x03df, 0xcd},	/* iR4BCoefficient	-51 */
+	{0x034c, 0x43},	/* bUnityOffset_GR	67 */
+	{0x034d, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters3
 	 */
-	{0x3e0, 0xb2},	/* iHorizontalOffsetR	-78 */
-	{0x3e1, 0xec},	/* iVerticalOffsetR	-20 */
-	{0x3e2, 0x31},	/* iR2RCoefficient	49 */
-	{0x3e3, 0xbd},	/* iR4RCoefficient	-67 */
-	{0x3e4, 0x12},	/* iHorizontalOffsetGR	18 */
-	{0x3e5, 0xd6},	/* iVerticalOffsetGR	-42 */
-	{0x3e6, 0x21},	/* iR2GRCoefficient	33 */
-	{0x3e7, 0xc6},	/* iR4GRCoefficient	-58 */
-	{0x3e8, 0xc0},	/* iHorizontalOffsetGB	-64 */
-	{0x3e9, 0xda},	/* iVerticalOffsetGB	-38 */
-	{0x3ea, 0x20},	/* iR2GBCoefficient	32 */
-	{0x3eb, 0xcc},	/* iR4GBCoefficient	-52 */
-	{0x3ec, 0x20},	/* iHorizontalOffsetB	32 */
-	{0x3ed, 0xdc},	/* iVerticalOffsetB	-36 */
-	{0x3ee, 0x1c},	/* iR2BCoefficient	28 */
-	{0x3ef, 0xd3},	/* iR4BCoefficient	-45 */
-	{0x34e, 0x43},	/* bUnityOffset_GR	67 */
-	{0x34f, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03e0, 0xb2},	/* iHorizontalOffsetR	-78 */
+	{0x03e1, 0xec},	/* iVerticalOffsetR	-20 */
+	{0x03e2, 0x31},	/* iR2RCoefficient	49 */
+	{0x03e3, 0xbd},	/* iR4RCoefficient	-67 */
+	{0x03e4, 0x12},	/* iHorizontalOffsetGR	18 */
+	{0x03e5, 0xd6},	/* iVerticalOffsetGR	-42 */
+	{0x03e6, 0x21},	/* iR2GRCoefficient	33 */
+	{0x03e7, 0xc6},	/* iR4GRCoefficient	-58 */
+	{0x03e8, 0xc0},	/* iHorizontalOffsetGB	-64 */
+	{0x03e9, 0xda},	/* iVerticalOffsetGB	-38 */
+	{0x03ea, 0x20},	/* iR2GBCoefficient	32 */
+	{0x03eb, 0xcc},	/* iR4GBCoefficient	-52 */
+	{0x03ec, 0x20},	/* iHorizontalOffsetB	32 */
+	{0x03ed, 0xdc},	/* iVerticalOffsetB	-36 */
+	{0x03ee, 0x1c},	/* iR2BCoefficient	28 */
+	{0x03ef, 0xd3},	/* iR4BCoefficient	-45 */
+	{0x034e, 0x43},	/* bUnityOffset_GR	67 */
+	{0x034f, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Set Contrained WhiteBalance
