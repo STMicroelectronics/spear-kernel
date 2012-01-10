@@ -395,7 +395,7 @@ static struct i2c_dev_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
 static void __init hdmi_tx_pb_init(void)
 {
 	struct clk *i2s_sclk_clk;
-	struct i2s_platform_data *pdata
+	struct i2s_platform_data *i2s_pdata
 		= dev_get_platdata(&spear1340_i2s_play_device.dev);
 
 	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
@@ -412,7 +412,7 @@ static void __init hdmi_tx_pb_init(void)
 		clk_put(i2s_sclk_clk);
 	}
 
-	pdata->swidth = 32;
+	i2s_pdata->swidth = 32;
 }
 
 
