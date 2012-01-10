@@ -1968,11 +1968,11 @@ static void vip_config_fifo_ovf_intr(struct vip *vip, bool enable)
 
 	if (enable)
 		/* enable fifo overflow interrupt */
-		writel(int_mask | IR_UNMASK_FIFO_OVF_INT,
+		writel(int_mask & IR_UNMASK_FIFO_OVF_INT,
 				vip->base + VIP_INT_MASK);
 	else
 		/* disable fifo overflow interrupt */
-		writel(int_mask & IR_MASK_FIFO_OVF_INT,
+		writel(int_mask | IR_MASK_FIFO_OVF_INT,
 				vip->base + VIP_INT_MASK);
 }
 
@@ -2121,6 +2121,9 @@ static int vip_release(struct file *file)
 		}
 		vip->io_usrs = 0;
 	}
+
+	/* disable fifo overflow interrupt */
+	vip_config_fifo_ovf_intr(vip, DISABLE_FIFO_OVF_INTR);
 
 	/* disable vip clock */
 	clk_disable(vip->clk);
