@@ -394,25 +394,30 @@ static struct i2c_dev_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
 
 static void __init hdmi_tx_pb_init(void)
 {
-	struct clk *i2s_sclk_clk;
-	struct i2s_platform_data *i2s_pdata
-		= dev_get_platdata(&spear1340_i2s_play_device.dev);
+	struct ad9889b_pdata *ad9889b_pdata
+		= spear1340_pb_i2c_board_hdmi_tx.platform_data;
 
-	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-	if (IS_ERR(i2s_sclk_clk))
-		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+	if (ad9889b_pdata->ain == HDMI_AUDIO_IN_I2S) {
+		struct clk *i2s_sclk_clk;
+		struct i2s_platform_data *i2s_pdata
+			= dev_get_platdata(&spear1340_i2s_play_device.dev);
 
-	if (clk_set_rate(i2s_sclk_clk, 3070000)) {
-		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
-		clk_put(i2s_sclk_clk);
+		i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+		if (IS_ERR(i2s_sclk_clk))
+			pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+
+		if (clk_set_rate(i2s_sclk_clk, 3070000)) {
+			pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+			clk_put(i2s_sclk_clk);
+		}
+
+		if (clk_enable(i2s_sclk_clk)) {
+			pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+			clk_put(i2s_sclk_clk);
+		}
+
+		i2s_pdata->swidth = 32;
 	}
-
-	if (clk_enable(i2s_sclk_clk)) {
-		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-		clk_put(i2s_sclk_clk);
-	}
-
-	i2s_pdata->swidth = 32;
 }
 
 
