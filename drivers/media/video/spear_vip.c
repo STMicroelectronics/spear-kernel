@@ -807,6 +807,10 @@ static int vip_try_fmt_vid_cap(struct file *file, void *priv,
 
 	f->fmt.pix.field = field;
 
+	v4l2_info(&vip->v4l2_dev,
+			"requested :: width = %d, height = %d\n",
+			f->fmt.pix.width, f->fmt.pix.height);
+
 	/* ensure image boundary sanity */
 	if (f->fmt.pix.width < VIP_MIN_WIDTH)
 		f->fmt.pix.width = VIP_MIN_WIDTH;
@@ -825,6 +829,12 @@ static int vip_try_fmt_vid_cap(struct file *file, void *priv,
 		(f->fmt.pix.width * fmt->depth) / 8;
 	f->fmt.pix.sizeimage =
 		f->fmt.pix.height * f->fmt.pix.bytesperline;
+
+	v4l2_info(&vip->v4l2_dev,
+			"adjusted :: width = %d, height = %d, bpp = %d, "
+			"bytesperline = %d, sizeimage = %d\n",
+			f->fmt.pix.width, f->fmt.pix.height, fmt->depth,
+			f->fmt.pix.bytesperline, f->fmt.pix.sizeimage);
 
 	return 0;
 }
