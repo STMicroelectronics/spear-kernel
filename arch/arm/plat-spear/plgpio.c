@@ -22,6 +22,7 @@
 #include <linux/ioport.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
+#include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <asm/mach-types.h>
@@ -58,6 +59,9 @@ struct plgpio {
 	int			(*o2p)(int offset);	/* offset_to_pin */
 	u32			p2o_regs;
 	struct plgpio_regs	regs;
+#ifdef CONFIG_PM
+	struct plgpio_regs	*csave_regs;
+#endif
 };
 
 /* register manipulation inline functions */
@@ -428,6 +432,16 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		goto release_region;
 	}
 
+#ifdef CONFIG_PM
+	plgpio->csave_regs = kzalloc(sizeof(*plgpio->csave_regs) *
+			DIV_ROUND_UP(pdata->gpio_count, MAX_GPIO_PER_REG),
+			GFP_KERNEL);
+	if (!plgpio->csave_regs) {
+		ret = -ENOMEM;
+		dev_dbg(&pdev->dev, "csave registers memory allocation fail\n");
+		goto kfree_plgpio;
+	}
+#endif
 	plgpio->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(plgpio->clk)) {
 		dev_warn(&pdev->dev, "could not retrieve clock\n");
@@ -438,7 +452,7 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 	if (!plgpio->base) {
 		ret = -ENOMEM;
 		dev_dbg(&pdev->dev, "ioremap fail\n");
-		goto kfree;
+		goto kfree_csave_reg;
 	}
 
 	spin_lock_init(&plgpio->lock);
@@ -497,6 +511,8 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		set_irq_chip_data(i+plgpio->irq_base, plgpio);
 	}
 	set_irq_data(irq, plgpio);
+
+	platform_set_drvdata(pdev, plgpio);
 	dev_info(&pdev->dev, "Initialization successful\n");
 
 	return 0;
@@ -506,7 +522,11 @@ remove_gpiochip:
 		dev_dbg(&pdev->dev, "unable to remove gpiochip\n");
 iounmap:
 	iounmap(plgpio->base);
-kfree:
+kfree_csave_reg:
+#ifdef CONFIG_PM
+	kfree(plgpio->csave_regs);
+#endif
+kfree_plgpio:
 	if (plgpio->clk)
 		clk_put(plgpio->clk);
 	kfree(plgpio);
@@ -517,10 +537,101 @@ fail:
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int plgpio_suspend(struct device *dev)
+{
+	struct plgpio *plgpio = dev_get_drvdata(dev);
+	int i, reg_count = DIV_ROUND_UP(plgpio->chip.ngpio, MAX_GPIO_PER_REG);
+	void __iomem *off;
+
+	for (i = 0; i < reg_count; i++) {
+		off = plgpio->base + i * sizeof(int *);
+
+		if (plgpio->regs.enb != -1)
+			plgpio->csave_regs[i].enb = readl(plgpio->regs.enb +
+					off);
+		if (plgpio->regs.eit != -1)
+			plgpio->csave_regs[i].eit = readl(plgpio->regs.eit +
+					off);
+		plgpio->csave_regs[i].wdata = readl(plgpio->regs.wdata + off);
+		plgpio->csave_regs[i].dir = readl(plgpio->regs.dir + off);
+		plgpio->csave_regs[i].ie = readl(plgpio->regs.ie + off);
+	}
+
+	return 0;
+}
+
+/*
+ * This is used to correct the values in end registers. End registers contain
+ * extra bits that might be used for other purpose in platform. So, we shouldn't
+ * overwrite these bits. This macro, reads given register again, preserves other
+ * bit values (non-plgpio bits), and retain captured value (plgpio bits).
+ */
+#define plgpio_prepare_reg(__reg, _off, _mask, _tmp)		\
+{								\
+	_tmp = readl(plgpio->regs.__reg + _off);		\
+	_tmp &= ~_mask;						\
+	plgpio->csave_regs[i].__reg =				\
+		_tmp | (plgpio->csave_regs[i].__reg & _mask);	\
+}
+
+static int plgpio_resume(struct device *dev)
+{
+	struct plgpio *plgpio = dev_get_drvdata(dev);
+	int i, reg_count = DIV_ROUND_UP(plgpio->chip.ngpio, MAX_GPIO_PER_REG);
+	void __iomem *off;
+	u32 mask, tmp;
+
+	for (i = 0; i < reg_count; i++) {
+		off = plgpio->base + i * sizeof(int *);
+
+		if (i == reg_count - 1) {
+			mask = (1 << (plgpio->chip.ngpio - i *
+						MAX_GPIO_PER_REG)) - 1;
+
+			if (plgpio->regs.enb != -1)
+				plgpio_prepare_reg(enb, off, mask, tmp);
+
+			if (plgpio->regs.eit != -1)
+				plgpio_prepare_reg(eit, off, mask, tmp);
+
+			plgpio_prepare_reg(wdata, off, mask, tmp);
+			plgpio_prepare_reg(dir, off, mask, tmp);
+			plgpio_prepare_reg(ie, off, mask, tmp);
+		}
+
+		writel(plgpio->csave_regs[i].wdata, plgpio->regs.wdata + off);
+		writel(plgpio->csave_regs[i].dir, plgpio->regs.dir + off);
+
+		if (plgpio->regs.eit != -1)
+			writel(plgpio->csave_regs[i].eit, plgpio->regs.eit +
+					off);
+
+		writel(plgpio->csave_regs[i].ie, plgpio->regs.ie + off);
+
+		if (plgpio->regs.enb != -1)
+			writel(plgpio->csave_regs[i].enb, plgpio->regs.enb +
+					off);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops plgpio_dev_pm_ops = {
+	.suspend = plgpio_suspend,
+	.resume = plgpio_resume,
+	.freeze = plgpio_suspend,
+	.restore = plgpio_resume,
+};
+#endif
+
 static struct platform_driver plgpio_driver = {
 	.probe		= plgpio_probe,
 	.driver		= {
 		.name	= "plgpio",
+#ifdef CONFIG_PM
+		.pm	= &plgpio_dev_pm_ops,
+#endif
 		.owner	= THIS_MODULE,
 	},
 };
