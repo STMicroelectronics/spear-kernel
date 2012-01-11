@@ -1568,6 +1568,9 @@ static int dw_resume_noirq(struct device *dev)
 static const struct dev_pm_ops dw_dev_pm_ops = {
 	.suspend_noirq = dw_suspend_noirq,
 	.resume_noirq = dw_resume_noirq,
+	.freeze_noirq = dw_suspend_noirq,
+	.thaw_noirq =	dw_resume_noirq,
+	.restore_noirq = dw_resume_noirq,
 };
 
 static struct platform_driver dw_driver = {
