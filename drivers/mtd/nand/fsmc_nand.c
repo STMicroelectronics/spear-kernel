@@ -298,6 +298,18 @@ static struct mtd_partition partition_info_128KB_blk[] = {
 
 /*
  * Default partition layout for large page(> 512 bytes) devices with
+ * erase block size equal to 256KB.
+ * Size for "Root file system" is updated in driver based on actual device size
+ */
+static struct mtd_partition partition_info_256KB_blk[] = {
+	PARTITION("X-loader", 0, 2 * 0x40000),
+	PARTITION("U-Boot", 0x80000, 6 * 0x40000),
+	PARTITION("Kernel", 0x200000, 24 * 0x40000),
+	PARTITION("Root File System", 0x800000, 0),
+};
+
+/*
+ * Default partition layout for large page(> 512 bytes) devices with
  * erase block size equal to 1024KB.
  * Size for "Root file system" is updated in driver based on actual device size
  */
@@ -934,6 +946,13 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 					host->partitions = partition_info_128KB_blk;
 					host->nr_partitions =
 						sizeof(partition_info_128KB_blk) /
+						sizeof(struct mtd_partition);
+					break;
+				case 0x40000:
+					host->partitions =
+						partition_info_256KB_blk;
+					host->nr_partitions =
+						sizeof(partition_info_256KB_blk) /
 						sizeof(struct mtd_partition);
 					break;
 				default:
