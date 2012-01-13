@@ -132,9 +132,8 @@
  *    VIP IP. So the STD supported by VIP driver will be a super-set
  *    of these DV and analog standards.
  */
-#define SIL9135A_INPUT_1	1
-#define SIL9135A_INPUT_2	2
-#define SIL9135A_OUTPUT		3
+#define SIL9135A_INPUT		1
+#define SIL9135A_OUTPUT		2
 #define SIL9135A_I2C_ADDR	0x18
 #define SIL9135A_STD_ALL	(V4L2_DV_480P59_94 | V4L2_DV_576P50 |	\
 				V4L2_DV_720P24 | V4L2_DV_720P25 |	\
@@ -258,7 +257,8 @@ static void __init rgmii_pb_init(void)
 /* sil9135a hdmi rx chip related */
 
 /*
- * inputs available at the SIL9135A HDMI receiver chip
+ * As HDMI RX is a dummy subdev for completing the flow to test VideoIN IP
+ * So, only single path is sufficient for the testing
  * FIXME: Appropriate names should be added for HDMI receiver inputs
  */
 static struct v4l2_input sil9135a_inputs[] = {
@@ -267,12 +267,7 @@ static struct v4l2_input sil9135a_inputs[] = {
 		.name = "1st Input",
 		.type = V4L2_INPUT_TYPE_CAMERA,
 		.std = SIL9135A_STD_ALL,
-	}, {
-		.index = 1,
-		.name = "2nd Input",
-		.type = V4L2_INPUT_TYPE_CAMERA,
-		.std = SIL9135A_STD_ALL,
-	},
+	}
 };
 
 /*
@@ -282,12 +277,9 @@ static struct v4l2_input sil9135a_inputs[] = {
  */
 static struct vip_subdev_route sil9135a_routes[] = {
 	{
-		.input = SIL9135A_INPUT_1,
+		.input = SIL9135A_INPUT,
 		.output = SIL9135A_OUTPUT,
-	}, {
-		.input = SIL9135A_INPUT_2,
-		.output = SIL9135A_OUTPUT,
-	},
+	}
 };
 
 /* info regarding the various subdevs connected to VIP */
