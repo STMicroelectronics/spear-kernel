@@ -231,6 +231,14 @@ static void dwc_dostart(struct dw_dma_chan *dwc, struct dw_desc *first)
 
 /*----------------------------------------------------------------------*/
 
+#define dw_dmac_unmap(utype, _desc, _child, _buf, _dir)			\
+do {									\
+	list_for_each_entry(_child, &_desc->tx_list, desc_node)		\
+		dma_unmap_##utype(parent, _child->lli._buf,		\
+				_child->len, _dir);			\
+	dma_unmap_##utype(parent, _desc->lli._buf, _desc->len, _dir);	\
+} while (0)
+
 static void
 dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 		bool callback_required)
@@ -264,19 +272,19 @@ dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 		struct device *parent = chan2parent(&dwc->chan);
 		if (!(txd->flags & DMA_COMPL_SKIP_DEST_UNMAP)) {
 			if (txd->flags & DMA_COMPL_DEST_UNMAP_SINGLE)
-				dma_unmap_single(parent, desc->lli.dar,
-						desc->len, DMA_FROM_DEVICE);
+				dw_dmac_unmap(single, desc, child, dar,
+						DMA_FROM_DEVICE);
 			else
-				dma_unmap_page(parent, desc->lli.dar,
-						desc->len, DMA_FROM_DEVICE);
+				dw_dmac_unmap(page, desc, child, dar,
+						DMA_FROM_DEVICE);
 		}
 		if (!(txd->flags & DMA_COMPL_SKIP_SRC_UNMAP)) {
 			if (txd->flags & DMA_COMPL_SRC_UNMAP_SINGLE)
-				dma_unmap_single(parent, desc->lli.sar,
-						desc->len, DMA_TO_DEVICE);
+				dw_dmac_unmap(single, desc, child, sar,
+						DMA_TO_DEVICE);
 			else
-				dma_unmap_page(parent, desc->lli.sar,
-						desc->len, DMA_TO_DEVICE);
+				dw_dmac_unmap(page, desc, child, sar,
+						DMA_TO_DEVICE);
 		}
 	}
 
@@ -676,6 +684,7 @@ dwc_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest, dma_addr_t src,
 		desc->lli.dar = dest + offset;
 		desc->lli.ctllo = ctllo;
 		desc->lli.ctlhi = xfer_count;
+		desc->len = xfer_count << src_width;
 
 		if (!first) {
 			first = desc;
@@ -701,7 +710,6 @@ dwc_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest, dma_addr_t src,
 			DMA_TO_DEVICE);
 
 	first->txd.flags = flags;
-	first->len = len;
 
 	return &first->txd;
 
@@ -725,7 +733,6 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	unsigned int		mem_width;
 	unsigned int		i;
 	struct scatterlist	*sg;
-	size_t			total_len = 0;
 
 	dev_vdbg(chan2dev(chan), "prep_dma_slave\n");
 
@@ -780,6 +787,7 @@ slave_sg_todev_fill_desc:
 			}
 
 			desc->lli.ctlhi = dlen >> mem_width;
+			desc->len = dlen;
 
 			if (!first) {
 				first = desc;
@@ -793,7 +801,6 @@ slave_sg_todev_fill_desc:
 						&first->tx_list);
 			}
 			prev = desc;
-			total_len += dlen;
 
 			if (len)
 				goto slave_sg_todev_fill_desc;
@@ -843,6 +850,7 @@ slave_sg_fromdev_fill_desc:
 				len = 0;
 			}
 			desc->lli.ctlhi = dlen >> reg_width;
+			desc->len = dlen;
 
 			if (!first) {
 				first = desc;
@@ -856,7 +864,6 @@ slave_sg_fromdev_fill_desc:
 						&first->tx_list);
 			}
 			prev = desc;
-			total_len += dlen;
 
 			if (len)
 				goto slave_sg_fromdev_fill_desc;
@@ -874,8 +881,6 @@ slave_sg_fromdev_fill_desc:
 	dma_sync_single_for_device(chan2parent(chan),
 			prev->txd.phys, sizeof(prev->lli),
 			DMA_TO_DEVICE);
-
-	first->len = total_len;
 
 	return &first->txd;
 
@@ -962,11 +967,19 @@ dwc_tx_status(struct dma_chan *chan,
 		ret = dma_async_is_complete(cookie, last_complete, last_used);
 	}
 
-	if (ret != DMA_SUCCESS)
-		dma_set_tx_state(txstate, last_complete, last_used,
-				dwc_first_active(dwc)->len);
-	else
+	if (ret != DMA_SUCCESS) {
+		struct dw_desc *desc, *child;
+		unsigned int len;
+
+		desc = dwc_first_active(dwc);
+		len = desc->len;
+		list_for_each_entry(child, &desc->tx_list, desc_node)
+			len += child->len;
+
+		dma_set_tx_state(txstate, last_complete, last_used, len);
+	} else {
 		dma_set_tx_state(txstate, last_complete, last_used, 0);
+	}
 
 	if (dwc->paused)
 		return DMA_PAUSED;
