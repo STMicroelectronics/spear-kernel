@@ -259,12 +259,11 @@ static void __init rgmii_pb_init(void)
 /*
  * As HDMI RX is a dummy subdev for completing the flow to test VideoIN IP
  * So, only single path is sufficient for the testing
- * FIXME: Appropriate names should be added for HDMI receiver inputs
  */
 static struct v4l2_input sil9135a_inputs[] = {
 	{
 		.index = 0,
-		.name = "1st Input",
+		.name = "VideoIN",
 		.type = V4L2_INPUT_TYPE_CAMERA,
 		.std = SIL9135A_STD_ALL,
 	}
