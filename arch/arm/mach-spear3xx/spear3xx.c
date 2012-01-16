@@ -1153,7 +1153,8 @@ void spear3xx_macb_plat_mdio_control(struct platform_device *pdev)
 		shift = MDIO_SEL_SHIFT;
 		maxintf = 2;
 	} else if (cpu_is_spear310()) {
-		reg = VA_SPEAR310_SOC_CONFIG_BASE + SPEAR310_SMII_MAC_CONF_OFF;
+		reg = IOMEM(VA_SPEAR310_SOC_CONFIG_BASE) +
+			SPEAR310_SMII_MAC_CONF_OFF;
 		mask = PHY_CONTROL_MASK;
 		shift = PHY_CONTROL_SHIFT;
 		maxintf = 4;
