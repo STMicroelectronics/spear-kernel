@@ -129,7 +129,6 @@ static struct pl08x_channel_data pl080_slave_channels[] = {
 		.max_signal = 15,
 		.muxval = 0,
 		.cctl = 0,
-		.device_fc = true,
 		.periph_buses = PL08X_AHB1,
 	}, {
 		.bus_id = "ras0_rx",

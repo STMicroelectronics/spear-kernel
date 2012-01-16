@@ -16,6 +16,7 @@
 #endif
 
 #include <linux/kernel.h>
+#include <linux/types.h>
 #include <plat/jpeg.h>
 #include <mach/dma.h>
 
@@ -56,6 +57,7 @@ void set_jpeg_dma_configuration(struct platform_device *jpeg_pdev,
 	data.jpeg2mem_slave.direction = DMA_FROM_DEVICE;
 	data.jpeg2mem_slave.src_addr_width = JPEG_WIDTH;
 	data.jpeg2mem_slave.src_maxburst = JPEG_BURST;
+	data.jpeg2mem_slave.device_fc = true;
 #endif /* !CONFIG_ARCH_SPEAR13XX */
 
 	/* set jpeg plat data */
