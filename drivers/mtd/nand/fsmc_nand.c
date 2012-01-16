@@ -539,6 +539,20 @@ static int fsmc_read_hwecc_ecc1(struct mtd_info *mtd, const uint8_t *data,
 	return 0;
 }
 
+/* Count the number of 0's in buff upto a max of max_bits */
+static int count_written_bits(uint8_t *buff, int size, int max_bits)
+{
+	int k, written_bits = 0;
+
+	for (k = 0; k < size; k++) {
+		written_bits += hweight8(~buff[k]);
+		if (written_bits > max_bits)
+			break;
+	}
+
+	return written_bits;
+}
+
 /*
  * fsmc_read_page_hwecc
  * @mtd:	mtd info structure
@@ -558,7 +572,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	struct fsmc_nand_data *host = container_of(mtd,
 					struct fsmc_nand_data, mtd);
 	struct fsmc_eccplace *ecc_place = host->ecc_place;
-	int i, j, k, s, stat, eccsize = chip->ecc.size;
+	int i, j, s, stat, eccsize = chip->ecc.size;
 	int eccbytes = chip->ecc.bytes;
 	int eccsteps = chip->ecc.steps;
 	uint8_t *p = buf;
@@ -574,7 +588,6 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	uint8_t *oob = (uint8_t *)&ecc_oob[0];
 
 	for (i = 0, s = 0; s < eccsteps; s++, i += eccbytes, p += eccsize) {
-
 		chip->cmdfunc(mtd, NAND_CMD_READ0, s * eccsize, page);
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
 		chip->read_buf(mtd, p, eccsize);
@@ -598,27 +611,12 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		memcpy(&ecc_code[i], oob, 13);
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 
-		/*
-		 * This is a temporary erase check. A newly erased page read
-		 * would result in an ecc error because the oob data is also
-		 * erased to FF and the calculated ecc for an FF data is not
-		 * FF..FF.
-		 * This is a workaround to skip performing correction in case
-		 * data is FF..FF
-		 */
-		for (k = 0; k < eccsize; k++) {
-			if (*(p + k) != 0xff)
-				break;
-		}
-
-		if (k < eccsize) {
-			stat = chip->ecc.correct(mtd, p, &ecc_code[i],
-					&ecc_calc[i]);
-			if (stat < 0)
-				mtd->ecc_stats.failed++;
-			else
-				mtd->ecc_stats.corrected += stat;
-		}
+		stat = chip->ecc.correct(mtd, p, &ecc_code[i],
+				&ecc_calc[i]);
+		if (stat < 0)
+			mtd->ecc_stats.failed++;
+		else
+			mtd->ecc_stats.corrected += stat;
 	}
 
 	return 0;
@@ -652,8 +650,32 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 		return 0;
 
 	/* too many errors */
-	if (unlikely(num_err > 8))
+	if (unlikely(num_err > 8)) {
+		/*
+		 * This is a temporary erase check. A newly erased page read
+		 * would result in an ecc error because the oob data is also
+		 * erased to FF and the calculated ecc for an FF data is not
+		 * FF..FF.
+		 * This is a workaround to skip performing correction in case
+		 * data is FF..FF
+		 *
+		 * Logic:
+		 * For every page, each bit written as 0 is counted until these
+		 * number of bits are greater than 8 (the maximum correction
+		 * capability of FSMC for each 512 + 13 bytes)
+		 */
+
+		int bits_ecc = count_written_bits(read_ecc, 13, 8);
+		int bits_data = count_written_bits(dat, 512, 8);
+
+		if ((bits_ecc + bits_data) <= 8) {
+			if (bits_data)
+				memset(dat, 0xff, 512);
+			return bits_data;
+		}
+
 		return -EBADMSG;
+	}
 
 	/* The calculated ecc is actually the correction index in data */
 	memcpy(ecc_data, calc_ecc, 13);
