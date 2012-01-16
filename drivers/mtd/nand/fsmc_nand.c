@@ -302,10 +302,10 @@ static struct mtd_partition partition_info_128KB_blk[] = {
  * Size for "Root file system" is updated in driver based on actual device size
  */
 static struct mtd_partition partition_info_256KB_blk[] = {
-	PARTITION("X-loader", 0, 2 * 0x40000),
-	PARTITION("U-Boot", 0x80000, 6 * 0x40000),
-	PARTITION("Kernel", 0x200000, 24 * 0x40000),
-	PARTITION("Root File System", 0x800000, 0),
+	PARTITION("X-loader", 0, 4 * 0x40000),
+	PARTITION("U-Boot", 0x100000, 6 * 0x40000),
+	PARTITION("Kernel", 0x280000, 24 * 0x40000),
+	PARTITION("Root File System", 0x880000, 0),
 };
 
 /*
