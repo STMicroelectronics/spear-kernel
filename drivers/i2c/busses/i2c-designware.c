@@ -844,6 +844,10 @@ static int dw_i2c_resume(struct device *dev)
 static const struct dev_pm_ops dw_i2c_dev_pm_ops = {
 	.suspend = dw_i2c_suspend,
 	.resume = dw_i2c_resume,
+	.freeze = dw_i2c_suspend,
+	.thaw = dw_i2c_resume,
+	.restore = dw_i2c_resume,
+	.poweroff = dw_i2c_suspend,
 };
 
 #define I2C_DW_DEV_PM_OPS (&dw_i2c_dev_pm_ops)
