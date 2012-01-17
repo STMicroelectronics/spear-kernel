@@ -145,6 +145,8 @@ enum jpeg_dev_type {
  * @char_dev_num: type used to represent jpeg device numbers within the kernel.
  * @lock: spinlock required for critical section safety
  * @regs: base address of jpeg device registers
+ * @tx_reg: physical address of tx register
+ * @rx_reg: physical address of rx register
  * @slaves: dma specific slaves info
  * @dma_client: dma specific client structure
  * @dma_chan: allocated dma channel
@@ -187,6 +189,8 @@ struct jpeg_dev {
 
 	/* JPEG register addresses */
 	struct jpeg_regs *regs;
+	dma_addr_t tx_reg;
+	dma_addr_t rx_reg;
 
 	/*DMA transfer*/
 	struct jpeg_plat_data *slaves;
