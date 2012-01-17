@@ -166,6 +166,7 @@ struct adc_chan {
  * @clk: clock structure for adc device
  * @clk_enbld: is clock enabled, true or false
  * @regs: base address of adc device registers
+ * @rx_reg: physical address of rx register
  * @chan: array of struct adc_chan containing channel specific info
  * @data: dma specific data structure
  * @dma_chan: allocated dma channel
@@ -192,6 +193,7 @@ struct adc_driver_data {
 
 	/* adc register addresses */
 	struct adc_regs *regs;
+	dma_addr_t rx_reg;
 
 	struct adc_chan chan[ADC_CHANNEL_NUM];
 	struct adc_plat_data *data;
@@ -352,12 +354,6 @@ static void dma_callback(void *param)
 	adc_wakeup();
 }
 
-static bool filter(struct dma_chan *chan, void *slave)
-{
-	chan->private = slave;
-	return true;
-}
-
 /* function doing dma transfers */
 static s32 dma_xfer(u32 len, void *digital_volt)
 {
@@ -366,27 +362,23 @@ static s32 dma_xfer(u32 len, void *digital_volt)
 	dma_cap_mask_t mask;
 	u32 size = len * sizeof(u32), dma_addr;
 	s32 status = 0;
-	void *dma_filter, *filter_data;
-	char *adc_str = "adc";
+	struct dma_slave_config dma_conf = {
+		.src_addr = g_drv_data->rx_reg,
+		.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
+		.src_maxburst = 1,
+		.direction = DMA_FROM_DEVICE,
+		.device_fc = false,
+	};
 
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
-	if (g_drv_data->data->dma_filter) {
-		dma_filter = g_drv_data->data->dma_filter;
-		filter_data = adc_str;
-	} else {
-		dma_filter = filter;
-		filter_data = &g_drv_data->data->slave;
-	}
-
-	chan = dma_request_channel(mask, dma_filter, filter_data);
+	chan = dma_request_channel(mask, g_drv_data->data->dma_filter,
+			g_drv_data->data->dma_data);
 	if (!chan)
 		return -EAGAIN;
 
-	/* Configure channel parameters if runtime_config is true */
-	if (g_drv_data->data->runtime_config)
-		dmaengine_slave_config(chan, (void *) &g_drv_data->data->slave);
+	dmaengine_slave_config(chan, (void *) &dma_conf);
 
 	g_drv_data->dma_chan = chan;
 
@@ -1320,7 +1312,6 @@ static s32 spear_adc_probe(struct platform_device *pdev)
 	s32 status = 0, i = 0;
 	struct adc_plat_data *plat_data = pdev->dev.platform_data;
 	struct resource	*io;
-	dma_addr_t rx_reg;
 
 	if (!plat_data) {
 		dev_err(&pdev->dev, "Invalid platform data\n");
@@ -1404,13 +1395,12 @@ static s32 spear_adc_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_SPEAR_ADC_DMA_IF
 #ifndef CONFIG_ARCH_SPEAR6XX
-	rx_reg = (dma_addr_t)&((struct adc_regs
+	g_drv_data->rx_reg = (dma_addr_t)&((struct adc_regs
 				*)io->start)->CHAN_DATA[ADC_CHANNEL0];
 #else
-	rx_reg = (dma_addr_t)&((struct adc_regs
+	g_drv_data->rx_reg = (dma_addr_t)&((struct adc_regs
 				*)io->start)->CHAN_DATA[ADC_CHANNEL0].MSB;
 #endif
-	set_adc_rx_reg(g_drv_data->data, rx_reg);
 #endif
 
 	status = default_configure();
