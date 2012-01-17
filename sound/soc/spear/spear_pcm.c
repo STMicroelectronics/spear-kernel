@@ -75,7 +75,10 @@ static int spear_pcm_prepare(struct snd_pcm_substream *substream)
 
 static int start_dma(struct spear_runtime_data *prtd)
 {
-	struct dma_slave_config conf;
+	struct dma_slave_config conf = {
+		.device_fc = false,
+	};
+
 	struct dma_chan *chan;
 	struct dma_async_tx_descriptor *desc;
 	struct scatterlist sg;
