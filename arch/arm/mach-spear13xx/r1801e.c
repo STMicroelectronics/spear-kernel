@@ -20,9 +20,7 @@
 #include <linux/phy.h>
 #include <linux/stmmac.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
-#include <plat/jpeg.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
@@ -258,13 +256,6 @@ static void __init ras_fsmc_config(u32 mode, u32 width)
 static void __init r1801e_init(void)
 {
 	int i;
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
-			&spear13xx_dmac_device[0].dev);
 
 	/*
 	 * SPEAr1310 reva FSMC cannot used as NOR and NAND at the same time

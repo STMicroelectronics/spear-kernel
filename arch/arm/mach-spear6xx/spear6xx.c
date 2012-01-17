@@ -26,6 +26,8 @@
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
+#include <plat/adc.h>
+#include <plat/jpeg.h>
 #include <plat/touchscreen.h>
 #include <plat/udc.h>
 #include <mach/irqs.h>
@@ -268,6 +270,13 @@ struct amba_device wdt_device = {
 };
 
 /* adc device registeration */
+static struct adc_plat_data adc_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.dma_data = "adc",
+	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
+		14000000, 0},
+};
+
 static struct resource adc_resources[] = {
 	{
 		.start = SPEAR6XX_ICM2_ADC_BASE,
@@ -284,6 +293,7 @@ struct platform_device adc_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &adc_pdata,
 	},
 	.num_resources = ARRAY_SIZE(adc_resources),
 	.resource = adc_resources,
@@ -508,6 +518,12 @@ struct platform_device ohci1_device = {
 };
 
 /* jpeg device registeration */
+static struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.mem2jpeg_slave = "to_jpeg",
+	.jpeg2mem_slave = "from_jpeg",
+};
+
 static struct resource jpeg_resources[] = {
 	{
 		.start = SPEAR6XX_ICM1_JPEG_BASE,
@@ -524,6 +540,7 @@ struct platform_device jpeg_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &jpeg_pdata,
 	},
 	.num_resources = ARRAY_SIZE(jpeg_resources),
 	.resource = jpeg_resources,

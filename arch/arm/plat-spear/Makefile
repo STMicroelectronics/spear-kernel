@@ -3,17 +3,17 @@
 #
 
 # Common support
-obj-y	:= adc.o clcd.o clock.o pll_clk.o smi.o time.o
+obj-y	:= clcd.o clock.o pll_clk.o smi.o time.o
 
 obj-$(CONFIG_ARCH_SPEAR13XX)	+= padmux.o
-obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o jpeg.o pl080.o udc.o
-obj-$(CONFIG_ARCH_SPEAR6XX)	+= jpeg.o pl080.o udc.o
+obj-$(CONFIG_ARCH_SPEAR3XX)	+= shirq.o padmux.o pl080.o udc.o
+obj-$(CONFIG_ARCH_SPEAR6XX)	+= pl080.o udc.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o
-obj-$(CONFIG_CPU_SPEAR1300)	+= jpeg.o udc.o
-obj-$(CONFIG_CPU_SPEAR1310_REVA) += plgpio.o jpeg.o udc.o
-obj-$(CONFIG_CPU_SPEAR1310)	+= plgpio.o jpeg.o
+obj-$(CONFIG_CPU_SPEAR1300)	+= udc.o
+obj-$(CONFIG_CPU_SPEAR1310_REVA) += plgpio.o udc.o
+obj-$(CONFIG_CPU_SPEAR1310)	+= plgpio.o
 obj-$(CONFIG_CPU_SPEAR1340)	+= plgpio.o
-obj-$(CONFIG_CPU_SPEAR900)	+= jpeg.o udc.o
+obj-$(CONFIG_CPU_SPEAR900)	+= udc.o
 obj-$(CONFIG_CPU_SPEAR310)	+= plgpio.o
 obj-$(CONFIG_CPU_SPEAR320)	+= plgpio.o
 obj-$(CONFIG_SPEAR_HDLC)	+= e1phy.o

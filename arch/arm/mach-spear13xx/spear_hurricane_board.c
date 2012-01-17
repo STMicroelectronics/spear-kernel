@@ -24,7 +24,6 @@
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
@@ -359,9 +358,6 @@ static void spear_hurricane_fixup(struct machine_desc *desc, struct tag *tags,
 static void __init spear_hurricane_init(void)
 {
 	unsigned int i;
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
 
 	/* set compact flash plat data */
 	set_arasan_cf_pdata(&spear13xx_cf_device, &cf_pdata);

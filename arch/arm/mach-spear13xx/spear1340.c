@@ -1375,27 +1375,17 @@ static struct dw_dma_slave uart1_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_UART1_TX),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_MEMORY,
 		.dst_master = SPEAR1340_DMA_MASTER_UART1,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_M2P,
 	}, {
 		/* Rx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SPEAR1340_UART1_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_UART1_RX),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_UART1,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -1436,29 +1426,17 @@ static struct dw_dma_slave camif0_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM0_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -1512,29 +1490,17 @@ static struct dw_dma_slave camif1_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_ODD),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM1_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_EVEN),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -1588,29 +1554,17 @@ static struct dw_dma_slave camif2_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_ODD),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM2_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_EVEN),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -1664,29 +1618,17 @@ static struct dw_dma_slave camif3_dma_param[] = {
 	{
 		/* odd line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_ODD),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_P_P2M,
 	}, {
 		/* even line */
 		.dma_dev = &spear13xx_dmac_device[1].dev,
-		.tx_reg = 0,
-		.rx_reg = SPEAR1340_CAM3_BASE + CAMIF_MEM_BUFFER,
-		.reg_width = DW_DMA_SLAVE_WIDTH_64BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_EVEN),
 		.cfg_lo = 0,
 		.src_master = SPEAR1340_DMA_MASTER_CAM,
 		.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_64,
-		.dst_msize = DW_DMA_MSIZE_64,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -1900,15 +1842,10 @@ struct platform_device spear1340_i2c1_device = {
 static struct dw_dma_slave i2s_play_dma_data = {
 	/* Play */
 	.dma_dev = &spear13xx_dmac_device[0].dev,
-	.tx_reg = SPEAR1340_I2S_PLAY_BASE + I2S_TXDMA,
-	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_I2S_TX),
 	.cfg_lo = 0,
 	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
 	.dst_master = SPEAR1340_DMA_MASTER_I2S_PLAY,
-	.src_msize = DW_DMA_MSIZE_16,
-	.dst_msize = DW_DMA_MSIZE_16,
-	.fc = DW_DMA_FC_D_M2P,
 };
 
 static struct i2s_platform_data i2s_play_data = {
@@ -1946,15 +1883,10 @@ struct platform_device spear1340_i2s_play_device = {
 static struct dw_dma_slave i2s_capture_dma_data = {
 	/* Record */
 	.dma_dev = &spear13xx_dmac_device[0].dev,
-	.rx_reg = SPEAR1340_I2S_REC_BASE + I2S_RXDMA,
-	.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_I2S_RX),
 	.cfg_lo = 0,
 	.src_master = SPEAR1340_DMA_MASTER_I2S_REC,
 	.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-	.src_msize = DW_DMA_MSIZE_16,
-	.dst_msize = DW_DMA_MSIZE_16,
-	.fc = DW_DMA_FC_D_P2M,
 };
 
 static struct i2s_platform_data i2s_capture_data = {
@@ -2108,15 +2040,10 @@ struct platform_device spear1340_sata0_device = {
 static struct dw_dma_slave spdif_in_dma_data = {
 	/* Record */
 	.dma_dev = &spear13xx_dmac_device[0].dev,
-	.rx_reg = SPEAR1340_SPDIF_IN_FIFO_BASE,
-	.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
 	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_SPDIF_RX),
 	.cfg_lo = 0,
 	.src_master = SPEAR1340_DMA_MASTER_SPDIF,
 	.dst_master = SPEAR1340_DMA_MASTER_MEMORY,
-	.src_msize = DW_DMA_MSIZE_16,
-	.dst_msize = DW_DMA_MSIZE_16,
-	.fc = DW_DMA_FC_D_P2M,
 };
 
 static struct spdif_platform_data spdif_in_data = {
@@ -2147,15 +2074,10 @@ struct platform_device spear1340_spdif_in_device = {
 static struct dw_dma_slave spdif_out_dma_data = {
 	/* Play */
 	.dma_dev = &spear13xx_dmac_device[0].dev,
-	.tx_reg = SPEAR1340_SPDIF_OUT_BASE + SPDIF_OUT_FIFO_DATA,
-	.reg_width = DW_DMA_SLAVE_WIDTH_32BIT,
 	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_SPDIF_TX),
 	.cfg_lo = 0,
 	.src_master = SPEAR1340_DMA_MASTER_MEMORY,
 	.dst_master = SPEAR1340_DMA_MASTER_SPDIF,
-	.src_msize = DW_DMA_MSIZE_16,
-	.dst_msize = DW_DMA_MSIZE_16,
-	.fc = DW_DMA_FC_D_M2P,
 };
 
 static struct spdif_platform_data spdif_out_data = {

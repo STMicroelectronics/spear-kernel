@@ -20,10 +20,8 @@
 #include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/hdlc.h>
-#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/emi.h>
@@ -230,12 +228,6 @@ static void __init spear310_evb_init(void)
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, NULL);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));

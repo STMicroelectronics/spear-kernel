@@ -32,7 +32,9 @@
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
+#include <plat/adc.h>
 #include <plat/clock.h>
+#include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
@@ -150,32 +152,21 @@ struct amba_device spear13xx_gpio_device[] = {
 
 /* ssp device registeration */
 #if 0
-#define SSP_DR(base)		(base + 0x008)
 static struct dw_dma_slave ssp_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_SSP0_TX),
 		.cfg_lo = 0,
 		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
 		.dst_master = SPEAR13XX_DMA_MASTER_SSP0,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_M2P,
 	}, {
 		/* Rx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SSP_DR(SPEAR13XX_SSP_BASE),
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_SSP0_RX),
 		.cfg_lo = 0,
 		.src_master = SPEAR13XX_DMA_MASTER_SSP0,
 		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 #endif
@@ -219,27 +210,17 @@ static struct dw_dma_slave uart_dma_param[] = {
 	{
 		/* Tx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SPEAR13XX_UART_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_UART0_TX),
 		.cfg_lo = 0,
 		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
 		.dst_master = SPEAR13XX_DMA_MASTER_UART0,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_M2P,
 	}, {
 		/* Rx */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SPEAR13XX_UART_BASE + UART01x_DR,
-		.reg_width = DW_DMA_SLAVE_WIDTH_8BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_UART0_RX),
 		.cfg_lo = 0,
 		.src_master = SPEAR13XX_DMA_MASTER_UART0,
 		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
-		.src_msize = DW_DMA_MSIZE_8,
-		.dst_msize = DW_DMA_MSIZE_8,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -264,6 +245,23 @@ struct amba_device spear13xx_uart_device = {
 };
 
 /* adc device registeration */
+static struct dw_dma_slave adc_dma_param[] = {
+	{
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_ADC),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_ADC,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+	}
+};
+
+static struct adc_plat_data adc_pdata = {
+	.dma_filter = dw_dma_filter,
+	.dma_data = &adc_dma_param,
+	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
+		NORMAL_RESOLUTION, 14000000, 0},
+};
+
 static struct resource adc_resources[] = {
 	{
 		.start = SPEAR13XX_ADC_BASE,
@@ -280,6 +278,7 @@ struct platform_device spear13xx_adc_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &adc_pdata,
 	},
 	.num_resources = ARRAY_SIZE(adc_resources),
 	.resource = adc_resources,
@@ -292,8 +291,6 @@ struct dw_dma_slave cf_dma_priv = {
 	.cfg_lo = 0,
 	.src_master = 0,
 	.dst_master = 0,
-	.src_msize = DW_DMA_MSIZE_16,
-	.dst_msize = DW_DMA_MSIZE_16,
 };
 
 static struct resource cf_resources[] = {
@@ -818,27 +815,17 @@ static struct dw_dma_slave i2s0_dma_data[] = {
 	{
 		/* Play */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SPEAR13XX_I2S0_BASE + I2S_TXDMA,
-		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
 		.cfg_lo = 0,
 		.src_master = 0,
 		.dst_master = 1,
-		.src_msize = DW_DMA_MSIZE_16,
-		.dst_msize = DW_DMA_MSIZE_16,
-		.fc = DW_DMA_FC_D_M2P,
 	}, {
 		/* Record */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SPEAR13XX_I2S0_BASE + I2S_RXDMA,
-		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
 		.cfg_lo = 0,
 		.src_master = 1,
 		.dst_master = 0,
-		.src_msize = DW_DMA_MSIZE_16,
-		.dst_msize = DW_DMA_MSIZE_16,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -884,27 +871,17 @@ static struct dw_dma_slave i2s1_dma_data[] = {
 	{
 		/* Play */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.tx_reg = SPEAR13XX_I2S1_BASE + I2S_TXDMA,
-		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
 		.cfg_lo = 0,
 		.src_master = 0,
 		.dst_master = 1,
-		.src_msize = DW_DMA_MSIZE_16,
-		.dst_msize = DW_DMA_MSIZE_16,
-		.fc = DW_DMA_FC_D_M2P,
 	}, {
 		/* Record */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
-		.rx_reg = SPEAR13XX_I2S1_BASE + I2S_RXDMA,
-		.reg_width = DW_DMA_SLAVE_WIDTH_16BIT,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
 		.cfg_lo = 0,
 		.src_master = 1,
 		.dst_master = 0,
-		.src_msize = DW_DMA_MSIZE_16,
-		.dst_msize = DW_DMA_MSIZE_16,
-		.fc = DW_DMA_FC_D_P2M,
 	}
 };
 
@@ -945,6 +922,30 @@ struct platform_device spear13xx_i2s1_device = {
 };
 
 /* jpeg device registeration */
+static struct dw_dma_slave jpeg_dma_param[] = {
+	{
+		/* mem2jpeg */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_TO_JPEG),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR13XX_DMA_MASTER_JPEG,
+	}, {
+		/* jpeg2mem */
+		.dma_dev = &spear13xx_dmac_device[0].dev,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_FROM_JPEG),
+		.cfg_lo = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_JPEG,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+	}
+};
+
+static struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = dw_dma_filter,
+	.mem2jpeg_slave = &jpeg_dma_param[0],
+	.jpeg2mem_slave = &jpeg_dma_param[1],
+};
+
 static struct resource jpeg_resources[] = {
 	{
 		.start = SPEAR13XX_JPEG_BASE,
@@ -961,6 +962,7 @@ struct platform_device spear13xx_jpeg_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &jpeg_pdata,
 	},
 	.num_resources = ARRAY_SIZE(jpeg_resources),
 	.resource = jpeg_resources,

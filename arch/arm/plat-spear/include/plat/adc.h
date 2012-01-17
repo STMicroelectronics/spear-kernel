@@ -14,42 +14,21 @@
 #ifndef __PLAT_ADC_H
 #define __PLAT_ADC_H
 
-#include <linux/platform_device.h>
 #include <linux/types.h>
 #include <linux/spear_adc_usr.h>
 
 #ifdef CONFIG_ARCH_SPEAR13XX
-#include <linux/dw_dmac.h>
-
-#define ADC_BURST		DW_DMA_MSIZE_1
-#define ADC_WIDTH		DW_DMA_SLAVE_WIDTH_32BIT
 #define ADC_DMA_MAX_COUNT	2048
-
-struct adc_plat_data {
-	struct adc_config config;
-	struct dw_dma_slave slave;
-	bool runtime_config;
-	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
-};
 #else
-#include <linux/dmaengine.h>
 #include <asm/hardware/pl080.h>
 
-#define ADC_BURST		1
-#define ADC_WIDTH		DMA_SLAVE_BUSWIDTH_4_BYTES
 #define ADC_DMA_MAX_COUNT	PL080_CONTROL_TRANSFER_SIZE_MASK
-
-struct adc_plat_data {
-	struct adc_config config;
-	struct dma_slave_config slave;
-	bool runtime_config;
-	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
-};
 #endif
 
-void set_adc_plat_data(struct platform_device *adc_pdev,
-		struct device *dma_dev);
-#ifdef CONFIG_SPEAR_ADC_DMA_IF
-void set_adc_rx_reg(struct adc_plat_data *data, dma_addr_t rx_reg);
-#endif /* CONFIG_SPEAR_ADC_DMA_IF */
+struct dma_chan;
+struct adc_plat_data {
+	struct adc_config config;
+	void *dma_data;
+	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
+};
 #endif /* __PLAT_ADC_H */

@@ -21,10 +21,8 @@
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/spi/spi.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/hdlc.h>
-#include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
@@ -336,9 +334,6 @@ static void __init spear1310_evb_init(void)
 {
 	unsigned int i;
 
-	/* set adc platform data */
-	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
-
 	/* set compact flash plat data */
 	set_arasan_cf_pdata(&spear13xx_cf_device, &cf_pdata);
 
@@ -346,9 +341,6 @@ static void __init spear1310_evb_init(void)
 	/* db9000_clcd plat data */
 	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
-			&spear13xx_dmac_device[0].dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);

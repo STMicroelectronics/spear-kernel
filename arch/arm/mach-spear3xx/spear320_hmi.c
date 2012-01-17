@@ -20,9 +20,7 @@
 #include <linux/mtd/fsmc.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
-#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
@@ -160,12 +158,6 @@ static void __init spear320_hmi_init(void)
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
 			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, NULL);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();

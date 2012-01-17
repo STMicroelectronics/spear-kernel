@@ -20,9 +20,7 @@
 #include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
-#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
@@ -121,15 +119,9 @@ static void __init spear600_evb_init(void)
 {
 	unsigned int i;
 
-	/* set adc platform data */
-	set_adc_plat_data(&adc_device, NULL);
-
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
 			FSMC_NAND_BW8);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&jpeg_device, NULL);
 
 	/* call spear600 machine init function */
 	spear600_init();
