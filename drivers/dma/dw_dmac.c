@@ -1356,6 +1356,12 @@ static void dw_dma_off(struct dw_dma *dw)
 	int i;
 
 	dma_writel(dw, CFG, 0);
+
+	channel_clear_bit(dw, MASK.XFER, dw->all_chan_mask);
+	channel_clear_bit(dw, MASK.SRC_TRAN, dw->all_chan_mask);
+	channel_clear_bit(dw, MASK.DST_TRAN, dw->all_chan_mask);
+	channel_clear_bit(dw, MASK.ERROR, dw->all_chan_mask);
+
 	while (dma_readl(dw, CFG) & DW_CFG_DMA_EN)
 		cpu_relax();
 
