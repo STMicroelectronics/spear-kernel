@@ -201,6 +201,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1340 specific devices */
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+	&spear1340_cpufreq_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear1340_gpiokeys_device,
 #endif
