@@ -558,12 +558,13 @@ static int pcie_clk_init(struct pcie_port *pp)
 {
 	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
-
+	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
 	return 0;
 }
 
 static int pcie_clk_exit(struct pcie_port *pp)
 {
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
 	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
 	return 0;
 }
