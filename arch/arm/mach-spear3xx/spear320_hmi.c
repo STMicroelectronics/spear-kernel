@@ -99,7 +99,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear320_pmx_i2s,
 	&spear320_pmx_pwm0_1[3],
 	&spear320_pmx_pwm2[3],
-	&spear320_pmx_sdhci[1],
+	&spear320_pmx_sdhci[0],
 	&spear320_pmx_uart2,
 	&spear320_pmx_mii1_2[1],
 };
