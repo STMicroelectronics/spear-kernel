@@ -25,6 +25,7 @@
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
 #include <plat/adc.h>
+#include <plat/cpufreq.h>
 #include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/generic.h>
@@ -178,6 +179,26 @@ struct platform_device spear3xx_adc_device = {
 	},
 	.num_resources = ARRAY_SIZE(adc_resources),
 	.resource = adc_resources,
+};
+
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	166000, /* 166 MHZ */
+	266000, /* 266 MHZ */
+	332000, /* 332 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device spear3xx_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
 };
 
 /* Ethernet device registeration */

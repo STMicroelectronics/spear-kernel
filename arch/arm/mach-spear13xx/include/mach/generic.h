@@ -481,6 +481,7 @@ extern struct platform_device spear13xx_wdt_device;
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
+extern struct platform_device spear13xx_cpufreq_device;
 extern struct platform_device spear13xx_i2s0_device;
 extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
@@ -601,6 +602,7 @@ extern struct platform_device spear1340_camif2_device;
 extern struct platform_device spear1340_camif3_device;
 extern struct platform_device spear1340_cec0_device;
 extern struct platform_device spear1340_cec1_device;
+extern struct platform_device spear1340_cpufreq_device;
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 extern struct platform_device spear1340_gpiokeys_device;
 #endif

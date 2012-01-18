@@ -296,6 +296,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+	&spear1340_cpufreq_device,
 #ifdef CONFIG_DRM_MALI
 	&spear1340_device_mali_drm,
 #endif

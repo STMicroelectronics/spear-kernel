@@ -35,6 +35,7 @@
 #include <asm/smp_twd.h>
 #include <plat/adc.h>
 #include <plat/clock.h>
+#include <plat/cpufreq.h>
 #include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/dma.h>
@@ -831,6 +832,28 @@ struct platform_device spear13xx_pcie_host0_device = {
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	200000, /* 200 MHZ */
+	250000, /* 250 MHZ */
+	332000, /* 332 MHZ */
+	400000, /* 400 MHZ */
+	500000, /* 500 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device spear13xx_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
+};
+
 /* i2s0 device registeration */
 static struct dw_dma_slave i2s0_dma_data[] = {
 	{

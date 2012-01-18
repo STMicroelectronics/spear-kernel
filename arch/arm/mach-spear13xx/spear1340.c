@@ -30,6 +30,7 @@
 #include <plat/camif.h>
 #include <plat/gpio.h>
 #include <plat/clock.h>
+#include <plat/cpufreq.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -1735,6 +1736,30 @@ struct platform_device spear1340_cec1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(cec1_resources),
 	.resource = cec1_resources,
+};
+
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	166000, /* 166 MHZ */
+	200000, /* 200 MHZ */
+	250000, /* 250 MHZ */
+	332000, /* 332 MHZ */
+	400000, /* 400 MHZ */
+	500000, /* 500 MHZ */
+	600000, /* 600 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device spear1340_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
 };
 
 /* SPEAr GPIO Buttons Info */

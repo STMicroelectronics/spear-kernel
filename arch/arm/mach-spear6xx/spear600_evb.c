@@ -65,6 +65,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	&adc_device,
+	&cpufreq_device,
 	&ehci0_device,
 	&ehci1_device,
 	&eth_device,

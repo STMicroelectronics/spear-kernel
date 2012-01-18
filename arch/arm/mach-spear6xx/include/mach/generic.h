@@ -36,6 +36,7 @@ extern struct amba_device ssp_device[];
 extern struct amba_device uart_device[];
 extern struct amba_device wdt_device;
 extern struct platform_device adc_device;
+extern struct platform_device cpufreq_device;
 extern struct platform_device ehci0_device;
 extern struct platform_device ehci1_device;
 extern struct platform_device eth_device;

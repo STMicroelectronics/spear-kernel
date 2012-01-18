@@ -209,6 +209,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
+	&spear13xx_cpufreq_device,
 	&spear13xx_db9000_clcd_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear13xx_device_gpiokeys,
