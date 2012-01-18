@@ -27,8 +27,7 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	int ret = 0;
-	u32 freq, format, rate, channel;
-	u32 ref_clock;
+	u32 channel;
 
 	/* set codec DAI configuration */
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
@@ -36,17 +35,7 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
-	format = params_format(params);
-	rate = params_rate(params);
 	channel = params_channels(params);
-	freq = format * rate * channel * 8;
-	ref_clock = freq * 8;
-
-	/* set the codec system clock for DAC */
-	ret = snd_soc_dai_set_sysclk(codec_dai, 0 , ref_clock,
-			SND_SOC_CLOCK_IN);
-	if (ret < 0)
-		return ret;
 
 	if (cpu_is_spear1340()) {
 #ifdef CONFIG_CPU_SPEAR1340

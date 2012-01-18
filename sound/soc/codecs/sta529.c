@@ -49,7 +49,6 @@ static const u8 sta529_reg[STA529_CACHEREGNUM] = {
 };
 
 struct sta529 {
-	unsigned int sysclk;
 	enum snd_soc_control_type control_type;
 	void *control_data;
 };
@@ -157,13 +156,6 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int
-spear_sta_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
-		unsigned int freq, int dir)
-{
-	return 0;
-}
-
 static int spear_sta529_mute(struct snd_soc_dai *dai, int mute)
 {
 	struct snd_soc_codec *codec = dai->codec;
@@ -210,7 +202,6 @@ static struct snd_soc_dai_ops sta529_dai_ops = {
 	.hw_params	= spear_sta529_hw_params,
 	.set_fmt	= spear_sta529_set_dai_fmt,
 	.digital_mute	= spear_sta529_mute,
-	.set_sysclk	= spear_sta_set_dai_sysclk,
 };
 
 static struct snd_soc_dai_driver sta529_dai = {
