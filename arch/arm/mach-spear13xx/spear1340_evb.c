@@ -304,6 +304,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_otg_device,
 	&spear1340_sata0_device,
 	&spear1340_thermal_device,
+#ifdef CONFIG_DRM_MALI
+	&spear1340_device_mali_drm,
+#endif
 };
 
 static struct arasan_cf_pdata cf_pdata = {
