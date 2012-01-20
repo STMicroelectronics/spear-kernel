@@ -1,0 +1,30 @@
+/*
+ * Copyright (C) 2010-2011 STMicroelectronics. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+#ifndef __ARCH_CONFIG_H__
+#define __ARCH_CONFIG_H__
+
+#define ARCH_UMP_BACKEND_DEFAULT          0
+#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x08000000 /*start at 128MiB*/
+//#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x0C000000 /*start at 192MiB*/
+//#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x0C000000 /*start at 192MiB*/
+/* #define ARCH_UMP_MEMORY_SIZE_DEFAULT 48UL * 1024UL * 1024UL */
+/* #define ARCH_UMP_MEMORY_SIZE_DEFAULT 16UL * 1024UL * 1024UL */
+
+/* trying 56 MiB reserved by UMP + 8 MiB reserved by Mali */
+//#define ARCH_UMP_MEMORY_SIZE_DEFAULT 56UL * 1024UL * 1024UL
+
+/* trying 48 MiB reserved by UMP + 16 MiB reserved by Mali */
+//#define ARCH_UMP_MEMORY_SIZE_DEFAULT 48UL * 1024UL * 1024UL
+
+/* trying 32 MiB reserved by UMP + 96 MiB reserved by Mali */
+#define ARCH_UMP_MEMORY_SIZE_DEFAULT 32UL * 1024UL * 1024UL
+
+#endif /* __ARCH_CONFIG_H__ */
