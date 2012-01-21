@@ -1568,6 +1568,8 @@ disable_clk:
 static const struct dev_pm_ops spear_adc_dev_pm_ops = {
 	.suspend = spear_adc_suspend,
 	.resume = spear_adc_resume,
+	.freeze = spear_adc_suspend,
+	.restore = spear_adc_resume,
 };
 
 #define SPEAR_ADC_DEV_PM_OPS (&spear_adc_dev_pm_ops)
