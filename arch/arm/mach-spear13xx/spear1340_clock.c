@@ -979,6 +979,9 @@ static struct pclk_info i2s_src_pclk_info[] = {
 		.pclk = &vco1div2_clk,
 		.pclk_val = SPEAR1340_I2S_SRC_VCO1DIV2_VAL,
 	}, {
+		.pclk = &pll2_clk,
+		.pclk_val = SPEAR1340_I2S_SRC_PLL2_VAL,
+	}, {
 		.pclk = &pll3_clk,
 		.pclk_val = SPEAR1340_I2S_SRC_PLL3_VAL,
 	}, {
