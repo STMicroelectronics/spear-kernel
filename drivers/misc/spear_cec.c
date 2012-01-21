@@ -570,6 +570,8 @@ static int spear_cec_resume(struct device *dev)
 static const struct dev_pm_ops spear_cec_pm_ops = {
 	.suspend = spear_cec_suspend,
 	.resume = spear_cec_resume,
+	.freeze = spear_cec_suspend,
+	.restore = spear_cec_resume,
 };
 #endif
 
