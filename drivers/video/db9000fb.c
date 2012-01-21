@@ -1142,24 +1142,28 @@ db9000fb_freq_policy(struct notifier_block *nb, unsigned long val, void *data)
  * Power management hooks. Note that we won't be called from IRQ context, unlike
  * the blank functions above, so we may sleep.
  */
-static int db9000fb_suspend(struct platform_device *pdev, pm_message_t state)
+static int db9000fb_suspend(struct device *dev)
 {
-	struct db9000fb_info *fbi = platform_get_drvdata(pdev);
+	struct db9000fb_info *fbi = dev_get_drvdata(dev);
 
 	set_ctrlr_state(fbi, C_DISABLE_PM);
 	return 0;
 }
 
-static int db9000fb_resume(struct platform_device *pdev)
+static int db9000fb_resume(struct device *dev)
 {
-	struct db9000fb_info *fbi = platform_get_drvdata(pdev);
+	struct db9000fb_info *fbi = dev_get_drvdata(dev);
 
 	set_ctrlr_state(fbi, C_ENABLE_PM);
 	return 0;
 }
-#else
-#define db9000fb_suspend	NULL
-#define db9000fb_resume	NULL
+
+static const struct dev_pm_ops db9000fb_pm_ops = {
+	.suspend	= db9000fb_suspend,
+	.resume		= db9000fb_resume,
+	.freeze		= db9000fb_suspend,
+	.restore	= db9000fb_resume,
+};
 #endif
 
 static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
@@ -1794,11 +1798,12 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 static struct platform_driver db9000fb_driver = {
 	.probe		= db9000fb_probe,
 	.remove		= db9000fb_remove,
-	.suspend	= db9000fb_suspend,
-	.resume		= db9000fb_resume,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= DRIVER_NAME,
+#ifdef CONFIG_PM
+		.pm = &db9000fb_pm_ops,
+#endif
 	},
 };
 
