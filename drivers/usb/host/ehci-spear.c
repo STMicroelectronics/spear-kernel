@@ -148,10 +148,8 @@ static int ehci_spear_drv_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops ehci_spear_pm_ops = {
-	.suspend = ehci_spear_drv_suspend,
-	.resume = ehci_spear_drv_resume,
-};
+static SIMPLE_DEV_PM_OPS(ehci_spear_pm_ops, ehci_spear_drv_suspend,
+		ehci_spear_drv_resume);
 #endif /* CONFIG_PM */
 
 static int spear_ehci_hcd_drv_probe(struct platform_device *pdev)
