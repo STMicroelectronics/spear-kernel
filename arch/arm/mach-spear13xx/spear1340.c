@@ -1342,6 +1342,31 @@ struct pmx_dev spear1340_pmx_sata = {
 	.mode_count = ARRAY_SIZE(pmx_sata_modes),
 };
 
+/* padmux devices to enable */
+static void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device)
+{
+	struct pmx_mux_reg *mux_reg;
+	int ret, i, j, k;
+
+	/*
+	 * Use pas mux framework to program device pads as gpios or let
+	 * them under device control. Turn them to device pads if
+	 * to_device is true else reset to make them as gpio.
+	 */
+	for (i = 0; i < count; i++) {
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+				mux_reg = &devs[i]->modes[j].mux_regs[k];
+				mux_reg->value = to_device? mux_reg->mask : 0x0;
+			}
+		}
+	}
+
+	ret = pmx_devs_enable(devs, count);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
 /* Add spear1340 specific devices here */
 /* Add Amba Devices */
 /* uart device registeration */
@@ -2449,31 +2474,6 @@ static struct gpio_req_list clcd_gpio_list[] = {
 	},
 };
 
-/* padmux devices to enable */
-static void config_clcd_pads(struct pmx_dev **devs, u8 count, bool on)
-{
-	struct pmx_mux_reg *mux_reg;
-	int ret, i, j, k;
-
-	/*
-	 * Some pmx structures will be used to set/reset register for clcd pmx
-	 * registers. Set register to make pads as clcd signals if on is true
-	 * else reset to make pads as gpio.
-	 */
-	for (i = 0; i < count; i++) {
-		for (j = 0; j < devs[i]->mode_count; j++) {
-			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
-				mux_reg = &devs[i]->modes[j].mux_regs[k];
-				mux_reg->value = on ? mux_reg->mask : 0x0;
-			}
-		}
-	}
-
-	ret = pmx_devs_enable(devs, count);
-	if (ret)
-		pr_err("padmux: registeration failed. err no: %d\n", ret);
-}
-
 /* Switch pads to plgpio or clcd now */
 void config_clcd_gpio_pads(bool on)
 {
@@ -2490,7 +2490,7 @@ void config_clcd_gpio_pads(bool on)
 		gpio_avail = true;
 	}
 
-	config_clcd_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
+	config_io_pads(clcd_pmx_devs, ARRAY_SIZE(clcd_pmx_devs), on);
 }
 
 #ifdef CONFIG_SND_SPEAR_SPDIF_IN
