@@ -385,10 +385,50 @@ static int __devexit cortexa9_wdt_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int cortexa9_wdt_suspend(struct device *dev)
+{
+	if (test_bit(WDT_BUSY, &wdt->status)) {
+		wdt_disable();
+		clk_disable(wdt->clk);
+	}
+
+	return 0;
+}
+
+static int cortexa9_wdt_resume(struct device *dev)
+{
+	int ret = 0;
+
+	if (test_bit(WDT_BUSY, &wdt->status)) {
+		ret = clk_enable(wdt->clk);
+		if (ret) {
+			dev_err(dev, "clock enable fail");
+			return ret;
+		}
+		wdt_enable();
+	}
+
+	return ret;
+}
+
+static const struct dev_pm_ops cortexa9_wdt_dev_pm_ops = {
+	.suspend = cortexa9_wdt_suspend,
+	.resume = cortexa9_wdt_resume,
+	.freeze = cortexa9_wdt_suspend,
+	.restore = cortexa9_wdt_resume,
+};
+
+#define CORTEXA9_WDT_DEV_PM_OPS (&cortexa9_wdt_dev_pm_ops)
+#else
+#define CORTEXA9_WDT_DEV_PM_OPS	NULL
+#endif /* CONFIG_PM */
+
 static struct platform_driver cortexa9_wdt_driver = {
 	.driver = {
 		.name = MODULE_NAME,
 		.owner	= THIS_MODULE,
+		.pm = CORTEXA9_WDT_DEV_PM_OPS,
 	},
 	.probe = cortexa9_wdt_probe,
 	.remove = __devexit_p(cortexa9_wdt_remove),
