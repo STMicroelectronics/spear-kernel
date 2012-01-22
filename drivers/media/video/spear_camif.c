@@ -128,6 +128,8 @@
 
 /* video memory limit */
 #define MAX_VIDEO_MEM		16	/* MiB */
+/* buffer count */
+#define CAMIF_MIN_BUFFER_CNT	3
 /* Buffer for one video frame */
 struct camif_buffer {
 	/* common v4l buffer stuff -- must be first */
@@ -521,8 +523,12 @@ static int camif_videobuf_setup(struct videobuf_queue *vq,
 
 	*size = bytes_per_line * icd->user_height;
 
-	if (!*count)
+	/* check for buffer count and size sanity */
+	if (*count > VIDEO_MAX_FRAME)
 		*count = VIDEO_MAX_FRAME;
+
+	if (*count < CAMIF_MIN_BUFFER_CNT)
+		*count = CAMIF_MIN_BUFFER_CNT;
 
 	if (*size * *count > MAX_VIDEO_MEM * 1024 * 1024)
 		*count = (MAX_VIDEO_MEM * 1024 * 1024) / *size;
