@@ -342,6 +342,7 @@
 
 struct vs6725 {
 	struct v4l2_subdev subdev;
+	struct soc_camera_link *icl;
 	int active_pipe;		/* whether pipe 0 or pipe 1 is active */
 	int saturation;
 	int contrast;
@@ -1880,6 +1881,71 @@ static unsigned long vs6725_query_bus_param(struct soc_camera_device *icd)
 	return soc_camera_apply_sensor_flags(icl, flags);
 }
 
+/*
+ * After VS6725 is enabled by pulling CE pin HI,
+ * we need to write the patches and default registers to
+ * ensure that the sensor is in a correct default state.
+ */
+static int vs6725_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv;
+	int ret;
+
+	if (!client)
+		/*
+		 * VS6725 probe has not been invoked as of now,
+		 * so fake a correct reply
+		 */
+		return 0;
+
+	priv = to_vs6725(client);
+
+	if (!priv || !priv->icl)
+		/*
+		 * VS6725 probe has not been invoked as of now,
+		 * so fake a correct reply
+		 */
+		return 0;
+
+	if (!on) {
+		/* power-off the sensor */
+		if (priv->icl->power) {
+			ret = priv->icl->power(&client->dev, 0);
+			if (ret < 0) {
+				dev_err(&client->dev,
+					"failed to power-off the camera.\n");
+				goto out;
+			}
+		}
+	} else {
+		/* power-on the sensor */
+		if (priv->icl->power) {
+			ret = priv->icl->power(&client->dev, 1);
+			if (ret < 0) {
+				dev_err(&client->dev,
+					"failed to power-on the camera.\n");
+				goto out;
+			}
+		}
+
+		/* add delay as defined in specs */
+		mdelay(100);
+
+		/* program sensor specific patches/quirks */
+		ret = vs6725_prog_default(client);
+		if (ret) {
+			dev_err(&client->dev,
+				"VS6725 default register program failed\n");
+			goto out;
+		}
+	}
+
+	return 0;
+out:
+	return ret;
+}
+
 /* get the current settings of a control on Vs6725 */
 static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
@@ -2232,24 +2298,10 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	if (enable) {
-		ret = vs6725_prog_default(client);
-		if (ret) {
-			dev_err(&client->dev,
-				"VS6725 default register program failed\n");
-			return ret;
-		}
-
+	if (enable)
 		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
-
-		/*
-		 * Allow the sensor to really boot-up.
-		 * Don't change the delay value set here.
-		 */
-		mdelay(505);
-	} else {
+	else
 		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
-	}
 
 	if (ret != 0)
 		return -EIO;
@@ -2653,6 +2705,7 @@ static struct soc_camera_ops vs6725_ops = {
 };
 
 static struct v4l2_subdev_core_ops vs6725_subdev_core_ops = {
+	.s_power = vs6725_s_power,
 	.g_ctrl = vs6725_g_ctrl,
 	.s_ctrl = vs6725_s_ctrl,
 	.g_chip_ident = vs6725_g_chip_ident,
@@ -2779,6 +2832,7 @@ static int vs6725_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&priv->subdev, client, &vs6725_subdev_ops);
 
 	icd->ops = &vs6725_ops;
+	priv->icl = icl;
 
 	priv->rect.left = 0;
 	priv->rect.top = 0;
