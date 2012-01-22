@@ -114,9 +114,6 @@
 #define HARDWARE_REG_BASE		0xD900
 #define LAST_REGISTER_ADDR		0xDA30
 
-/* FIXME: find a better way of doing this */
-#define SET_TO_ONE			1
-
 /* vs6725 i2c write address is 0x20 */
 
 /*
@@ -317,7 +314,7 @@
 #define FLASH_MODE			0x0240
 #define FLASH_RECOMMENDED		0x0248
 /* vs6725 anti-vignettte registers */
-#define AV_DISABLE				0x0260
+#define AV_DISABLE			0x0260
 /* vs6725 special effect control registers */
 #define NEGATIVE			0x02C0
 #define SOLARISING			0x02C1
@@ -990,10 +987,6 @@ static struct regval_list vs6725_patch1[] = {
 static struct regval_list vs6725_patch2[] = {
 	{0xc234, 0x01}, /* Core_Reg enable */
 	{OPF_DCTRL, 0x06}, /* DCTRL */
-	{OPF_YCBCR_SETUP, 0x00}, /* YCBCR SETUP: no swap */
-	{OIF_PCLK_SETUP, 0xFE}, /* PCLK_SETUP: CLK out the data at -ve edge */
-	{OIF_VSYNC_SETUP, 0x0d}, /* VSYNC Active HI, as per VESA specs */
-	{OIF_HSYNC_SETUP, 0x0d}, /* HSYNC Active HI, as per VESA specs */
 	{E_DIV, 0x01}, /* Set Divider to 1 */
 	{MAX_DERATING, 0x10}, /* Set Output Clock DeRating Factor to 16 */
 
@@ -1294,18 +1287,6 @@ static struct regval_list default_before_auto_frame_rate_on[] = {
 	{PIPE1_SENSOR_MODE, 0x0},
 	/* View/Live setup - Disabled */
 	{VIEW_LIVE_EN, 0x0},
-	/* Image size setup - pipe 0 */
-	{PIPE0_IMAGE_SIZE, 0x9},	/* custom size, 512*512 */
-	{PIPE0_MANUAL_HS_HI, 0x2},	/* uwManualHSize_hi */
-	{PIPE0_MANUAL_HS_LO, 0x0},	/* uwManualHSize_lo */
-	{PIPE0_MANUAL_VS_HI, 0x2},	/* uwManualVSize_hi */
-	{PIPE0_MANUAL_VS_LO, 0x0},	/* uwManualVSize_lo */
-	/* Image size setup - pipe 1 */
-	{PIPE1_IMAGE_SIZE, 0x0},
-	/* Data format (stream 0) */
-	{PIPE0_DATA_FORMAT, 0x2},	/* DataFormat_YCbCr_Custom */
-	/* Data format (stream 1) */
-	{PIPE1_DATA_FORMAT, 0x2},
 	/* Active pipe setup */
 	{ACTIVE_PIPE_BANK, 0x0},	/* PIPE_0 is active pipe */
 	/* Manual frame rate */
@@ -2193,13 +2174,11 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 		case V4L2_COLORFX_NEGATIVE:
 			ret = vs6725_reg_write(client,
-				NEGATIVE,
-				SET_TO_ONE);
+				NEGATIVE, 1);
 			break;
 		case V4L2_COLORFX_SKETCH:
 			ret = vs6725_reg_write(client,
-				SKETCH,
-				SET_TO_ONE);
+				SKETCH, 1);
 			break;
 		default:
 			/*
@@ -2479,7 +2458,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	switch (code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
-		dev_dbg(&client->dev, "pixel format YUYV8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2490,7 +2468,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
-		dev_dbg(&client->dev, "pixel format UYVY8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2501,7 +2478,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_YVYU8_2X8:
-		dev_dbg(&client->dev, "pixel format YVYU8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2512,7 +2488,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
-		dev_dbg(&client->dev, "pixel format VYUY8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2523,7 +2498,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
-		dev_dbg(&client->dev, "pixel format RBG444_2X8_PADHI_BE\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2535,7 +2509,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		priv->colorspace = V4L2_COLORSPACE_SRGB;
 		break;
 	case V4L2_MBUS_FMT_RGB565_2X8_BE:
-		dev_dbg(&client->dev, "pixel format RGB565_2X8_BE\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
