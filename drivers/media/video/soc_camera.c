@@ -43,6 +43,55 @@ static LIST_HEAD(hosts);
 static LIST_HEAD(devices);
 static DEFINE_MUTEX(list_lock);		/* Protects the list of hosts */
 
+static int soc_camera_power_on(struct soc_camera_device *icd,
+				struct soc_camera_link *icl)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	int ret;
+
+	if (icl->power) {
+		ret = icl->power(icd->pdev, 1);
+		if (ret < 0) {
+			dev_err(icd->pdev,
+				"Platform failed to power-on the camera.\n");
+			goto eout;
+		}
+	}
+
+	ret = v4l2_subdev_call(sd, core, s_power, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		goto esdpwr;
+
+	return 0;
+
+esdpwr:
+	if (icl->power)
+		icl->power(icd->pdev, 0);
+eout:
+	return ret;
+}
+
+static int soc_camera_power_off(struct soc_camera_device *icd,
+				struct soc_camera_link *icl)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	int ret = v4l2_subdev_call(sd, core, s_power, 0);
+
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		return ret;
+
+	if (icl->power) {
+		ret = icl->power(icd->pdev, 0);
+		if (ret < 0) {
+			dev_err(icd->pdev,
+				"Platform failed to power-off the camera.\n");
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
 const struct soc_camera_format_xlate *soc_camera_xlate_by_fourcc(
 	struct soc_camera_device *icd, unsigned int fourcc)
 {
@@ -96,6 +145,10 @@ static int soc_camera_try_fmt_vid_cap(struct file *file, void *priv,
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 
 	WARN_ON(priv != file->private_data);
+
+	/* Only single-plane capture is supported so far */
+	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
 
 	/* limit format to hardware capabilities */
 	return ici->ops->try_fmt(icd, f);
@@ -375,11 +428,9 @@ static int soc_camera_open(struct file *file)
 			},
 		};
 
-		if (icl->power) {
-			ret = icl->power(icd->pdev, 1);
-			if (ret < 0)
-				goto epower;
-		}
+		ret = soc_camera_power_on(icd, icl);
+		if (ret < 0)
+			goto epower;
 
 		/* The camera could have been already on, try to reset */
 		if (icl->reset)
@@ -425,8 +476,7 @@ esfmt:
 eresume:
 	ici->ops->remove(icd);
 eiciadd:
-	if (icl->power)
-		icl->power(icd->pdev, 0);
+	soc_camera_power_off(icd, icl);
 epower:
 	icd->use_count--;
 	mutex_unlock(&icd->video_lock);
@@ -450,8 +500,7 @@ static int soc_camera_close(struct file *file)
 
 		ici->ops->remove(icd);
 
-		if (icl->power)
-			icl->power(icd->pdev, 0);
+		soc_camera_power_off(icd, icl);
 	}
 
 	if (icd->streamer == file)
@@ -531,6 +580,11 @@ static int soc_camera_s_fmt_vid_cap(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+		dev_warn(icd->pdev, "Wrong buf-type %d\n", f->type);
+		return -EINVAL;
+	}
+
 	if (icd->streamer && icd->streamer != file)
 		return -EBUSY;
 
@@ -580,6 +634,9 @@ static int soc_camera_g_fmt_vid_cap(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
 	pix->width		= icd->user_width;
 	pix->height		= icd->user_height;
 	pix->field		= icd->vb_vidq.field;
@@ -624,10 +681,11 @@ static int soc_camera_streamon(struct file *file, void *priv,
 
 	mutex_lock(&icd->video_lock);
 
-	v4l2_subdev_call(sd, video, s_stream, 1);
-
 	/* This calls buf_queue from host driver's videobuf_queue_ops */
 	ret = videobuf_streamon(&icd->vb_vidq);
+
+	if (!ret)
+		v4l2_subdev_call(sd, video, s_stream, 1);
 
 	mutex_unlock(&icd->video_lock);
 
@@ -738,6 +796,9 @@ static int soc_camera_cropcap(struct file *file, void *fh,
 	struct soc_camera_device *icd = file->private_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 
+	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
 	return ici->ops->cropcap(icd, a);
 }
 
@@ -747,6 +808,9 @@ static int soc_camera_g_crop(struct file *file, void *fh,
 	struct soc_camera_device *icd = file->private_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	int ret;
+
+	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
 
 	mutex_lock(&icd->vb_vidq.vb_lock);
 	ret = ici->ops->get_crop(icd, a);
@@ -941,14 +1005,15 @@ static int soc_camera_probe(struct device *dev)
 
 	dev_info(dev, "Probing %s\n", dev_name(dev));
 
-	if (icl->power) {
-		ret = icl->power(icd->pdev, 1);
-		if (ret < 0) {
-			dev_err(dev,
-				"Platform failed to power-on the camera.\n");
-			goto epower;
-		}
-	}
+	/*
+	 * This will not yet call v4l2_subdev_core_ops::s_power(1), because the
+	 * subdevice has not been initialised yet. We'll have to call it once
+	 * again after initialisation, even though it shouldn't be needed, we
+	 * don't do any IO here.
+	 */
+	ret = soc_camera_power_on(icd, icl);
+	if (ret < 0)
+		goto epower;
 
 	/* The camera could have been already on, try to reset */
 	if (icl->reset)
@@ -1005,8 +1070,12 @@ static int soc_camera_probe(struct device *dev)
 	if (ret < 0)
 		goto evidstart;
 
-	/* Try to improve our guess of a reasonable window format */
 	sd = soc_camera_to_subdev(icd);
+	ret = v4l2_subdev_call(sd, core, s_power, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD)
+		goto evidstart;
+
+	/* Try to improve our guess of a reasonable window format */
 	if (!v4l2_subdev_call(sd, video, g_mbus_fmt, &mf)) {
 		icd->user_width		= mf.width;
 		icd->user_height	= mf.height;
@@ -1021,8 +1090,7 @@ static int soc_camera_probe(struct device *dev)
 
 	ici->ops->remove(icd);
 
-	if (icl->power)
-		icl->power(icd->pdev, 0);
+	soc_camera_power_off(icd, icl);
 
 	mutex_unlock(&icd->video_lock);
 
@@ -1044,8 +1112,7 @@ eadddev:
 evdc:
 	ici->ops->remove(icd);
 eadd:
-	if (icl->power)
-		icl->power(icd->pdev, 0);
+	soc_camera_power_off(icd, icl);
 epower:
 	return ret;
 }
