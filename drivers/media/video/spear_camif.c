@@ -128,8 +128,14 @@
 
 /* video memory limit */
 #define MAX_VIDEO_MEM		16	/* MiB */
+
 /* buffer count */
 #define CAMIF_MIN_BUFFER_CNT	3
+
+/* camif image size boundary */
+#define CAMIF_MAX_WIDTH		1920
+#define CAMIF_MAX_HEIGHT	1200
+
 /* Buffer for one video frame */
 struct camif_buffer {
 	/* common v4l buffer stuff -- must be first */
@@ -165,8 +171,17 @@ struct camif {
 	/* flags to indicate states */
 	bool first_frame_end;
 
+	/* current format supported by camif */
+	struct v4l2_format fmt;
+
 	/* camif controller data specific to a platform */
 	struct camif_controller *pdata;
+
+	/* physical variant of camif->base */
+	dma_addr_t phys_base_addr;
+
+	/* used to store the crop window */
+	struct v4l2_rect crop;
 };
 
 /* camif interrupt selection types */
@@ -179,6 +194,18 @@ enum camif_interrupt_config {
 	DISABLE_EVEN_FIELD_DMA,
 	ENABLE_BOTH_FIELD_DMA,
 	DISABLE_BOTH_FIELD_DMA,
+};
+
+/* camif supported burst sizes */
+enum camif_burst_size {
+	CAMIF_BURST_SIZE_1 = 1,
+	CAMIF_BURST_SIZE_4 = 4,
+	CAMIF_BURST_SIZE_8 = 8,
+	CAMIF_BURST_SIZE_16 = 16,
+	CAMIF_BURST_SIZE_32 = 32,
+	CAMIF_BURST_SIZE_64 = 64,
+	CAMIF_BURST_SIZE_128 = 128,
+	CAMIF_BURST_SIZE_256 = 256,
 };
 
 /*
@@ -276,6 +303,43 @@ static void camif_configure_interrupts(struct camif *camif,
 				"invalid interrupt config type\n");
 		break;
 	}
+}
+
+/* Program new DMA burst settings for CAMIF */
+static void camif_prog_dma_burst(struct camif *camif,
+					enum camif_burst_size size)
+{
+	u32 ctrl = readl(camif->base + CAMIF_CTRL);
+	u32 ctrl_save = ctrl & CTRL_DMA_BURST_MASK;
+
+	switch (size) {
+	case CAMIF_BURST_SIZE_1:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_1);
+		break;
+	case CAMIF_BURST_SIZE_4:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_4);
+		break;
+	case CAMIF_BURST_SIZE_8:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_8);
+		break;
+	case CAMIF_BURST_SIZE_16:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_16);
+		break;
+	case CAMIF_BURST_SIZE_32:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_32);
+		break;
+	case CAMIF_BURST_SIZE_64:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_64);
+		break;
+	case CAMIF_BURST_SIZE_128:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_128);
+		break;
+	case CAMIF_BURST_SIZE_256:
+		ctrl = CTRL_DMA_BSIZE(ctrl_save, BURST_SIZE_256);
+		break;
+	}
+
+	writel(ctrl, camif->base + CAMIF_CTRL);
 }
 
 /* Program default values for CAMIF control register */
@@ -783,15 +847,86 @@ static void camif_put_formats(struct soc_camera_device *icd)
 	icd->host_priv = NULL;
 }
 
+/* Alter DMA settings on the run as per the new format selected */
+static void camif_change_dma_settings(struct camif *camif, u32 bytesperline)
+{
+	struct dma_slave_config conf;
+	int dma_burst_size = 0, camif_burst_size = 0;
+	int dma_tx_width = DMA_SLAVE_BUSWIDTH_8_BYTES;
+	int camif_tx_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+
+	/*
+	 * Note: There are two corner cases we need to take care of here
+	 * to ensure that DMA works for all possible resolutions
+	 * selected by user-space application:
+	 * 1. camif DMA_BURST_SIZE (programmed in CAM_IF_CTRL reg
+	 *    cannot be greater then the length of a line.
+	 * 2. For all resolutions:
+	 *    (bytes_per_line * 8) % (CAMIF.TR_WIDTH * CAMIF.BURST_SIZE)
+	 *    should be 0. If not, change the DMA settings to the next
+	 *    best possible ones. This is required because we have
+	 *    higher time penality for the SREQs performed via DMA.
+	 */
+	for (camif_burst_size = CAMIF_BURST_SIZE_256;
+			camif_burst_size >= CAMIF_BURST_SIZE_16;
+			camif_burst_size = camif_burst_size / 2) {
+		if (bytesperline %
+				(camif_tx_width * camif_burst_size) == 0) {
+			if (camif_burst_size > (bytesperline * 8))
+				continue;
+
+			goto prog_dma;
+		}
+	}
+
+	if (camif_burst_size < CAMIF_BURST_SIZE_16)
+		/*
+		 * Now we are left with no option but to set the camif
+		 * burst size to CAMIF_BURST_SIZE_16 and expect that the
+		 * rest of the data (left after the last burst of
+		 * CAMIF_BURST_SIZE_16) will be completed via single
+		 * requests
+		 */
+		camif_burst_size = CAMIF_BURST_SIZE_16;
+
+prog_dma:
+	/* program the new config settings */
+
+	/*
+	 * Note that while camif supports a 32-bit DMA
+	 * slave bus width the underlying DMA
+	 * controller can support more,
+	 * so we need to handle the same as well
+	 */
+	if (dma_tx_width > DMA_SLAVE_BUSWIDTH_4_BYTES)
+		dma_burst_size = camif_burst_size / 2;
+	else
+		dma_burst_size = camif_burst_size;
+
+	conf.src_maxburst = conf.dst_maxburst = dma_burst_size;
+	conf.src_addr_width = dma_tx_width;
+
+	conf.src_addr = camif->phys_base_addr + CAMIF_MEM_BUFFER;
+	conf.direction = DMA_FROM_DEVICE;
+	conf.device_fc = false;
+
+	dmaengine_slave_config(camif->chan, &conf);
+
+	/* Re-program the camif side DMA burst settings */
+	camif_prog_dma_burst(camif, camif_burst_size);
+}
+
 /*
  * CAMIF can perform cropping, but we don't want to waste bandwidth
  * and kill the framerate by always requesting the maximum image
- * from the sub-device (client/sensor). So, first we request exaclty the
+ * from the sub-device (client/sensor). So, first we request the exact
  * user rectangle from the sensor. The sensor will try to preserve its
  * output frame as far as possible, but it could have changed, so we
- * retreive it again. After that we invoke the crop functionality of
- * CAMIF, to ensure that we have a final rectangle which is as close as
- * possible to what has been requested by the user.
+ * retreive it again. In case the sub-device does not support s_crop
+ * or cannot produce an cropping rectangle with desired accuracy
+ * we invoke the crop functionality of CAMIF, to ensure that we have
+ * a final rectangle which is as close as possible to what has been
+ * requested by the user.
  */
 static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
@@ -823,7 +958,8 @@ static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 	}
 
 	/* check for extreme boundary size (> 1920 * 2560) */
-	if (mf.width > 2560 || mf.height > 1920) {
+	if (mf.width > CAMIF_MAX_WIDTH ||
+			mf.height > CAMIF_MAX_HEIGHT) {
 		dev_warn(dev, "cam-output window exceeds the max boundary\n");
 		return -EINVAL;
 	}
@@ -855,6 +991,8 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 {
 	struct device *dev = icd->dev.parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
 	const struct soc_camera_format_xlate *xlate = NULL;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
@@ -881,6 +1019,52 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	v4l2_fill_pix_format(pix, &mf);
 
 	icd->current_fmt = xlate;
+
+	/*
+	 * Underlying subdev may support all fields types but we
+	 * need to set the field type we support.
+	 */
+	switch (mf.field) {
+	case V4L2_FIELD_ANY:
+	case V4L2_FIELD_NONE:
+		pix->field = V4L2_FIELD_NONE;
+		break;
+	default:
+		/* TODO: support interlaced at least in pass-through mode */
+		dev_warn(icd->dev.parent, "field type %d unsupported, "
+				"resorting to the default PROGRESSIVE mode\n",
+				mf.field);
+		pix->field = V4L2_FIELD_NONE;
+	}
+
+	/* image boundary checks for CAMIF */
+	if (pix->width > CAMIF_MAX_WIDTH)
+		pix->width = CAMIF_MAX_WIDTH;
+
+	if (pix->height > CAMIF_MAX_HEIGHT)
+		pix->height = CAMIF_MAX_HEIGHT;
+
+	/* update the values of sizeimage and bytesperline */
+	pix->bytesperline = soc_mbus_bytes_per_line(pix->width,
+						xlate->host_fmt);
+	pix->sizeimage = pix->bytesperline * pix->height;
+
+	dev_info(dev, "adjusted:: width=%d, height=%d, "
+			"bytesperline=%d, sizeimage=%d\n",
+			pix->width, pix->height,
+			pix->bytesperline, pix->sizeimage);
+
+	/*
+	 * To ensure that DMA works for all possible resolutions
+	 * selected by user-space application the DNA controller and
+	 * camif DMA interface must be re-programmed with new correct
+	 * values.
+	 */
+	if (camif->chan)
+		camif_change_dma_settings(camif, pix->bytesperline);
+
+	/* keep a local copy of the format for later usage */
+	camif->fmt = *f;
 
 	return 0;
 
@@ -938,6 +1122,18 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 		pix->field = V4L2_FIELD_NONE;
 	}
 
+	/* image boundary checks for CAMIF */
+	if (pix->width > CAMIF_MAX_WIDTH)
+		pix->width = CAMIF_MAX_WIDTH;
+
+	if (pix->height > CAMIF_MAX_HEIGHT)
+		pix->height = CAMIF_MAX_HEIGHT;
+
+	/* update the values of sizeimage and bytesperline */
+	pix->bytesperline = soc_mbus_bytes_per_line(pix->width,
+						xlate->host_fmt);
+	pix->sizeimage = pix->bytesperline * pix->height;
+
 	return 0;
 
 out:
@@ -952,6 +1148,14 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 	struct camif *camif = ici->priv;
 
 	/* dma related settings */
+	struct dma_slave_config dma_conf = {
+		.src_addr = camif->phys_base_addr,
+		.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
+		.src_maxburst = 64,
+		.direction = DMA_FROM_DEVICE,
+		.device_fc = false,
+	};
+
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
@@ -982,6 +1186,8 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 		}
 		break;
 	}
+
+	dmaengine_slave_config(camif->chan, (void *) &dma_conf);
 
 	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
 			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -1137,6 +1343,8 @@ static int __devinit camif_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto exit;
 	}
+
+	camif->phys_base_addr = mem->start;
 
 	if (!request_mem_region(mem->start, resource_size(mem),
 				KBUILD_MODNAME)) {
