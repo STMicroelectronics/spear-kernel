@@ -27,9 +27,6 @@
  * different locations in the DDR and the application should be
  * intelligent enough to pick up the data from these locations
  * automatically in a proper fashion?
- *
- * 3. Perform DMA operations in a DMA tasklet rather than in the frame
- * end interrupt handler.
  */
 
 #include <linux/clk.h>
@@ -66,20 +63,25 @@
 #define CAMIF_OFEC		0x1C	/* Odd Field Embedded Codes Register */
 
 /* control register bits */
-#define CTRL_RGB_ALPHA_VALUE(a)	(((a) & 0xff) << 24)
+#define CTRL_RGB_ALPHA_VALUE(a)	((a) << 24)
 #define CTRL_INTL_EN		BIT(23)
 #define CTRL_SGA_TFR_EN		BIT(22)
-#define CTRL_DMA_BURST_SIZE(a)	(((a) & 0x7) << 19)
+#define CTRL_DMA_BURST_SHIFT	19
+#define CTRL_DMA_BURST_MASK	0xffc7ffff
+#define CTRL_DMA_BSIZE(a, b)	((a) | ((b) << CTRL_DMA_BURST_SHIFT))
 #define CTRL_WAIT_STATE_EN	BIT(18)
 #define CTRL_CROP_SELECT	BIT(17)
-#define CTRL_EAV_SEL		BIT(16)
-#define CTRL_IF_SYNC_TYPE	BIT(12)	/* ITU656 */
-#define CTRL_IF_TRANS(a)	(((a) & 0xf) << 8)
-#define CTRL_VS_POL		BIT(7)
-#define CTRL_HS_POL		BIT(6)
-#define CTRL_PCK_POL		BIT(5)
-#define CTRL_EMB_CODES_EN	BIT(4)
+#define CTRL_EAV_SEL(a)		((a) << 16)
+#define CTRL_IF_SYNC_TYPE(a)	((a) << 12)
+#define CTRL_IF_TRANS(a)	((a) << 8)
+#define CTRL_VS_POL(a)		((a) << 7)
+#define CTRL_HS_POL(a)		((a) << 6)
+#define CTRL_PCK_POL(a)		((a) << 5)
+#define CTRL_EMB(a)		((a) << 4)
 #define CTRL_CAPTURE_MODES(a)	((a) & 0xf)
+#define CTRL_VS_POL_HI		BIT(7)
+#define CTRL_HS_POL_HI		BIT(6)
+#define CTRL_PCK_POL_HI		BIT(5)
 
 /* interrupt and dma mask register bits */
 #define IR_DUR_MASK_BREQ	BIT(15)
@@ -106,9 +108,7 @@
 #define ITU656_EMBED_EVEN_CODE	0xABB6809D
 #define ITU656_EMBED_ODD_CODE	0xECF1C7DA
 
-/* video memory limit */
-#define MAX_VIDEO_MEM		16	/* MiB */
-
+/* camif version */
 #define CAM_IF_VERSION_CODE	KERNEL_VERSION(0, 0, 1)
 
 /* camif bus capabilities */
@@ -126,13 +126,14 @@
 #define CROP_V_MASK		0xffff0000
 #define CROP_H_MASK		0xffff
 
+/* video memory limit */
+#define MAX_VIDEO_MEM		16	/* MiB */
 /* Buffer for one video frame */
 struct camif_buffer {
 	/* common v4l buffer stuff -- must be first */
 	struct videobuf_buffer vb;
 	enum v4l2_mbus_pixelcode code;
 	/* rest of the details */
-	const struct soc_camera_data_format *fmt;
 	int inwork;
 	struct dma_async_tx_descriptor *desc;
 };
@@ -278,9 +279,11 @@ static void camif_configure_interrupts(struct camif *camif,
 /* Program default values for CAMIF control register */
 static void camif_prog_default_ctrl(struct camif *camif)
 {
-	u32 ctrl = 0;
+	u32 ctrl = 0, ctrl_save;
 	bool emb_synchro = 0;
 	bool eav_sel = 0;
+
+	ctrl_save = readl(camif->base + CAMIF_CTRL);
 
 	if (camif->pdata->config->sync_type == EMBEDDED_SYNC) {
 		emb_synchro = 1;
@@ -289,14 +292,16 @@ static void camif_prog_default_ctrl(struct camif *camif)
 		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
 	}
 
-	ctrl = (camif->pdata->config->burst_size << 19) |
-		(eav_sel << 16) | (emb_synchro << 12) |
-		(camif->pdata->config->transform << 8) |
-		(camif->pdata->config->vsync_polarity << 7) |
-		(camif->pdata->config->hsync_polarity << 6) |
-		(camif->pdata->config->pclk_polarity << 5) |
-		(camif->pdata->config->sync_type << 4) |
-		camif->pdata->config->capture_mode;
+	ctrl = CTRL_DMA_BSIZE(ctrl_save & CTRL_DMA_BURST_MASK,
+				camif->pdata->config->burst_size) |
+		CTRL_EAV_SEL(eav_sel) |
+		CTRL_IF_SYNC_TYPE(emb_synchro) |
+		CTRL_IF_TRANS(camif->pdata->config->transform) |
+		CTRL_VS_POL(camif->pdata->config->vsync_polarity) |
+		CTRL_HS_POL(camif->pdata->config->hsync_polarity) |
+		CTRL_PCK_POL(camif->pdata->config->pclk_polarity) |
+		CTRL_EMB(camif->pdata->config->sync_type) |
+		CTRL_CAPTURE_MODES(camif->pdata->config->capture_mode);
 
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
@@ -415,6 +420,11 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 static irqreturn_t camif_line_int(int irq, void *dev_id)
 {
 	struct camif *camif = (struct camif *)dev_id;
+	int status_reg;
+
+	status_reg = readl(camif->base + CAMIF_STATUS);
+	if (!status_reg)
+		return IRQ_NONE;
 
 	/* perform a dummy write to clear line-end interrupt */
 	writel(IRQ_STATUS_LINE_END, camif->base + CAMIF_STATUS);
@@ -580,7 +590,6 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 		vb->state = VIDEOBUF_PREPARED;
 	}
 	buf->inwork = 0;
-	camif->vq = vq;
 
 	return 0;
 fail:
@@ -639,28 +648,6 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 {
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 
-#ifdef DEBUG
-	struct soc_camera_device *icd = vq->priv_data;
-	struct device *dev = icd->dev.parent;
-
-	dev_dbg(dev, "%s (vb=0x%p) 0x%08lx %d\n", __func__,
-		vb, vb->baddr, vb->bsize);
-
-	switch (vb->state) {
-	case VIDEOBUF_ACTIVE:
-		dev_dbg(dev, "%s (active)\n", __func__);
-		break;
-	case VIDEOBUF_QUEUED:
-		dev_dbg(dev, "%s (queued)\n", __func__);
-		break;
-	case VIDEOBUF_PREPARED:
-		dev_dbg(dev, "%s (prepared)\n", __func__);
-		break;
-	default:
-		dev_dbg(dev, "%s (unknown)\n", __func__);
-		break;
-	}
-#endif
 
 	free_buffer(vq, buf);
 }
@@ -873,25 +860,25 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 		return -EINVAL;
 	}
 
-	mf.width = pix->width;
-	mf.height = pix->height;
-	mf.field = pix->field;
-	mf.colorspace = pix->colorspace;
-	mf.code = xlate->code;
+	v4l2_fill_mbus_format(&mf, pix, xlate->code);
 
+	/* limit to sensor capabilities */
 	ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
 	if (ret < 0)
-		return ret;
+		goto out;
 
-	if (mf.code != xlate->code)
-		return -EINVAL;
+	if (mf.code != xlate->code) {
+		ret = -EINVAL;
+		goto out;
+	}
 
-	pix->width = mf.width;
-	pix->height = mf.height;
-	pix->field = mf.field;
-	pix->colorspace	= mf.colorspace;
+	v4l2_fill_pix_format(pix, &mf);
+
 	icd->current_fmt = xlate;
 
+	return 0;
+
+out:
 	return ret;
 }
 
@@ -917,22 +904,21 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 
 	pix->sizeimage = pix->height * pix->bytesperline;
 
-	mf.width	= pix->width;
-	mf.height	= pix->height;
-	mf.field	= pix->field;
-	mf.colorspace	= pix->colorspace;
-	mf.code		= xlate->code;
+	v4l2_fill_mbus_format(&mf, pix, xlate->code);
 
 	/* limit to sensor capabilities */
 	ret = v4l2_subdev_call(sd, video, try_mbus_fmt, &mf);
 	if (ret < 0)
-		return ret;
+		goto out;
+
+	v4l2_fill_pix_format(pix, &mf);
 
 	pix->pixelformat = pixfmt;
-	pix->width	= mf.width;
-	pix->height	= mf.height;
-	pix->colorspace	= mf.colorspace;
 
+	/*
+	 * Underlying subdev may support all fields types but we
+	 * need to report the field type we support.
+	 */
 	switch (mf.field) {
 	case V4L2_FIELD_ANY:
 	case V4L2_FIELD_NONE:
@@ -940,11 +926,15 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 		break;
 	default:
 		/* TODO: support interlaced at least in pass-through mode */
-		dev_err(icd->dev.parent, "field type %d unsupported\n",
+		dev_warn(icd->dev.parent, "field type %d unsupported, "
+				"resorting to the default PROGRESSIVE mode\n",
 				mf.field);
-		return -EINVAL;
+		pix->field = V4L2_FIELD_NONE;
 	}
 
+	return 0;
+
+out:
 	return ret;
 }
 
@@ -1033,14 +1023,14 @@ static void camif_setup_ctrl(struct soc_camera_device *icd,
 	u32 ctrl;
 
 	ctrl = readl(camif->base + CAMIF_CTRL);
-	ctrl |= CTRL_VS_POL | CTRL_HS_POL;
+	ctrl |= CTRL_VS_POL_HI | CTRL_HS_POL_HI;
 
 	if (flags & SOCAM_PCLK_SAMPLE_FALLING)
-		ctrl &= ~CTRL_PCK_POL;
+		ctrl &= ~CTRL_PCK_POL_HI;
 	if (flags & SOCAM_HSYNC_ACTIVE_LOW)
-		ctrl &= ~CTRL_HS_POL;
+		ctrl &= ~CTRL_HS_POL_HI;
 	if (flags & SOCAM_VSYNC_ACTIVE_LOW)
-		ctrl &= ~CTRL_VS_POL;
+		ctrl &= ~CTRL_VS_POL_HI;
 
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
