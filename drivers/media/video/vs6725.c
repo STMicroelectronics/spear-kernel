@@ -48,9 +48,8 @@
 #define MAX_FRAME_RATE	30
 
 /* vs6725 cropping windows params */
-/* FIXME: limit to a resolution of 512*512 for now */
-#define VS6725_MAX_WIDTH		512
-#define VS6725_MAX_HEIGHT		512
+#define VS6725_MAX_WIDTH		UXGA_WIDTH
+#define VS6725_MAX_HEIGHT		UXGA_HEIGHT
 #define VS6725_MIN_WIDTH		0
 #define VS6725_MIN_HEIGHT		0
 #define VS6725_COLUMN_SKIP		8
@@ -354,8 +353,7 @@ struct vs6725 {
 	int model;			/* ident codes from v4l2-chip-ident.h */
 	struct v4l2_rect rect;		/* sensor cropping window */
 	struct v4l2_fract frame_rate;
-	enum v4l2_mbus_pixelcode code;
-	enum v4l2_colorspace colorspace;
+	struct v4l2_mbus_framefmt fmt;
 };
 
 enum vs6725_exposure_ctrl_mode {
@@ -444,17 +442,47 @@ enum vs6725_image_size {
 };
 
 /*
- * pixel codes supported by VS6725:
- * Note that by default the endianess is big-endian as defined by
- * OPF_DCTRL register
+ * formats supported by VS6725
  */
-static enum v4l2_mbus_pixelcode vs6725_codes[] = {
-	V4L2_MBUS_FMT_YUYV8_2X8,
-	V4L2_MBUS_FMT_UYVY8_2X8,
-	V4L2_MBUS_FMT_YVYU8_2X8,
-	V4L2_MBUS_FMT_VYUY8_2X8,
-	V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE,
-	V4L2_MBUS_FMT_RGB565_2X8_BE,
+struct vs6725_format {
+	enum v4l2_mbus_pixelcode mbus_code;
+	enum v4l2_colorspace colorspace;
+};
+
+static struct vs6725_format vs6725_formats[] = {
+	{
+		.mbus_code = V4L2_MBUS_FMT_YUYV8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_UYVY8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_YVYU8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_VYUY8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE,
+		.colorspace = V4L2_COLORSPACE_SRGB,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_RGB565_2X8_BE,
+		.colorspace = V4L2_COLORSPACE_SRGB,
+	},
+};
+
+/* default VS6725 format */
+static struct v4l2_mbus_framefmt vs6725_default_fmt = {
+	.width = VS6725_MAX_WIDTH - VS6725_MIN_WIDTH,
+	.height = VS6725_MAX_HEIGHT - VS6725_MIN_HEIGHT,
+	.code = V4L2_MBUS_FMT_YUYV8_2X8,
+	.field = V4L2_FIELD_NONE,
+	.colorspace = V4L2_COLORSPACE_JPEG,
 };
 
 /* useful in-case you need to write an array of registers */
@@ -1719,10 +1747,6 @@ static const struct v4l2_queryctrl vs6725_controls[] = {
 };
 
 static int vs6725_prog_default(struct i2c_client *client);
-static bool is_unscaled_image_ok(int width, int height, struct v4l2_rect *rect)
-{
-	return width > rect->width || height > rect->height;
-}
 
 /* read a register */
 static int vs6725_reg_read(struct i2c_client *client, int reg, u8 *val)
@@ -2325,16 +2349,6 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	/*
-	 * FIXME: I think height should be aligned by 2 because the
-	 * V4L2 specs state that "the driver must round the vertical
-	 * offset of the cropping rectangle to frame lines modulo two,
-	 * such that the field order cannot be confused" but not sure if
-	 * the width field should also be aligned here.
-	 */
-	rect->height = ALIGN(rect->height, 2);
-	rect->width = ALIGN(rect->width, 2);
-
 	/* FIXME: the datasheet doesn't specify minimum sizes */
 	soc_camera_limit_side(&rect->left, &rect->width,
 			VS6725_COLUMN_SKIP, VS6725_MIN_WIDTH, VS6725_MAX_WIDTH);
@@ -2431,18 +2445,46 @@ static int vs6725_s_parm(struct v4l2_subdev *sd,
 
 	return 0;
 }
-/* get the format we will capture in */
+
+/* get the format we are currently capturing in */
 static int vs6725_g_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
 
-	mf->width = priv->rect.width;
-	mf->height = priv->rect.height;
-	mf->code = priv->code;
-	mf->colorspace = priv->colorspace;
+	*mf = priv->fmt;
+
+	return 0;
+}
+
+/*
+ * Try the format provided by application, without really making any
+ * hardware settings.
+ */
+static int vs6725_try_fmt(struct v4l2_subdev *sd,
+		struct v4l2_mbus_framefmt *mf)
+{
+	int index;
+
+	for (index = 0; index < ARRAY_SIZE(vs6725_formats); index++)
+		if (vs6725_formats[index].mbus_code == mf->code)
+			break;
+
+	if (index >= ARRAY_SIZE(vs6725_formats))
+		/* fallback to the default format */
+		index = 0;
+
+	mf->code = vs6725_formats[index].mbus_code;
+	mf->colorspace = vs6725_formats[index].colorspace;
 	mf->field = V4L2_FIELD_NONE;
+
+	/* check for upper resolution boundary */
+	if (mf->width > UXGA_WIDTH)
+		mf->width = UXGA_WIDTH;
+
+	if (mf->height > UXGA_HEIGHT)
+		mf->height = UXGA_HEIGHT;
 
 	return 0;
 }
@@ -2454,9 +2496,12 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
-	enum v4l2_mbus_pixelcode code = mf->code;
 
-	switch (code) {
+	ret = vs6725_try_fmt(sd, mf);
+	if (ret)
+		return ret;
+
+	switch (mf->code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
@@ -2465,7 +2510,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		ret |= vs6725_reg_write(client,
@@ -2475,7 +2519,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_YVYU8_2X8:
 		ret |= vs6725_reg_write(client,
@@ -2485,7 +2528,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
 		ret |= vs6725_reg_write(client,
@@ -2495,7 +2537,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
 		ret |= vs6725_reg_write(client,
@@ -2506,7 +2547,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 			OPF_RGB_SETUP,
 			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
 			RGB444_ZERO_PADDING_ON);
-		priv->colorspace = V4L2_COLORSPACE_SRGB;
 		break;
 	case V4L2_MBUS_FMT_RGB565_2X8_BE:
 		ret |= vs6725_reg_write(client,
@@ -2516,7 +2556,6 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_RGB_SETUP,
 			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
-		priv->colorspace = V4L2_COLORSPACE_SRGB;
 		break;
 	default:
 		/*
@@ -2526,7 +2565,7 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		 * return.
 		 */
 		dev_err(&client->dev, "Pixel format not handled: 0x%x\n"
-			"Reverting to default YVYU8 format\n", code);
+			"Reverting to default YVYU8 format\n", mf->code);
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
@@ -2534,14 +2573,11 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			OPF_YCBCR_SETUP,
 			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
 		break;
 	}
 
 	/* set image size */
 	if (!ret) {
-		priv->code = code;
-
 		if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
 			vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
@@ -2620,53 +2656,19 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		}
 	}
 
-	if (!ret) {
-		mf->colorspace = priv->colorspace;
-		mf->width = priv->rect.width;
-		mf->height = priv->rect.height;
-	}
+	if (!ret)
+		priv->fmt = *mf;
 
 	return ret;
-}
-
-static int vs6725_try_fmt(struct v4l2_subdev *sd,
-		struct v4l2_mbus_framefmt *mf)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
-
-	if (is_unscaled_image_ok(mf->width, mf->height, &priv->rect))
-		v4l_bound_align_image(&mf->width, VS6725_MIN_WIDTH,
-			VS6725_MAX_WIDTH, 1,
-			&mf->height, VS6725_MIN_HEIGHT,
-			VS6725_MAX_HEIGHT, 1, 0);
-
-	mf->field = V4L2_FIELD_NONE;
-
-	switch (mf->code) {
-	case V4L2_MBUS_FMT_YUYV8_2X8:
-	case V4L2_MBUS_FMT_UYVY8_2X8:
-	case V4L2_MBUS_FMT_YVYU8_2X8:
-	case V4L2_MBUS_FMT_VYUY8_2X8:
-	default:
-		mf->colorspace = V4L2_COLORSPACE_JPEG;
-		break;
-	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
-	case V4L2_MBUS_FMT_RGB565_2X8_BE:
-		mf->colorspace = V4L2_COLORSPACE_SRGB;
-		break;
-	}
-
-	return 0;
 }
 
 static int vs6725_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 				enum v4l2_mbus_pixelcode *code)
 {
-	if (index >= ARRAY_SIZE(vs6725_codes))
+	if (index >= ARRAY_SIZE(vs6725_formats))
 		return -EINVAL;
 
-	*code = vs6725_codes[index];
+	*code = vs6725_formats[index].mbus_code;
 	return 0;
 }
 
@@ -2805,12 +2807,10 @@ static int vs6725_probe(struct i2c_client *client,
 	icd->ops = &vs6725_ops;
 	priv->icl = icl;
 
+	/* set the default format */
+	priv->fmt = vs6725_default_fmt;
 	priv->rect.left = 0;
 	priv->rect.top = 0;
-	priv->rect.width = VS6725_MAX_WIDTH - VS6725_MIN_WIDTH;
-	priv->rect.height = VS6725_MAX_HEIGHT - VS6725_MIN_HEIGHT;
-	priv->code = V4L2_MBUS_FMT_YUYV8_2X8;
-	priv->colorspace = V4L2_COLORSPACE_JPEG;
 
 	ret = vs6725_camera_init(icd, client);
 	if (ret) {
