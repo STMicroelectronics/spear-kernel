@@ -2743,7 +2743,6 @@ static int vs6725_prog_default(struct i2c_client *client)
 	int ret = 0;
 
 	ret |= vs6725_reg_write_multiple(client, vs6725_patch1);
-	mdelay(200);
 	ret |= vs6725_reg_write_multiple(client, vs6725_patch2);
 	ret |= vs6725_reg_write_multiple(client, default_non_gui);
 	ret |= vs6725_reg_write_multiple(client, default_streaming);
@@ -2758,7 +2757,6 @@ static int vs6725_prog_default(struct i2c_client *client)
 			default_before_auto_frame_rate_on);
 	ret |= vs6725_reg_write_multiple(client, default_bayer_off);
 	ret |= vs6725_reg_write_multiple(client, default_pre_run_setup);
-	mdelay(50);
 
 	return ret;
 }
