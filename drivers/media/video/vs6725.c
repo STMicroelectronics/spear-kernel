@@ -44,6 +44,9 @@
 #define QQCIF_WIDTH	88
 #define QQCIF_HEIGHT	72
 
+/* max supported frame rate */
+#define MAX_FRAME_RATE	30
+
 /* vs6725 cropping windows params */
 /* FIXME: limit to a resolution of 512*512 for now */
 #define VS6725_MAX_WIDTH		512
@@ -352,6 +355,7 @@ struct vs6725 {
 	bool hflip;
 	int model;			/* ident codes from v4l2-chip-ident.h */
 	struct v4l2_rect rect;		/* sensor cropping window */
+	struct v4l2_fract frame_rate;
 	enum v4l2_mbus_pixelcode code;
 	enum v4l2_colorspace colorspace;
 };
@@ -2340,6 +2344,62 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	return ret;
 }
 
+static int vs6725_g_parm(struct v4l2_subdev *sd,
+			struct v4l2_streamparm *parms)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	struct v4l2_captureparm *cp = &parms->parm.capture;
+
+	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	memset(cp, 0, sizeof(*cp));
+	cp->capability = V4L2_CAP_TIMEPERFRAME;
+	cp->timeperframe.numerator = priv->frame_rate.denominator;
+	cp->timeperframe.denominator = priv->frame_rate.numerator;
+
+	return 0;
+}
+
+static int vs6725_s_parm(struct v4l2_subdev *sd,
+				struct v4l2_streamparm *parms)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	struct v4l2_captureparm *cp = &parms->parm.capture;
+	struct v4l2_fract *tpf = &cp->timeperframe;
+
+	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+	if (cp->extendedmode != 0)
+		return -EINVAL;
+
+	if (tpf->numerator == 0 || tpf->denominator == 0
+		|| (tpf->denominator > tpf->numerator * MAX_FRAME_RATE)) {
+		/* reset to max frame rate */
+		tpf->numerator = 1;
+		tpf->denominator = MAX_FRAME_RATE;
+	}
+
+	/*
+	 * numerator and denominator conventions used by VS6725 and v4l2
+	 * are complimentary to each other.
+	 */
+	priv->frame_rate.numerator = tpf->denominator;
+	priv->frame_rate.denominator = tpf->numerator;
+
+	/* manual frame rate settings */
+	vs6725_reg_write(client, AUTO_FRAME_MODE, MANUAL_FRAME_RATE);
+	vs6725_reg_write(client, DES_FRAME_RATE_NUM_HI,
+			WRITE_HI_BYTE(priv->frame_rate.numerator));
+	vs6725_reg_write(client, DES_FRAME_RATE_NUM_LO,
+			WRITE_LO_BYTE(priv->frame_rate.numerator));
+	vs6725_reg_write(client, DES_FRAME_RATE_DEN,
+			WRITE_LO_BYTE(priv->frame_rate.denominator));
+
+	return 0;
+}
 /* get the format we will capture in */
 static int vs6725_g_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_mbus_framefmt *mf)
@@ -2604,6 +2664,8 @@ static struct v4l2_subdev_core_ops vs6725_subdev_core_ops = {
 
 static struct v4l2_subdev_video_ops vs6725_video_ops = {
 	.s_stream = vs6725_s_stream,
+	.s_parm = vs6725_s_parm,
+	.g_parm = vs6725_g_parm,
 	.g_mbus_fmt = vs6725_g_fmt,
 	.s_mbus_fmt = vs6725_s_fmt,
 	.try_mbus_fmt = vs6725_try_fmt,
