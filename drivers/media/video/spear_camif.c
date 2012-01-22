@@ -123,8 +123,8 @@
 				SOCAM_DATA_ACTIVE_LOW)
 
 /* crop masks */
-#define CROP_V_MASK		0xffff0000
-#define CROP_H_MASK		0xffff
+#define CROP_V_MASK(a)		(((a) & 0xffff) << 15)
+#define CROP_H_MASK(a)		((a) & 0xffff)
 
 /* video memory limit */
 #define MAX_VIDEO_MEM		16	/* MiB */
@@ -916,6 +916,129 @@ prog_dma:
 	camif_prog_dma_burst(camif, camif_burst_size);
 }
 
+static void camif_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
+{
+	struct v4l2_rect *rect = &crop->c;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+
+	/* check for image xtreme boundary */
+	if (rect->width > CAMIF_MAX_WIDTH)
+		rect->width = CAMIF_MAX_WIDTH;
+
+	if (rect->height > CAMIF_MAX_HEIGHT)
+		rect->height = CAMIF_MAX_HEIGHT;
+
+	/*
+	 * Use CAMIF cropping to crop to the new window:
+	 * program the crop start and stop registers to ensure correct cropping
+	 * coordinates
+	 */
+	writel(CROP_H_MASK(rect->left), camif->base + CAMIF_CSTARTP);
+	writel(CROP_V_MASK(rect->top), camif->base + CAMIF_CSTARTP);
+
+	writel(CROP_H_MASK(rect->left + rect->width),
+			camif->base + CAMIF_CSTOPP);
+	writel(CROP_V_MASK(rect->top + rect->height),
+			camif->base + CAMIF_CSTOPP);
+
+	/* enable cropping */
+	writel(readl(camif->base + CAMIF_CTRL) | CTRL_CROP_SELECT,
+			camif->base + CAMIF_CTRL);
+
+	/* save cropped dimensions for later use */
+	camif->fmt.fmt.pix.width = icd->user_width = rect->width;
+	camif->fmt.fmt.pix.height = icd->user_height = rect->height;
+	camif->fmt.fmt.pix.bytesperline =
+		soc_mbus_bytes_per_line(icd->user_width,
+						icd->current_fmt->host_fmt);
+	camif->fmt.fmt.pix.sizeimage =
+		camif->fmt.fmt.pix.bytesperline *
+		camif->fmt.fmt.pix.height;
+
+	camif->crop = crop->c;
+
+	/*
+	 * To ensure that DMA works for all possible resolutions
+	 * selected by user-space application the DNA controller and
+	 * camif DMA interface must be re-programmed with new correct
+	 * values.
+	 */
+	if (camif->chan)
+		camif_change_dma_settings(camif,
+				camif->fmt.fmt.pix.bytesperline);
+}
+
+/*
+ * CAMIF supports cropping, but we first should check if the underlying
+ * sub-dev supports cropcrop. If it does we should try to get the
+ * cropcap window of the sub-dev. Otherwise, we need to provide
+ * CAMIF's own cropcap window to the user-space.
+ */
+static int camif_cropcap(struct soc_camera_device *icd,
+				struct v4l2_cropcap *crop)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct device *dev = icd->dev.parent;
+	int ret;
+
+	/* try to check if the sub-device supports cropcap */
+	ret = v4l2_subdev_call(sd, video, cropcap, crop);
+	if (ret == -ENOIOCTLCMD) {
+		/*
+		 * Sensor does not support cropcrop, so return CAMIF's
+		 * present cropcap window
+		 */
+		memset(crop, 0, sizeof(struct v4l2_cropcap));
+		crop->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		crop->bounds.width = crop->defrect.width = CAMIF_MAX_WIDTH;
+		crop->bounds.height = crop->defrect.height = CAMIF_MAX_HEIGHT;
+		crop->pixelaspect.numerator = 1;
+		crop->pixelaspect.denominator = 1;
+	} else if (ret < 0 && (ret != -ENOIOCTLCMD)) {
+		dev_warn(dev, "subdev failed in cropcrop\n");
+		goto out;
+	}
+
+	return 0;
+
+out:
+	return ret;
+}
+
+/*
+ * CAMIF supports cropping, but we first should check if the underlying
+ * sub-dev supports g_crop. If it does we should try to get the
+ * cropping window of the sub-dev. Otherwise, we need to provide
+ * CAMIF's own cropping window to the user-space.
+ */
+static int camif_get_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct device *dev = icd->dev.parent;
+	struct camif *camif = ici->priv;
+	int ret;
+
+	/* try to get the cropping window of the sub-device */
+	ret = v4l2_subdev_call(sd, video, g_crop, crop);
+	if (ret == -ENOIOCTLCMD) {
+		/*
+		 * Sensor does not support g_crop, so return CAMIF's
+		 * present cropping window
+		 */
+		crop->c = camif->crop;
+	} else if (ret < 0 && (ret != -ENOIOCTLCMD)) {
+		dev_warn(dev, "subdev failed in g_crop\n");
+		goto out;
+	}
+
+	return 0;
+
+out:
+	return ret;
+}
+
 /*
  * CAMIF can perform cropping, but we don't want to waste bandwidth
  * and kill the framerate by always requesting the maximum image
@@ -930,61 +1053,65 @@ prog_dma:
  */
 static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
-	int ret;
 	struct v4l2_rect *rect = &crop->c;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct camif *camif = ici->priv;
 	struct device *dev = icd->dev.parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct v4l2_mbus_framefmt mf;
+	int ret;
 
-	/*
-	 * check if the sub-device supports cropping with the
-	 * user-defined cropping params. On success crop contains
-	 * current camera crop.
-	 */
+	/* check if the sub-device supports cropping */
 	ret = v4l2_subdev_call(sd, video, s_crop, crop);
-	if (ret < 0) {
-		dev_warn(dev, "failed to crop to %ux%u@%u:%u\n",
+	if (ret == -ENOIOCTLCMD) {
+		/* sensor does not support cropping but camif does */
+		camif_crop(icd, crop);
+	} else if (ret < 0 && (ret != -ENOIOCTLCMD)) {
+		dev_warn(dev, "subdev failed to crop to %ux%u@%u:%u\n",
 			 rect->width, rect->height, rect->left, rect->top);
-		return ret;
+		goto out;
+	} else {
+		/* retrieve camera output window */
+		ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
+		if (ret < 0) {
+			dev_warn(dev, "failed to get current subdev format\n");
+			goto out;
+		}
+
+		/*
+		 * It may be that the camera cropping produced a frame beyond
+		 * our capabilities (i.e. > CAMIF_MAX_WIDTH * CAMIF_MAX_HEIGHT).
+		 * Simply extract a subframe, that we can process.
+		 */
+		if (mf.width > CAMIF_MAX_WIDTH ||
+				mf.height > CAMIF_MAX_HEIGHT) {
+			camif_crop(icd, crop);
+			/*
+			 * Try to align the underlying camera to our cropped
+			 * subframe
+			 */
+			mf.width = rect->width;
+			mf.height = rect->height;
+
+			ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
+			if (ret < 0)
+				goto out;
+
+			if (mf.width > CAMIF_MAX_WIDTH ||
+				mf.height > CAMIF_MAX_HEIGHT) {
+				dev_warn(dev, "Inconsistent state after s_crop."
+					" Use S_FMT to repair\n");
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+
+		icd->user_width = mf.width;
+		icd->user_height = mf.height;
 	}
-
-	/* retrieve camera output window */
-	ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
-	if (ret < 0) {
-		dev_warn(dev, "failed to fetch current format\n");
-		return ret;
-	}
-
-	/* check for extreme boundary size (> 1920 * 2560) */
-	if (mf.width > CAMIF_MAX_WIDTH ||
-			mf.height > CAMIF_MAX_HEIGHT) {
-		dev_warn(dev, "cam-output window exceeds the max boundary\n");
-		return -EINVAL;
-	}
-
-	/*
-	 * use CAMIF cropping to crop to the new window:
-	 * program the crop start and stop registers to ensure correct cropping
-	 * coordinates
-	 */
-	writel((rect->left & CROP_H_MASK), camif->base + CAMIF_CSTARTP);
-	writel((rect->top & CROP_V_MASK), camif->base + CAMIF_CSTARTP);
-
-	writel(((rect->left + rect->width) & CROP_H_MASK),
-			camif->base + CAMIF_CSTOPP);
-	writel(((rect->top + rect->height) & CROP_V_MASK),
-			camif->base + CAMIF_CSTOPP);
-
-	/* enable cropping */
-	writel(readl(camif->base + CAMIF_CTRL) | CTRL_CROP_SELECT,
-			camif->base + CAMIF_CTRL);
-
-	icd->user_width = mf.width;
-	icd->user_height = mf.height;
 
 	return 0;
+
+out:
+	return ret;
 }
 
 static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
@@ -1300,6 +1427,8 @@ static struct soc_camera_host_ops camif_soc_camera_host_ops = {
 	.remove	= camif_remove_device,
 	.get_formats = camif_get_formats,
 	.put_formats = camif_put_formats,
+	.cropcap = camif_cropcap,
+	.get_crop = camif_get_crop,
 	.set_crop = camif_set_crop,
 	.set_fmt = camif_set_fmt,
 	.try_fmt = camif_try_fmt,
