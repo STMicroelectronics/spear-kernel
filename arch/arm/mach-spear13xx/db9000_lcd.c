@@ -21,149 +21,60 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
-static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
-	.mode = {
-		.name = "Sharp LQ043T3DA0A",
-		.refresh = 0,
-		.xres = 480,
-		.yres = 272,
-		.pixclock = 111000,
-		.left_margin = 2,
-		.right_margin = 2,
-		.upper_margin = 2,
-		.lower_margin = 2,
-		.hsync_len = 40,
-		.vsync_len = 10,
-		.sync = 0,/* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+static struct fb_videomode def_modelist[] = {
+	{
+		"480x272-32@0", 0, 480, 272, 111000, 2, 2, 2, 2, 40, 10, 0,
+		FB_VMODE_NONINTERLACED
+	}, {
+		"800x480-32@0", 0, 800, 480, 33333, 40, 40, 29, 13, 48, 3, 0,
+		FB_VMODE_NONINTERLACED
+	}, {
+		"1024x768-32@60", 60, 1024, 768, 15384, 160, 24, 29, 3, 136, 6,
+		0, FB_VMODE_NONINTERLACED
+	}, {
+		"1280x720-32@60", 60, 1280, 720, 13468, 220, 110, 20, 5, 40, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED
+	}, {
+		"1920x540-32@60", 60, 1920, 540, 13468, 148, 88, 15, 2, 44, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED
+	}, {
+		"1920x1080-32@60", 60, 1920, 1080, 6734, 148, 88, 36, 4, 44, 5,
+		FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+		FB_VMODE_NONINTERLACED
 	},
-	.bpp = 32,
-	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
-	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
-		DB9000_PWMFR_PWM_FCD(0x18),
-	.pctr = 0,
-	.dear = 0,
 };
 
-static struct db9000fb_mach_info sharp_lcd_info = {
-	.modes		= &sharp_LQ043T3DX0A_mode,
-	.num_modes	= 1,
-	.lcd_conn	= LCD_PCLK_EDGE_FALL,
-	.video_mem_size	= 0,
-	.cmap_static	= 0,
-	.cmap_inverse	= 0,
-};
-
-static struct db9000fb_mode_info hannstar_hsd07_mode = {
-	.mode = {
-		.name = "Hannstar HSD07",
-		.refresh = 0,
-		.xres = 800,
-		.yres = 480,
-		.pixclock = 33333,
-		.left_margin = 40,
-		.right_margin = 40,
-		.upper_margin = 29,
-		.lower_margin = 13,
-		.hsync_len = 48,
-		.vsync_len = 3,
-		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
-	},
-	.bpp = 32,
-	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-		DB9000_CR1_VSP | DB9000_CR1_OPS(1),
-	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
-		DB9000_PWMFR_PWM_FCD(0x18),
-	.pctr = 0,
-	.dear = 0,
-};
-static struct db9000fb_mach_info hannstar_hsd07_info = {
-	.modes		= &hannstar_hsd07_mode,
-	.num_modes	= 1,
-	.lcd_conn	= LCD_PCLK_EDGE_FALL,
-	.video_mem_size	= 0,
-	.cmap_static	= 0,
-	.cmap_inverse	= 0,
-};
-
-/* Max possible resolution for HDMI TX */
-static struct db9000fb_mode_info hdmi_1080p_mode = {
-	.mode = {	/* 1080p */
-		.name = "HDMI 1080p",
-		.refresh = 60,
-		.xres = 1920,
-		.yres = 1080,
-		.pixclock = 6734,
-		.left_margin = 148,
-		.right_margin = 88,
-		.upper_margin = 36,
-		.lower_margin = 4,
-		.hsync_len = 44,
-		.vsync_len = 5,
-		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
-	},
+static struct db9000fb_ctrl_info ctrl_info = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
-	.pwmfr = DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
-		DB9000_PWMFR_PWM_FCD(0x8),
+	.pwmfr = ~DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
+		DB9000_PWMFR_PWM_FCD(0x18),
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
 
-static struct db9000fb_mach_info hdmi_1080p_info = {
-	.modes          = &hdmi_1080p_mode,
-	.num_modes      = 1,
-	.lcd_conn       = LCD_PCLK_EDGE_FALL,
-	.video_mem_size = 0,
-	.cmap_static    = 0,
-	.cmap_inverse   = 0,
-};
-
-static struct db9000fb_mode_info chimei_b101aw02_mode = {
-	.mode = {
-		.name = "Chemei B101AW02",
-		.refresh = 60,
-		.xres = 1024,
-		.yres = 768,
-		.pixclock = 15384,
-		.left_margin = 160,
-		.right_margin = 24,
-		.upper_margin = 29,
-		.lower_margin = 3,
-		.hsync_len = 136,
-		.vsync_len = 6,
-		.sync = 0, /* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
-	},
-	.bpp = 32,
-	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
-		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
-	.pwmfr = DB9000_PWMFR_PWM_FCI | DB9000_PWMFR_PWM_FCE |
-		DB9000_PWMFR_PWM_FCD(0x8),
-	.pctr = DB9000_PCTR_PCI,
-	.dear = 0,
-};
-static struct db9000fb_mach_info chimei_b101aw02_info = {
-	.modes          = &chimei_b101aw02_mode,
-	.num_modes      = 1,
-	.lcd_conn       = LCD_PCLK_EDGE_FALL,
-	.video_mem_size = 0,
-	.cmap_static    = 0,
-	.cmap_inverse   = 0,
+static struct db9000fb_mach_info clcd_plat_info = {
+	.modes		= def_modelist,
+	.num_modes	= ARRAY_SIZE(def_modelist),
+	.ctrl_info	= &ctrl_info,
+	.lcd_conn	= LCD_PCLK_EDGE_FALL,
+	.video_mem_size	= 0,
+	.cmap_static	= 0,
+	.cmap_inverse	= 0,
 };
 
 static void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
-	struct db9000fb_mode_info *inf = data->modes;
 	struct clk *pclk, *vco_clk, *clcd_pclk, *fb_clk, *ah_clk;
 
 	pdev->dev.platform_data = data;
 
-#ifdef CONFIG_CPU_SPEAR1340
 	if (cpu_is_spear1340())
 		data->clcd_mux_selection = &config_clcd_gpio_pads;
-#endif
 
 	if (!strcmp("1024x768-32@60", data->def_mode)) {
 		vco_clk = clk_get(NULL, "vco1div4_clk");

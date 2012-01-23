@@ -80,7 +80,7 @@ extern uint32_t __attribute__((weak)) __div64_32(uint64_t *n, uint32_t base);
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on);
 static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on);
 static int db9000fb_activate_var(struct fb_var_screeninfo *var,
-		struct db9000fb_info *);
+		struct db9000fb_info *fbi);
 static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state);
 
 static inline unsigned long
@@ -323,23 +323,22 @@ static unsigned int db9000fb_display_dma_period(struct fb_var_screeninfo *var)
  * Select the smallest mode that allows the desired resolution to be displayed.
  * If desired parameters can be rounded up.
  */
-static struct db9000fb_mode_info
+static struct fb_videomode
 	*db9000fb_getmode(struct db9000fb_mach_info *mach,
 					struct fb_var_screeninfo *var)
 {
-	struct db9000fb_mode_info *mode = NULL;
-	struct db9000fb_mode_info *modelist = mach->modes;
+	struct fb_videomode *mode = NULL;
+	struct fb_videomode *modelist = mach->modes;
 	unsigned int best_x = 0xffffffff, best_y = 0xffffffff;
 	unsigned int i;
 
 	for (i = 0; i < mach->num_modes; i++) {
-		if (modelist[i].mode.xres >= var->xres &&
-			modelist[i].mode.yres >= var->yres &&
-			modelist[i].mode.xres < best_x &&
-			modelist[i].mode.yres < best_y &&
-			modelist[i].bpp >= var->bits_per_pixel)	{
-			best_x = modelist[i].mode.xres;
-			best_y = modelist[i].mode.yres;
+		if (modelist[i].xres >= var->xres &&
+			modelist[i].yres >= var->yres &&
+			modelist[i].xres < best_x &&
+			modelist[i].yres < best_y) {
+			best_x = modelist[i].xres;
+			best_y = modelist[i].yres;
 			mode = &modelist[i];
 		}
 	}
@@ -347,22 +346,19 @@ static struct db9000fb_mode_info
 }
 
 static void db9000fb_setmode(struct fb_var_screeninfo *var,
-			struct db9000fb_mode_info *mode)
+			struct fb_videomode *mode)
 {
-	var->xres		= mode->mode.xres;
-	var->yres		= mode->mode.yres;
-	var->bits_per_pixel	= mode->bpp;
-	mode->depth		= mode->bpp;
-	var->pixclock		= mode->mode.pixclock;
-	var->hsync_len		= mode->mode.hsync_len;
-	var->left_margin	= mode->mode.left_margin;
-	var->right_margin	= mode->mode.right_margin;
-	var->vsync_len		= mode->mode.vsync_len;
-	var->upper_margin	= mode->mode.upper_margin;
-	var->lower_margin	= mode->mode.lower_margin;
-	var->sync		= mode->mode.sync;
-	var->grayscale		= mode->cmap_greyscale;
-	var->xres_virtual	= mode->mode.xres;
+	var->xres		= mode->xres;
+	var->yres		= mode->yres;
+	var->pixclock		= mode->pixclock;
+	var->hsync_len		= mode->hsync_len;
+	var->left_margin	= mode->left_margin;
+	var->right_margin	= mode->right_margin;
+	var->vsync_len		= mode->vsync_len;
+	var->upper_margin	= mode->upper_margin;
+	var->lower_margin	= mode->lower_margin;
+	var->sync		= mode->sync;
+	var->xres_virtual	= mode->xres;
 	var->yres_virtual	= var->yres * NUM_OF_FRAMEBUFFERS;
 }
 
@@ -380,7 +376,7 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct db9000fb_info *fbi = to_db9000fb(info);
 	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
-	struct db9000fb_mode_info *mode = db9000fb_getmode(inf, var);
+	struct fb_videomode *mode = db9000fb_getmode(inf, var);
 
 	if (!mode)
 		return -EINVAL;
@@ -396,18 +392,18 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		db9000fb_setmode(var, mode);
 		return 0;
 	} else {
-		if (var->xres > inf->modes->mode.xres)
+		if (var->xres > inf->modes->xres)
 			return -EINVAL;
-		if (var->yres > inf->modes->mode.yres)
+		if (var->yres > inf->modes->yres)
 			return -EINVAL;
-		if (var->bits_per_pixel > inf->modes->bpp)
+		if (var->bits_per_pixel > inf->ctrl_info->bpp)
 			return -EINVAL;
 		if (var->yres_virtual >
-				inf->modes->mode.yres * NUM_OF_FRAMEBUFFERS)
+				inf->modes->yres * NUM_OF_FRAMEBUFFERS)
 			return -EINVAL;
-		if (var->xres_virtual != inf->modes->mode.xres)
+		if (var->xres_virtual != inf->modes->xres)
 			return -EINVAL;
-		if (var->yoffset > inf->modes->mode.yres)
+		if (var->yoffset > inf->modes->yres)
 			return -EINVAL;
 	}
 
@@ -759,7 +755,7 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		+ var->right_margin;
 	y_res = var->yres + var->vsync_len + var->upper_margin
 		+ var->lower_margin;
-	clk_rate = x_res * y_res * inf->modes->mode.refresh;
+	clk_rate = x_res * y_res * inf->modes->refresh;
 
 	pr_debug("Clock value is %x", clk_rate);
 
@@ -1214,7 +1210,7 @@ static int db9000fb_resume(struct platform_device *pdev)
 #endif
 
 static void db9000fb_decode_mode_info(struct db9000fb_info *fbi,
-				struct db9000fb_mode_info *modes,
+				struct fb_videomode *modes,
 				unsigned int num_modes)
 {
 	unsigned int i, smemlen;
@@ -1222,8 +1218,8 @@ static void db9000fb_decode_mode_info(struct db9000fb_info *fbi,
 	db9000fb_setmode(&fbi->fb.var, &modes[0]);
 
 	for (i = 0; i < num_modes; i++) {
-		smemlen = modes[i].mode.xres * modes[i].mode.yres * modes[i].bpp
-			/ 8;
+		smemlen = modes[i].xres * modes[i].yres *
+			PANEL_MAX_BPP / 8;
 		if (smemlen > fbi->fb.fix.smem_len)
 			fbi->fb.fix.smem_len = smemlen;
 	}
@@ -1234,11 +1230,11 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 {
 	fbi->cmap_inverse	= inf->cmap_inverse;
 	fbi->cmap_static	= inf->cmap_static;
-	fbi->reg_cr1		= inf->modes->cr1;
-	fbi->reg_pctr		= inf->modes->pctr;
-	fbi->reg_dear		= inf->modes->dear;
+	fbi->reg_cr1		= inf->ctrl_info->cr1;
+	fbi->reg_pctr		= inf->ctrl_info->pctr;
+	fbi->reg_dear		= inf->ctrl_info->dear;
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	fbi->reg_pwmfr		= inf->modes->pwmfr;
+	fbi->reg_pwmfr		= inf->ctrl_info->pwmfr;
 #endif
 /* decode_mode: */
 	db9000fb_decode_mode_info(fbi, inf->modes, inf->num_modes);
@@ -1340,7 +1336,7 @@ static int __devinit parse_opt_mode(struct device *dev, const char *this_opt)
 done:
 	if (res_specified) {
 		dev_info(dev, "overriding resolution: %dx%d\n", xres, yres);
-		inf->modes[0].mode.xres = xres; inf->modes[0].mode.yres = yres;
+		inf->modes[0].xres = xres; inf->modes[0].yres = yres;
 	}
 	if (bpp_specified)
 		switch (bpp) {
@@ -1365,8 +1361,8 @@ done:
 
 static int __devinit parse_opt(struct device *dev, char *this_opt)
 {
-	struct db9000fb_mach_info *inf = dev->platform_data;
-	struct db9000fb_mode_info *mode = inf->modes;
+	struct db9000fb_mach_info *inf = dev_get_platdata(dev);
+	struct fb_videomode *mode = inf->modes;
 	struct db9000fb_info *info = dev_get_drvdata(dev);
 	char s[81];
 
@@ -1377,93 +1373,93 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "mode:", 5)) {
 		return parse_opt_mode(dev, this_opt);
 	} else if (!strncmp(this_opt, "pixclock:", 9)) {
-		mode->mode.pixclock = strict_strtoul(this_opt+9, 0, 0);
-		sprintf(s, "pixclock: %u\n", mode->mode.pixclock);
+		mode->pixclock = strict_strtoul(this_opt+9, 0, 0);
+		sprintf(s, "pixclock: %u\n", mode->pixclock);
 	} else if (!strncmp(this_opt, "left:", 5)) {
-		mode->mode.left_margin = strict_strtoul(this_opt+5, 0, 0);
-		sprintf(s, "left: %u\n", mode->mode.left_margin);
+		mode->left_margin = strict_strtoul(this_opt+5, 0, 0);
+		sprintf(s, "left: %u\n", mode->left_margin);
 	} else if (!strncmp(this_opt, "right:", 6)) {
-		mode->mode.right_margin = strict_strtoul(this_opt+6, 0, 0);
-		sprintf(s, "right: %u\n", mode->mode.right_margin);
+		mode->right_margin = strict_strtoul(this_opt+6, 0, 0);
+		sprintf(s, "right: %u\n", mode->right_margin);
 	} else if (!strncmp(this_opt, "upper:", 6)) {
-		mode->mode.upper_margin = strict_strtoul(this_opt+6, 0, 0);
-		sprintf(s, "upper: %u\n", mode->mode.upper_margin);
+		mode->upper_margin = strict_strtoul(this_opt+6, 0, 0);
+		sprintf(s, "upper: %u\n", mode->upper_margin);
 	} else if (!strncmp(this_opt, "lower:", 6)) {
-		mode->mode.lower_margin = strict_strtoul(this_opt+6, 0, 0);
-		sprintf(s, "lower: %u\n", mode->mode.lower_margin);
+		mode->lower_margin = strict_strtoul(this_opt+6, 0, 0);
+		sprintf(s, "lower: %u\n", mode->lower_margin);
 	} else if (!strncmp(this_opt, "hsynclen:", 9)) {
-		mode->mode.hsync_len = strict_strtoul(this_opt+9, 0, 0);
-		sprintf(s, "hsynclen: %u\n", mode->mode.hsync_len);
+		mode->hsync_len = strict_strtoul(this_opt+9, 0, 0);
+		sprintf(s, "hsynclen: %u\n", mode->hsync_len);
 	} else if (!strncmp(this_opt, "vsynclen:", 9)) {
-		mode->mode.vsync_len = strict_strtoul(this_opt+9, 0, 0);
-		sprintf(s, "vsynclen: %u\n", mode->mode.vsync_len);
+		mode->vsync_len = strict_strtoul(this_opt+9, 0, 0);
+		sprintf(s, "vsynclen: %u\n", mode->vsync_len);
 	} else if (!strncmp(this_opt, "hsync:", 6)) {
 		if (strict_strtoul(this_opt+6, 0, 0) == 0) {
 			sprintf(s, "hsync: Active Low\n");
-			mode->mode.sync &= ~FB_SYNC_HOR_HIGH_ACT;
+			mode->sync &= ~FB_SYNC_HOR_HIGH_ACT;
 		} else {
 			sprintf(s, "hsync: Active High\n");
-			mode->mode.sync |= FB_SYNC_HOR_HIGH_ACT;
+			mode->sync |= FB_SYNC_HOR_HIGH_ACT;
 		}
 	} else if (!strncmp(this_opt, "vsync:", 6)) {
 		if (strict_strtoul(this_opt+6, 0, 0) == 0) {
 			sprintf(s, "vsync: Active Low\n");
-			mode->mode.sync &= ~FB_SYNC_VERT_HIGH_ACT;
+			mode->sync &= ~FB_SYNC_VERT_HIGH_ACT;
 		} else {
 			sprintf(s, "vsync: Active High\n");
-			mode->mode.sync |= FB_SYNC_VERT_HIGH_ACT;
+			mode->sync |= FB_SYNC_VERT_HIGH_ACT;
 		}
 	} else if (!strncmp(this_opt, "pixclockpol:", 12)) {
 		if (strict_strtoul(this_opt+12, 0, 0) == 0) {
 			sprintf(s, "pixel clock polarity: falling edge\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_PCP) |
-				DB9000_CR1_PixFlEdg;
+			inf->ctrl_info->cr1 = (info->reg_cr1 &
+					~DB9000_CR1_PCP) | DB9000_CR1_PixFlEdg;
 		} else {
 			sprintf(s, "pixel clock polarity: rising edge\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_PCP) |
-				DB9000_CR1_PixRsEdg;
+			inf->ctrl_info->cr1 = (info->reg_cr1 &
+					~DB9000_CR1_PCP) | DB9000_CR1_PixRsEdg;
 		}
 	} else if (!strncmp(this_opt, "fbp:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "frame buffer 24 bit packing: No packing, \
 					24 bits per 32-bit word\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_FBP);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_FBP);
 		} else {
 			sprintf(s, "frame buffer 24 bit packing: pack 4 24 bit \
 					pixel in 3 32-bit memory words\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_FBP);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_FBP);
 		}
 	} else if (!strncmp(this_opt, "dep:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "data enable polarity: active low\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEP);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEP);
 		} else {
 			sprintf(s, "data enable polarity: active high\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_DEP);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_DEP);
 		}
 	} else if (!strncmp(this_opt, "dee:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "DMA end address enable: disabled\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEE);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_DEE);
 		} else {
 			sprintf(s, "DMA end address enable: enabled\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_DEE);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_DEE);
 		}
 	} else if (!strncmp(this_opt, "dear:", 5)) {
-		inf->modes->dear = strict_strtoul(this_opt+5, 0, 0);
+		inf->ctrl_info->dear = strict_strtoul(this_opt+5, 0, 0);
 		sprintf(s, "DMA end address offset: %d\n",
 			strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "lps:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Selected Single port output mode to LCD\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_LPS);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_LPS);
 		} else {
 			sprintf(s, "Selected Dual Output port mode to LCD\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_LPS);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_LPS);
 		}
 	} else if (!strncmp(this_opt, "fdw:", 4)) {
-		inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_FDW(3));
-		inf->modes->cr1 |=
+		inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_FDW(3));
+		inf->ctrl_info->cr1 |=
 			DB9000_CR1_FDW(strict_strtoul(this_opt+4, 0, 0));
 		sprintf(s, "Fifo DMA Words setting: %d\n",
 				strict_strtoul(this_opt+4, 0, 0));
@@ -1471,14 +1467,14 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Palette load source from internal \
 					registers\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_PSS);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_PSS);
 		} else {
 			sprintf(s, "Palette load source from frame buffer\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_PSS);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_PSS);
 		}
 	} else if (!strncmp(this_opt, "ops:", 4)) {
-		inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_OPS(7));
-		inf->modes->cr1 |=
+		inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_OPS(7));
+		inf->ctrl_info->cr1 |=
 			(DB9000_CR1_OPS(strict_strtoul(this_opt+4, 0, 0))
 				& DB9000_CR1_OPS(3));
 		sprintf(s, "Output pixel select: %d\n",
@@ -1486,53 +1482,53 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "rgb:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "RGB mode set to: RGB\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_RGB);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_RGB);
 		} else {
 			sprintf(s, "RGB mode set to BGR\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_RGB);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_RGB);
 		}
 	} else if (!strncmp(this_opt, "epo:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel endianness set to little\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_EPO);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_EPO);
 		} else {
 			sprintf(s, "Pixel endianness set to big\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_EPO);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_EPO);
 		}
 	} else if (!strncmp(this_opt, "ebo:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Frame buffer byte endianness set to \
 					little\n");
-			inf->modes->cr1 = (info->reg_cr1 & ~DB9000_CR1_EBO);
+			inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_EBO);
 		} else {
 			sprintf(s, "Frame buffer byte endianness set to big\n");
-			inf->modes->cr1 = (info->reg_cr1 | DB9000_CR1_EBO);
+			inf->ctrl_info->cr1 = (info->reg_cr1 | DB9000_CR1_EBO);
 		}
 	} else if (!strncmp(this_opt, "pci:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel Clock Input Select: Master bus \
 					clock or Pixel clock divider\n");
-			inf->modes->pctr =
+			inf->ctrl_info->pctr =
 				(info->reg_pctr & ~DB9000_PCTR_PCI);
 		} else {
 			sprintf(s, "Pixel Clock Input Select: PCLK_IN\n");
-			inf->modes->pctr =
+			inf->ctrl_info->pctr =
 				(info->reg_pctr | DB9000_PCTR_PCI);
 		}
 	} else if (!strncmp(this_opt, "pcb:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Pixel Clock comes from pixel clock \
 					divider\n");
-			inf->modes->pctr =
+			inf->ctrl_info->pctr =
 				(info->reg_pctr & ~DB9000_PCTR_PCB);
 		} else {
 			sprintf(s, "Pixel clock comes from bus clock\n");
-			inf->modes->pctr =
+			inf->ctrl_info->pctr =
 				(info->reg_pctr & ~DB9000_PCTR_PCB);
 		}
 	} else if (!strncmp(this_opt, "pcd:", 4)) {
-		inf->modes->pctr = (info->reg_pctr & ~DB9000_PCTR_PCD(255));
-		inf->modes->pctr |=
+		inf->ctrl_info->pctr = (info->reg_pctr & ~DB9000_PCTR_PCD(255));
+		inf->ctrl_info->pctr |=
 			DB9000_PCTR_PCD(strict_strtoul(this_opt+4, 0, 0));
 		sprintf(s, "Pixel clock divider: %d\n",
 				strict_strtoul(this_opt+4, 0, 0));
@@ -1599,20 +1595,20 @@ MODULE_PARM_DESC(options, "LCD parameters (see Documentation/fb/db9000fb.txt)");
 static void __devinit db9000fb_check_options(struct device *dev,
 		struct db9000fb_mach_info *inf)
 {
-	if (inf->modes->cr1 & CR1_INVALID_CONFIG_MASK)
+	if (inf->ctrl_info->cr1 & CR1_INVALID_CONFIG_MASK)
 		dev_warn(dev, "machine CR1 setting contains illegal bits: \
-				%08x\n", inf->modes->cr1 &
+				%08x\n", inf->ctrl_info->cr1 &
 				CR1_INVALID_CONFIG_MASK);
 
-	if (inf->modes->cr1 & DB9000_CR1_OPS(4))
+	if (inf->ctrl_info->cr1 & DB9000_CR1_OPS(4))
 		dev_warn(dev, "CR1 OPS[2] bit set illegally: %08x\n",
-				inf->modes->cr1);
+				inf->ctrl_info->cr1);
 
-	if ((inf->modes->cr1 & DB9000_CR1_FDW(3)) == DB9000_CR1_FDW(3))
+	if ((inf->ctrl_info->cr1 & DB9000_CR1_FDW(3)) == DB9000_CR1_FDW(3))
 		dev_warn(dev, "CR1 Fifo DMA Words field illegal value: %08x\n",
-				inf->modes->cr1 & DB9000_CR1_FDW(3));
+				inf->ctrl_info->cr1 & DB9000_CR1_FDW(3));
 
-	switch (inf->modes->bpp) {
+	switch (inf->ctrl_info->bpp) {
 	case 1:
 	case 2:
 	case 4:
@@ -1623,27 +1619,25 @@ static void __devinit db9000fb_check_options(struct device *dev,
 	case 32:
 		break;
 	default:
-		dev_warn(dev, "BPP setting illegal: %d\n", inf->modes->bpp);
+		dev_warn(dev, "BPP setting illegal: %d\n", inf->ctrl_info->bpp);
 	}
 
-	if ((inf->modes->mode.xres > 4096) || (inf->modes->mode.xres < 16))
+	if ((inf->modes->xres > 4096) || (inf->modes->xres < 16))
 		dev_warn(dev, "Horizontal resolution out of range: %d\n",
-				inf->modes->mode.xres);
+				inf->modes->xres);
 
-	if ((inf->modes->mode.yres > 4096) || (inf->modes->mode.yres < 64))
+	if ((inf->modes->yres > 4096) || (inf->modes->yres < 64))
 		dev_warn(dev, "Vertical resolution out of range: %d\n",
-				inf->modes->mode.yres);
+				inf->modes->yres);
 
-	if (inf->modes->mode.left_margin > 255)
+	if (inf->modes->left_margin > 255)
 		dev_warn(dev, "machine Horizontal Back Port setting out of \
-				range: %d\n", inf->modes->mode.left_margin);
+				range: %d\n", inf->modes->left_margin);
 
-	if (inf->modes->mode.right_margin > 255)
+	if (inf->modes->right_margin > 255)
 		dev_warn(dev, "machine Horizontal Front Port setting out of \
-				range: %d\n", inf->modes->mode.left_margin);
+				range: %d\n", inf->modes->left_margin);
 }
-#else
-#define db9000fb_check_options(...)	do {} while (0)
 #endif
 
 static int __devinit db9000fb_probe(struct platform_device *pdev)
@@ -1691,13 +1685,13 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_fbi;
 	}
 
-	if ((inf->modes->bpp == 24) &&
-			((inf->modes->cr1 & DB9000_CR1_FBP) == 0))
-		inf->modes->bpp = 32;
-	video_buf_size = ((inf->modes->mode.xres) * (inf->modes->mode.yres) *
-			(inf->modes->bpp) / 8) * NUM_OF_FRAMEBUFFERS;
+	if ((inf->ctrl_info->bpp == 24) &&
+			((inf->ctrl_info->cr1 & DB9000_CR1_FBP) == 0))
+		inf->ctrl_info->bpp = 32;
+	video_buf_size = ((inf->modes->xres) * (inf->modes->yres) *
+			(inf->ctrl_info->bpp) / 8) * NUM_OF_FRAMEBUFFERS;
 
-	if (inf->modes->bpp < 16)
+	if (inf->ctrl_info->bpp < 16)
 		fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
 	else
 		fbi->video_mem_size = video_buf_size;

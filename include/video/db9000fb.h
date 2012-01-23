@@ -358,8 +358,7 @@ struct db9000fb_frame_buff {
  * It is set in linux/arch/arm/mach-spear13xx and used in the probe routine
  * of linux/drivers/video/db9000fb.c
  */
-struct db9000fb_mode_info {
-	struct fb_videomode	mode;
+struct db9000fb_ctrl_info {
 	u8	bpp;
 	u32	cr1;
 	u32	pctr;
@@ -376,7 +375,8 @@ struct db9000fb_mode_info {
  * and used in the probe routine of linux/drivers/video/db9000fb.c
  */
 struct db9000fb_mach_info {
-	struct db9000fb_mode_info *modes;
+	struct fb_videomode *modes;
+	struct db9000fb_ctrl_info *ctrl_info;
 	unsigned int num_modes;
 
 	unsigned int	lcd_conn;
