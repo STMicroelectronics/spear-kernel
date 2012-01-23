@@ -204,6 +204,9 @@ struct camif {
 
 	/* keep a track for present power state */
 	enum camif_power_state power_state;
+
+	/* keep a track of 1st frame-end interrupt */
+	bool first_frame_end;
 };
 
 /* camif interrupt selection types */
@@ -463,6 +466,9 @@ static void camif_start_capture(struct camif *camif,
 	/* enable CAMIF clk */
 	clk_enable(camif->clk);
 
+	/* reset global flags */
+	camif->first_frame_end = true;
+
 	switch (state) {
 	case CAMIF_BRINGUP:
 		/* reset global status flags */
@@ -521,6 +527,9 @@ static void camif_stop_capture(struct camif *camif,
 		camif->power_state = CAMIF_SUSPEND;
 		break;
 	}
+
+	/* clear global flags */
+	camif->first_frame_end = false;
 
 	/* disable CAMIF clk */
 	clk_disable(camif->clk);
@@ -656,7 +665,13 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		/* perform a dummy write to clear frame-end interrupt */
 		writel(IRQ_STATUS_FRAME_END, camif->base + CAMIF_STATUS);
 
-		/* For the 1st frame-end, enable DMA engine */
+		/* always ignore the 1st frame */
+		if (camif->first_frame_end) {
+			camif->first_frame_end = false;
+			goto out;
+		}
+
+		/* from 2nd frame onwards, enable DMA engine */
 		if (!list_empty(&camif->dma_queue)) {
 				spin_lock_irqsave(&camif->dma_queue_lock,
 						flags);
@@ -682,6 +697,7 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		}
 	}
 
+out:
 	return IRQ_HANDLED;
 }
 
