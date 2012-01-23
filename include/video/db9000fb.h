@@ -382,6 +382,7 @@ struct db9000fb_mach_info {
 	unsigned int	lcd_conn;
 	unsigned long	video_mem_size;
 	unsigned long frame_buf_base;
+	char		*def_mode;
 	u_int		fixed_modes : 1,
 			cmap_inverse:1,
 			cmap_static:1,

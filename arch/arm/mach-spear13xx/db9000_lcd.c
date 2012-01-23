@@ -165,8 +165,7 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 		data->clcd_mux_selection = &config_clcd_gpio_pads;
 #endif
 
-	if (!strcmp("Chemei B101AW02", inf->mode.name)
-			|| (!strcmp("HDMI 1080p", inf->mode.name))) {
+	if (!strcmp("1024x768-32@60", data->def_mode)) {
 		vco_clk = clk_get(NULL, "vco1div4_clk");
 		if (IS_ERR(vco_clk)) {
 			pr_err("%s:vco1div 4 clock get fail\n", __func__);
@@ -201,8 +200,7 @@ free_pclk:
 free_vco_clk:
 		clk_put(vco_clk);
 
-	} else if (!strcmp("Sharp LQ043T3DA0A", inf->mode.name)) {
-
+	} else if (!strcmp("480x272-32@0", data->def_mode)) {
 		ah_clk = clk_get(NULL, "ahb_clk");
 		if (IS_ERR(ah_clk)) {
 			pr_err("%s:enabling ahb_clk fail\n", __func__);
@@ -217,42 +215,6 @@ free_vco_clk:
 		clk_set_parent(fb_clk, ah_clk);
 	}
 	return ;
-}
-
-/* string specifying which clcd boards are requested */
-static char spear13xx_panel[20] = {'\0', };
-static int __init spear13xx_panel_select(char *panel)
-{
-	if (strlen(panel) <= sizeof(spear13xx_panel))
-		strcpy(spear13xx_panel, panel);
-	else
-		return -ENOMEM;
-
-	return 0;
-}
-__setup("panel=", spear13xx_panel_select);
-
-static struct db9000fb_mach_info *panel_to_mach_info(char *panel)
-{
-	struct db9000fb_mach_info *mach_info;
-
-	if (!strcmp(spear13xx_panel, "chimei"))
-		mach_info = &chimei_b101aw02_info;
-	else if (!strcmp(spear13xx_panel, "sharp"))
-		mach_info = &sharp_lcd_info;
-	else if (!strcmp(spear13xx_panel, "hannstar"))
-		mach_info = &hannstar_hsd07_info;
-	else if (!strcmp(spear13xx_panel, "1080p"))
-		mach_info = &hdmi_1080p_info;
-	else {
-		/* choose a default panel based upon board */
-		if (machine_is_spear1340_evb() || machine_is_spear900_evb())
-			mach_info = &chimei_b101aw02_info;
-		else
-			mach_info = &sharp_lcd_info;
-	}
-
-	return mach_info;
 }
 
 static unsigned long frame_buf_base;
@@ -270,13 +232,16 @@ void spear13xx_panel_fixup(struct meminfo *mi)
 void spear13xx_panel_init(struct platform_device *pdev)
 {
 	struct db9000fb_mach_info *mach_info;
-
-	mach_info = panel_to_mach_info(spear13xx_panel);
+	mach_info = &clcd_plat_info;
 
 	if (!mach_info) {
-		pr_err("Invalid panel requested: %s\n", spear13xx_panel);
+		pr_err("Invalid panel requested:\n");
 		return;
 	}
+	if (machine_is_spear1340_evb() || machine_is_spear900_evb())
+		mach_info->def_mode = "1024x768-32@60";
+	else
+		mach_info->def_mode = "480x272-32@0";
 
 	mach_info->frame_buf_base = frame_buf_base;
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, mach_info);
