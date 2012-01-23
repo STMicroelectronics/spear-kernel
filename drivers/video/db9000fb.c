@@ -550,7 +550,7 @@ static void exit_backlight(struct db9000fb_info *fbi)
 
 static void init_backlight(struct db9000fb_info *fbi)
 {
-	printk(KERN_ERR "backlight control is not available\n");
+	pr_info("backlight control is not available\n");
 }
 
 static void exit_backlight(struct db9000fb_info *fbi)
@@ -708,7 +708,7 @@ static inline int get_pcd(struct db9000fb_info *fbi,
 	pcd_32 = (pcd * pixclock)/1000000;
 
 	if (pcd_32 < 2)	{
-		printk(KERN_ERR"Invalid PCD value %d", pcd_32);
+		pr_err("Invalid PCD value %d", pcd_32);
 		return -EINVAL;
 	}
 
@@ -833,8 +833,8 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 
 #if DEBUG_VAR
 	if (var->xres < 16 || var->xres > 4096)
-		printk(KERN_ERR "%s: invalid xres %d\n",
-			fbi->fb.fix.id, var->xres);
+		pr_err("%s: invalid xres %d\n", fbi->fb.fix.id, var->xres);
+
 	switch (var->bits_per_pixel) {
 	case 1:
 	case 2:
@@ -846,34 +846,33 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	case 32:
 		break;
 	default:
-		printk(KERN_ERR "%s: invalid bit depth %d\n",
-			fbi->fb.fix.id, var->bits_per_pixel);
+		pr_err("%s: invalid bit depth %d\n", fbi->fb.fix.id,
+				var->bits_per_pixel);
 		break;
 	}
 	if (var->hsync_len < 1 || var->hsync_len > 255)
-		printk(KERN_ERR "%s: invalid hsync_len %d\n",
-			fbi->fb.fix.id, var->hsync_len);
+		pr_err("%s: invalid hsync_len %d\n", fbi->fb.fix.id,
+				var->hsync_len);
 	if (var->left_margin < 1 || var->left_margin > 255)
-		printk(KERN_ERR "%s: invalid left_margin %d\n",
+		pr_err("%s: invalid left_margin %d\n",
 			fbi->fb.fix.id, var->left_margin);
 	if (var->right_margin < 1 || var->right_margin > 255)
-		printk(KERN_ERR "%s: invalid right_margin %d\n",
-			fbi->fb.fix.id, var->right_margin);
+		pr_err("%s: invalid right_margin %d\n", fbi->fb.fix.id,
+				var->right_margin);
 	if (var->yres < 1 || var->yres > 4096)
-		printk(KERN_ERR "%s: invalid yres %d\n",
-			fbi->fb.fix.id, var->yres);
+		pr_err("%s: invalid yres %d\n", fbi->fb.fix.id, var->yres);
 	if (var->vsync_len < 1 || var->vsync_len > 255)
-		printk(KERN_ERR "%s: invalid vsync_len %d\n",
-			fbi->fb.fix.id, var->vsync_len);
+		pr_err("%s: invalid vsync_len %d\n", fbi->fb.fix.id,
+				var->vsync_len);
 	if (var->upper_margin < 0 || var->upper_margin > 255)
-		printk(KERN_ERR "%s: invalid upper_margin %d\n",
-			fbi->fb.fix.id, var->upper_margin);
+		pr_err("%s: invalid upper_margin %d\n", fbi->fb.fix.id,
+				var->upper_margin);
 	if (var->lower_margin < 0 || var->lower_margin > 255)
-		printk(KERN_ERR "%s: invalid lower_margin %d\n",
-			fbi->fb.fix.id, var->lower_margin);
+		pr_err("%s: invalid lower_margin %d\n", fbi->fb.fix.id,
+				var->lower_margin);
 	if (var->pixclock <= 0)
-		printk(KERN_ERR "%s: invalid pixel clock %d\n",
-				fbi->fb.fix.id, var->pixclock);
+		pr_err("%s: invalid pixel clock %d\n", fbi->fb.fix.id,
+				var->pixclock);
 #endif
 	/* Update shadow copy atomically */
 	local_irq_save(flags);
