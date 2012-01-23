@@ -57,7 +57,7 @@
 
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
-#define DB9000_INIT_FB 0
+#define DRIVER_NAME "clcd-db9000"
 #include "db9000fb.h"
 
 /* Bits which should not be set in machine configuration structures */
@@ -86,9 +86,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state);
 static inline unsigned long
 lcd_readl(struct db9000fb_info *fbi, unsigned int off)
 {
-	unsigned long val;
-	val = readl(fbi->mmio_base + off);
-	return val;
+	return readl(fbi->mmio_base + off);
 }
 
 static inline void
@@ -297,8 +295,6 @@ static int db9000fb_bpp_to_cr1(struct fb_var_screeninfo *var)
 		ret = DB9000_CR1_BPP(DB9000_CR1_BPP_18bpp);
 		break;
 	case 24:
-		ret = DB9000_CR1_BPP(DB9000_CR1_BPP_24bpp);
-		break;
 	default:
 		ret = DB9000_CR1_BPP(DB9000_CR1_BPP_24bpp);
 	}
@@ -384,18 +380,19 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	struct db9000fb_info *fbi = to_db9000fb(info);
 	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
+	struct db9000fb_mode_info *mode = db9000fb_getmode(inf, var);
+
+	if (!mode)
+		return -EINVAL;
 
 	if ((var->xres < MIN_XRES) || (var->yres < MIN_YRES)
 			|| (var->yres_virtual < MIN_YRES))
 		return -EINVAL;
+
 	if ((var->pixclock) <= 0)
 		return -EINVAL;
 
 	if (inf->fixed_modes) {
-		struct db9000fb_mode_info *mode;
-		mode = db9000fb_getmode(inf, var);
-		if (!mode)
-			return -EINVAL;
 		db9000fb_setmode(var, mode);
 		return 0;
 	} else {
@@ -419,59 +416,59 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	 *
 	 * The pixel packing format is described on page ?? of the DB9000 TRM.
 	 */
-	if (var->bits_per_pixel == 16) {
-		var->red.offset		= 11;
-		var->red.length		= 5;
+	switch (var->bits_per_pixel) {
+	case 1:
+	case 2:
+	case 4:
+	case 8:
+		var->red.offset = var->green.offset = 0;
+		var->blue.offset = var->transp.offset = 0;
+		var->red.length	= 8;
+		var->green.length	= 8;
+		var->blue.length	= 8;
+		var->transp.length	= 0;
+		break;
+	case 16:
+		var->red.offset	= 11;
+		var->red.length	= 5;
 		var->green.offset	= 5;
 		var->green.length	= 6;
 		var->blue.offset	= 0;
 		var->blue.length	= 5;
 		var->transp.offset = var->transp.length = 0;
-	} else if (var->bits_per_pixel > 16) {
-		struct db9000fb_mode_info *mode;
-		mode = db9000fb_getmode(inf, var);
-		if (!mode)
-			return -EINVAL;
-		switch (mode->depth) {
-		case 18: /* RGB666 */
-			var->transp.offset = var->transp.length = 0;
-			var->red.offset		= 12;
-			var->red.length		= 6;
-			var->green.offset	= 6;
-			var->green.length	= 6;
-			var->blue.offset	= 0;
-			var->blue.length	= 6;
-			break;
-		case 24: /* RGB888 */
-			var->transp.offset = var->transp.length = 0;
-			var->red.offset		= 16;
-			var->red.length		= 8;
-			var->green.offset	= 8;
-			var->green.length	= 8;
-			var->blue.offset	= 0;
-			var->blue.length	= 8;
-			break;
-		case 32: /* RGB888 */
-			var->transp.offset	= 24;
-			var->transp.length	= 0;
-			var->red.offset		= 16;
-			var->red.length		= 8;
-			var->green.offset	= 8;
-			var->green.length	= 8;
-			var->blue.offset	= 0;
-			var->blue.length	= 8;
-			break;
-		default:
-			return -EINVAL;
-		}
-	} else {
-		var->red.offset = var->green.offset = 0;
-		var->blue.offset = var->transp.offset = 0;
+		break;
+	case 18: /* RGB666 */
+		var->transp.offset = var->transp.length = 0;
+		var->red.offset		= 12;
+		var->red.length		= 6;
+		var->green.offset	= 6;
+		var->green.length	= 6;
+		var->blue.offset	= 0;
+		var->blue.length	= 6;
+		break;
+	case 24: /* RGB888 */
+		var->transp.offset = var->transp.length = 0;
+		var->red.offset		= 16;
 		var->red.length		= 8;
+		var->green.offset	= 8;
 		var->green.length	= 8;
+		var->blue.offset	= 0;
 		var->blue.length	= 8;
+		break;
+	case 32: /* RGB888 */
+		var->transp.offset	= 24;
 		var->transp.length	= 0;
+		var->red.offset		= 16;
+		var->red.length		= 8;
+		var->green.offset	= 8;
+		var->green.length	= 8;
+		var->blue.offset	= 0;
+		var->blue.length	= 8;
+		break;
+	default:
+		return -EINVAL;
 	}
+
 	return 0;
 }
 
@@ -546,16 +543,6 @@ static void exit_backlight(struct db9000fb_info *fbi)
 	if (fbi->backlight)
 		backlight_device_unregister(fbi->backlight);
 }
-#else
-
-static void init_backlight(struct db9000fb_info *fbi)
-{
-	pr_info("backlight control is not available\n");
-}
-
-static void exit_backlight(struct db9000fb_info *fbi)
-{
-}
 #endif
 
 /*
@@ -614,9 +601,10 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_NORMAL:
 		if (fbi->fb.fix.visual == FB_VISUAL_PSEUDOCOLOR ||
-		fbi->fb.fix.visual == FB_VISUAL_STATIC_PSEUDOCOLOR)
+		fbi->fb.fix.visual == FB_VISUAL_STATIC_PSEUDOCOLOR) {
 			for (i = 0; i < fbi->palette_size; i++)
 				db9000fb_setpalettereg(i, 0, 0, 0, 0, info);
+		}
 
 		db9000fb_schedule_work(fbi, C_DISABLE);
 	/* TODO: if (db9000fb_blank_helper) db9000fb_blank_helper(blank); */
@@ -636,9 +624,8 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	struct fb_info *info)
 {
+	struct db9000fb_info *fbi = to_db9000fb(info);
 	unsigned next_frame_address;
-	struct db9000fb_info *fbi =
-		container_of(info, struct db9000fb_info, fb);
 	u_int y_bottom = var->yoffset;
 
 	if (!(var->vmode & FB_VMODE_YWRAP))
@@ -754,9 +741,7 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 
 	if (dma < 0 || dma >= DMA_MAX)
 		return -EINVAL;
-	if (pal == PAL_NONE)
-		fbi->reg_cr1 &= ~DB9000_CR1_PSS;
-	if (pal == PAL_STATIC)
+	if ((pal == PAL_NONE) || (pal == PAL_STATIC))
 		fbi->reg_cr1 &= ~DB9000_CR1_PSS;
 	else if (pal == PAL_IN_FB)
 		fbi->reg_cr1 |= DB9000_CR1_PSS;
@@ -1265,17 +1250,15 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	struct db9000fb_mach_info *inf = dev->platform_data;
 
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
-	fbi = kmalloc(sizeof(struct db9000fb_info), GFP_KERNEL);
+	fbi = kzalloc(sizeof(struct db9000fb_info), GFP_KERNEL);
 	if (!fbi) {
 		dev_err(dev, "%s: kmalloc allocation failed\n", __func__);
 		return NULL;
 	}
 
-	memset(fbi, 0, sizeof(struct db9000fb_info));
-	fbi->dev = dev;
 	fbi->clk = clk_get(dev, NULL);
 	if (IS_ERR(fbi->clk)) {
-		kfree(fbi);
+		kzfree(fbi);
 		return NULL;
 	}
 
@@ -1318,7 +1301,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 #ifdef CONFIG_FB_DB9000_PARAMETERS
 static int __devinit parse_opt_mode(struct device *dev, const char *this_opt)
 {
-	struct db9000fb_mach_info *inf = dev->platform_data;
+	struct db9000fb_mach_info *inf = dev_get_platdata(dev);
 
 	const char *name = this_opt+5;
 	unsigned int namelen = strlen(name);
@@ -1664,70 +1647,54 @@ static void __devinit db9000fb_check_options(struct device *dev,
 
 static int __devinit db9000fb_probe(struct platform_device *pdev)
 {
-	struct db9000fb_info *fbi;
-	struct db9000fb_mach_info *inf;
+	struct db9000fb_info *fbi = NULL;
+	struct db9000fb_mach_info *inf = dev_get_platdata(&pdev->dev);
 	struct resource *r;
-	int irq, ret;
-	int video_buf_size = 0;
-	int bits_per_pixel = 0;
 	char __iomem *addr;
-	inf = pdev->dev.platform_data;
-	ret = -EBUSY;
-	fbi = NULL;
+	int irq;
+	int ret = -EBUSY;
+	int video_buf_size = 0;
+
 	if (!inf)
 		return ret;
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (r == NULL) {
-		dev_err(&pdev->dev, "no I/O memory resource defined\n");
-		return ret;
-	}
+	if (!r)
+		return -EINVAL;
 
-	r = request_mem_region(r->start, resource_size(r), pdev->name);
-	if (r == NULL) {
-		dev_err(&pdev->dev, "failed to request I/O memory\n");
-		return ret;
+	if (!devm_request_mem_region(&pdev->dev, r->start, resource_size(r),
+				DRIVER_NAME)) {
+		dev_warn(&pdev->dev, "failed to get memory region resource\n");
+		return -ENOENT;
 	}
 
 	ret = db9000fb_parse_options(&pdev->dev, g_options);
 	if (ret < 0)
 		return ret;
 
+#ifdef DEBUG_VAR
 	db9000fb_check_options(&pdev->dev, inf);
-
-	dev_info(&pdev->dev, "got a %dx%dx%d LCD\n",
-			inf->modes->mode.xres,
-			inf->modes->mode.yres,
-			inf->modes->bpp);
-	if (inf->modes->mode.xres == 0 ||
-			inf->modes->mode.yres == 0 ||
-			inf->modes->bpp == 0) {
-		dev_err(&pdev->dev, "Invalid resolution or bit depth\n");
-		return -EINVAL;
-	}
+#endif
 
 	fbi = db9000fb_init_fbinfo(&pdev->dev);
 	if (!fbi) {
 		/* only reason for db9000fb_init_fbinfo to fail is kmalloc */
-		dev_err(&pdev->dev, "Failed to initialize"
-				"framebuffer device\n");
+		dev_err(&pdev->dev, "Failed to init framebuffer device\n");
 		return -ENOMEM;
 	}
 
 	fbi->mmio_base = ioremap(r->start, resource_size(r));
-	if (fbi->mmio_base == NULL) {
+	if (!fbi->mmio_base) {
 		dev_err(&pdev->dev, "failed to map I/O memory\n");
 		ret = -ENOMEM;
 		goto err_free_fbi;
 	}
 
-	bits_per_pixel = inf->modes->bpp;
 	if ((inf->modes->bpp == 24) &&
 			((inf->modes->cr1 & DB9000_CR1_FBP) == 0))
-		bits_per_pixel = 32;
-	video_buf_size = ((inf->modes->mode.xres) *
-			(inf->modes->mode.yres) *
-			(bits_per_pixel) / 8) * NUM_OF_FRAMEBUFFERS;
+		inf->modes->bpp = 32;
+	video_buf_size = ((inf->modes->mode.xres) * (inf->modes->mode.yres) *
+			(inf->modes->bpp) / 8) * NUM_OF_FRAMEBUFFERS;
 
 	if (inf->modes->bpp < 16)
 		fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
@@ -1769,8 +1736,11 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	 * This makes sure that our colour bitfield descriptors are correctly
 	 * initialised.
 	 */
+
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	fbi->pdev = pdev;
 	init_backlight(fbi);
+#endif
 
 	ret = db9000fb_check_var(&fbi->fb.var, &fbi->fb);
 	if (ret) {
@@ -1837,7 +1807,9 @@ err_clear_plat_data:
 err_free_irq:
 	free_irq(irq, fbi);
 err_free_framebuffer_addr:
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	exit_backlight(fbi);
+#endif
 	iounmap(addr);
 err_free_mmio_base:
 	iounmap(fbi->mmio_base);
@@ -1872,7 +1844,9 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, fbi);
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	exit_backlight(fbi);
+#endif
 	iounmap(fbi->fb.screen_base);
 	iounmap(fbi->mmio_base);
 
@@ -1892,7 +1866,7 @@ static struct platform_driver db9000fb_driver = {
 	.resume		= db9000fb_resume,
 	.driver		= {
 		.owner	= THIS_MODULE,
-		.name	= "clcd-db9000",
+		.name	= DRIVER_NAME,
 	},
 };
 
