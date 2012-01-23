@@ -139,6 +139,14 @@
 /* number of CAMIF regs which need to be banked */
 #define CAMIF_REG_COUNT		6
 
+/* possible camif power states */
+enum camif_power_state {
+	CAMIF_SUSPEND = 0,
+	CAMIF_RESUME,
+	CAMIF_SHUTDOWN,
+	CAMIF_BRINGUP,
+};
+
 /* Buffer for one video frame */
 struct camif_buffer {
 	/* common v4l buffer stuff -- must be first */
@@ -193,6 +201,9 @@ struct camif {
 
 	/* used to store the crop window */
 	struct v4l2_rect crop;
+
+	/* keep a track for present power state */
+	enum camif_power_state power_state;
 };
 
 /* camif interrupt selection types */
@@ -210,14 +221,6 @@ enum camif_interrupt_config {
 	DISABLE_EVEN_FIELD_DMA,
 	ENABLE_BOTH_FIELD_DMA,
 	DISABLE_BOTH_FIELD_DMA,
-};
-
-/* possible camif power states */
-enum camif_power_state {
-	CAMIF_SUSPEND = 0,
-	CAMIF_RESUME,
-	CAMIF_SHUTDOWN,
-	CAMIF_BRINGUP,
 };
 
 /* camif supported burst sizes */
@@ -472,11 +475,13 @@ static void camif_start_capture(struct camif *camif,
 		 * settings, once SET_FMT is called from user-space
 		 */
 		camif_prog_default_ctrl(camif);
+		camif->power_state = CAMIF_BRINGUP;
 		break;
 	case CAMIF_RESUME:
 	default:
 		/* restore saved CAMIF registers */
 		camif_restore_regs(camif);
+		camif->power_state = CAMIF_RESUME;
 		break;
 	}
 
@@ -502,6 +507,7 @@ static void camif_stop_capture(struct camif *camif,
 			dmaengine_terminate_all(camif->chan);
 			dma_release_channel(camif->chan);
 		}
+		camif->power_state = CAMIF_SHUTDOWN;
 		break;
 	case CAMIF_SUSPEND:
 	default:
@@ -511,6 +517,8 @@ static void camif_stop_capture(struct camif *camif,
 		/* terminate all requests on the DMA channel */
 		if (camif->chan)
 			dmaengine_terminate_all(camif->chan);
+
+		camif->power_state = CAMIF_SUSPEND;
 		break;
 	}
 
@@ -1718,12 +1726,109 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int camif_suspend(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	int ret = 0;
+
+	/* check if CAMIF is in UP(running) state */
+	if (camif->power_state == CAMIF_BRINGUP) {
+		camif_stop_capture(camif, CAMIF_SUSPEND);
+
+		/* put subdev in low-power state */
+		if (camif->icd) {
+			struct v4l2_subdev *sd =
+				soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 0);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
+	}
+
+	return ret;
+}
+
+static int camif_resume(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
+	dma_cookie_t cookie;
+	int ret = 0;
+
+	/* check if CAMIF is in SUSPENDed state */
+	if (camif->power_state == CAMIF_SUSPEND) {
+		/* bring subdev out of low-power state */
+		if (camif->icd) {
+			struct v4l2_subdev *sd =
+				soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 1);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
+
+		/*
+		 * As at the time of suspend, underlying DMA would have
+		 * terminated all existing DMA descriptor requests, we need
+		 * to again 'submit' the buffers present in our dma queue
+		 */
+		if (!ret && !list_empty(&camif->dma_queue)) {
+			list_for_each_entry(vb, &camif->dma_queue, queue) {
+				buf = container_of(vb, struct camif_buffer, vb);
+				ret = camif_init_dma_channel(camif, buf);
+				if (ret) {
+					dev_err(camif->icd->dev.parent,
+						"DMA initialization failed\n");
+					goto out;
+				}
+
+				/* submit the DMA descriptor */
+				cookie = buf->desc->tx_submit(buf->desc);
+				ret = dma_submit_error(cookie);
+				if (ret) {
+					dev_err(camif->icd->dev.parent,
+						"dma submit error %d\n",
+						cookie);
+					goto out;
+				}
+
+				camif->chan->device->
+					device_issue_pending(camif->chan);
+			}
+		}
+
+		/* Resume CAMIF frame capture */
+		camif_start_capture(camif, CAMIF_RESUME);
+	}
+
+out:
+	return ret;
+}
+
+static const struct dev_pm_ops camif_pm_dev_ops = {
+	.suspend = camif_suspend,
+	.resume	= camif_resume,
+	.freeze = camif_suspend,
+	.restore = camif_resume,
+};
+
+#define CAMIF_DEV_PM_OPS (&camif_pm_dev_ops)
+
+#else
+#define CAMIF_DEV_PM_OPS NULL
+
+#endif /* CONFIG_PM */
+
 static struct platform_driver camif_driver = {
 	.probe = camif_probe,
 	.remove = __devexit_p(camif_remove),
 	.driver = {
 		.name = "spear_camif",
 		.owner = THIS_MODULE,
+		.pm = CAMIF_DEV_PM_OPS,
 	},
 };
 
