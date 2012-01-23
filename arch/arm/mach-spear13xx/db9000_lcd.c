@@ -61,7 +61,7 @@ static struct db9000fb_mach_info clcd_plat_info = {
 	.num_modes	= ARRAY_SIZE(def_modelist),
 	.ctrl_info	= &ctrl_info,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
-	.video_mem_size	= 0,
+	.mem_size	= 0,
 	.cmap_static	= 0,
 	.cmap_inverse	= 0,
 };
@@ -129,13 +129,13 @@ free_vco_clk:
 }
 
 static unsigned long frame_buf_base;
+static unsigned long frame_buf_size;
+
 void spear13xx_panel_fixup(struct meminfo *mi)
 {
-	int size;
-
-	size = (NUM_OF_FRAMEBUFFERS * PANEL_MAX_XRES * PANEL_MAX_YRES *
-			PANEL_MAX_BPP / 8);
-	frame_buf_base = reserve_mem(mi, ALIGN(size, SZ_1M));
+	frame_buf_size = (NUM_OF_FRAMEBUFFERS * PANEL_MAX_XRES *
+			PANEL_MAX_YRES * PANEL_MAX_BPP / 8);
+	frame_buf_base = reserve_mem(mi, ALIGN(frame_buf_size, SZ_1M));
 	if (frame_buf_base == ~0)
 		pr_err("Unable to allocate fb buffer\n");
 }
@@ -155,5 +155,6 @@ void spear13xx_panel_init(struct platform_device *pdev)
 		mach_info->def_mode = "480x272-32@0";
 
 	mach_info->frame_buf_base = frame_buf_base;
+	mach_info->mem_size = frame_buf_size;
 	clcd_set_plat_data(&spear13xx_db9000_clcd_device, mach_info);
 }

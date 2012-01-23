@@ -58,6 +58,8 @@
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
 
+#define SYNTH_MIN 55555
+
 static char *mode_option __devinitdata;
 
 /* Bits which should not be set in machine configuration structures */
@@ -320,49 +322,6 @@ static unsigned int db9000fb_display_dma_period(struct fb_var_screeninfo *var)
 #endif
 
 /*
- * Select the smallest mode that allows the desired resolution to be displayed.
- * If desired parameters can be rounded up.
- */
-static struct fb_videomode
-	*db9000fb_getmode(struct db9000fb_mach_info *mach,
-					struct fb_var_screeninfo *var)
-{
-	struct fb_videomode *mode = NULL;
-	struct fb_videomode *modelist = mach->modes;
-	unsigned int best_x = 0xffffffff, best_y = 0xffffffff;
-	unsigned int i;
-
-	for (i = 0; i < mach->num_modes; i++) {
-		if (modelist[i].xres >= var->xres &&
-			modelist[i].yres >= var->yres &&
-			modelist[i].xres < best_x &&
-			modelist[i].yres < best_y) {
-			best_x = modelist[i].xres;
-			best_y = modelist[i].yres;
-			mode = &modelist[i];
-		}
-	}
-	return mode;
-}
-
-static void db9000fb_setmode(struct fb_var_screeninfo *var,
-			struct fb_videomode *mode)
-{
-	var->xres		= mode->xres;
-	var->yres		= mode->yres;
-	var->pixclock		= mode->pixclock;
-	var->hsync_len		= mode->hsync_len;
-	var->left_margin	= mode->left_margin;
-	var->right_margin	= mode->right_margin;
-	var->vsync_len		= mode->vsync_len;
-	var->upper_margin	= mode->upper_margin;
-	var->lower_margin	= mode->lower_margin;
-	var->sync		= mode->sync;
-	var->xres_virtual	= mode->xres;
-	var->yres_virtual	= var->yres * NUM_OF_FRAMEBUFFERS;
-}
-
-/*
  * db9000fb_check_var():
  *	Get the video params out of 'var'. If a value doesn't fit, round it up,
  *	if it's too big, return -EINVAL.
@@ -374,44 +333,30 @@ static void db9000fb_setmode(struct fb_var_screeninfo *var,
 static int
 db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	struct db9000fb_info *fbi = to_db9000fb(info);
-	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
-	struct fb_videomode *mode = db9000fb_getmode(inf, var);
-
-	if (!mode)
-		return -EINVAL;
-
-	if ((var->xres < MIN_XRES) || (var->yres < MIN_YRES)
-			|| (var->yres_virtual < MIN_YRES))
-		return -EINVAL;
-
-	if ((var->pixclock) <= 0)
-		return -EINVAL;
-
-	if (inf->fixed_modes) {
-		db9000fb_setmode(var, mode);
-		return 0;
-	} else {
-		if (var->xres > inf->modes->xres)
-			return -EINVAL;
-		if (var->yres > inf->modes->yres)
-			return -EINVAL;
-		if (var->bits_per_pixel > inf->ctrl_info->bpp)
-			return -EINVAL;
-		if (var->yres_virtual >
-				inf->modes->yres * NUM_OF_FRAMEBUFFERS)
-			return -EINVAL;
-		if (var->xres_virtual != inf->modes->xres)
-			return -EINVAL;
-		if (var->yoffset > inf->modes->yres)
-			return -EINVAL;
-	}
-
 	/*
 	 * Setup the RGB parameters for this display.
 	 *
 	 * The pixel packing format is described on page ?? of the DB9000 TRM.
 	 */
+	if (var->hsync_len < 0 || var->hsync_len > 255)
+		return -EINVAL;
+	if (var->left_margin < 0 || var->left_margin > 255)
+		return -EINVAL;
+	if (var->right_margin < 0 || var->right_margin > 255)
+		return -EINVAL;
+	if (var->yres < 16 || var->yres > 4096 || (var->yres % 4))
+		return -EINVAL;
+	if (var->xres < 16 || var->xres > 4096 || (var->xres % 4))
+		return -EINVAL;
+	if (var->vsync_len < 0 || var->vsync_len > 255)
+		return -EINVAL;
+	if (var->upper_margin < 0 || var->upper_margin > 255)
+		return -EINVAL;
+	if (var->lower_margin < 0 || var->lower_margin > 255)
+		return -EINVAL;
+	if (var->pixclock <= 0)
+		return -EINVAL;
+
 	switch (var->bits_per_pixel) {
 	case 1:
 	case 2:
@@ -419,14 +364,14 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	case 8:
 		var->red.offset = var->green.offset = 0;
 		var->blue.offset = var->transp.offset = 0;
-		var->red.length	= 8;
-		var->green.length	= 8;
-		var->blue.length	= 8;
-		var->transp.length	= 0;
+		var->red.length		= var->bits_per_pixel;
+		var->green.length	= var->bits_per_pixel;
+		var->blue.length	= var->bits_per_pixel;
+		var->transp.length	= var->bits_per_pixel;
 		break;
 	case 16:
-		var->red.offset	= 11;
-		var->red.length	= 5;
+		var->red.offset		= 11;
+		var->red.length		= 5;
 		var->green.offset	= 5;
 		var->green.length	= 6;
 		var->blue.offset	= 0;
@@ -548,22 +493,27 @@ static void exit_backlight(struct db9000fb_info *fbi)
 static int db9000fb_set_par(struct fb_info *info)
 {
 	struct db9000fb_info *fbi = to_db9000fb(info);
-	struct fb_var_screeninfo *var = &info->var;
-	if (var->bits_per_pixel >= 16)
+
+	fbi->fb.var.xres_virtual = fbi->fb.var.xres;
+	fbi->fb.var.yres_virtual = fbi->fb.var.yres *
+		NUM_OF_FRAMEBUFFERS;
+
+	if (fbi->fb.var.bits_per_pixel >= 16)
 		fbi->fb.fix.visual = FB_VISUAL_TRUECOLOR;
 	else if (!fbi->cmap_static)
 		fbi->fb.fix.visual = FB_VISUAL_PSEUDOCOLOR;
 	else
 		fbi->fb.fix.visual = FB_VISUAL_STATIC_PSEUDOCOLOR;
 
-	fbi->fb.fix.line_length = var->xres_virtual *
-					var->bits_per_pixel / 8;
-	if (var->bits_per_pixel >= 16) {
+	fbi->fb.fix.line_length = fbi->fb.var.xres_virtual *
+					fbi->fb.var.bits_per_pixel / 8;
+	if (fbi->fb.var.bits_per_pixel >= 16) {
 		fbi->palette_size = 0;
 		fbi->palette_mode = PAL_NONE;
 	} else {
-		fbi->palette_size = 1 << var->bits_per_pixel;
+		fbi->palette_size = 1 << fbi->fb.var.bits_per_pixel;
 	}
+
 	fbi->palette_cpu = (u16 *)&fbi->palette[0];
 
 	/* Set (any) board control register to handle new color depth */
@@ -576,7 +526,8 @@ static int db9000fb_set_par(struct fb_info *info)
 		fb_alloc_cmap(&fbi->fb.cmap, 1<<fbi->fb.var.bits_per_pixel, 0);
 	}
 
-	db9000fb_activate_var(var, fbi);
+	db9000fb_activate_var(&fbi->fb.var, fbi);
+
 	return 0;
 }
 
@@ -636,10 +587,10 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	if (fbi->reg_dbar != next_frame_address) {
 		lcd_writel(fbi, DB9000_DBAR, next_frame_address);
 		lcd_writel(fbi, DB9000_DEAR, next_frame_address +
-			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS));
+			(fbi->video_mem_size / NUM_OF_FRAMEBUFFERS));
 		lcd_writel(fbi, DB9000_MRR,
 			DB9000_MRR_DEAR_MRR(next_frame_address +
-			(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS)) |
+			(fbi->video_mem_size / NUM_OF_FRAMEBUFFERS)) |
 			DB9000_MRR_MRR(DB9000_MRR_OUTST_4));
 		/*
 		 * Force waiting till the current buffer is completely drawn by
@@ -748,26 +699,23 @@ static int setup_frame_dma(struct db9000fb_info *fbi, int dma, int pal,
 static void setup_parallel_timing(struct db9000fb_info *fbi,
 				struct fb_var_screeninfo *var)
 {
-	u32 x_res, y_res, clk_rate;
-	struct db9000fb_mach_info *inf = fbi->dev->platform_data;
+	u32 clk_rate;
 
-	x_res = var->xres + var->hsync_len + var->left_margin
-		+ var->right_margin;
-	y_res = var->yres + var->vsync_len + var->upper_margin
-		+ var->lower_margin;
-	clk_rate = x_res * y_res * inf->modes->refresh;
+	clk_rate = PICOS2KHZ(var->pixclock) * 1000;
 
-	pr_debug("Clock value is %x", clk_rate);
+	pr_debug("Clock value is %d", clk_rate);
 
-	if (!(fbi->reg_pctr & DB9000_PCTR_PCI)) {
+	if (var->pixclock > SYNTH_MIN) {
 		int pcd = get_pcd(fbi, var->pixclock);
 		if (pcd >= 0) {
 			fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
 			fbi->reg_pctr |= pcd | DB9000_PCTR_PCR;
 			set_hsync_time(fbi, pcd);
 		}
-	} else
+	} else {
 		clk_set_rate(fbi->clk, clk_rate);
+	}
+
 	fbi->reg_htr =
 	/* horizontal sync width */
 		DB9000_HTR_HSW(var->hsync_len) |
@@ -799,6 +747,8 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 		(var->sync & FB_SYNC_HOR_HIGH_ACT) ? 0 : DB9000_CR1_HSP;
 	fbi->reg_cr1 |=
 		(var->sync & FB_SYNC_VERT_HIGH_ACT) ? 0 : DB9000_CR1_VSP;
+	fbi->reg_dear = lcd_readl(fbi, DB9000_DBAR) + (var->xres * var->yres *
+			var->bits_per_pixel / 8);
 }
 
 /*
@@ -831,18 +781,18 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 				var->bits_per_pixel);
 		break;
 	}
-	if (var->hsync_len < 1 || var->hsync_len > 255)
+	if (var->hsync_len < 0 || var->hsync_len > 255)
 		pr_err("%s: invalid hsync_len %d\n", fbi->fb.fix.id,
 				var->hsync_len);
-	if (var->left_margin < 1 || var->left_margin > 255)
+	if (var->left_margin < 0 || var->left_margin > 255)
 		pr_err("%s: invalid left_margin %d\n",
 			fbi->fb.fix.id, var->left_margin);
-	if (var->right_margin < 1 || var->right_margin > 255)
+	if (var->right_margin < 0 || var->right_margin > 255)
 		pr_err("%s: invalid right_margin %d\n", fbi->fb.fix.id,
 				var->right_margin);
-	if (var->yres < 1 || var->yres > 4096)
+	if (var->yres < 16 || var->yres > 4096)
 		pr_err("%s: invalid yres %d\n", fbi->fb.fix.id, var->yres);
-	if (var->vsync_len < 1 || var->vsync_len > 255)
+	if (var->vsync_len < 0 || var->vsync_len > 255)
 		pr_err("%s: invalid vsync_len %d\n", fbi->fb.fix.id,
 				var->vsync_len);
 	if (var->upper_margin < 0 || var->upper_margin > 255)
@@ -854,6 +804,10 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->pixclock <= 0)
 		pr_err("%s: invalid pixel clock %d\n", fbi->fb.fix.id,
 				var->pixclock);
+	if (var->xres_virtual < var->xres)
+		return -EINVAL;
+	if (var->yres_virtual < var->yres * NUM_OF_FRAMEBUFFERS)
+		return -EINVAL;
 #endif
 	/* Update shadow copy atomically */
 	local_irq_save(flags);
@@ -885,7 +839,8 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_VTR1) != fbi->reg_vtr1) ||
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
 		(lcd_readl(fbi, DB9000_HVTER) != fbi->reg_hvter) ||
-		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr))
+		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr) ||
+		(lcd_readl(fbi, DB9000_DEAR) != fbi->reg_dear))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 
 	return 0;
@@ -959,8 +914,6 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
-	fbi->reg_dear = fbi->reg_dbar +
-		(fbi->video_mem_size_used / NUM_OF_FRAMEBUFFERS);
 
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
@@ -1008,7 +961,7 @@ static irqreturn_t db9000fb_handle_irq(int irq, void *dev_id)
 		dbar = lcd_readl(fbi, DB9000_DBAR);
 		if (dbar != fbi->reg_dbar) {
 			fbi->reg_dbar = dbar;
-			fbi->reg_dear = dbar + (fbi->video_mem_size_used /
+			fbi->reg_dear = dbar + (fbi->video_mem_size /
 				NUM_OF_FRAMEBUFFERS);
 			complete(&fbi->vsync_notifier);
 		}
@@ -1209,22 +1162,6 @@ static int db9000fb_resume(struct platform_device *pdev)
 #define db9000fb_resume	NULL
 #endif
 
-static void db9000fb_decode_mode_info(struct db9000fb_info *fbi,
-				struct fb_videomode *modes,
-				unsigned int num_modes)
-{
-	unsigned int i, smemlen;
-
-	db9000fb_setmode(&fbi->fb.var, &modes[0]);
-
-	for (i = 0; i < num_modes; i++) {
-		smemlen = modes[i].xres * modes[i].yres *
-			PANEL_MAX_BPP / 8;
-		if (smemlen > fbi->fb.fix.smem_len)
-			fbi->fb.fix.smem_len = smemlen;
-	}
-}
-
 static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 				struct db9000fb_mach_info *inf)
 {
@@ -1236,14 +1173,12 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	fbi->reg_pwmfr		= inf->ctrl_info->pwmfr;
 #endif
-/* decode_mode: */
-	db9000fb_decode_mode_info(fbi, inf->modes, inf->num_modes);
 }
 
 static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 {
 	struct db9000fb_info *fbi;
-	struct db9000fb_mach_info *inf = dev->platform_data;
+	struct db9000fb_mach_info *inf = dev_get_platdata(dev);
 
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
 	fbi = kzalloc(sizeof(struct db9000fb_info), GFP_KERNEL);
@@ -1648,7 +1583,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	char __iomem *addr;
 	int irq;
 	int ret = -EBUSY;
-	int video_buf_size = 0;
 
 	if (!inf)
 		return ret;
@@ -1685,17 +1619,27 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_fbi;
 	}
 
+	if (!mode_option)
+		mode_option = inf->def_mode;
+
+	ret = fb_find_mode(&fbi->fb.var, &fbi->fb, mode_option,
+			inf->modes, inf->num_modes, NULL,
+			inf->ctrl_info->bpp);
+
+	if (!ret)
+		pr_err("unsupprted resolution format");
+
+	dev_info(&pdev->dev, "got a %dx%dx%d LCD\n", fbi->fb.var.xres,
+			fbi->fb.var.yres, inf->ctrl_info->bpp);
+
 	if ((inf->ctrl_info->bpp == 24) &&
 			((inf->ctrl_info->cr1 & DB9000_CR1_FBP) == 0))
 		inf->ctrl_info->bpp = 32;
-	video_buf_size = ((inf->modes->xres) * (inf->modes->yres) *
-			(inf->ctrl_info->bpp) / 8) * NUM_OF_FRAMEBUFFERS;
 
 	if (inf->ctrl_info->bpp < 16)
-		fbi->video_mem_size = video_buf_size + PALETTE_SIZE;
-	else
-		fbi->video_mem_size = video_buf_size;
+		fbi->video_mem_size += PALETTE_SIZE;
 
+	fbi->video_mem_size = inf->mem_size;
 	/* Initialize video memory */
 	addr = ioremap(fbi->frame_base, fbi->video_mem_size);
 	if (!addr) {
@@ -1743,15 +1687,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_irq;
 	}
 
-	if ((fbi->palette_mode == PAL_STATIC) ||
-			(fbi->palette_mode == PAL_NONE))
-		fbi->video_mem_size_used = video_buf_size;
-	else if (fbi->palette_mode == PAL_IN_FB)
-		fbi->video_mem_size_used =
-			video_buf_size + (fbi->palette_size * 2);
-	if (fbi->reg_dear == 0)
-		fbi->reg_dear = (fbi->video_mem_size_used /
-			NUM_OF_FRAMEBUFFERS) + fbi->fb.fix.smem_start;
+	if (fbi->palette_mode == PAL_IN_FB)
+		fbi->video_mem_size += (fbi->palette_size * 2);
 
 	 /* Ok, now enable the LCD controller */
 	set_ctrlr_state(fbi, C_ENABLE);
