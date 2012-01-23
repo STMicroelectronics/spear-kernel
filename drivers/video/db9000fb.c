@@ -58,6 +58,8 @@
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
 
+static char *mode_option __devinitdata;
+
 /* Bits which should not be set in machine configuration structures */
 #define CR1_INVALID_CONFIG_MASK	(~(DB9000_CR1_ENB | DB9000_CR1_LPE |\
 			DB9000_CR1_BPP(7) | DB9000_CR1_RGB | DB9000_CR1_EPO |\
@@ -1869,8 +1871,35 @@ static struct platform_driver db9000fb_driver = {
 	},
 };
 
+#ifndef MODULE
+static int __init db9000fb_setup(char *options)
+{
+	char *this_opt;
+
+	/* Parse user speficied options (`video=db9000:') */
+	if (!options || !*options)
+		return 0;
+
+	while ((this_opt = strsep(&options, ",")) != NULL) {
+		if (!*this_opt)
+			continue;
+		else
+			mode_option = this_opt;
+	}
+	return 0;
+}
+#endif
+
 static int __init db9000fb_init(void)
 {
+	/* For kernel boot options (in 'video=pm3fb:<options>' format) */
+#ifndef MODULE
+	char *option = NULL;
+
+	if (fb_get_options("db9000", &option))
+		return -ENODEV;
+	db9000fb_setup(option);
+#endif
 	if (db9000fb_setup_options())
 		return -EINVAL;
 
