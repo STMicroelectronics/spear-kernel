@@ -2896,6 +2896,8 @@ static int dw_udc_resume(struct device *dev)
 static const struct dev_pm_ops dw_udc_pm_ops = {
 	.suspend = dw_udc_suspend,
 	.resume = dw_udc_resume,
+	.freeze = dw_udc_suspend,
+	.restore = dw_udc_resume,
 };
 
 #endif
