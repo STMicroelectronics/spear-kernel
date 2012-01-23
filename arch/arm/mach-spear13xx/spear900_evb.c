@@ -24,13 +24,13 @@
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <video/db9000fb.h>
 #include <asm/mach-types.h>
 #include <asm/setup.h>
 #include <plat/fsmc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>

@@ -20,13 +20,13 @@
 #include <linux/mtd/nand.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/spi/spi.h>
+#include <video/db9000fb.h>
 #include <asm/mach-types.h>
 #include <plat/fsmc.h>
 #include <plat/hdlc.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1310_misc_regs.h>

@@ -15,10 +15,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <video/db9000fb.h>
 
 #include <asm/setup.h>
-#include <mach/db9000-regs.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 

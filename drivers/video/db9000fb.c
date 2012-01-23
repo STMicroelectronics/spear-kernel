@@ -47,18 +47,16 @@
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <video/db9000fb.h>
 
 #include <asm/irq.h>
 #include <mach/bitfield.h>
-#include <mach/db9000-regs.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
-#include "db9000fb.h"
 
 /* Bits which should not be set in machine configuration structures */
 #define CR1_INVALID_CONFIG_MASK	(~(DB9000_CR1_ENB | DB9000_CR1_LPE |\
@@ -1264,6 +1262,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 
 	strcpy(fbi->fb.fix.id, DB9000FB_NAME);
 
+	fbi->dev = dev;
 	fbi->fb.fix.type	= FB_TYPE_PACKED_PIXELS;
 	fbi->fb.fix.type_aux	= 0;
 	fbi->fb.fix.xpanstep	= 0;

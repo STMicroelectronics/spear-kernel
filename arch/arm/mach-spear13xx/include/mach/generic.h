@@ -511,6 +511,8 @@ void nand_select_bank(u32 bank, u32 busw);
 void spear13xx_l2x0_init(void);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
+void spear13xx_panel_fixup(struct meminfo *mi);
+void spear13xx_panel_init(struct platform_device *pdev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */

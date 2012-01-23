@@ -28,7 +28,6 @@
 #include <linux/param.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
-#include <mach/db9000fb_info.h>
 #include <media/ad9889b.h>
 
 /* Interrupt MASK/STATUS bits */

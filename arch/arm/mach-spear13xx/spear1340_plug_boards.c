@@ -65,9 +65,9 @@
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <video/db9000fb.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
