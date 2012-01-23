@@ -1270,27 +1270,12 @@ static irqreturn_t designware_jpeg_irq(s32 irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static s32
-designware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
+static int designware_jpeg_suspend(struct device *dev)
 {
-	unsigned long flags;
 	/* aborting all jpeg operations */
 	if (g_drv_data->jpeg_busy[JPEG_READ] ||
 			g_drv_data->jpeg_busy[JPEG_WRITE]) {
 		jpeg_abort(-EINTR);
-
-		jfree(JPEG_READ);
-		jfree(JPEG_WRITE);
-
-		if (g_drv_data->dma_chan[JPEG_READ])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_READ]);
-		if (g_drv_data->dma_chan[JPEG_WRITE])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_WRITE]);
-
-		spin_lock_irqsave(&g_drv_data->lock, flags);
-		g_drv_data->jpeg_busy[JPEG_READ] = 0;
-		g_drv_data->jpeg_busy[JPEG_WRITE] = 0;
-		spin_unlock_irqrestore(&g_drv_data->lock, flags);
 
 		clk_disable(g_drv_data->clk);
 	}
@@ -1299,12 +1284,25 @@ designware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 }
 
 #ifdef CONFIG_PM
-static s32 designware_jpeg_resume(struct platform_device *pdev)
+static int designware_jpeg_resume(struct device *dev)
 {
+	if (g_drv_data->jpeg_busy[JPEG_READ] ||
+			g_drv_data->jpeg_busy[JPEG_WRITE]) {
+		int ret = clk_enable(g_drv_data->clk);
+
+		if (ret)
+			return ret;
+	}
+
 	return 0;
 }
-#else
-#define designware_jpeg_resume NULL
+
+static const struct dev_pm_ops designware_jpeg_dev_pm_ops = {
+	.suspend = designware_jpeg_suspend,
+	.resume = designware_jpeg_resume,
+	.freeze = designware_jpeg_suspend,
+	.restore = designware_jpeg_resume,
+};
 #endif /* CONFIG_PM */
 
 static s32 designware_jpeg_probe(struct platform_device *pdev)
@@ -1438,7 +1436,6 @@ static s32 designware_jpeg_remove(struct platform_device *pdev)
 	enum jpeg_dev_type dev_type;
 	s32 irq;
 	struct resource	*res;
-	pm_message_t state;
 
 	if (!g_drv_data)
 		return 0;
@@ -1446,7 +1443,7 @@ static s32 designware_jpeg_remove(struct platform_device *pdev)
 	/* prevent double remove */
 	platform_set_drvdata(pdev, NULL);
 
-	designware_jpeg_suspend(pdev, state);
+	designware_jpeg_suspend(&pdev->dev);
 
 	/*unregister char driver */
 	for (dev_type = JPEG_READ; dev_type < MAX_DEV; dev_type += JPEG_WRITE)
@@ -1482,11 +1479,12 @@ static struct platform_driver designware_jpeg_driver = {
 		.name = DRIVER_NAME,
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm = &designware_jpeg_dev_pm_ops,
+#endif
 	},
 	.probe = designware_jpeg_probe,
 	.remove = __devexit_p(designware_jpeg_remove),
-	.suspend = designware_jpeg_suspend,
-	.resume = designware_jpeg_resume,
 };
 
 static s32 __init designware_jpeg_init(void)
