@@ -4,19 +4,18 @@
 *
 * Based on arch/arm/mach-pxa/devices.c
 *
-* This file is licensed under the terms of the GNU General Public
-* License version 2. This program is licensed "as is" without any
-* warranty of any kind, whether express or implied.
+* This file is licensed under the terms of the GNU General Public License
+* version 2. This program is licensed "as is" without any warranty of any kind,
+* whether express or implied.
 */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/platform_device.h>
-#include <linux/dma-mapping.h>
-#include <linux/clk.h>
-#include <linux/dma-mapping.h>
 #include <linux/amba/bus.h>
+#include <linux/clk.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
+
 #include <asm/setup.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
@@ -46,13 +45,14 @@ static struct db9000fb_mode_info sharp_LQ043T3DX0A_mode = {
 	.pctr = 0,
 	.dear = 0,
 };
+
 static struct db9000fb_mach_info sharp_lcd_info = {
 	.modes		= &sharp_LQ043T3DX0A_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
-	.video_mem_size = 0,
-	.cmap_static    = 0,
-	.cmap_inverse   = 0,
+	.video_mem_size	= 0,
+	.cmap_static	= 0,
+	.cmap_inverse	= 0,
 };
 
 static struct db9000fb_mode_info hannstar_hsd07_mode = {
@@ -82,14 +82,14 @@ static struct db9000fb_mach_info hannstar_hsd07_info = {
 	.modes		= &hannstar_hsd07_mode,
 	.num_modes	= 1,
 	.lcd_conn	= LCD_PCLK_EDGE_FALL,
-	.video_mem_size = 0,
-	.cmap_static    = 0,
-	.cmap_inverse   = 0,
+	.video_mem_size	= 0,
+	.cmap_static	= 0,
+	.cmap_inverse	= 0,
 };
 
 /* Max possible resolution for HDMI TX */
 static struct db9000fb_mode_info hdmi_1080p_mode = {
-	.mode = { 	/* 1080p */
+	.mode = {	/* 1080p */
 		.name = "HDMI 1080p",
 		.refresh = 60,
 		.xres = 1920,

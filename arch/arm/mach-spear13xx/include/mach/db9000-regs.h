@@ -245,25 +245,6 @@
 #define DB9000_ISR_FNCM	(1 << 13) /* Frame Descriptor - Node Complete - Mask */
 #define DB9000_ISR_FLCM	(1 << 14) /* Frame Descriptor - List Complete - Mask */
 
-/* Interrupt Vector Register, Offset 0x020 */
-#define DB9000_ISR_OFUV	(1 << 0)  /* OFU & OFUM */
-#define DB9000_ISR_OFOV	(1 << 1)  /* OFO & OFOM */
-#define DB9000_ISR_IFUV	(1 << 2)  /* IFU & IFUM */
-#define DB9000_ISR_IFOV	(1 << 3)  /* IFO & IFOM */
-#define DB9000_ISR_FERV	(1 << 4)  /* FER & FERM */
-#define DB9000_ISR_MBEV	(1 << 5)  /* MBE & MBEM */
-#define DB9000_ISR_VCTV	(1 << 6)  /* VCT & VCTM */
-#define DB9000_ISR_BAUV	(1 << 7)  /* BAU & BAUM */
-#define DB9000_ISR_LDDV	(1 << 8)  /* LDD & LDDM */
-/* #ifdef CONFIG_AXI_BUS */
-#define DB9000_ISR_ABLV	(1 << 9)  /* ABL & ABLM */
-#define DB9000_ISR_ARIV	(1 << 10) /* ARI & ARIM */
-#define DB9000_ISR_ARSV	(1 << 11) /* ARS & ARSM */
-/* #endif */
-#define DB9000_ISR_FBEV	(1 << 12) /* FBE & FBEM */
-#define DB9000_ISR_FNCV	(1 << 13) /* FNC & FNCM */
-#define DB9000_ISR_FLCV	(1 << 14) /* FLC & FLCM */
-
 /* Interrupt Scan Compare Register, Offset 0x024 */
 #define DB9000_ISCR_VSC(x)		((x) & 0x7)
 
