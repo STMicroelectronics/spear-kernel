@@ -348,6 +348,44 @@ static int __devexit sp805_wdt_remove(struct amba_device *adev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int sp805_wdt_suspend(struct device *dev)
+{
+	if (test_bit(WDT_BUSY, &wdt->status)) {
+		wdt_disable();
+		clk_disable(wdt->clk);
+	}
+
+	return 0;
+}
+
+static int sp805_wdt_resume(struct device *dev)
+{
+	int ret = 0;
+
+	if (test_bit(WDT_BUSY, &wdt->status)) {
+		ret = clk_enable(wdt->clk);
+		if (ret) {
+			dev_err(dev, "clock enable fail");
+			return ret;
+		}
+		wdt_enable();
+	}
+
+	return ret;
+}
+
+static const struct dev_pm_ops sp805_wdt_dev_pm_ops = {
+	.suspend = sp805_wdt_suspend,
+	.resume = sp805_wdt_resume,
+	.freeze = sp805_wdt_suspend,
+	.restore = sp805_wdt_resume,
+};
+#define SP805_WDT_DEV_PM_OPS (&sp805_wdt_dev_pm_ops)
+#else
+#define SP805_WDT_DEV_PM_OPS	NULL
+#endif /* CONFIG_PM */
+
 static struct amba_id sp805_wdt_ids[] __initdata = {
 	{
 		.id	= 0x00141805,
@@ -359,6 +397,7 @@ static struct amba_id sp805_wdt_ids[] __initdata = {
 static struct amba_driver sp805_wdt_driver = {
 	.drv = {
 		.name	= MODULE_NAME,
+		.pm	= SP805_WDT_DEV_PM_OPS,
 	},
 	.id_table	= sp805_wdt_ids,
 	.probe		= sp805_wdt_probe,
