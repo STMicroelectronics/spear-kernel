@@ -27,37 +27,33 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/clk.h>
+#include <linux/completion.h>
+#include <linux/cpufreq.h>
+#include <linux/delay.h>
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/fb.h>
+#include <linux/io.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/ioport.h>
+#include <linux/kernel.h>
+#include <linux/kthread.h>
+#include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/kernel.h>
-#include <linux/sched.h>
-#include <linux/errno.h>
-#include <linux/string.h>
-#include <linux/interrupt.h>
-#include <linux/slab.h>
-#include <linux/mm.h>
-#include <linux/fb.h>
-#include <linux/delay.h>
-#include <linux/init.h>
-#include <linux/ioport.h>
-#include <linux/cpufreq.h>
-#include <linux/platform_device.h>
-#include <linux/dma-mapping.h>
-#include <linux/clk.h>
-#include <linux/err.h>
-#include <linux/completion.h>
 #include <linux/mutex.h>
-#include <linux/kthread.h>
-#include <linux/freezer.h>
+#include <linux/platform_device.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
 
-#include <mach/hardware.h>
-#include <linux/io.h>
 #include <asm/irq.h>
-#include <linux/math64.h>
 #include <mach/bitfield.h>
 #include <mach/db9000-regs.h>
 #include <mach/db9000fb_info.h>
 #include <mach/generic.h>
+#include <mach/hardware.h>
 
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
