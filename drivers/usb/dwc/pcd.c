@@ -1360,6 +1360,24 @@ static int dwc_otg_pcd_stop_cb(void *_p)
 static int dwc_otg_pcd_suspend_cb(void *_p)
 {
 	struct dwc_pcd *pcd = (struct dwc_pcd *)_p;
+	u32 dsts, dctl;
+	struct device_if *dev_if = (GET_CORE_IF(pcd))->dev_if;
+
+	/* Check if suspend state */
+	dsts = dwc_read32(dev_sts_reg(pcd));
+
+	if (!(DWC_DSTS_SUSP_STS_RD(dsts))) {
+		dwc_otg_pcd_stop(pcd);
+
+		/* Do Soft Disconnect */
+		dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+		dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 1);
+		dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+	} else {
+		if (!enable_irq_wake(pcd->otg_dev->irq))
+			pcd->irq_wake = 1;
+		pcd->active_suspend = 1;
+	}
 
 	if (pcd->driver && pcd->driver->suspend) {
 		spin_unlock(&pcd->lock);
@@ -1375,8 +1393,24 @@ static int dwc_otg_pcd_suspend_cb(void *_p)
  */
 static int dwc_otg_pcd_resume_cb(void *_p)
 {
+	u32 dctl;
 	struct dwc_pcd *pcd = (struct dwc_pcd *)_p;
 	struct core_if *core_if = pcd->otg_dev->core_if;
+	struct device_if *dev_if = (GET_CORE_IF(pcd))->dev_if;
+
+	if (pcd->active_suspend) {
+		/* bus resumed */
+		if (pcd->irq_wake) {
+			disable_irq_wake(pcd->otg_dev->irq);
+			pcd->irq_wake = 0;
+		}
+		pcd->active_suspend = 0;
+	} else {
+		/* Remove Soft Disconnect */
+		dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+		dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
+		dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+	}
 
 	if (pcd->driver && pcd->driver->resume) {
 		spin_unlock(&pcd->lock);

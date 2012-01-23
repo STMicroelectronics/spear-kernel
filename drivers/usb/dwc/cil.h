@@ -341,6 +341,8 @@ struct dwc_pcd {
 
 	/*  Tasklet to delay starting of xfer in DMA mode */
 	struct tasklet_struct *start_xfer_tasklet;
+	u8 active_suspend;
+	u8 irq_wake;
 
 	/* The test mode to enter when the tasklet is executed. */
 	unsigned test_mode;

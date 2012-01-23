@@ -381,6 +381,35 @@ fail_dwc_dev:
  * unregistered with the bus driver.
  */
 
+#ifdef CONFIG_PM
+static int dwc_otg_suspend(struct device *dev)
+{
+	struct dwc_otg_device *dwc_dev = dev_get_drvdata(dev);
+
+	if (dwc_otg_is_host_mode(dwc_dev->core_if))
+		dwc_dev->core_if->hcd_cb->stop(dwc_dev->core_if->hcd_cb->p);
+	else
+		dwc_dev->core_if->pcd_cb->suspend(dwc_dev->core_if->pcd_cb->p);
+
+	return 0;
+}
+
+static int dwc_otg_resume(struct device *dev)
+{
+	struct dwc_otg_device *dwc_dev = dev_get_drvdata(dev);
+
+	if (dwc_otg_is_host_mode(dwc_dev->core_if))
+		dwc_dev->core_if->hcd_cb->start(dwc_dev->core_if->hcd_cb->p);
+	else
+		dwc_dev->core_if->pcd_cb->resume_wakeup(
+				dwc_dev->core_if->pcd_cb->p);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(dwc_otg_pm_ops, dwc_otg_suspend, dwc_otg_resume);
+#endif
+
 #if defined(CONFIG_OF)
 static const struct of_device_id dwc_otg_match[] = {
 	{.compatible = "amcc,dwc-otg",},
@@ -397,6 +426,9 @@ static struct platform_driver dwc_otg_driver = {
 		   .owner = THIS_MODULE,
 #if defined(CONFIG_OF)
 		   .of_match_table = dwc_otg_match,
+#endif
+#ifdef CONFIG_PM
+	.pm = &dwc_otg_pm_ops,
 #endif
 		   },
 };
