@@ -638,13 +638,11 @@ static inline int get_pcd(struct db9000fb_info *fbi,
 {
 	uint32_t pcd, pcd_32;
 
-	pcd = (uint32_t)(clk_get_rate(fbi->clk)/1000000);
+	pcd = (uint32_t)(clk_get_rate(fbi->bus_clk)/1000000);
 	pcd_32 = (pcd * pixclock)/1000000;
 
-	if (pcd_32 < 2)	{
-		pr_err("Invalid PCD value %d", pcd_32);
+	if (pcd_32 < 2)
 		return -EINVAL;
-	}
 
 	pcd_32 = pcd_32 - 2;
 	return pcd_32;
@@ -700,20 +698,26 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 				struct fb_var_screeninfo *var)
 {
 	u32 clk_rate;
+	int pcd;
 
 	clk_rate = PICOS2KHZ(var->pixclock) * 1000;
-
 	pr_debug("Clock value is %d", clk_rate);
 
-	if (var->pixclock > SYNTH_MIN) {
-		int pcd = get_pcd(fbi, var->pixclock);
-		if (pcd >= 0) {
-			fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
-			fbi->reg_pctr |= pcd | DB9000_PCTR_PCR;
-			set_hsync_time(fbi, pcd);
-		}
+	fbi->reg_pctr &= ~DB9000_PCTR_PCR;
+
+	pcd = get_pcd(fbi, var->pixclock);
+	if (pcd >= 0) {
+		/* first try bus clk src */
+		fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
+		fbi->reg_pctr |= DB9000_PCTR_PCD(pcd);
+		set_hsync_time(fbi, pcd);
+		clk_set_parent(fbi->clk, fbi->bus_clk);
+
 	} else {
-		clk_set_rate(fbi->clk, clk_rate);
+		fbi->reg_pctr |= DB9000_PCTR_PCI;
+		/* else try pixel clk src */
+		clk_set_rate(fbi->pixel_clk, clk_rate);
+		clk_set_parent(fbi->clk, fbi->pixel_clk);
 	}
 
 	fbi->reg_htr =
@@ -759,7 +763,6 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 				struct db9000fb_info *fbi)
 {
-	u_long flags;
 	size_t nbytes;
 
 #if DEBUG_VAR
@@ -810,8 +813,6 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		return -EINVAL;
 #endif
 	/* Update shadow copy atomically */
-	local_irq_save(flags);
-
 	setup_parallel_timing(fbi, var);
 
 	fbi->reg_imr = DB9000_IMR_MASK_ALL;
@@ -826,8 +827,6 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		setup_frame_dma(fbi, DMA_BASE, PAL_IN_FB, 0, nbytes);
 	else
 		setup_frame_dma(fbi, DMA_BASE, PAL_STATIC, 0, nbytes);
-
-	local_irq_restore(flags);
 
 	/*
 	 * Only update the registers if the controller is enabled and something
@@ -1196,6 +1195,12 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 		kzfree(fbi);
 		return NULL;
 	}
+
+	fbi->pixel_clk = inf->pixel_clk;
+	fbi->bus_clk = inf->bus_clk;
+
+	if (!fbi->pixel_clk || !fbi->bus_clk)
+		return NULL;
 
 	strcpy(fbi->fb.fix.id, DB9000FB_NAME);
 

@@ -389,7 +389,8 @@ struct db9000fb_mach_info {
 			acceleration_enabled:1,
 			unused:28;
 	void (*clcd_mux_selection) (bool);
-
+	struct clk *bus_clk;
+	struct clk *pixel_clk;
 };
 
 struct db9000fb_info {
@@ -397,6 +398,8 @@ struct db9000fb_info {
 	struct device		*dev;
 	struct platform_device *pdev;
 	struct clk		*clk;
+	struct clk		*bus_clk;
+	struct clk		*pixel_clk;
 	struct db9000fb_dma_descriptor	*f_descriptor;
 
 	void __iomem		*mmio_base;
