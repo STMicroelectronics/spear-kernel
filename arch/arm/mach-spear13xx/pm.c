@@ -71,8 +71,10 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Do the GIC specific latch ups for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
+#ifdef CPU_PWR_DOMAIN_OFF
 		gic_cpu_exit(0);
 		gic_dist_save(0);
+#endif
 #ifdef CONFIG_PCI
 		/* Suspend PCIE bus */
 		spear_pcie_suspend();
@@ -83,9 +85,11 @@ static int spear_pm_sleep(suspend_state_t state)
 	spear_clocksource_suspend();
 	/* Move the cpu into suspend */
 	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
+#ifdef CPU_PWR_DOMAIN_OFF
 	/* Resume Operations begin */
 	if (state == PM_SUSPEND_MEM)
 		spear13xx_l2x0_init();
+#endif
 	/* Call the CPU PM notifiers to notify exit from sleep */
 	cpu_pm_exit();
 	/* twd timer restart */
@@ -94,8 +98,10 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Do the GIC restoration for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
+#ifdef CPU_PWR_DOMAIN_OFF
 		gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
 		gic_dist_restore(0);
+#endif
 #ifdef CONFIG_PCI
 		/* Resume PCIE bus */
 		spear_pcie_resume();
@@ -120,11 +126,14 @@ void spear_sys_suspend(suspend_state_t state)
 
 	void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk)
 		= NULL;
+#ifdef CPU_PWR_DOMAIN_OFF
 	void (*spear_sram_wake)(void) = NULL;
+#endif
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 	void *sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
 	u32 pm_cfg = readl(VA_PCM_CFG);
 
+#ifdef CPU_PWR_DOMAIN_OFF
 	if (state == PM_SUSPEND_MEM) {
 		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
 				spear_wakeup_sz);
@@ -154,10 +163,13 @@ void spear_sys_suspend(suspend_state_t state)
 		writel(pm_cfg | PCM_SET_WAKEUP_CFG, VA_PCM_WKUP_CFG);
 		/* Set the  VA_SWITCH_CTR to Max Restart Current */
 		writel(SWITCH_CTR_CFG, VA_SWITCH_CTR);
-	} else {
+	} else
 		/* source gpio interrupt through GIC */
 		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
-	}
+#else
+		pm_cfg |= PWR_DOM_ON;
+		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
+#endif
 
 	/*
 	 * Copy in the MPMC registers at the end of SRAM

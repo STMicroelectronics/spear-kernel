@@ -262,6 +262,7 @@ wait_ack2:
 	bic	r0, r0, #0xc000
 	str	r0, [r6, #0x100]
 
+#ifdef CPU_PWR_DOMAIN_OFF
 	bic	r0, r0, #0x03e0
 	bic	r0, r0, #0x2400
 	str	r0, [r6, #0x100]
@@ -269,6 +270,7 @@ wait_ack3:
 	ldr	r0, [r6, #0x100]
 	tst	r0, #0x4000
 	beq	wait_ack3
+#endif
 	nop
 	nop
 	nop
