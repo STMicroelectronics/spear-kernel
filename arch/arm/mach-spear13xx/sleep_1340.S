@@ -350,12 +350,6 @@ wait_till_normal_mode:
 	cmp	r0, #0xf0000
 	bne wait_till_normal_mode
 
-	/*
-	 * Invalidate all instruction caches to PoU
-	 * and flush branch target cache
-	 */
-	mov	r1, #0
-	mcr	p15, 0, r1, c7, c5, 0
 #ifdef MPMC_RESET
 	ldr	r7, =MISC_BASE_PA
 	/* Enable the MPMC clock */
@@ -431,11 +425,6 @@ ddr_out_srefresh:
 	str	r1, [r7, #0x2c]
 	dsb
 	isb
-	mov	r0, #0x0
-	mcr	p15, 0, r0, c7, c5, 4	@ Flush prefetch buffer
-	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
-	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
-	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 finalize_exit:
 	/* Clearance is required in the mpmc space */
@@ -554,6 +543,15 @@ srefresh_end_rev_0:
 	orr	r0, r0, #0x50
 	str	r0, [r7, #0x038]
 #endif
+	/*
+	 * Invalidate all instruction caches to PoU
+	 */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0
+	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
+	mcr	p15, 0, r0, c7, c5, 7
+	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
+	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 	msr	cpsr, r4
 	ldmia	r8!, {r0}
