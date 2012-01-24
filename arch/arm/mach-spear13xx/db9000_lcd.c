@@ -18,6 +18,7 @@
 #include <video/db9000fb.h>
 
 #include <asm/setup.h>
+#include <plat/clock.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
@@ -69,63 +70,67 @@ static struct db9000fb_mach_info clcd_plat_info = {
 static void clcd_set_plat_data(struct platform_device *pdev,
 		struct db9000fb_mach_info *data)
 {
-	struct clk *pclk, *vco_clk, *clcd_pclk, *fb_clk, *ah_clk;
+	struct clk *clcd_pclk, *fb_clk, *ah_clk;
+	int ret;
 
 	pdev->dev.platform_data = data;
 
 	if (cpu_is_spear1340())
 		data->clcd_mux_selection = &config_clcd_gpio_pads;
 
-	if (!strcmp("1024x768-32@60", data->def_mode)) {
-		vco_clk = clk_get(NULL, "vco1div4_clk");
-		if (IS_ERR(vco_clk)) {
-			pr_err("%s:vco1div 4 clock get fail\n", __func__);
-			return ;
-		}
-
-		pclk = clk_get(NULL, "clcd_synth_clk");
-		if (IS_ERR(pclk)) {
-			pr_err("%s:clcd synth clock get fail\n", __func__);
-			goto free_vco_clk;
-		}
-		clk_set_parent(pclk, vco_clk);
-
-		clcd_pclk = clk_get_sys("clcd_pixel_clk", NULL);
-		if (IS_ERR(clcd_pclk)) {
-			pr_err("%s:clcd-pixel clock get fail\n", __func__);
-			goto free_pclk;
-		}
-		clk_set_parent(clcd_pclk, pclk);
-
-		fb_clk = clk_get_sys("clcd-db9000", NULL);
-		if (IS_ERR(fb_clk)) {
-			pr_err("%s:clcd clock get fail\n", __func__);
-			goto free_clcd_pclk;
-		}
-		clk_set_parent(fb_clk, clcd_pclk);
-
-free_clcd_pclk:
-		clk_put(clcd_pclk);
-free_pclk:
-		clk_put(pclk);
-free_vco_clk:
-		clk_put(vco_clk);
-
-	} else if (!strcmp("480x272-32@0", data->def_mode)) {
-		ah_clk = clk_get(NULL, "ahb_clk");
-		if (IS_ERR(ah_clk)) {
-			pr_err("%s:enabling ahb_clk fail\n", __func__);
-			return ;
-		}
-		fb_clk = clk_get_sys("clcd-db9000", NULL);
-		if (IS_ERR(fb_clk)) {
-			pr_err("%s:enabling fb_clk fail\n", __func__);
-			clk_put(ah_clk);
-			return;
-		}
-		clk_set_parent(fb_clk, ah_clk);
+	ret = clk_set_parent_sys(NULL, "clcd_synth_clk", NULL, "vco1div4_clk");
+	if (ret) {
+		pr_err("%s:failed to set vco1div4 as parent of clcd_synth\n",
+				__func__);
+		return ;
 	}
-	return ;
+
+	ret = clk_set_parent_sys("clcd_pixel_clk", NULL, NULL,
+			"clcd_synth_clk");
+	if (ret) {
+		pr_err("%s:failed to set clcd_synth as parent of pixel clk\n",
+				__func__);
+		return ;
+	}
+
+	clcd_pclk = clk_get_sys("clcd_pixel_clk", NULL);
+	if (IS_ERR(clcd_pclk)) {
+		pr_err("%s:clcd-pixel clock get fail\n", __func__);
+		return;
+	}
+
+	ah_clk = clk_get(NULL, "ahb_clk");
+	if (IS_ERR(ah_clk)) {
+		pr_err("%s:enabling ahb_clk fail\n", __func__);
+		goto free_clcd_pclk;
+	}
+
+	fb_clk = clk_get_sys("clcd-db9000", NULL);
+	if (IS_ERR(fb_clk)) {
+		pr_err("%s:enabling fb_clk fail\n", __func__);
+		goto free_ah_clk;
+	}
+
+	/*
+	 * set pixel clk on bus clk by default, would be changed by
+	 * driver as per the need
+	 */
+	ret = clk_set_parent(fb_clk, clcd_pclk);
+	if (ret) {
+		pr_err("%s:failed to set pixel clk as parent of clcd\n",
+				__func__);
+		goto free_fb_clk;
+	}
+
+	data->pixel_clk = clcd_pclk;
+	data->bus_clk = ah_clk;
+
+free_fb_clk:
+	clk_put(fb_clk);
+free_ah_clk:
+	clk_put(ah_clk);
+free_clcd_pclk:
+	clk_put(clcd_pclk);
 }
 
 static unsigned long frame_buf_base;
