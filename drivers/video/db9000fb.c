@@ -1635,6 +1635,10 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 			inf->modes, inf->num_modes, NULL,
 			inf->ctrl_info->bpp);
 
+	if (ret > 2)
+		ret = fb_find_mode(&fbi->fb.var, &fbi->fb, mode_option,
+				NULL, 0, NULL, inf->ctrl_info->bpp);
+
 	if (!ret)
 		pr_err("unsupprted resolution format");
 
