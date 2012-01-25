@@ -2067,6 +2067,10 @@ static struct resource spdif_in_resources[] = {
 		.end = SPEAR1340_SPDIF_IN_BASE + SZ_128 - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
+		.start = SPEAR1340_SPDIF_IN_FIFO_BASE,
+		.end = SPEAR1340_SPDIF_IN_FIFO_BASE + SZ_64 - 1,
+		.flags = IORESOURCE_IO,
+	}, {
 		.start = SPEAR1340_IRQ_SPDIF_IN,
 		.flags = IORESOURCE_IRQ,
 	},
