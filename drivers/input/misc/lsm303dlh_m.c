@@ -30,13 +30,13 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <mach/gpio.h>
 #endif
 
-#include <linux/lsm303dlh.h>
+#include <linux/i2c/lsm303dlh.h>
 #include <linux/regulator/consumer.h>
 #include <linux/kernel.h>
 
@@ -128,7 +128,7 @@ struct lsm303dlh_m_data {
 	/* lock for sysfs operations */
 	struct mutex lock;
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	struct input_dev *input_dev;
 #endif
 	struct regulator *regulator;
@@ -349,7 +349,7 @@ static int lsm303dlh_m_set_mode(struct lsm303dlh_m_data *ddata,
 	return ret;
 }
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 
 static irqreturn_t lsm303dlh_m_gpio_irq(int irq, void *device_data)
 {
@@ -501,7 +501,7 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP) {
 		regulator_enable(ddata->regulator);
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	enable_irq(gpio_to_irq(ddata->pdata.irq_m));
 #endif
 	}
@@ -518,7 +518,7 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 
 	if (mode == LSM303DLH_M_MODE_SLEEP) {
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 		disable_irq(gpio_to_irq(ddata->pdata.irq_m));
 #endif
 
@@ -623,7 +623,7 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	if (ret)
 		goto exit_free_regulator;
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 
 	ddata->input_dev = input_allocate_device();
 	if (!ddata->input_dev) {
@@ -665,7 +665,7 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 
 	return ret;
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 err_input_failed:
 	input_unregister_device(ddata->input_dev);
 err_input_register_failed:
@@ -688,7 +688,7 @@ static int __devexit lsm303dlh_m_remove(struct i2c_client *client)
 
 	ddata = i2c_get_clientdata(client);
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	input_unregister_device(ddata->input_dev);
 	input_free_device(ddata->input_dev);
 #endif
@@ -719,7 +719,7 @@ static int lsm303dlh_m_suspend(struct device *dev)
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP)
 		return 0;
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	disable_irq(gpio_to_irq(ddata->pdata.irq_m));
 #endif
 
@@ -742,7 +742,7 @@ static int lsm303dlh_m_resume(struct device *dev)
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP)
 		return 0;
 
-#ifdef CONFIG_SENSORS_LSM303DLH_INPUT_DEVICE
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	enable_irq(gpio_to_irq(ddata->pdata.irq_m));
 #endif
 
