@@ -38,6 +38,7 @@
 
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/regulator/consumer.h>
+#include <linux/kernel.h>
 
 /* lsm303dlh accelerometer registers */
 #define WHO_AM_I	0x0F
@@ -847,6 +848,18 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 {
 	int ret;
 	struct lsm303dlh_a_data *ddata = NULL;
+
+	if (client->dev.platform_data == NULL) {
+		dev_err(&client->dev, "platform data is NULL. exiting.\n");
+		ret = -ENODEV;
+		goto exit_free_regulator;
+	}
+
+	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
+		dev_err(&client->dev, "client not i2c capable\n");
+		ret = -ENODEV;
+		goto exit_free_regulator;
+	}
 
 	ddata = kzalloc(sizeof(struct lsm303dlh_a_data), GFP_KERNEL);
 	if (ddata == NULL) {
