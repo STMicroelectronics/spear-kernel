@@ -16,6 +16,7 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/i2c/l3g4200d.h>
+#include <linux/i2c/lsm303dlh.h>
 #include <linux/irq.h>
 #include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
@@ -151,10 +152,6 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.mask = 0x0,
 		.value = 0x0,
 	}, {
-		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = 0x0,
-		.value = 0x0,
-	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_4,
 		.mask = 0x00000020, /* enabling I2S_OUT_DATA_3 as PL-GPIO */
 		.value = 0x0,
@@ -188,6 +185,28 @@ static struct pmx_dev spear1340_pmx_plgpios = {
 	.name = "plgpios",
 	.modes = pmx_plgpios_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
+};
+
+/* Pad Multiplexing for LSM303DLH Accelerometer and Magnetometer device */
+static struct pmx_mux_reg lsm303_plgpios_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = 0x1180,
+		.value = 0x0,
+	},
+};
+
+static struct pmx_dev_mode lsm303_plgpios_modes[] = {
+	{
+		.mux_regs = lsm303_plgpios_mux,
+		.mux_reg_cnt = ARRAY_SIZE(lsm303_plgpios_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_lsm303 = {
+	.name = "lsm303_acc_mag",
+	.modes = lsm303_plgpios_modes,
+	.mode_count = ARRAY_SIZE(lsm303_plgpios_modes),
 };
 
 /* padmux devices to enable */
@@ -230,6 +249,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
 	&spear1340_pmx_sata,
+	&spear1340_pmx_lsm303,
 
 	/* Keep this entry at the bottom of table to override earlier setting */
 	&spear1340_pmx_plgpios,
@@ -356,6 +376,28 @@ static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.axis_map_z = 2,
 };
 
+/* LSM303DLH Accelerometer and Magnetometer platform data */
+static struct lsm303dlh_platform_data lsm303dlh_a_pdata = {
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+	.name_a = "lsm303dlh_a",
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	.irq_a1 = PLGPIO_71,
+	.irq_a2 = PLGPIO_75,
+#endif
+};
+
+static struct lsm303dlh_platform_data lsm303dlh_m_pdata = {
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+	.name_m = "lsm303dlh_m",
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	.irq_m = PLGPIO_70,
+#endif
+};
+
 static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 	/* gyroscope board info */
 	.type = "l3g4200d_gyr",
@@ -365,6 +407,30 @@ static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 
 struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr = {
 	.board = &spear1340_evb_i2c_board_l3g4200d_gyr,
+	.busnum = 0,
+};
+
+/* lsm303dlh accelerometer board info */
+static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_acc = {
+		.type = "lsm303dlh_a",
+		.addr = 0x19,
+		.platform_data = &lsm303dlh_a_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_a = {
+	.board = &spear1340_evb_i2c_lsm303dlh_acc,
+	.busnum = 0,
+};
+
+/* lsm303dlh magnetometer board info */
+static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_mag = {
+		.type = "lsm303dlh_m",
+		.addr = 0x1E,
+		.platform_data = &lsm303dlh_m_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_m = {
+	.board = &spear1340_evb_i2c_lsm303dlh_mag,
 	.busnum = 0,
 };
 
@@ -403,6 +469,8 @@ static struct i2c_dev_info *i2c_devs[] __initdata = {
 	&spear1340_evb_i2c_l3g4200d_gyr,
 	&spear1340_evb_i2c_eeprom0,
 	&spear1340_evb_i2c_eeprom1,
+	&spear1340_evb_i2c_lsm303dlh_a,
+	&spear1340_evb_i2c_lsm303dlh_m,
 	&spear1340_evb_i2c_sta529,
 };
 
