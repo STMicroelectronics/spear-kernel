@@ -412,13 +412,8 @@ static int cortexa9_wdt_resume(struct device *dev)
 	return ret;
 }
 
-static const struct dev_pm_ops cortexa9_wdt_dev_pm_ops = {
-	.suspend = cortexa9_wdt_suspend,
-	.resume = cortexa9_wdt_resume,
-	.freeze = cortexa9_wdt_suspend,
-	.restore = cortexa9_wdt_resume,
-};
-
+static SIMPLE_DEV_PM_OPS(cortexa9_wdt_dev_pm_ops, cortexa9_wdt_suspend,
+		cortexa9_wdt_resume);
 #define CORTEXA9_WDT_DEV_PM_OPS (&cortexa9_wdt_dev_pm_ops)
 #else
 #define CORTEXA9_WDT_DEV_PM_OPS	NULL
