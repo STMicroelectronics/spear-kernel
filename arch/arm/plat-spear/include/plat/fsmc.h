@@ -34,7 +34,8 @@
 /* This function is used to set platform data field of pdev->dev */
 static inline void fsmc_nand_set_plat_data(struct platform_device *pdev,
 		struct mtd_partition *partitions, unsigned int nr_partitions,
-		unsigned int options, unsigned int width)
+		unsigned int options, unsigned int width,
+		struct fsmc_nand_timings *timings)
 {
 	struct fsmc_nand_platform_data *plat_data;
 	plat_data = dev_get_platdata(&pdev->dev);
@@ -56,6 +57,7 @@ static inline void fsmc_nand_set_plat_data(struct platform_device *pdev,
 
 	plat_data->options = options;
 	plat_data->width = width;
+	plat_data->nand_timings = timings;
 }
 
 static inline void fsmc_nor_set_plat_data(struct platform_device *pdev,

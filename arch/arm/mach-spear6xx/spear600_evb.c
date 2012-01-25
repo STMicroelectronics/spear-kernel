@@ -121,7 +121,7 @@ static void __init spear600_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8);
+			FSMC_NAND_BW8, NULL);
 
 	/* call spear600 machine init function */
 	spear600_init();

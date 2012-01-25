@@ -169,7 +169,7 @@ static void __init spear300_evb_init(void)
 
 	/* set nand0 device's plat data */
 	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);
