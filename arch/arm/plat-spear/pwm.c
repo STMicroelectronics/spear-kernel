@@ -22,6 +22,7 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/types.h>
 #include <mach/hardware.h>
 
 /* PWM registers and bits definitions */
@@ -475,7 +476,7 @@ err:
 }
 
 #ifdef CONFIG_PM
-static int spear_pwm_suspend(struct device *dev)
+static int pwm_suspend(struct device *dev, bool csave)
 {
 	struct pwm *pwm = dev_get_drvdata(dev);
 	struct pwm_device *pwmd;
@@ -484,6 +485,9 @@ static int spear_pwm_suspend(struct device *dev)
 		if (pwm->pwmd_enabled)
 			writel(0, pwm->mmio_base + SPEAR13XX_PWMMCR);
 	}
+
+	if (!csave)
+		goto sus_clk_dis;
 
 	list_for_each_entry(pwmd, &pwm->devices, node) {
 		if (pwmd->busy) {
@@ -496,6 +500,7 @@ static int spear_pwm_suspend(struct device *dev)
 		}
 	}
 
+sus_clk_dis:
 	/* disable clock */
 	if (pwm->clk_enabled)
 		clk_disable(pwm->clk);
@@ -503,7 +508,17 @@ static int spear_pwm_suspend(struct device *dev)
 	return 0;
 }
 
-static int spear_pwm_resume(struct device *dev)
+static int spear_pwm_suspend(struct device *dev)
+{
+	return pwm_suspend(dev, true);
+}
+
+static int spear_pwm_poweroff(struct device *dev)
+{
+	return pwm_suspend(dev, false);
+}
+
+static int pwm_resume(struct device *dev, bool csave)
 {
 	struct pwm *pwm = dev_get_drvdata(dev);
 	struct pwm_device *pwmd;
@@ -517,6 +532,9 @@ static int spear_pwm_resume(struct device *dev)
 		}
 	}
 
+	if (!csave)
+		goto res_pwm_enable;
+
 	list_for_each_entry(pwmd, &pwm->devices, node) {
 		if (pwmd->busy) {
 			writel(pwmd->csave_reg_PWMDCR,
@@ -528,6 +546,7 @@ static int spear_pwm_resume(struct device *dev)
 		}
 	}
 
+res_pwm_enable:
 	if (cpu_is_spear1340()) {
 		if (pwm->pwmd_enabled)
 			writel(1, pwm->mmio_base + SPEAR13XX_PWMMCR);
@@ -536,10 +555,22 @@ static int spear_pwm_resume(struct device *dev)
 	return ret;
 }
 
+static int spear_pwm_resume(struct device *dev)
+{
+	return pwm_resume(dev, true);
+}
+
+static int spear_pwm_thaw(struct device *dev)
+{
+	return pwm_resume(dev, false);
+}
+
 static const struct dev_pm_ops spear_pwm_dev_pm_ops = {
 	.suspend = spear_pwm_suspend,
 	.resume = spear_pwm_resume,
 	.freeze = spear_pwm_suspend,
+	.thaw = spear_pwm_thaw,
+	.poweroff = spear_pwm_poweroff,
 	.restore = spear_pwm_resume,
 };
 
