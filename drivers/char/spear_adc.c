@@ -35,6 +35,7 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/sched.h>
+#include <linux/types.h>
 #include <linux/wait.h>
 #include <plat/adc.h>
 #include <plat/hardware.h>
@@ -1478,13 +1479,16 @@ static s32 spear_adc_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static s32 spear_adc_suspend(struct device *dev)
+static s32 adc_suspend(struct device *dev, bool csave)
 {
 	int i, ret = 0;
 	bool got_config = false;
 
 	if (!g_drv_data->usage_count)
 		return 0;
+
+	if (!csave)
+		goto sus_clk_dis;
 
 	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].configured;
 			i++) {
@@ -1506,12 +1510,23 @@ static s32 spear_adc_suspend(struct device *dev)
 		}
 	}
 
+sus_clk_dis:
 	clk_disable(g_drv_data->clk);
 
 	return ret;
 }
 
-static s32 spear_adc_resume(struct device *dev)
+static s32 spear_adc_suspend(struct device *dev)
+{
+	return adc_suspend(dev, true);
+}
+
+static s32 spear_adc_poweroff(struct device *dev)
+{
+	return adc_suspend(dev, false);
+}
+
+static s32 adc_resume(struct device *dev, bool csave)
 {
 	int i, ret;
 	bool configured = false;
@@ -1526,6 +1541,9 @@ static s32 spear_adc_resume(struct device *dev)
 		dev_err(dev, "Resume: clk enable failed\n");
 		return ret;
 	}
+
+	if (!csave)
+		return 0;
 
 	for (i = 0; i < ADC_CHANNEL_NUM && g_drv_data->chan[i].configured;
 			i++) {
@@ -1555,10 +1573,22 @@ disable_clk:
 	return ret;
 }
 
+static s32 spear_adc_resume(struct device *dev)
+{
+	return adc_resume(dev, true);
+}
+
+static s32 spear_adc_thaw(struct device *dev)
+{
+	return adc_resume(dev, false);
+}
+
 static const struct dev_pm_ops spear_adc_dev_pm_ops = {
 	.suspend = spear_adc_suspend,
 	.resume = spear_adc_resume,
 	.freeze = spear_adc_suspend,
+	.thaw = spear_adc_thaw,
+	.poweroff = spear_adc_poweroff,
 	.restore = spear_adc_resume,
 };
 
