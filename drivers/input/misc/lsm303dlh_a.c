@@ -16,11 +16,11 @@
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
+ * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/i2c.h>
@@ -39,95 +39,95 @@
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/regulator/consumer.h>
 
- /* lsm303dlh accelerometer registers */
- #define WHO_AM_I    0x0F
+/* lsm303dlh accelerometer registers */
+#define WHO_AM_I	0x0F
 
- /* ctrl 1: pm2 pm1 pm0 dr1 dr0 zenable yenable zenable */
- #define CTRL_REG1       0x20    /* power control reg */
- #define CTRL_REG2       0x21    /* power control reg */
- #define CTRL_REG3       0x22    /* power control reg */
- #define CTRL_REG4       0x23    /* interrupt control reg */
- #define CTRL_REG5       0x24    /* interrupt control reg */
+/* ctrl 1: pm2 pm1 pm0 dr1 dr0 zenable yenable zenable */
+#define CTRL_REG1	0x20	/* power control reg */
+#define CTRL_REG2	0x21	/* power control reg */
+#define CTRL_REG3	0x22	/* power control reg */
+#define CTRL_REG4	0x23	/* interrupt control reg */
+#define CTRL_REG5	0x24	/* interrupt control reg */
 
- #define STATUS_REG      0x27    /* status register */
+#define STATUS_REG	0x27	/* status register */
 
- #define AXISDATA_REG    0x28    /* axis data */
+#define AXISDATA_REG	0x28	/* axis data */
 
- #define INT1_CFG  0x30    /* interrupt 1 configuration */
- #define INT1_SRC  0x31    /* interrupt 1 source reg    */
- #define INT1_THS  0x32    /* interrupt 1 threshold */
- #define INT1_DURATION  0x33    /* interrupt 1 threshold */
+#define INT1_CFG	0x30	/* interrupt 1 configuration */
+#define INT1_SRC	0x31	/* interrupt 1 source reg */
+#define INT1_THS	0x32	/* interrupt 1 threshold */
+#define INT1_DURATION	0x33	/* interrupt 1 threshold */
 
- #define INT2_CFG  0x34    /* interrupt 2 configuration */
- #define INT2_SRC  0x35    /* interrupt 2 source reg    */
- #define INT2_THS  0x36    /* interrupt 2 threshold */
- #define INT2_DURATION  0x37    /* interrupt 2 threshold */
+#define INT2_CFG	0x34	/* interrupt 2 configuration */
+#define INT2_SRC	0x35	/* interrupt 2 source reg */
+#define INT2_THS	0x36	/* interrupt 2 threshold */
+#define INT2_DURATION	0x37	/* interrupt 2 threshold */
 
- /* Sensitivity adjustment */
- #define SHIFT_ADJ_2G 4 /*    1/16*/
- #define SHIFT_ADJ_4G 3 /*    2/16*/
- #define SHIFT_ADJ_8G 2 /* ~3.9/16*/
+/* Sensitivity adjustment */
+#define SHIFT_ADJ_2G	4 /*	1/16*/
+#define SHIFT_ADJ_4G	3 /*	2/16*/
+#define SHIFT_ADJ_8G	2 /* ~3.9/16*/
 
- /* Control register 1 */
- #define LSM303DLH_A_CR1_PM_BIT 5
- #define LSM303DLH_A_CR1_PM_MASK (0x7 << LSM303DLH_A_CR1_PM_BIT)
- #define LSM303DLH_A_CR1_DR_BIT 3
- #define LSM303DLH_A_CR1_DR_MASK (0x3 << LSM303DLH_A_CR1_DR_BIT)
- #define LSM303DLH_A_CR1_EN_BIT 0
- #define LSM303DLH_A_CR1_EN_MASK (0x7 << LSM303DLH_A_CR1_EN_BIT)
+/* Control register 1 */
+#define LSM303DLH_A_CR1_PM_BIT 5
+#define LSM303DLH_A_CR1_PM_MASK (0x7 << LSM303DLH_A_CR1_PM_BIT)
+#define LSM303DLH_A_CR1_DR_BIT 3
+#define LSM303DLH_A_CR1_DR_MASK (0x3 << LSM303DLH_A_CR1_DR_BIT)
+#define LSM303DLH_A_CR1_EN_BIT 0
+#define LSM303DLH_A_CR1_EN_MASK (0x7 << LSM303DLH_A_CR1_EN_BIT)
 
- /* Control register 2 */
- #define LSM303DLH_A_CR4_ST_BIT 1
- #define LSM303DLH_A_CR4_ST_MASK (0x1 << LSM303DLH_A_CR4_ST_BIT)
- #define LSM303DLH_A_CR4_STS_BIT 3
- #define LSM303DLH_A_CR4_STS_MASK (0x1 << LSM303DLH_A_CR4_STS_BIT)
- #define LSM303DLH_A_CR4_FS_BIT 4
- #define LSM303DLH_A_CR4_FS_MASK (0x3 << LSM303DLH_A_CR4_FS_BIT)
- #define LSM303DLH_A_CR4_BLE_BIT 6
- #define LSM303DLH_A_CR4_BLE_MASK (0x3 << LSM303DLH_A_CR4_BLE_BIT)
- #define LSM303DLH_A_CR4_BDU_BIT 7
- #define LSM303DLH_A_CR4_BDU_MASK (0x1 << LSM303DLH_A_CR4_BDU_BIT)
+/* Control register 2 */
+#define LSM303DLH_A_CR4_ST_BIT 1
+#define LSM303DLH_A_CR4_ST_MASK (0x1 << LSM303DLH_A_CR4_ST_BIT)
+#define LSM303DLH_A_CR4_STS_BIT 3
+#define LSM303DLH_A_CR4_STS_MASK (0x1 << LSM303DLH_A_CR4_STS_BIT)
+#define LSM303DLH_A_CR4_FS_BIT 4
+#define LSM303DLH_A_CR4_FS_MASK (0x3 << LSM303DLH_A_CR4_FS_BIT)
+#define LSM303DLH_A_CR4_BLE_BIT 6
+#define LSM303DLH_A_CR4_BLE_MASK (0x3 << LSM303DLH_A_CR4_BLE_BIT)
+#define LSM303DLH_A_CR4_BDU_BIT 7
+#define LSM303DLH_A_CR4_BDU_MASK (0x1 << LSM303DLH_A_CR4_BDU_BIT)
 
- /* Control register 3 */
- #define LSM303DLH_A_CR3_I1_BIT 0
- #define LSM303DLH_A_CR3_I1_MASK (0x3 << LSM303DLH_A_CR3_I1_BIT)
- #define LSM303DLH_A_CR3_LIR1_BIT 2
- #define LSM303DLH_A_CR3_LIR1_MASK (0x1 << LSM303DLH_A_CR3_LIR1_BIT)
- #define LSM303DLH_A_CR3_I2_BIT 3
- #define LSM303DLH_A_CR3_I2_MASK (0x3 << LSM303DLH_A_CR3_I2_BIT)
- #define LSM303DLH_A_CR3_LIR2_BIT 5
- #define LSM303DLH_A_CR3_LIR2_MASK (0x1 << LSM303DLH_A_CR3_LIR2_BIT)
- #define LSM303DLH_A_CR3_PPOD_BIT 6
- #define LSM303DLH_A_CR3_PPOD_MASK (0x1 << LSM303DLH_A_CR3_PPOD_BIT)
- #define LSM303DLH_A_CR3_IHL_BIT 7
- #define LSM303DLH_A_CR3_IHL_MASK (0x1 << LSM303DLH_A_CR3_IHL_BIT)
+/* Control register 3 */
+#define LSM303DLH_A_CR3_I1_BIT 0
+#define LSM303DLH_A_CR3_I1_MASK (0x3 << LSM303DLH_A_CR3_I1_BIT)
+#define LSM303DLH_A_CR3_LIR1_BIT 2
+#define LSM303DLH_A_CR3_LIR1_MASK (0x1 << LSM303DLH_A_CR3_LIR1_BIT)
+#define LSM303DLH_A_CR3_I2_BIT 3
+#define LSM303DLH_A_CR3_I2_MASK (0x3 << LSM303DLH_A_CR3_I2_BIT)
+#define LSM303DLH_A_CR3_LIR2_BIT 5
+#define LSM303DLH_A_CR3_LIR2_MASK (0x1 << LSM303DLH_A_CR3_LIR2_BIT)
+#define LSM303DLH_A_CR3_PPOD_BIT 6
+#define LSM303DLH_A_CR3_PPOD_MASK (0x1 << LSM303DLH_A_CR3_PPOD_BIT)
+#define LSM303DLH_A_CR3_IHL_BIT 7
+#define LSM303DLH_A_CR3_IHL_MASK (0x1 << LSM303DLH_A_CR3_IHL_BIT)
 
- #define LSM303DLH_A_CR3_I_SELF 0x0
- #define LSM303DLH_A_CR3_I_OR   0x1
- #define LSM303DLH_A_CR3_I_DATA 0x2
- #define LSM303DLH_A_CR3_I_BOOT 0x3
+#define LSM303DLH_A_CR3_I_SELF 0x0
+#define LSM303DLH_A_CR3_I_OR	0x1
+#define LSM303DLH_A_CR3_I_DATA 0x2
+#define LSM303DLH_A_CR3_I_BOOT 0x3
 
- #define LSM303DLH_A_CR3_LIR_LATCH 0x1
+#define LSM303DLH_A_CR3_LIR_LATCH 0x1
 
- /* Range */
- #define LSM303DLH_A_RANGE_2G 0x00
- #define LSM303DLH_A_RANGE_4G 0x01
- #define LSM303DLH_A_RANGE_8G 0x03
+/* Range */
+#define LSM303DLH_A_RANGE_2G 0x00
+#define LSM303DLH_A_RANGE_4G 0x01
+#define LSM303DLH_A_RANGE_8G 0x03
 
- /* Mode */
- #define LSM303DLH_A_MODE_OFF 0x00
- #define LSM303DLH_A_MODE_NORMAL 0x01
- #define LSM303DLH_A_MODE_LP_HALF 0x02
- #define LSM303DLH_A_MODE_LP_1 0x03
- #define LSM303DLH_A_MODE_LP_2 0x02
- #define LSM303DLH_A_MODE_LP_5 0x05
- #define LSM303DLH_A_MODE_LP_10 0x06
+/* Mode */
+#define LSM303DLH_A_MODE_OFF 0x00
+#define LSM303DLH_A_MODE_NORMAL 0x01
+#define LSM303DLH_A_MODE_LP_HALF 0x02
+#define LSM303DLH_A_MODE_LP_1 0x03
+#define LSM303DLH_A_MODE_LP_2 0x02
+#define LSM303DLH_A_MODE_LP_5 0x05
+#define LSM303DLH_A_MODE_LP_10 0x06
 
- /* Rate */
- #define LSM303DLH_A_RATE_50 0x00
- #define LSM303DLH_A_RATE_100 0x01
- #define LSM303DLH_A_RATE_400 0x02
- #define LSM303DLH_A_RATE_1000 0x03
+/* Rate */
+#define LSM303DLH_A_RATE_50 0x00
+#define LSM303DLH_A_RATE_100 0x01
+#define LSM303DLH_A_RATE_400 0x02
+#define LSM303DLH_A_RATE_1000 0x03
 
 /* Multiple byte transfer enable */
 #define MULTIPLE_I2C_TR 0x80
@@ -164,7 +164,7 @@ struct lsm303dlh_a_data {
 	int shift_adjust;
 
 	unsigned char interrupt_control;
-	unsigned int  interrupt_channel;
+	unsigned int interrupt_channel;
 
 	unsigned char interrupt_configure[2];
 	unsigned char interrupt_duration[2];
@@ -182,7 +182,8 @@ static int lsm303dlh_a_write(struct lsm303dlh_a_data *ddata, u8 reg,
 	return ret;
 }
 
-static int lsm303dlh_a_read(struct lsm303dlh_a_data *ddata, u8 reg, char *msg)
+static int lsm303dlh_a_read(struct lsm303dlh_a_data *ddata, u8 reg,
+		char *msg)
 {
 	int ret = i2c_smbus_read_byte_data(ddata->client, reg);
 	if (ret < 0)
@@ -217,23 +218,23 @@ static int lsm303dlh_a_restore(struct lsm303dlh_a_data *ddata)
 	if (ret < 0)
 		goto fail;
 
-	ret = lsm303dlh_a_write(ddata, INT1_CFG, ddata->interrupt_configure[0],
-			"INT1_CFG");
+	ret = lsm303dlh_a_write(ddata, INT1_CFG,
+			ddata->interrupt_configure[0], "INT1_CFG");
 	if (ret < 0)
 		goto fail;
 
-	ret = lsm303dlh_a_write(ddata, INT2_CFG, ddata->interrupt_configure[1],
-			"INT2_CFG");
+	ret = lsm303dlh_a_write(ddata, INT2_CFG,
+			ddata->interrupt_configure[1], "INT2_CFG");
 	if (ret < 0)
 		goto fail;
 
-	ret = lsm303dlh_a_write(ddata, INT1_THS, ddata->interrupt_threshold[0],
-			"INT1_THS");
+	ret = lsm303dlh_a_write(ddata, INT1_THS,
+			ddata->interrupt_threshold[0], "INT1_THS");
 	if (ret < 0)
 		goto fail;
 
-	ret = lsm303dlh_a_write(ddata, INT2_THS, ddata->interrupt_threshold[1],
-			"INT2_THS");
+	ret = lsm303dlh_a_write(ddata, INT2_THS,
+			ddata->interrupt_threshold[1], "INT2_THS");
 	if (ret < 0)
 		goto fail;
 
@@ -251,7 +252,6 @@ fail:
 	return ret;
 }
 
-
 static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 {
 	unsigned char acc_data[6];
@@ -261,7 +261,8 @@ static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 			AXISDATA_REG | MULTIPLE_I2C_TR, 6, acc_data);
 	if (ret < 0) {
 		dev_err(&ddata->client->dev,
-			"i2c_smbus_read_i2c_block_data failed error %d Register AXISDATA_REG\n", ret);
+			"i2c_smbus_read_i2c_block_data failed error \
+			%d Register AXISDATA_REG\n", ret);
 		return ret;
 	}
 
@@ -273,14 +274,9 @@ static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 	data[1] >>= ddata->shift_adjust;
 	data[2] >>= ddata->shift_adjust;
 
-	/* taking position and orientation of x,y,z axis into account*/
-	if (ddata->pdata.axis_map_x == 
-	    ddata->pdata.axis_map_y == 
-	    ddata->pdata.axis_map_z == 0) {
-		ddata->data.x = data[0];
-		ddata->data.y = data[1];
-		ddata->data.z = data[2];
-	} else {
+	/* taking position and orientation of x, y, z axis into account*/
+	if (ddata->pdata.axis_map_x || ddata->pdata.axis_map_y ||
+			ddata->pdata.axis_map_z) {
 		data[ddata->pdata.axis_map_x] = ddata->pdata.negative_x ?
 			-data[ddata->pdata.axis_map_x] :
 			 data[ddata->pdata.axis_map_x];
@@ -294,6 +290,10 @@ static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 		ddata->data.x = data[ddata->pdata.axis_map_x];
 		ddata->data.y = data[ddata->pdata.axis_map_y];
 		ddata->data.z = data[ddata->pdata.axis_map_z];
+	} else {
+		ddata->data.x = data[0];
+		ddata->data.y = data[1];
+		ddata->data.z = data[2];
 	}
 
 	return ret;
@@ -324,7 +324,7 @@ static ssize_t lsm303dlh_a_show_data(struct device *dev,
 
 	mutex_unlock(&ddata->lock);
 
-	return sprintf(buf, "(%d,%d,%d)\n", ddata->data.x, ddata->data.y,
+	return sprintf(buf, "(%d, %d, %d)\n", ddata->data.x, ddata->data.y,
 			ddata->data.z);
 }
 
@@ -392,7 +392,7 @@ static ssize_t lsm303dlh_a_store_interrupt_control(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			"device is switched off, make it ON using MODE");
 		return count;
 	}
 
@@ -465,7 +465,7 @@ static ssize_t lsm303dlh_a_store_interrupt_configure(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			"device is switched off, make it ON using MODE");
 		return count;
 	}
 
@@ -514,7 +514,7 @@ static ssize_t lsm303dlh_a_store_interrupt_duration(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			"device is switched off, make it ON using MODE");
 		return count;
 	}
 
@@ -565,7 +565,7 @@ static ssize_t lsm303dlh_a_store_interrupt_threshold(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			"device is switched off, make it ON using MODE");
 		return count;
 	}
 
@@ -638,7 +638,7 @@ static ssize_t lsm303dlh_a_store_range(struct device *dev,
 	bdu_enabled_val |= LSM303DLH_A_CR4_BDU_MASK;
 
 	error = lsm303dlh_a_write(ddata, CTRL_REG4, bdu_enabled_val,
-				  "CTRL_REG4");
+				"CTRL_REG4");
 	if (error < 0) {
 		mutex_unlock(&ddata->lock);
 		return error;
@@ -693,7 +693,7 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 	if (val < LSM303DLH_A_MODE_OFF || val > LSM303DLH_A_MODE_LP_10)
 		return -EINVAL;
 
-	/*  if same mode as existing, return */
+	/* if same mode as existing, return */
 	if (ddata->mode == val)
 		return 0;
 
@@ -889,9 +889,9 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 
-    /* accelerometer has two interrupts channels
-       (thresholds,durations and sources)
-       and can support two input devices */
+	/* accelerometer has two interrupt channels
+	 * (thresholds, durations and sources)
+	 * and can support two input devices */
 
 	ddata->input_dev = input_allocate_device();
 	if (!ddata->input_dev) {
@@ -1067,7 +1067,7 @@ static int lsm303dlh_a_resume(struct device *dev)
 
 static const struct dev_pm_ops lsm303dlh_a_dev_pm_ops = {
 	.suspend = lsm303dlh_a_suspend,
-	.resume  = lsm303dlh_a_resume,
+	.resume = lsm303dlh_a_resume,
 };
 #endif /* CONFIG_PM */
 
@@ -1092,13 +1092,12 @@ static int __init lsm303dlh_a_init(void)
 {
 	return i2c_add_driver(&lsm303dlh_a_driver);
 }
+module_init(lsm303dlh_a_init)
 
 static void __exit lsm303dlh_a_exit(void)
 {
 	i2c_del_driver(&lsm303dlh_a_driver);
 }
-
-module_init(lsm303dlh_a_init)
 module_exit(lsm303dlh_a_exit)
 
 MODULE_DESCRIPTION("LSM303DLH 3-Axis Accelerometer Driver");
