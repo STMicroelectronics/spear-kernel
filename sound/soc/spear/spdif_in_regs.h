@@ -49,6 +49,11 @@
 
 #define SPDIF_IN_IRQ_MASK	0x04
 #define SPDIF_IN_IRQ		0x08
+	#define SPDIF_IRQ_FIFOWRITE	(1 << 0)
+	#define SPDIF_IRQ_EMPTYFIFOREAD	(1 << 1)
+	#define SPDIF_IRQ_FIFOFULL	(1 << 2)
+	#define SPDIF_IRQ_OUTOFRANGE	(1 << 3)
+
 #define SPDIF_IN_STA		0x0C
 	#define SPDIF_IN_LOCK		(0x1 << 0)
 

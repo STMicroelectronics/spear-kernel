@@ -28,6 +28,7 @@ struct spdif_in_dev {
 	struct clk *clk;
 	struct dma_data dma_params;
 	void *io_base;
+	int irq;
 };
 
 static int spdif_in_startup(struct snd_pcm_substream *substream,
@@ -64,6 +65,7 @@ static void spdif_in_shutdown(struct snd_pcm_substream *substream,
 	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
 		return;
 
+	writel(0x0, host->io_base + SPDIF_IN_IRQ_MASK);
 	clk_disable(host->clk);
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
@@ -151,6 +153,29 @@ struct snd_soc_dai_driver spdif_in_dai = {
 	.ops = &spdif_in_dai_ops,
 };
 
+static irqreturn_t spdif_in_irq(int irq, void *arg)
+{
+	struct spdif_in_dev *host = (struct spdif_in_dev *)arg;
+
+	u32 irq_status = readl(host->io_base + SPDIF_IN_IRQ);
+
+	if (!irq_status)
+		return IRQ_NONE;
+
+	if (irq_status & SPDIF_IRQ_FIFOWRITE)
+		pr_err("spdif in: fifo write error\n");
+	if (irq_status & SPDIF_IRQ_EMPTYFIFOREAD)
+		pr_err("spdif in: empty fifo read error\n");
+	if (irq_status & SPDIF_IRQ_FIFOFULL)
+		pr_err("spdif in: fifo full error\n");
+	if (irq_status & SPDIF_IRQ_OUTOFRANGE)
+		pr_err("spdif in: out of range error\n");
+
+	writel(0, host->io_base + SPDIF_IN_IRQ);
+
+	return IRQ_HANDLED;
+}
+
 static int spdif_in_probe(struct platform_device *pdev)
 {
 	struct spdif_in_dev *host;
@@ -181,6 +206,10 @@ static int spdif_in_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	host->irq = platform_get_irq(pdev, 0);
+	if (host->irq < 0)
+		return -EINVAL;
+
 	host->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(host->clk))
 		return PTR_ERR(host->clk);
@@ -191,6 +220,14 @@ static int spdif_in_probe(struct platform_device *pdev)
 	host->dma_params.filter = pdata->filter;
 
 	dev_set_drvdata(&pdev->dev, host);
+
+	ret = devm_request_irq(&pdev->dev, host->irq, spdif_in_irq, 0,
+			"spdif-in", host);
+	if (ret) {
+		clk_put(host->clk);
+		dev_warn(&pdev->dev, "request_irq failed\n");
+		return ret;
+	}
 
 	ret = snd_soc_register_dai(&pdev->dev, &spdif_in_dai);
 	if (ret != 0) {
