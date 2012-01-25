@@ -156,8 +156,11 @@ static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 		prtd->buf_index %= prtd->xfer_cnt;
 
 		/* Inform framework that a transfer is finished */
-		if (from_callback)
+		if (from_callback) {
+			spin_unlock_irqrestore(&prtd->lock, flags);
 			snd_pcm_period_elapsed(substream);
+			spin_lock_irqsave(&prtd->lock, flags);
+		}
 	}
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
@@ -206,7 +209,9 @@ static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
+		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->pcm_running = false;
+		spin_unlock_irqrestore(&prtd->lock, flags);
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 			chan = prtd->dma_chan[0];
 		else
