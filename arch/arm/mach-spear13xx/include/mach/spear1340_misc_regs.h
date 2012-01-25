@@ -288,6 +288,7 @@
 
 #define VA_SPEAR1340_PERIP2_SW_RST		(VA_MISC_BASE + 0x31C)
 #define VA_SPEAR1340_PERIP3_SW_RST		(VA_MISC_BASE + 0x320)
+	#define SPEAR1340_SPDIF_IN_RST			(1 << 12)
 /* Peripherial Configuration Registers */
 #define VA_SPEAR1340_DMAC_HS_SEL		(VA_MISC_BASE + 0x400)
 #define VA_SPEAR1340_DMAC_SEL			(VA_MISC_BASE + 0x404)

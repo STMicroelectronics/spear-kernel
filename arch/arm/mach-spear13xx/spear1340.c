@@ -2037,6 +2037,15 @@ struct platform_device spear1340_sata0_device = {
 };
 
 /* spdif-in device registeration */
+static void spdif_in_reset(void)
+{
+	writel(readl(VA_SPEAR1340_PERIP3_SW_RST) | SPEAR1340_SPDIF_IN_RST,
+		VA_SPEAR1340_PERIP3_SW_RST);
+
+	writel(readl(VA_SPEAR1340_PERIP3_SW_RST) & ~SPEAR1340_SPDIF_IN_RST,
+		VA_SPEAR1340_PERIP3_SW_RST);
+}
+
 static struct dw_dma_slave spdif_in_dma_data = {
 	/* Record */
 	.dma_dev = &spear13xx_dmac_device[0].dev,
@@ -2049,6 +2058,7 @@ static struct dw_dma_slave spdif_in_dma_data = {
 static struct spdif_platform_data spdif_in_data = {
 	.dma_params = &spdif_in_dma_data,
 	.filter = dw_dma_filter,
+	.reset_perip = spdif_in_reset,
 };
 
 static struct resource spdif_in_resources[] = {
