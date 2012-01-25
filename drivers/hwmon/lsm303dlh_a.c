@@ -132,7 +132,9 @@
 /* Multiple byte transfer enable */
 #define MULTIPLE_I2C_TR 0x80
 
-/* Range -2048 to 2047 */
+/* 2g: Range -2048 to 2047 */
+/* 4g: Range -5196 to 5195 */
+/* 8g: Range -10392 to 10391 */
 struct lsm303dlh_a_t {
 	short	x;
 	short	y;
@@ -202,55 +204,46 @@ static int lsm303dlh_a_restore(struct lsm303dlh_a_data *ddata)
 	reg = ddata->range;
 	reg |= LSM303DLH_A_CR4_BDU_MASK;
 
-	ret = lsm303dlh_a_write(ddata, CTRL_REG1, context,
-				"CTRL_REG1");
+	ret = lsm303dlh_a_write(ddata, CTRL_REG1, context, "CTRL_REG1");
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, CTRL_REG4, reg, "CTRL_REG4");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, CTRL_REG3, ddata->interrupt_control,
 			"CTRL_REG3");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT1_CFG, ddata->interrupt_configure[0],
 			"INT1_CFG");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT2_CFG, ddata->interrupt_configure[1],
 			"INT2_CFG");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT1_THS, ddata->interrupt_threshold[0],
 			"INT1_THS");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT2_THS, ddata->interrupt_threshold[1],
 			"INT2_THS");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT1_DURATION,
 			ddata->interrupt_duration[0], "INT1_DURATION");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_a_write(ddata, INT1_DURATION,
 			ddata->interrupt_duration[1], "INT1_DURATION");
-
 	if (ret < 0)
 		goto fail;
 
@@ -268,8 +261,7 @@ static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 			AXISDATA_REG | MULTIPLE_I2C_TR, 6, acc_data);
 	if (ret < 0) {
 		dev_err(&ddata->client->dev,
-				"i2c_smbus_read_byte_data failed error %d\
-				Register AXISDATA_REG \n", ret);
+			"i2c_smbus_read_i2c_block_data failed error %d Register AXISDATA_REG\n", ret);
 		return ret;
 	}
 
@@ -282,17 +274,27 @@ static int lsm303dlh_a_readdata(struct lsm303dlh_a_data *ddata)
 	data[2] >>= ddata->shift_adjust;
 
 	/* taking position and orientation of x,y,z axis into account*/
+	if (ddata->pdata.axis_map_x == 
+	    ddata->pdata.axis_map_y == 
+	    ddata->pdata.axis_map_z == 0) {
+		ddata->data.x = data[0];
+		ddata->data.y = data[1];
+		ddata->data.z = data[2];
+	} else {
+		data[ddata->pdata.axis_map_x] = ddata->pdata.negative_x ?
+			-data[ddata->pdata.axis_map_x] :
+			 data[ddata->pdata.axis_map_x];
+		data[ddata->pdata.axis_map_y] = ddata->pdata.negative_y ?
+			-data[ddata->pdata.axis_map_y] :
+			 data[ddata->pdata.axis_map_y];
+		data[ddata->pdata.axis_map_z] = ddata->pdata.negative_z ?
+			-data[ddata->pdata.axis_map_z] :
+			 data[ddata->pdata.axis_map_z];
 
-	data[ddata->pdata.axis_map_x] = ddata->pdata.negative_x ?
-		-data[ddata->pdata.axis_map_x] : data[ddata->pdata.axis_map_x];
-	data[ddata->pdata.axis_map_y] = ddata->pdata.negative_y ?
-		-data[ddata->pdata.axis_map_y] : data[ddata->pdata.axis_map_y];
-	data[ddata->pdata.axis_map_z] = ddata->pdata.negative_z ?
-		-data[ddata->pdata.axis_map_z] : data[ddata->pdata.axis_map_z];
-
-	ddata->data.x = data[ddata->pdata.axis_map_x];
-	ddata->data.y = data[ddata->pdata.axis_map_y];
-	ddata->data.z = data[ddata->pdata.axis_map_z];
+		ddata->data.x = data[ddata->pdata.axis_map_x];
+		ddata->data.y = data[ddata->pdata.axis_map_y];
+		ddata->data.z = data[ddata->pdata.axis_map_z];
+	}
 
 	return ret;
 }
@@ -307,7 +309,7 @@ static ssize_t lsm303dlh_a_show_data(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return ret;
 	}
 
@@ -322,7 +324,7 @@ static ssize_t lsm303dlh_a_show_data(struct device *dev,
 
 	mutex_unlock(&ddata->lock);
 
-	return sprintf(buf, "%8x:%8x:%8x\n", ddata->data.x, ddata->data.y,
+	return sprintf(buf, "(%d,%d,%d)\n", ddata->data.x, ddata->data.y,
 			ddata->data.z);
 }
 
@@ -612,7 +614,7 @@ static ssize_t lsm303dlh_a_store_range(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return count;
 	}
 
@@ -636,7 +638,7 @@ static ssize_t lsm303dlh_a_store_range(struct device *dev,
 	bdu_enabled_val |= LSM303DLH_A_CR4_BDU_MASK;
 
 	error = lsm303dlh_a_write(ddata, CTRL_REG4, bdu_enabled_val,
-	"CTRL_REG4");
+				  "CTRL_REG4");
 	if (error < 0) {
 		mutex_unlock(&ddata->lock);
 		return error;
@@ -653,6 +655,7 @@ static ssize_t lsm303dlh_a_store_range(struct device *dev,
 		ddata->shift_adjust = SHIFT_ADJ_8G;
 		break;
 	default:
+		mutex_unlock(&ddata->lock);
 		return -EINVAL;
 	}
 
@@ -767,7 +770,7 @@ static ssize_t lsm303dlh_a_store_rate(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return count;
 	}
 
@@ -800,32 +803,24 @@ static ssize_t lsm303dlh_a_store_rate(struct device *dev,
 }
 
 static DEVICE_ATTR(data, S_IRUGO, lsm303dlh_a_show_data, NULL);
-
 static DEVICE_ATTR(range, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_range, lsm303dlh_a_store_range);
-
 static DEVICE_ATTR(mode, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_mode, lsm303dlh_a_store_mode);
-
 static DEVICE_ATTR(rate, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_rate, lsm303dlh_a_store_rate);
-
 static DEVICE_ATTR(interrupt_control, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_interrupt_control,
 		lsm303dlh_a_store_interrupt_control);
-
 static DEVICE_ATTR(interrupt_channel, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_interrupt_channel,
 		lsm303dlh_a_store_interrupt_channel);
-
 static DEVICE_ATTR(interrupt_configure, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_interrupt_configure,
 		lsm303dlh_a_store_interrupt_configure);
-
 static DEVICE_ATTR(interrupt_duration, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_interrupt_duration,
 		lsm303dlh_a_store_interrupt_duration);
-
 static DEVICE_ATTR(interrupt_threshold, S_IWUGO | S_IRUGO,
 		lsm303dlh_a_show_interrupt_threshold,
 		lsm303dlh_a_store_interrupt_threshold);
@@ -884,8 +879,7 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto exit_free_regulator;
 
-	dev_info(&client->dev, "3-Axis Accelerometer, ID : %d\n",
-			 ret);
+	dev_info(&client->dev, "3-Axis Accelerometer, ID : %d\n", ret);
 
 	mutex_init(&ddata->lock);
 
@@ -987,7 +981,7 @@ exit_free_regulator:
 	}
 err_op_failed:
 	kfree(ddata);
-	dev_err(&client->dev, "probe function fails %x", ret);
+	dev_err(&client->dev, "probe function fails %x\n", ret);
 	return ret;
 }
 
@@ -1036,7 +1030,7 @@ static int lsm303dlh_a_suspend(struct device *dev)
 #endif
 
 	ret = lsm303dlh_a_write(ddata, CTRL_REG1,
-		LSM303DLH_A_MODE_OFF, "CONTROL");
+				LSM303DLH_A_MODE_OFF, "CONTROL");
 
 	if (ddata->regulator)
 		regulator_disable(ddata->regulator);
@@ -1063,14 +1057,14 @@ static int lsm303dlh_a_resume(struct device *dev)
 	if (ddata->regulator)
 		regulator_enable(ddata->regulator);
 
-	ret	= lsm303dlh_a_restore(ddata);
-
+	ret = lsm303dlh_a_restore(ddata);
 	if (ret < 0)
 		dev_err(&ddata->client->dev,
-				"Error while resuming the device");
+			"Error while resuming the device.\n");
 
 	return ret;
 }
+
 static const struct dev_pm_ops lsm303dlh_a_dev_pm_ops = {
 	.suspend = lsm303dlh_a_suspend,
 	.resume  = lsm303dlh_a_resume,
@@ -1107,6 +1101,6 @@ static void __exit lsm303dlh_a_exit(void)
 module_init(lsm303dlh_a_init)
 module_exit(lsm303dlh_a_exit)
 
-MODULE_DESCRIPTION("lSM303DLH 3-Axis Accelerometer Driver");
+MODULE_DESCRIPTION("LSM303DLH 3-Axis Accelerometer Driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("STMicroelectronics");
