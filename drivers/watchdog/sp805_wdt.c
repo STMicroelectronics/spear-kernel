@@ -375,12 +375,8 @@ static int sp805_wdt_resume(struct device *dev)
 	return ret;
 }
 
-static const struct dev_pm_ops sp805_wdt_dev_pm_ops = {
-	.suspend = sp805_wdt_suspend,
-	.resume = sp805_wdt_resume,
-	.freeze = sp805_wdt_suspend,
-	.restore = sp805_wdt_resume,
-};
+static SIMPLE_DEV_PM_OPS(sp805_wdt_dev_pm_ops, sp805_wdt_suspend,
+		sp805_wdt_resume);
 #define SP805_WDT_DEV_PM_OPS (&sp805_wdt_dev_pm_ops)
 #else
 #define SP805_WDT_DEV_PM_OPS	NULL
