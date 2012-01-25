@@ -92,15 +92,16 @@ static int start_dma(struct spear_runtime_data *prtd)
 		chan = prtd->dma_chan[0];
 		direction = DMA_TO_DEVICE;
 		conf.dst_addr = dma_data->addr;
-		conf.dst_maxburst = 16;
-		conf.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	} else {
 		chan = prtd->dma_chan[1];
 		direction = DMA_FROM_DEVICE;
 		conf.src_addr = dma_data->addr;
-		conf.src_maxburst = 16;
-		conf.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	}
+
+	conf.src_maxburst = dma_data->max_burst;
+	conf.dst_maxburst = dma_data->max_burst;
+	conf.src_addr_width = dma_data->addr_width;
+	conf.dst_addr_width = dma_data->addr_width;
 
 	/* Prepare sg's */
 	sg_init_table(&sg, 1);

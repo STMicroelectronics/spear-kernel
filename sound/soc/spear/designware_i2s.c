@@ -410,6 +410,10 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->capture_dma_data.data = pdata->capture_dma_data;
 	dev->play_dma_data.addr = res->start + I2S_TXDMA;
 	dev->capture_dma_data.addr = res->start + I2S_RXDMA;
+	dev->play_dma_data.max_burst = 16;
+	dev->capture_dma_data.max_burst = 16;
+	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	dev->play_dma_data.filter = pdata->filter;
 	dev->capture_dma_data.filter = pdata->filter;
 
