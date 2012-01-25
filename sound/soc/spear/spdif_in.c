@@ -48,7 +48,7 @@ static int spdif_in_startup(struct snd_pcm_substream *substream,
 		return ret;
 
 	ctrl = SPDIF_IN_PRTYEN | SPDIF_IN_STATEN | SPDIF_IN_USREN |
-		SPDIF_IN_VALEN;
+		SPDIF_IN_VALEN | SPDIF_IN_BLKEN;
 	ctrl |= SPDIF_MODE_16BIT | SPDIF_FIFO_THRES_16;
 
 	writel(ctrl, host->io_base + SPDIF_IN_CTRL);
