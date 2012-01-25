@@ -237,6 +237,9 @@ static int spdif_out_probe(struct platform_device *pdev)
 	pdata = dev_get_platdata(&pdev->dev);
 
 	host->dma_params.data = pdata->dma_params;
+	host->dma_params.addr = res->start + SPDIF_OUT_FIFO_DATA;
+	host->dma_params.max_burst = 16;
+	host->dma_params.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	host->dma_params.filter = pdata->filter;
 
 	dev_set_drvdata(&pdev->dev, host);
