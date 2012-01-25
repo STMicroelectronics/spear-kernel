@@ -24,19 +24,34 @@
 #include <mach/spdif.h>
 #include "spdif_in_regs.h"
 
+struct spdif_in_params {
+	u32 format;
+};
+
 struct spdif_in_dev {
 	struct clk *clk;
 	struct dma_data dma_params;
+	struct spdif_in_params saved_params;
 	void *io_base;
+	bool running;
 	int irq;
 };
+
+static void spdif_in_configure(struct spdif_in_dev *host)
+{
+	u32 ctrl = SPDIF_IN_PRTYEN | SPDIF_IN_STATEN | SPDIF_IN_USREN |
+		SPDIF_IN_VALEN | SPDIF_IN_BLKEN;
+	ctrl |= SPDIF_MODE_16BIT | SPDIF_FIFO_THRES_16;
+
+	writel(ctrl, host->io_base + SPDIF_IN_CTRL);
+	writel(0xF, host->io_base + SPDIF_IN_IRQ_MASK);
+}
 
 static int spdif_in_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct spdif_in_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
 	int ret;
-	u32 ctrl;
 
 	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
 		return -EINVAL;
@@ -47,12 +62,8 @@ static int spdif_in_startup(struct snd_pcm_substream *substream,
 	if (ret)
 		return ret;
 
-	ctrl = SPDIF_IN_PRTYEN | SPDIF_IN_STATEN | SPDIF_IN_USREN |
-		SPDIF_IN_VALEN | SPDIF_IN_BLKEN;
-	ctrl |= SPDIF_MODE_16BIT | SPDIF_FIFO_THRES_16;
-
-	writel(ctrl, host->io_base + SPDIF_IN_CTRL);
-	writel(0xF, host->io_base + SPDIF_IN_IRQ_MASK);
+	spdif_in_configure(host);
+	host->running = true;
 
 	return 0;
 }
@@ -67,22 +78,13 @@ static void spdif_in_shutdown(struct snd_pcm_substream *substream,
 
 	writel(0x0, host->io_base + SPDIF_IN_IRQ_MASK);
 	clk_disable(host->clk);
+	host->running = false;
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
 
-static int spdif_in_hw_params(struct snd_pcm_substream *substream,
-		struct snd_pcm_hw_params *params,
-		struct snd_soc_dai *dai)
+static void spdif_in_foramt(struct spdif_in_dev *host, u32 format)
 {
-	struct spdif_in_dev *host = snd_soc_dai_get_drvdata(dai);
-	u32 ctrl, format;
-
-	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
-		return -EINVAL;
-
-	format = params_format(params);
-
-	ctrl = readl(host->io_base + SPDIF_IN_CTRL);
+	u32 ctrl = readl(host->io_base + SPDIF_IN_CTRL);
 
 	switch (format) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -91,10 +93,26 @@ static int spdif_in_hw_params(struct snd_pcm_substream *substream,
 
 	case SNDRV_PCM_FORMAT_IEC958_SUBFRAME_LE:
 		ctrl &= ~SPDIF_XTRACT_16BIT;
-		break;		
+		break;
 	}
 
 	writel(ctrl, host->io_base + SPDIF_IN_CTRL);
+}
+
+static int spdif_in_hw_params(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params,
+		struct snd_soc_dai *dai)
+{
+	struct spdif_in_dev *host = snd_soc_dai_get_drvdata(dai);
+	u32 format;
+
+	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
+		return -EINVAL;
+
+	format = params_format(params);
+
+	spdif_in_foramt(host, format);
+	host->saved_params.format = format;
 
 	return 0;
 }
@@ -113,9 +131,11 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		clk_enable(host->clk);
 		ctrl = readl(host->io_base + SPDIF_IN_CTRL);
 		ctrl |= SPDIF_IN_SAMPLE | SPDIF_IN_ENB;
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
+		writel(0xF, host->io_base + SPDIF_IN_IRQ_MASK);
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -124,6 +144,8 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 		ctrl = readl(host->io_base + SPDIF_IN_CTRL);
 		ctrl &= ~(SPDIF_IN_SAMPLE | SPDIF_IN_ENB);
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
+		writel(0x0, host->io_base + SPDIF_IN_IRQ_MASK);
+		clk_disable(host->clk);
 		break;
 
 	default:
@@ -250,12 +272,15 @@ static int spdif_in_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#define SPDIF_IN_DEV_PM_OPS NULL
+
 static struct platform_driver spdif_in_driver = {
 	.probe		= spdif_in_probe,
 	.remove		= spdif_in_remove,
 	.driver		= {
 		.name	= "spdif-in",
 		.owner	= THIS_MODULE,
+		.pm	= SPDIF_IN_DEV_PM_OPS,
 	},
 };
 
