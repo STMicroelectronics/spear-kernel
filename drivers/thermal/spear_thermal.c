@@ -96,12 +96,8 @@ static int spear_thermal_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops spear_thermal_pm_ops = {
-	.suspend = spear_thermal_suspend,
-	.resume = spear_thermal_resume,
-	.freeze = spear_thermal_suspend,
-	.restore = spear_thermal_resume,
-};
+static SIMPLE_DEV_PM_OPS(spear_thermal_pm_ops, spear_thermal_suspend,
+		spear_thermal_resume);
 #endif
 
 static int spear_thermal_probe(struct platform_device *pdev)
