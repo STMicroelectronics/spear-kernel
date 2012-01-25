@@ -26,6 +26,4 @@ struct spdif_platform_data {
 	void (*reset_perip)(void);
 };
 
-#define SPDIF_OUT_FIFO_DATA	0x04
-
 #endif /* MACH_SPDIF_H */
