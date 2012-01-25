@@ -407,6 +407,7 @@ struct db9000fb_info {
 	size_t			dma_buff_size;
 	dma_addr_t		dma_buff_phys;
 	unsigned long		frame_base;
+	bool			clk_enabled;
 
 	/*
 	 * These are the addresses we mapped

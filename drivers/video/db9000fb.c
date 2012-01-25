@@ -880,7 +880,6 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	u32 val;
 	unsigned int isr;
 	unsigned int imr;
-	int ret = 0;
 
 	pr_debug("db9000fb: Enabling LCD controller\n");
 	pr_debug("reg_cr1: 0x%08x\n", (unsigned int) fbi->reg_cr1);
@@ -890,12 +889,9 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	pr_debug("reg_pctr: 0x%08x\n", (unsigned int) fbi->reg_pctr);
 
 	/* enable LCD controller clock */
-	ret = clk_enable(fbi->clk);
-	if (ret) {
-		ret = PTR_ERR(fbi->clk);
-		clk_put(fbi->clk);
-		kfree(fbi);
-		return;
+	if (!fbi->clk_enabled) {
+		fbi->clk_enabled =true;
+		clk_enable(fbi->clk);
 	}
 
 	/* Write into the palette memory */
@@ -929,8 +925,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_IMR, imr | DB9000_ISR_BAU);
 
 	lcd_writel(fbi, DB9000_CR1,
-		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_LPE |
-		DB9000_CR1_DEE);
+		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_DEE);
 
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
@@ -944,7 +939,11 @@ static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 	cr1 = lcd_readl(fbi, DB9000_CR1) & ~DB9000_CR1_ENB;
 	lcd_writel(fbi, DB9000_CR1, cr1);
 	msleep(100);
-	clk_disable(fbi->clk);
+
+	if (fbi->clk_enabled) {
+		fbi->clk_enabled = false;
+		clk_disable(fbi->clk);
+	}
 }
 
 /* db9000fb_handle_irq: Handle 'LCD DONE' interrupts. */
@@ -1157,10 +1156,36 @@ static int db9000fb_resume(struct device *dev)
 	return 0;
 }
 
+static int db9000fb_thaw(struct device *dev)
+{
+	struct db9000fb_info *fbi = dev_get_drvdata(dev);
+
+	if (!fbi->clk_enabled) {
+		fbi->clk_enabled =true;
+		clk_enable(fbi->clk);
+	}
+
+	return 0;
+}
+
+static int db9000fb_poweroff(struct device *dev)
+{
+	struct db9000fb_info *fbi = dev_get_drvdata(dev);
+
+	if (fbi->clk_enabled) {
+		fbi->clk_enabled = false;
+		clk_disable(fbi->clk);
+	}
+
+	return 0;
+}
+
 static const struct dev_pm_ops db9000fb_pm_ops = {
 	.suspend	= db9000fb_suspend,
 	.resume		= db9000fb_resume,
 	.freeze		= db9000fb_suspend,
+	.thaw		= db9000fb_thaw,
+	.poweroff	= db9000fb_poweroff,
 	.restore	= db9000fb_resume,
 };
 #endif
