@@ -1070,7 +1070,7 @@ static int lsm303dlh_a_suspend(struct device *dev)
 	return ret;
 }
 
-static int lsm303dlh_a_resume(struct device *dev)
+static int __lsm303dlh_a_resume(struct device *dev, bool csave)
 {
 	struct lsm303dlh_a_data *ddata;
 	int ret;
@@ -1089,6 +1089,9 @@ static int lsm303dlh_a_resume(struct device *dev)
 	if (ddata->regulator)
 		regulator_enable(ddata->regulator);
 
+	if (!csave)
+		return 0;
+
 	ret = lsm303dlh_a_restore(ddata);
 	if (ret < 0)
 		dev_err(&ddata->client->dev,
@@ -1097,9 +1100,23 @@ static int lsm303dlh_a_resume(struct device *dev)
 	return ret;
 }
 
+static int lsm303dlh_a_resume(struct device *dev)
+{
+	return __lsm303dlh_a_resume(dev, true);
+}
+
+static int lsm303dlh_a_thaw(struct device *dev)
+{
+	return __lsm303dlh_a_resume(dev, false);
+}
+
 static const struct dev_pm_ops lsm303dlh_a_dev_pm_ops = {
 	.suspend = lsm303dlh_a_suspend,
 	.resume = lsm303dlh_a_resume,
+	.freeze = lsm303dlh_a_suspend,
+	.thaw = lsm303dlh_a_thaw,
+	.poweroff = lsm303dlh_a_suspend,
+	.restore = lsm303dlh_a_resume,
 };
 #endif /* CONFIG_PM */
 
