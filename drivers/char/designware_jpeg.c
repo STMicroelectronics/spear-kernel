@@ -1299,12 +1299,8 @@ static int designware_jpeg_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops designware_jpeg_dev_pm_ops = {
-	.suspend = designware_jpeg_suspend,
-	.resume = designware_jpeg_resume,
-	.freeze = designware_jpeg_suspend,
-	.restore = designware_jpeg_resume,
-};
+static SIMPLE_DEV_PM_OPS(designware_jpeg_dev_pm_ops, designware_jpeg_suspend,
+		designware_jpeg_resume);
 #endif /* CONFIG_PM */
 
 static s32 designware_jpeg_probe(struct platform_device *pdev)
