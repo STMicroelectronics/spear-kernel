@@ -888,6 +888,7 @@ static struct dw_dma_slave i2s1_dma_data[] = {
 static struct i2s_platform_data i2s1_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
+	.swidth = 16,
 	.play_dma_data = &i2s1_dma_data[0],
 	.capture_dma_data = &i2s1_dma_data[1],
 	.filter = dw_dma_filter,
