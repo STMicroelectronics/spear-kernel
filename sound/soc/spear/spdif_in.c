@@ -33,7 +33,7 @@ struct spdif_in_dev {
 	struct dma_data dma_params;
 	struct spdif_in_params saved_params;
 	void *io_base;
-	bool running;
+	void (*reset_perip)(void);
 	int irq;
 };
 
@@ -51,20 +51,11 @@ static int spdif_in_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct spdif_in_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
-	int ret;
 
 	if (substream->stream != SNDRV_PCM_STREAM_CAPTURE)
 		return -EINVAL;
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)&host->dma_params);
-
-	ret = clk_enable(host->clk);
-	if (ret)
-		return ret;
-
-	spdif_in_configure(host);
-	host->running = true;
-
 	return 0;
 }
 
@@ -77,12 +68,10 @@ static void spdif_in_shutdown(struct snd_pcm_substream *substream,
 		return;
 
 	writel(0x0, host->io_base + SPDIF_IN_IRQ_MASK);
-	clk_disable(host->clk);
-	host->running = false;
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
 
-static void spdif_in_foramt(struct spdif_in_dev *host, u32 format)
+static void spdif_in_format(struct spdif_in_dev *host, u32 format)
 {
 	u32 ctrl = readl(host->io_base + SPDIF_IN_CTRL);
 
@@ -110,8 +99,6 @@ static int spdif_in_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 
 	format = params_format(params);
-
-	spdif_in_foramt(host, format);
 	host->saved_params.format = format;
 
 	return 0;
@@ -132,6 +119,9 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		clk_enable(host->clk);
+		spdif_in_configure(host);
+		spdif_in_format(host, host->saved_params.format);
+
 		ctrl = readl(host->io_base + SPDIF_IN_CTRL);
 		ctrl |= SPDIF_IN_SAMPLE | SPDIF_IN_ENB;
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
@@ -145,6 +135,9 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 		ctrl &= ~(SPDIF_IN_SAMPLE | SPDIF_IN_ENB);
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
 		writel(0x0, host->io_base + SPDIF_IN_IRQ_MASK);
+
+		if (host->reset_perip)
+			host->reset_perip();
 		clk_disable(host->clk);
 		break;
 
@@ -240,6 +233,7 @@ static int spdif_in_probe(struct platform_device *pdev)
 
 	host->dma_params.data = pdata->dma_params;
 	host->dma_params.filter = pdata->filter;
+	host->reset_perip = pdata->reset_perip;
 
 	dev_set_drvdata(&pdev->dev, host);
 

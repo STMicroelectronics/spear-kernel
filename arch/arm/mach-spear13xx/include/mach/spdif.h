@@ -23,6 +23,7 @@ struct spdif_platform_data {
 	/* DMA params */
 	void *dma_params;
 	bool (*filter)(struct dma_chan *chan, void *slave);
+	void (*reset_perip)(void);
 };
 
 #define SPDIF_OUT_FIFO_DATA	0x04
