@@ -47,7 +47,7 @@
 #define CRA_REG_M	0x00  /* Configuration register A */
 #define CRB_REG_M	0x01  /* Configuration register B */
 #define MR_REG_M	0x02  /* Mode register */
-#define SR_REG_M    0x09  /* Status register */
+#define SR_REG_M	0x09  /* Status register */
 
 /* Output register start address*/
 #define OUT_X_M		0x03
@@ -149,8 +149,7 @@ static int lsm303dlh_m_write(struct lsm303dlh_m_data *ddata,
 	int ret = i2c_smbus_write_byte_data(ddata->client, reg, val);
 	if (ret < 0)
 		dev_err(&ddata->client->dev,
-			"i2c_smbus_write_byte_data failed error %d\
-			Register (%s)\n", ret, msg);
+			"i2c_smbus_write_byte_data failed error %d Register (%s)\n", ret, msg);
 	return ret;
 }
 
@@ -159,17 +158,14 @@ static int lsm303dlh_m_restore(struct lsm303dlh_m_data *ddata)
 	int ret = 0;
 
 	ret = lsm303dlh_m_write(ddata, CRB_REG_M, ddata->range, "SET RANGE");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_m_write(ddata, CRA_REG_M, ddata->rate, "SET RATE");
-
 	if (ret < 0)
 		goto fail;
 
 	ret = lsm303dlh_m_set_mode(ddata, ddata->mode);
-
 	if (ret < 0)
 		goto fail;
 
@@ -184,8 +180,7 @@ static int lsm303dlh_m_read_multi(struct lsm303dlh_m_data *ddata, u8 reg,
 		   reg | MULTIPLE_I2C_TR, count, val);
 	if (ret < 0)
 		dev_err(&ddata->client->dev,
-			"i2c_smbus_read_i2c_block_data failed error %d\
-			 Register (%s)\n", ret, msg);
+			"i2c_smbus_read_i2c_block_data failed error %d Register (%s)\n", ret, msg);
 	return ret;
 }
 
@@ -212,7 +207,7 @@ static ssize_t lsm303dlh_m_store_rate(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return count;
 	}
 
@@ -226,7 +221,6 @@ static ssize_t lsm303dlh_m_store_rate(struct device *dev,
 	ddata->rate = data;
 
 	error = lsm303dlh_m_write(ddata, CRA_REG_M, data, "SET RATE");
-
 	if (error < 0) {
 		mutex_unlock(&ddata->lock);
 		return error;
@@ -254,17 +248,21 @@ static int lsm303dlh_m_xyz_read(struct lsm303dlh_m_data *ddata)
 		(((xyz_data[4]) << 8) | xyz_data[5]);
 
 	/* taking orientation of x,y,z axis into account*/
-
-	ddata->data[ddata->pdata.axis_map_x] = ddata->pdata.negative_x ?
-		-ddata->data[ddata->pdata.axis_map_x] :
-		ddata->data[ddata->pdata.axis_map_x];
-	ddata->data[ddata->pdata.axis_map_y] = ddata->pdata.negative_y ?
-		-ddata->data[ddata->pdata.axis_map_y] :
-		ddata->data[ddata->pdata.axis_map_y];
-	ddata->data[ddata->pdata.axis_map_z] = ddata->pdata.negative_z ?
-		-ddata->data[ddata->pdata.axis_map_z] :
-		ddata->data[ddata->pdata.axis_map_z];
-
+	if (ddata->pdata.axis_map_x == 
+	    ddata->pdata.axis_map_y == 
+	    ddata->pdata.axis_map_z == 0) {
+		/* do nothing */
+	} else {
+		ddata->data[ddata->pdata.axis_map_x] = ddata->pdata.negative_x ?
+			-ddata->data[ddata->pdata.axis_map_x] :
+			 ddata->data[ddata->pdata.axis_map_x];
+		ddata->data[ddata->pdata.axis_map_y] = ddata->pdata.negative_y ?
+			-ddata->data[ddata->pdata.axis_map_y] :
+			 ddata->data[ddata->pdata.axis_map_y];
+		ddata->data[ddata->pdata.axis_map_z] = ddata->pdata.negative_z ?
+			-ddata->data[ddata->pdata.axis_map_z] :
+			 ddata->data[ddata->pdata.axis_map_z];
+	}
 	return ret;
 }
 
@@ -274,11 +272,23 @@ static ssize_t lsm303dlh_m_gain(struct device *dev,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct lsm303dlh_m_data *ddata = platform_get_drvdata(pdev);
+	int ret;
 
-	return sprintf(buf, "%8x:%8x:%8x\n",
-			ddata->gain[ddata->pdata.axis_map_x],
-			ddata->gain[ddata->pdata.axis_map_y],
-			ddata->gain[ddata->pdata.axis_map_z]);
+	if (ddata->pdata.axis_map_x == 
+	    ddata->pdata.axis_map_y == 
+	    ddata->pdata.axis_map_z == 0) {
+		ret = sprintf(buf, "(%d,%d,%d)\n",
+			      ddata->gain[0],
+			      ddata->gain[1],
+			      ddata->gain[2]);
+	} else {
+		ret = sprintf(buf, "(%d,%d,%d)\n",
+			      ddata->gain[ddata->pdata.axis_map_x],
+			      ddata->gain[ddata->pdata.axis_map_y],
+			      ddata->gain[ddata->pdata.axis_map_z]);
+	}
+
+	return ret;
 }
 
 static ssize_t lsm303dlh_m_values(struct device *dev,
@@ -291,7 +301,7 @@ static ssize_t lsm303dlh_m_values(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return ret;
 	}
 
@@ -306,11 +316,21 @@ static ssize_t lsm303dlh_m_values(struct device *dev,
 	mutex_unlock(&ddata->lock);
 
 	/* taking orientation of x,y,z axis into account*/
+	if (ddata->pdata.axis_map_x == 
+	    ddata->pdata.axis_map_y == 
+	    ddata->pdata.axis_map_z == 0) {
+		ret = sprintf(buf, "(%d,%d,%d)\n",
+			      ddata->data[0],
+			      ddata->data[1],
+			      ddata->data[2]);
+	} else {
+		ret = sprintf(buf, "(%d,%d,%d)\n",
+			      ddata->data[ddata->pdata.axis_map_x],
+			      ddata->data[ddata->pdata.axis_map_y],
+			      ddata->data[ddata->pdata.axis_map_z]);
+	}
 
-	return sprintf(buf, "%8x:%8x:%8x\n",
-			ddata->data[ddata->pdata.axis_map_x],
-			ddata->data[ddata->pdata.axis_map_y],
-			ddata->data[ddata->pdata.axis_map_z]);
+	return ret;
 }
 
 static int lsm303dlh_m_set_mode(struct lsm303dlh_m_data *ddata,
@@ -324,8 +344,7 @@ static int lsm303dlh_m_set_mode(struct lsm303dlh_m_data *ddata,
 
 	if (ret < 0)
 		dev_err(&ddata->client->dev,
-			"i2c_smbus_write_byte_data failed error %d\
-			Register (%s)\n", ret, "MODE CONTROL");
+			"i2c_smbus_write_byte_data failed error %d Register (%s)\n", ret, "MODE CONTROL");
 
 	return ret;
 }
@@ -383,7 +402,7 @@ static ssize_t lsm303dlh_m_store_range(struct device *dev,
 
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP) {
 		dev_info(&ddata->client->dev,
-				"device is switched off,make it ON using MODE");
+			 "device is switched off, make it ON using MODE.\n");
 		return count;
 	}
 
@@ -426,9 +445,17 @@ static ssize_t lsm303dlh_m_store_range(struct device *dev,
 
 	mutex_lock(&ddata->lock);
 
-	ddata->gain[ddata->pdata.axis_map_x] = xy_gain;
-	ddata->gain[ddata->pdata.axis_map_y] = xy_gain;
-	ddata->gain[ddata->pdata.axis_map_z] = z_gain;
+	if (ddata->pdata.axis_map_x == 
+	    ddata->pdata.axis_map_y == 
+	    ddata->pdata.axis_map_z == 0) {
+		ddata->gain[0] = xy_gain;
+		ddata->gain[1] = xy_gain;
+		ddata->gain[2] = z_gain;
+	} else {
+		ddata->gain[ddata->pdata.axis_map_x] = xy_gain;
+		ddata->gain[ddata->pdata.axis_map_y] = xy_gain;
+		ddata->gain[ddata->pdata.axis_map_z] = z_gain;
+	}
 
 	range <<= LSM303DLH_M_CRB_GN_BIT;
 	range &= LSM303DLH_M_CRB_GN_MASK;
@@ -503,9 +530,18 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 		ddata->range = LSM303DLH_M_RANGE_1_3G;
 		ddata->range <<= LSM303DLH_M_CRB_GN_BIT;
 		ddata->range &= LSM303DLH_M_CRB_GN_MASK;
-		ddata->gain[ddata->pdata.axis_map_x] = XY_GAIN_1_3;
-		ddata->gain[ddata->pdata.axis_map_y] = XY_GAIN_1_3;
-		ddata->gain[ddata->pdata.axis_map_z] = Z_GAIN_1_3;
+		
+		if (ddata->pdata.axis_map_x == 
+		    ddata->pdata.axis_map_y == 
+		    ddata->pdata.axis_map_z == 0) {
+			ddata->gain[0] = XY_GAIN_1_3;
+			ddata->gain[1] = XY_GAIN_1_3;
+			ddata->gain[2] = Z_GAIN_1_3;
+		} else {
+			ddata->gain[ddata->pdata.axis_map_x] = XY_GAIN_1_3;
+			ddata->gain[ddata->pdata.axis_map_y] = XY_GAIN_1_3;
+			ddata->gain[ddata->pdata.axis_map_z] = Z_GAIN_1_3;
+		}
 
 		regulator_disable(ddata->regulator);
 	}
@@ -514,15 +550,11 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 }
 
 static DEVICE_ATTR(gain, S_IRUGO, lsm303dlh_m_gain, NULL);
-
 static DEVICE_ATTR(data, S_IRUGO, lsm303dlh_m_values, NULL);
-
 static DEVICE_ATTR(mode, S_IWUGO | S_IRUGO,
 		lsm303dlh_m_show_mode, lsm303dlh_m_store_mode);
-
 static DEVICE_ATTR(range, S_IWUGO | S_IRUGO,
 		lsm303dlh_m_show_range, lsm303dlh_m_store_range);
-
 static DEVICE_ATTR(rate, S_IWUGO | S_IRUGO,
 		lsm303dlh_m_show_rate, lsm303dlh_m_store_rate);
 
@@ -582,7 +614,7 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto exit_free_regulator;
 
-	dev_info(&client->dev, "Magnetometer, ID : %x:%x:%x",
+	dev_info(&client->dev, "Magnetometer, ID : %x:%x:%x\n",
 			version[0], version[1], version[2]);
 
 	mutex_init(&ddata->lock);
@@ -645,7 +677,7 @@ exit_free_regulator:
 		regulator_put(ddata->regulator);
 	}
 err_op_failed:
-	dev_err(&client->dev, " lsm303dlh_m_probe failed %x", ret);
+	dev_err(&client->dev, "lsm303dlh_m_probe failed %x\n", ret);
 	kfree(ddata);
 	return ret;
 }
@@ -717,12 +749,12 @@ static int lsm303dlh_m_resume(struct device *dev)
 	regulator_enable(ddata->regulator);
 
 	ret = lsm303dlh_m_restore(ddata);
-
 	if (ret < 0)
 		return ret;
 
 	return ret;
 }
+
 static const struct dev_pm_ops lsm303dlh_m_dev_pm_ops = {
 	.suspend = lsm303dlh_m_suspend,
 	.resume  = lsm303dlh_m_resume,
@@ -759,6 +791,6 @@ static void __exit lsm303dlh_m_exit(void)
 module_init(lsm303dlh_m_init);
 module_exit(lsm303dlh_m_exit);
 
-MODULE_DESCRIPTION("lSM303DLH 3-Axis Magnetometer Driver");
+MODULE_DESCRIPTION("LSM303DLH 3-Axis Magnetometer Driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("STMicroelectronics");
