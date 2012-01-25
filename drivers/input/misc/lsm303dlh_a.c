@@ -937,6 +937,19 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 		goto err_input_register_failed2;
 	}
 
+	/* Request GPIOs for interrupt lines */
+	ret = gpio_request_one(ddata->pdata.irq_a1, GPIOF_IN, "LSM303_INT_1");
+	if (ret) {
+		pr_err("GPIO request for LSM303 accel mag irq_a2 failed\n");
+		goto err_gpio1_req_failed;
+	}
+
+	ret = gpio_request_one(ddata->pdata.irq_a2, GPIOF_IN, "LSM303_INT_2");
+	if (ret) {
+		pr_err("GPIO request for LSM303 accel irq_a2 failed\n");
+		goto err_gpio2_req_failed;
+	}
+
 	/* Register interrupt */
 	ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_a1), NULL,
 			lsm303dlh_a_gpio_irq,
@@ -966,6 +979,10 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 err_input_failed:
+	gpio_free(ddata->pdata.irq_a2);
+err_gpio2_req_failed:
+	gpio_free(ddata->pdata.irq_a1);
+err_gpio1_req_failed:
 	input_unregister_device(ddata->input_dev2);
 err_input_register_failed2:
 	input_unregister_device(ddata->input_dev);
@@ -991,6 +1008,8 @@ static int __devexit lsm303dlh_a_remove(struct i2c_client *client)
 
 	ddata = i2c_get_clientdata(client);
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	gpio_free(ddata->pdata.irq_a1);
+	gpio_free(ddata->pdata.irq_a2);
 	input_unregister_device(ddata->input_dev);
 	input_unregister_device(ddata->input_dev2);
 	input_free_device(ddata->input_dev);
