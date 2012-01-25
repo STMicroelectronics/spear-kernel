@@ -48,7 +48,7 @@ static int spdif_in_startup(struct snd_pcm_substream *substream,
 
 	ctrl = SPDIF_IN_PRTYEN | SPDIF_IN_STATEN | SPDIF_IN_USREN |
 		SPDIF_IN_VALEN;
-	ctrl |= SPDIF_MODE_16BIT | SPDIF_IN_SAMPLE | SPDIF_FIFO_THRES_16;
+	ctrl |= SPDIF_MODE_16BIT | SPDIF_FIFO_THRES_16;
 
 	writel(ctrl, host->io_base + SPDIF_IN_CTRL);
 	writel(0xF, host->io_base + SPDIF_IN_IRQ_MASK);
@@ -112,7 +112,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ctrl = readl(host->io_base + SPDIF_IN_CTRL);
-		ctrl |= SPDIF_IN_ENB;
+		ctrl |= SPDIF_IN_SAMPLE | SPDIF_IN_ENB;
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
 		break;
 
@@ -120,7 +120,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		ctrl = readl(host->io_base + SPDIF_IN_CTRL);
-		ctrl &= ~SPDIF_IN_ENB;
+		ctrl &= ~(SPDIF_IN_SAMPLE | SPDIF_IN_ENB);
 		writel(ctrl, host->io_base + SPDIF_IN_CTRL);
 		break;
 
