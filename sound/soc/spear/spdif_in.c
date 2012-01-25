@@ -195,11 +195,15 @@ static int spdif_in_probe(struct platform_device *pdev)
 {
 	struct spdif_in_dev *host;
 	struct spdif_platform_data *pdata;
-	struct resource *res;
+	struct resource *res, *res_fifo;
 	int ret;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
+		return -EINVAL;
+
+	res_fifo = platform_get_resource(pdev, IORESOURCE_IO, 0);
+	if (!res_fifo)
 		return -EINVAL;
 
 	if (!devm_request_mem_region(&pdev->dev, res->start,
@@ -232,6 +236,9 @@ static int spdif_in_probe(struct platform_device *pdev)
 	pdata = dev_get_platdata(&pdev->dev);
 
 	host->dma_params.data = pdata->dma_params;
+	host->dma_params.addr = res_fifo->start;
+	host->dma_params.max_burst = 16;
+	host->dma_params.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	host->dma_params.filter = pdata->filter;
 	host->reset_perip = pdata->reset_perip;
 
