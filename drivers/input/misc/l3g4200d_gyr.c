@@ -837,13 +837,13 @@ static int l3g4200d_resume(struct device *dev)
 	size_t err = 0;
 
 	l3g4200d_device_power_on(gyro);
-	err = l3g4200d_update_fs_range(gyro, gyro->params.poll_rate_ms);
+	err = l3g4200d_update_fs_range(gyro, gyro->params.fs_range);
 	if (err < 0) {
 		dev_err(dev, "update_fs_range failed\n");
 		return err;
 	}
 
-	err = l3g4200d_update_odr(gyro, gyro->pdata->poll_interval);
+	err = l3g4200d_update_odr(gyro, gyro->params.poll_rate_ms);
 	if (err < 0) {
 		dev_err(dev, "update_odr failed\n");
 		return err;
