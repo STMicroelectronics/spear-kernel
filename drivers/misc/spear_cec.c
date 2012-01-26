@@ -566,13 +566,7 @@ static int spear_cec_resume(struct device *dev)
 
 	return 0;
 }
-
-static const struct dev_pm_ops spear_cec_pm_ops = {
-	.suspend = spear_cec_suspend,
-	.resume = spear_cec_resume,
-	.freeze = spear_cec_suspend,
-	.restore = spear_cec_resume,
-};
+static SIMPLE_DEV_PM_OPS(spear_cec_pm_ops, spear_cec_suspend, spear_cec_resume);
 #endif
 
 static struct platform_driver spear_cec_driver = {
