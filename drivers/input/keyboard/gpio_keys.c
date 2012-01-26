@@ -611,10 +611,7 @@ static int gpio_keys_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops gpio_keys_pm_ops = {
-	.suspend	= gpio_keys_suspend,
-	.resume		= gpio_keys_resume,
-};
+static SIMPLE_DEV_PM_OPS(gpio_keys_pm_ops, gpio_keys_suspend, gpio_keys_resume);
 #endif
 
 static struct platform_driver gpio_keys_device_driver = {
