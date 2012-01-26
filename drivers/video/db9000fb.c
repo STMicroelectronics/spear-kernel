@@ -1338,7 +1338,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	s[0] = '\0';
 
 	if (!strncmp(this_opt, "vmem:", 5)) {
-		inf->video_mem_size = memparse(this_opt + 5, NULL);
+		inf->mem_size = memparse(this_opt + 5, NULL);
 	} else if (!strncmp(this_opt, "mode:", 5)) {
 		return parse_opt_mode(dev, this_opt);
 	} else if (!strncmp(this_opt, "pixclock:", 9)) {
