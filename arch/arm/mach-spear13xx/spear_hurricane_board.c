@@ -423,7 +423,7 @@ static void __init spear_hurricane_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 }
 
-MACHINE_START(SPEAR_HURRICANE_BOARD, "NCOMPUTING-SPEAR-HURRICANE-BOARD")
+MACHINE_START(SPEAR_HURRICANE, "NCOMPUTING-SPEAR-HURRICANE-BOARD")
 	.boot_params	=	0x00000100,
 	.fixup		=	spear_hurricane_fixup,
 	.map_io		=	spear13xx_map_io,
