@@ -105,6 +105,8 @@ struct camif_config_data {
 	enum camif_capture_modes capture_mode;
 	enum camif_dma_burst_size burst_size;
 	enum camif_channel_type channel;
+	/* callback to reset the CAMIF module */
+	void (*camif_module_enable)(int, bool);
 };
 
 /**
