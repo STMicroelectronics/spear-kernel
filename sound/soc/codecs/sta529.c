@@ -56,6 +56,7 @@ static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_SINGLE("Master Playback Volume", STA529_MVOL, 0, 127, 1),
 	SOC_SINGLE("Left Playback Volume", STA529_LVOL, 0, 127, 1),
 	SOC_SINGLE("Right Playback Volume", STA529_RVOL, 0, 127, 1),
+	SOC_SINGLE("I2S Capture Volume", STA529_ADCCFG, 5, 7, 0),
 	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
 };
 
