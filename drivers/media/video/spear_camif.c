@@ -770,7 +770,6 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 	dev_dbg(dev, "%s (vb=0x%p) 0x%08lx %d\n", __func__,
 		vb, vb->baddr, vb->bsize);
 
-
 #ifdef DEBUG
 	/* This can be useful if you want to see if we actually fill
 	 * the buffer with something */
