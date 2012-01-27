@@ -130,6 +130,13 @@
 #define LSM303DLH_A_RATE_400 0x02
 #define LSM303DLH_A_RATE_1000 0x03
 
+/* Axis */
+#define LSM303DLH_A_X_AXIS 0x01
+#define LSM303DLH_A_Y_AXIS 0x02
+#define LSM303DLH_A_Z_AXIS 0x04
+#define LSM303DLH_A_ALL_AXIS (LSM303DLH_A_X_AXIS | \
+		LSM303DLH_A_Y_AXIS | LSM303DLH_A_Z_AXIS)
+
 /* Multiple byte transfer enable */
 #define MULTIPLE_I2C_TR 0x80
 
@@ -199,7 +206,8 @@ static int lsm303dlh_a_restore(struct lsm303dlh_a_data *ddata)
 	unsigned char reg;
 	unsigned char shifted_mode = (ddata->mode << LSM303DLH_A_CR1_PM_BIT);
 	unsigned char shifted_rate = (ddata->rate << LSM303DLH_A_CR1_DR_BIT);
-	unsigned char context = (shifted_mode | shifted_rate);
+	unsigned char axis = LSM303DLH_A_ALL_AXIS;
+	unsigned char context = (shifted_mode | shifted_rate | axis);
 	int ret = 0;
 
 	/* BDU should be enabled by default/recommened */
