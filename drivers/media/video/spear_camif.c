@@ -205,6 +205,15 @@ struct camif {
 
 	/* keep a track of 1st frame-end interrupt */
 	bool first_frame_end;
+
+	/* active buffer/frame present? */
+	bool no_active_frm;
+
+	/* timer to handle DMA hang case */
+	struct timer_list idle_timer;
+
+	/* camif instance id */
+	int id;
 };
 
 /* camif interrupt selection types */
@@ -273,6 +282,15 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 		.order			= SOC_MBUS_ORDER_LE,
 	},
 };
+
+static void camif_do_idle(unsigned long _arg);
+
+/* reset camif */
+static void camif_module_enable(struct camif *camif, bool enable)
+{
+	if (camif->pdata->config->camif_module_enable)
+		camif->pdata->config->camif_module_enable(camif->id, enable);
+}
 
 /* Helper routine to configure CAMIF interrupts */
 static void camif_configure_interrupts(struct camif *camif,
@@ -461,11 +479,21 @@ static void camif_restore_regs(struct camif *camif)
 static void camif_start_capture(struct camif *camif,
 			enum camif_power_state state)
 {
+	/* turn on the CAMIF module */
+	camif_module_enable(camif, true);
+
 	/* enable CAMIF clk */
 	clk_enable(camif->clk);
 
 	/* reset global flags */
 	camif->first_frame_end = true;
+	camif->no_active_frm = false;
+
+	/* setup a timer to keep track of the frame DMA completion */
+	init_timer(&camif->idle_timer);
+	camif->idle_timer.function = &camif_do_idle;
+	camif->idle_timer.expires = jiffies + HZ;
+	camif->idle_timer.data = (unsigned long)camif;
 
 	switch (state) {
 	case CAMIF_BRINGUP:
@@ -491,7 +519,35 @@ static void camif_start_capture(struct camif *camif,
 
 	/* enable frame-end interrupts only */
 	camif_configure_interrupts(camif, DISABLE_ALL);
-	camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
+}
+
+/*
+ * Recover from undefined camif state:
+ * It has been noticed that the CAMIF module will hang the system
+ * while performing a DMA request. This is purel random and then we
+ * are left in an state where we need to disable the entire
+ * CAMIF module (as CAMIF has no specific bit to enable/disable the
+ * module and also there is no mechanism to flush the data present
+ * in the CAMIF line buffer
+ */
+static void camif_set_recovery_state(struct camif *camif)
+{
+	/* stop all interrupts */
+	camif_configure_interrupts(camif, DISABLE_ALL);
+
+	/* bank the camif regs */
+	camif_save_regs(camif);
+
+	/* turn off camif module */
+	camif_module_enable(camif, false);
+
+	/* terminate any pending DMA transfers */
+	if (camif->chan)
+		dmaengine_terminate_all(camif->chan);
+
+	/* mark that we have no more active frames */
+	camif->cur_frm = NULL;
+	camif->no_active_frm = true;
 }
 
 /* Stop/Suspend CAMIF functionality and DMA transfers */
@@ -528,17 +584,82 @@ static void camif_stop_capture(struct camif *camif,
 
 	/* clear global flags */
 	camif->first_frame_end = false;
+	camif->cur_frm = NULL;
+
+	/* delete recovery timer */
+	del_timer_sync(&camif->idle_timer);
 
 	/* disable CAMIF clk */
 	clk_disable(camif->clk);
+
+	/* turn off camif module */
+	camif_module_enable(camif, false);
+}
+
+/*
+ * Add error handling mechanism to avoid hanging of system in case
+ * CAMIF stops a DMA transfer in-between.
+ */
+static void camif_do_idle(unsigned long arg)
+{
+	struct camif *camif = (struct camif *)arg;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
+
+	/*
+	 * if camif was stopped earlier due to a empty dma_queue
+	 * we need to handle the same here.
+	 */
+	if (!camif->no_active_frm) {
+
+		/*
+		 * change states to error state of all active buffers
+		 * and delete them from queue
+		 */
+		camif->cur_frm = list_first_entry(&camif->dma_queue,
+				struct camif_buffer, vb.queue);
+
+		while (!list_empty(&camif->dma_queue)) {
+			vb = &camif->cur_frm->vb;
+			buf = container_of(vb, struct camif_buffer, vb);
+			vb->state = VIDEOBUF_ERROR;
+			do_gettimeofday(&vb->ts);
+
+			/*
+			 * Set the field_count field. Note that the soc_camera
+			 * layer divides the field_count field by 2, so for
+			 * progressive mode we need to mark completion of 2
+			 * fields whereas for interlaced mode we need to mark
+			 * completion of 1 field here.
+			 */
+			if (camif->fmt.fmt.pix.field == V4L2_FIELD_NONE)
+				vb->field_count = camif->frame_cnt * 2;
+			if (camif->fmt.fmt.pix.field == V4L2_FIELD_INTERLACED)
+				vb->field_count = camif->frame_cnt;
+
+			/* wake-up any process interested in using this buf */
+			wake_up_interruptible(&vb->done);
+
+			/* get the next frame from dma_queue */
+			list_del_init(&vb->queue);
+			camif->cur_frm = list_entry(camif->dma_queue.next,
+					struct camif_buffer, vb.queue);
+		}
+
+		/* put camif in a recovery state */
+		camif_set_recovery_state(camif);
+	}
 }
 
 void camif_schedule_next_buffer(struct camif *camif, struct videobuf_buffer *vb,
 				struct camif_buffer *buf)
 {
 	/* check if dma queue is empty */
-	if (list_empty(&camif->dma_queue))
+	if (list_empty(&camif->dma_queue)) {
+		/* put camif in a recovery state */
+		camif_set_recovery_state(camif);
 		return;
+	}
 
 	/* get the next frame from dma_queue and mark it as ACTIVE */
 	camif->cur_frm = list_entry(camif->dma_queue.next,
@@ -596,6 +717,9 @@ static void camif_rx_dma_complete(void *arg)
 	buf = container_of(vb, struct camif_buffer, vb);
 	WARN_ON(buf->inwork || list_empty(&vb->queue));
 	camif_process_buffer_complete(camif, vb, buf);
+
+	/* schedule timer again */
+	mod_timer(&camif->idle_timer, jiffies + 3 * HZ);
 
 	spin_unlock_irqrestore(&camif->lock, flags);
 
@@ -696,12 +820,20 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		/* increment total frame count */
 		camif->frame_cnt++;
 
+		/* we have a active frame now */
+		camif->no_active_frm = false;
+
 		/* enable DMA */
 		camif_configure_interrupts(camif,
 				ENABLE_EVEN_FIELD_DMA);
 		camif_configure_interrupts(camif,
 				DISABLE_FRAME_END_INT);
 
+		/*
+		 * start the timer which keeps watch on DMA completion
+		 * of a buffer.
+		 */
+		mod_timer(&camif->idle_timer, jiffies + HZ);
 
 		spin_unlock_irqrestore(&camif->lock, flags);
 	}
@@ -859,6 +991,16 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		return;
 	}
 
+	/*
+	 * if camif was stopped earlier due to a empty dma_queue
+	 * we need to handle the same here.
+	 */
+	if (!camif->cur_frm && camif->no_active_frm) {
+		/* turn on CAMIF module and restore registers */
+		camif_module_enable(camif, true);
+		camif_restore_regs(camif);
+	}
+
 	/* submit the DMA descriptor */
 	cookie = buf->desc->tx_submit(buf->desc);
 	ret = dma_submit_error(cookie);
@@ -868,7 +1010,9 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		return;
 	}
 
-	camif->chan->device->device_issue_pending(camif->chan);
+	/* enable frame-end interrupt as we don't have a current frame */
+	if (!camif->cur_frm)
+		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 }
 
 /* Called under spinlock_irqsave(&camif->lock, ...) */
@@ -879,15 +1023,26 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 	struct camif *camif = ici->priv;
+	unsigned long flags;
+
+	spin_lock_irqsave(&camif->lock, flags);
+
+	if (camif->cur_frm == buf) {
+		/* stop DMA transfers */
+		camif_configure_interrupts(camif, DISABLE_EVEN_FIELD_DMA);
+		if (camif->chan)
+			dmaengine_terminate_all(camif->chan);
+
+		camif->cur_frm = NULL;
+	}
 
 	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED) &&
 			!list_empty(&vb->queue)) {
 		vb->state = VIDEOBUF_ERROR;
-
 		list_del_init(&vb->queue);
-		if (camif->cur_frm == buf)
-			camif->cur_frm = NULL;
 	}
+
+	spin_unlock_irqrestore(&camif->lock, flags);
 
 	free_buffer(vq, buf);
 }
@@ -1654,6 +1809,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->frm_start_end_irq = frm_start_end_irq;
 	camif->line_irq = line_irq;
 	camif->pdata = pdev->dev.platform_data;
+	camif->id = pdev->id;
 
 	ret = request_irq(camif->line_irq, camif_line_int, 0,
 				"camif_line", camif);
