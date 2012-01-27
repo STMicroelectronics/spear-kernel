@@ -566,6 +566,9 @@ static void l3g4200d_input_poll_func(struct input_polled_dev *dev)
 	struct l3g4200d_t data_out;
 	int err = -EIO;
 
+	if (!gyro->hw_initialized)
+		return;
+
 	mutex_lock(&gyro->lock);
 	err = l3g4200d_get_data(gyro, &data_out);
 	if (err < 0)
