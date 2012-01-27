@@ -425,6 +425,7 @@ static int dwc_otg_handle_wakeup_detected_intr(struct core_if *core_if)
 	u32 gintsts = 0;
 	struct device_if *dev_if = core_if->dev_if;
 	ulong global_regs = core_if->core_global_regs;
+	struct dwc_pcd *pcd;
 
 	if (dwc_otg_is_device_mode(core_if)) {
 		u32 dctl = 0;
@@ -433,8 +434,12 @@ static int dwc_otg_handle_wakeup_detected_intr(struct core_if *core_if)
 		dctl = DEC_DCTL_REMOTE_WAKEUP_SIG(dctl, 1);
 		dwc_modify32(dev_if->dev_global_regs + DWC_DCTL, dctl, 0);
 
-		if (core_if->pcd_cb && core_if->pcd_cb->resume_wakeup)
+		if (core_if->pcd_cb && core_if->pcd_cb->resume_wakeup) {
+			pcd = (struct dwc_pcd *)core_if->pcd_cb->p;
+			spin_lock(&pcd->lock);
 			core_if->pcd_cb->resume_wakeup(core_if->pcd_cb->p);
+			spin_unlock(&pcd->lock);
+		}
 	} else {
 		u32 pcgcctl = 0;
 
