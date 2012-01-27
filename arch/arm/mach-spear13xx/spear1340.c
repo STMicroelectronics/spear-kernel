@@ -1410,6 +1410,34 @@ struct amba_device spear1340_uart1_device = {
 };
 
 /* Add Platform Devices */
+
+/* camera reset handler */
+static void camif_enable(int cam_id, bool enable)
+{
+	u32 val = readl(VA_SPEAR1340_PERIP3_SW_RST);
+	u32 mask = 0;
+
+	switch (cam_id) {
+	case 0:
+		mask = SPEAR1340_CAM0_RST;
+		break;
+	case 1:
+		mask = SPEAR1340_CAM1_RST;
+		break;
+	case 2:
+		mask = SPEAR1340_CAM2_RST;
+		break;
+	case 3:
+		mask = SPEAR1340_CAM3_RST;
+		break;
+	}
+
+	if (!enable)
+		writel(val | mask, VA_SPEAR1340_PERIP3_SW_RST);
+	else
+		writel(val & ~mask, VA_SPEAR1340_PERIP3_SW_RST);
+}
+
 /* camera interface 0 device registeration */
 static struct camif_config_data cam0_data = {
 	.sync_type = EXTERNAL_SYNC,
@@ -1420,6 +1448,7 @@ static struct camif_config_data cam0_data = {
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
 };
 
 static struct dw_dma_slave camif0_dma_param[] = {
@@ -1484,6 +1513,7 @@ static struct camif_config_data cam1_data = {
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
 };
 
 static struct dw_dma_slave camif1_dma_param[] = {
@@ -1548,6 +1578,7 @@ static struct camif_config_data cam2_data = {
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
 };
 
 static struct dw_dma_slave camif2_dma_param[] = {
@@ -1602,6 +1633,7 @@ struct platform_device spear1340_camif2_device = {
 	.resource = camif2_resources,
 };
 
+
 /* camera interface 3 device registeration */
 static struct camif_config_data cam3_data = {
 	.sync_type = EXTERNAL_SYNC,
@@ -1612,6 +1644,7 @@ static struct camif_config_data cam3_data = {
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
 };
 
 static struct dw_dma_slave camif3_dma_param[] = {
