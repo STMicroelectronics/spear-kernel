@@ -175,8 +175,6 @@ struct camif {
 
 	/* locks */
 	spinlock_t lock;
-	spinlock_t dma_queue_lock;
-	spinlock_t irqlock;
 
 	/* dma queue */
 	struct list_head dma_queue;
@@ -185,7 +183,7 @@ struct camif {
 	int frame_cnt;
 
 	/* current videobuffer */
-	struct videobuf_buffer *cur_frm;
+	struct camif_buffer *cur_frm;
 
 	/* current format supported by camif */
 	struct v4l2_format fmt;
@@ -535,29 +533,29 @@ static void camif_stop_capture(struct camif *camif,
 	clk_disable(camif->clk);
 }
 
-void camif_schedule_next_buffer(struct camif *camif)
+void camif_schedule_next_buffer(struct camif *camif, struct videobuf_buffer *vb,
+				struct camif_buffer *buf)
 {
-	unsigned long flags;
+	/* check if dma queue is empty */
+	if (list_empty(&camif->dma_queue))
+		return;
 
-	spin_lock_irqsave(&camif->dma_queue_lock, flags);
+	/* get the next frame from dma_queue and mark it as ACTIVE */
 	camif->cur_frm = list_entry(camif->dma_queue.next,
-					struct videobuf_buffer, queue);
-	list_del(&camif->cur_frm->queue);
-	spin_unlock_irqrestore(&camif->dma_queue_lock, flags);
+					struct camif_buffer, vb.queue);
 
 	camif->frame_cnt++;
-	camif->cur_frm->state = VIDEOBUF_ACTIVE;
+	camif->cur_frm->vb.state = VIDEOBUF_ACTIVE;
 }
 
-void camif_process_buffer_complete(struct camif *camif)
+void camif_process_buffer_complete(struct camif *camif,
+					struct videobuf_buffer *vb,
+					struct camif_buffer *buf)
 {
-	struct timeval timevalue;
-
 	/* mark timestamp for this buffer and mark it as DONE */
-	do_gettimeofday(&timevalue);
-	camif->cur_frm->ts = timevalue;
-	camif->cur_frm->state = VIDEOBUF_DONE;
-	camif->cur_frm->size = camif->fmt.fmt.pix.sizeimage;
+	list_del_init(&vb->queue);
+	vb->state = VIDEOBUF_DONE;
+	do_gettimeofday(&vb->ts);
 
 	/*
 	 * Set the field_count field. Note that the soc_camera layer
@@ -566,30 +564,39 @@ void camif_process_buffer_complete(struct camif *camif)
 	 * interlaced mode we need to mark completion of 1 field here.
 	 */
 	if (camif->fmt.fmt.pix.field == V4L2_FIELD_NONE)
-		camif->cur_frm->field_count = camif->frame_cnt * 2;
+		vb->field_count = camif->frame_cnt * 2;
 	if (camif->fmt.fmt.pix.field == V4L2_FIELD_INTERLACED)
-		camif->cur_frm->field_count = camif->frame_cnt;
+		vb->field_count = camif->frame_cnt;
 
 	/* wake-up any process interested in using this buffer */
-	wake_up_interruptible(&camif->cur_frm->done);
+	wake_up_interruptible(&vb->done);
 
 	/* schedule the next buffer present in the buffer queue */
-	camif_schedule_next_buffer(camif);
+	camif_schedule_next_buffer(camif, vb, buf);
 }
 
 /* DMA completion callback */
 static void camif_rx_dma_complete(void *arg)
 {
 	struct camif *camif = (struct camif *)arg;
+	struct camif_buffer *buf;
+	struct videobuf_buffer *vb;
 	unsigned long flags;
 
-	/* check if dma queue is empty */
-	if (list_empty(&camif->dma_queue))
+	spin_lock_irqsave(&camif->lock, flags);
+
+	/* cur_frm should not be NULL in DMA handler */
+	if (!camif->cur_frm) {
+		spin_unlock_irqrestore(&camif->lock, flags);
 		goto out;
+	}
 
 	/* mark current frame as done */
-	spin_lock_irqsave(&camif->lock, flags);
-	camif_process_buffer_complete(camif);
+	vb = &camif->cur_frm->vb;
+	buf = container_of(vb, struct camif_buffer, vb);
+	WARN_ON(buf->inwork || list_empty(&vb->queue));
+	camif_process_buffer_complete(camif, vb, buf);
+
 	spin_unlock_irqrestore(&camif->lock, flags);
 
 out:
@@ -652,6 +659,8 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 	int status_reg;
 	unsigned long flags;
 	struct camif *camif = (struct camif *)dev_id;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
 	if (!status_reg)
@@ -665,36 +674,36 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		/* perform a dummy write to clear frame-end interrupt */
 		writel(IRQ_STATUS_FRAME_END, camif->base + CAMIF_STATUS);
 
+		spin_lock_irqsave(&camif->lock, flags);
 		/* always ignore the 1st frame */
 		if (camif->first_frame_end) {
 			camif->first_frame_end = false;
+			spin_unlock_irqrestore(&camif->lock, flags);
 			goto out;
 		}
 
 		/* from 2nd frame onwards, enable DMA engine */
-		if (!list_empty(&camif->dma_queue)) {
-				spin_lock_irqsave(&camif->dma_queue_lock,
-						flags);
-				camif->cur_frm =
-					list_entry(camif->dma_queue.next,
-						struct videobuf_buffer, queue);
-				/* remove buffer from the buffer queue */
-				list_del(&camif->cur_frm->queue);
-				spin_unlock_irqrestore(&camif->dma_queue_lock,
-						flags);
+		camif->cur_frm =
+			list_first_entry(&camif->dma_queue,
+					struct camif_buffer, vb.queue);
 
-				spin_lock_irqsave(&camif->lock, flags);
-				/* mark state of the current frame to active */
-				camif->cur_frm->state = VIDEOBUF_ACTIVE;
-				/* increment total frame count */
-				camif->frame_cnt++;
-				/* enable DMA */
-				camif_configure_interrupts(camif,
-						ENABLE_EVEN_FIELD_DMA);
-				camif_configure_interrupts(camif,
-						DISABLE_FRAME_END_INT);
-				spin_unlock_irqrestore(&camif->lock, flags);
-		}
+		vb = &camif->cur_frm->vb;
+		buf = container_of(vb, struct camif_buffer, vb);
+
+		/* mark state of the current frame to active */
+		camif->cur_frm->vb.state = VIDEOBUF_ACTIVE;
+
+		/* increment total frame count */
+		camif->frame_cnt++;
+
+		/* enable DMA */
+		camif_configure_interrupts(camif,
+				ENABLE_EVEN_FIELD_DMA);
+		camif_configure_interrupts(camif,
+				DISABLE_FRAME_END_INT);
+
+
+		spin_unlock_irqrestore(&camif->lock, flags);
 	}
 
 out:
@@ -819,12 +828,12 @@ out:
 	return ret;
 }
 
+/* Called under spinlock_irqsave(&camif->lock, ...) */
 static void camif_videobuf_queue(struct videobuf_queue *vq,
 		struct videobuf_buffer *vb)
 {
 	int ret;
 	dma_cookie_t cookie;
-	unsigned long flags;
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
@@ -834,9 +843,7 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		__func__, vb, vb->baddr, vb->bsize);
 
 	/* add the buffer to the DMA queue */
-	spin_lock_irqsave(&camif->dma_queue_lock, flags);
 	list_add_tail(&vb->queue, &camif->dma_queue);
-	spin_unlock_irqrestore(&camif->dma_queue_lock, flags);
 
 	/* change state of the buffer */
 	vb->state = VIDEOBUF_QUEUED;
@@ -864,23 +871,25 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	camif->chan->device->device_issue_pending(camif->chan);
 }
 
+/* Called under spinlock_irqsave(&camif->lock, ...) */
 static void camif_videobuf_release(struct videobuf_queue *vq,
 				 struct videobuf_buffer *vb)
 {
-	unsigned long flags;
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 	struct camif *camif = ici->priv;
 
-	/*
-	 * we need to flush the buffer from the dma queue since
-	 * they are de-allocated
-	 */
-	spin_lock_irqsave(&camif->dma_queue_lock, flags);
-	INIT_LIST_HEAD(&camif->dma_queue);
-	spin_unlock_irqrestore(&camif->dma_queue_lock, flags);
+	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED) &&
+			!list_empty(&vb->queue)) {
+		vb->state = VIDEOBUF_ERROR;
 
-	vb->state = VIDEOBUF_NEEDS_INIT;
+		list_del_init(&vb->queue);
+		if (camif->cur_frm == buf)
+			camif->cur_frm = NULL;
+	}
+
+	free_buffer(vq, buf);
 }
 
 static struct videobuf_queue_ops camif_videobuf_ops = {
@@ -1460,7 +1469,7 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 	dmaengine_slave_config(camif->chan, (void *) &dma_conf);
 
 	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
-			&camif->irqlock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
+			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			camif->fmt.fmt.pix.field, sizeof(struct camif_buffer),
 			icd, NULL);
 }
@@ -1690,8 +1699,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 
 	/* init locks */
 	spin_lock_init(&camif->lock);
-	spin_lock_init(&camif->irqlock);
-	spin_lock_init(&camif->dma_queue_lock);
 
 	dev_info(&pdev->dev, "%s registered, (base-addr=%p, "
 			"lineIRQ=%d, vsyncIRQ=%d)\n",
@@ -1811,9 +1818,6 @@ static int camif_resume(struct device *dev)
 						cookie);
 					goto out;
 				}
-
-				camif->chan->device->
-					device_issue_pending(camif->chan);
 			}
 		}
 
