@@ -1960,6 +1960,12 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct vs6725 *priv = to_vs6725(client);
 
 	switch (ctrl->id) {
+	case V4L2_CID_BRIGHTNESS:
+		ret = vs6725_reg_read(client,
+				BRIGHTNESS,
+				&val);
+		ctrl->value = val;
+		break;
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_read(client,
 				CONTRAST,
@@ -2024,6 +2030,13 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct vs6725 *priv = to_vs6725(client);
 
 	switch (ctrl->id) {
+	case V4L2_CID_BRIGHTNESS:
+		ret = vs6725_reg_write(client,
+				BRIGHTNESS,
+				ctrl->value);
+		if (!ret)
+			priv->brightness = ctrl->value;
+		break;
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_write(client,
 				CONTRAST,
