@@ -388,8 +388,11 @@ static int dwc_otg_suspend(struct device *dev)
 
 	if (dwc_otg_is_host_mode(dwc_dev->core_if))
 		dwc_dev->core_if->hcd_cb->stop(dwc_dev->core_if->hcd_cb->p);
-	else
+	else {
+		spin_lock(&dwc_dev->pcd->lock);
 		dwc_dev->core_if->pcd_cb->suspend(dwc_dev->core_if->pcd_cb->p);
+		spin_unlock(&dwc_dev->pcd->lock);
+	}
 
 	return 0;
 }
@@ -400,9 +403,12 @@ static int dwc_otg_resume(struct device *dev)
 
 	if (dwc_otg_is_host_mode(dwc_dev->core_if))
 		dwc_dev->core_if->hcd_cb->start(dwc_dev->core_if->hcd_cb->p);
-	else
+	else {
+		spin_lock(&dwc_dev->pcd->lock);
 		dwc_dev->core_if->pcd_cb->resume_wakeup(
 				dwc_dev->core_if->pcd_cb->p);
+		spin_unlock(&dwc_dev->pcd->lock);
+	}
 
 	return 0;
 }
