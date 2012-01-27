@@ -35,7 +35,8 @@
 #define USB_WKUP	0x2
 #define PWR_DOM_ON	0x3c00
 /* Use all Sources except USB as wake up trigger */
-#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP)
+#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP \
+		| USB_WKUP)
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
