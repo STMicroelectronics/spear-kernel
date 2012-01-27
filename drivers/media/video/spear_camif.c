@@ -767,6 +767,8 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 	if (bytes_per_line < 0)
 		return bytes_per_line;
 
+	WARN_ON(!list_empty(&vb->queue));
+
 	dev_dbg(dev, "%s (vb=0x%p) 0x%08lx %d\n", __func__,
 		vb, vb->baddr, vb->bsize);
 
