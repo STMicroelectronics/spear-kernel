@@ -1168,7 +1168,7 @@ static int db9000fb_thaw(struct device *dev)
 	return 0;
 }
 
-static int db9000fb_poweroff(struct device *dev)
+static int db9000fb_freeze(struct device *dev)
 {
 	struct db9000fb_info *fbi = dev_get_drvdata(dev);
 
@@ -1183,9 +1183,9 @@ static int db9000fb_poweroff(struct device *dev)
 static const struct dev_pm_ops db9000fb_pm_ops = {
 	.suspend	= db9000fb_suspend,
 	.resume		= db9000fb_resume,
-	.freeze		= db9000fb_suspend,
+	.freeze		= db9000fb_freeze,
 	.thaw		= db9000fb_thaw,
-	.poweroff	= db9000fb_poweroff,
+	.poweroff	= db9000fb_suspend,
 	.restore	= db9000fb_resume,
 };
 #endif
