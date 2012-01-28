@@ -22,6 +22,8 @@
 #include <mach/spdif.h>
 #include "spdif_out_regs.h"
 
+static int spdif_out_mute;
+
 struct spdif_out_params {
 	u32 rate;
 	u32 core_freq;
@@ -159,10 +161,14 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
-		ctrl &= ~SPDIF_OPMODE_MASK;
-		ctrl |= SPDIF_OPMODE_AUD_DATA | SPDIF_STATE_NORMAL;
-		writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
+			ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
+			ctrl &= ~SPDIF_OPMODE_MASK;
+			if (!spdif_out_mute)
+				ctrl |= SPDIF_OPMODE_AUD_DATA |
+					SPDIF_STATE_NORMAL;
+			else
+				ctrl |= SPDIF_OPMODE_MUTE_PCM;
+			writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -181,7 +187,67 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	return ret;
 }
 
+static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
+{
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
+	u32 val;
+
+	spdif_out_mute = mute;
+	val = readl(host->io_base + SPDIF_OUT_CTRL);
+	val &= ~SPDIF_OPMODE_MASK;
+
+	if (mute)
+		val |= SPDIF_OPMODE_MUTE_PCM;
+	else {
+		if (host->running)
+			val |= SPDIF_OPMODE_AUD_DATA | SPDIF_STATE_NORMAL;
+		else
+			val |= SPDIF_OPMODE_OFF;
+	}
+
+	writel(val, host->io_base + SPDIF_OUT_CTRL);
+	return 0;
+}
+
+static int spdif_mute_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = spdif_out_mute;
+	return 0;
+}
+
+static int spdif_mute_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_card *card = codec->card;
+	struct snd_soc_pcm_runtime *rtd = card->rtd;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+
+	if (spdif_out_mute == ucontrol->value.integer.value[0])
+		return 0;
+
+	spdif_digital_mute(cpu_dai, ucontrol->value.integer.value[0]);
+
+	return 1;
+}
+static const struct snd_kcontrol_new spdif_out_controls[] = {
+	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", (unsigned long)&spdif_out_mute,
+			spdif_mute_get, spdif_mute_put),
+};
+
+int spdif_soc_dai_probe(struct snd_soc_dai *dai)
+{
+	struct snd_soc_card *card = dai->card;
+	struct snd_soc_pcm_runtime *rtd = card->rtd;
+	struct snd_soc_codec *codec = rtd->codec;
+
+	return snd_soc_add_controls(codec, spdif_out_controls,
+				ARRAY_SIZE(spdif_out_controls));
+}
+
 static struct snd_soc_dai_ops spdif_out_dai_ops = {
+	.digital_mute	= spdif_digital_mute,
 	.startup	= spdif_out_startup,
 	.shutdown	= spdif_out_shutdown,
 	.trigger	= spdif_out_trigger,
@@ -197,6 +263,7 @@ struct snd_soc_dai_driver spdif_out_dai = {
 				 SNDRV_PCM_RATE_192000),
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
+	.probe = spdif_soc_dai_probe,
 	.ops = (struct snd_soc_dai_ops *)&spdif_out_dai_ops,
 };
 
