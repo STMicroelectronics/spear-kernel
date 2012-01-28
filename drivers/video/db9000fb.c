@@ -1875,7 +1875,7 @@ static int __init db9000fb_init(void)
 
 	return platform_driver_register(&db9000fb_driver);
 }
-module_init(db9000fb_init);
+subsys_initcall(db9000fb_init);
 
 static void __exit db9000fb_exit(void)
 {
