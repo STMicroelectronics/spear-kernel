@@ -1731,7 +1731,10 @@ static int soc_poweroff(struct device *dev)
 static const struct dev_pm_ops soc_pm_ops = {
 	.suspend = soc_suspend,
 	.resume = soc_resume,
+	.freeze = soc_suspend,
+	.thaw = soc_resume,
 	.poweroff = soc_poweroff,
+	.restore = soc_resume,
 };
 
 /* ASoC platform driver */
