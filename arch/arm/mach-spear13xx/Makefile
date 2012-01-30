@@ -42,6 +42,9 @@ obj-$(CONFIG_SPEAR1340_PLUG_BOARDS)	+= spear1340_plug_boards.o
 # NComputing spear hurricane boards files
 obj-$(MACH_SPEAR_HURRICANE)		+= spear_hurricane_board.o
 
+# SPEAr1340 LCAD Board
+obj-$(CONFIG_MACH_SPEAR1340_LCAD)	+= spear1340_lcad.o
+
 # spear900 specific files
 obj-$(CONFIG_CPU_SPEAR900)		+= clock.o spear900.o
 # spear900 boards files
