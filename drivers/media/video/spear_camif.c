@@ -508,17 +508,26 @@ static void camif_start_capture(struct camif *camif,
 		 */
 		camif_prog_default_ctrl(camif);
 		camif->power_state = CAMIF_BRINGUP;
+
+		/*
+		 * Keep all interrupts disabled for now and enable frame-end
+		 * interrupts after QBUF call from user-space
+		 */
+		camif_configure_interrupts(camif, DISABLE_ALL);
 		break;
 	case CAMIF_RESUME:
 	default:
 		/* restore saved CAMIF registers */
 		camif_restore_regs(camif);
 		camif->power_state = CAMIF_RESUME;
+
+		/*
+		 * enable frame-end interrupts as we have already queued
+		 * data when we went to suspend state
+		 */
+		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 		break;
 	}
-
-	/* enable frame-end interrupts only */
-	camif_configure_interrupts(camif, DISABLE_ALL);
 }
 
 /*
@@ -567,12 +576,23 @@ static void camif_stop_capture(struct camif *camif,
 			dmaengine_terminate_all(camif->chan);
 			dma_release_channel(camif->chan);
 		}
+
+		/* we have no more current frames to process */
+		camif->cur_frm = NULL;
+
 		camif->power_state = CAMIF_SHUTDOWN;
 		break;
 	case CAMIF_SUSPEND:
 	default:
-		/* save copies of CAMIF registers */
-		camif_save_regs(camif);
+		/*
+		 * Save copies of CAMIF registers only if
+		 * we were SUSPENDed when there was
+		 * an active frame present. Otherwise the registers
+		 * already banked in 'camif_set_recovery_state' will
+		 * serve our purpose.
+		 */
+		if (!camif->no_active_frm)
+			camif_save_regs(camif);
 
 		/* terminate all requests on the DMA channel */
 		if (camif->chan)
@@ -584,7 +604,6 @@ static void camif_stop_capture(struct camif *camif,
 
 	/* clear global flags */
 	camif->first_frame_end = false;
-	camif->cur_frm = NULL;
 
 	/* delete recovery timer */
 	del_timer_sync(&camif->idle_timer);
