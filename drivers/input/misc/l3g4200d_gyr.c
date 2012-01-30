@@ -834,49 +834,23 @@ static int l3g4200d_suspend(struct device *dev)
 	return 0;
 }
 
-static int __l3g4200d_resume(struct device *dev, bool csave)
+static int l3g4200d_resume(struct device *dev)
 {
 	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
-	size_t err = 0;
 
 	if (!atomic_read(&gyro->enabled))
 		return 0;
 
 	l3g4200d_device_power_on(gyro);
 
-	if (!csave)
-		return 0;
-
-	err = l3g4200d_update_fs_range(gyro, gyro->params.fs_range);
-	if (err < 0) {
-		dev_err(dev, "update_fs_range failed\n");
-		return err;
-	}
-
-	err = l3g4200d_update_odr(gyro, gyro->params.poll_rate_ms);
-	if (err < 0) {
-		dev_err(dev, "update_odr failed\n");
-		return err;
-	}
-
 	return 0;
-}
-
-static int l3g4200d_resume(struct device *dev)
-{
-	return __l3g4200d_resume(dev, true);
-}
-
-static int l3g4200d_thaw(struct device *dev)
-{
-	return __l3g4200d_resume(dev, false);
 }
 
 static const struct dev_pm_ops l3g4200d_pm = {
 	.suspend = l3g4200d_suspend,
 	.resume = l3g4200d_resume,
 	.freeze = l3g4200d_suspend,
-	.thaw = l3g4200d_thaw,
+	.thaw = l3g4200d_resume,
 	.poweroff = l3g4200d_suspend,
 	.restore = l3g4200d_resume,
 };
