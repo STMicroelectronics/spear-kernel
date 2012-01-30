@@ -412,11 +412,11 @@ static int spear_smi_write_enable(struct spear_smi *dev, u32 bank)
 	writel(ctrlreg1, dev->io_base + SMI_CR1);
 	writel(0, dev->io_base + SMI_CR2);
 
-	if (ret <= 0) {
+	if (ret == 0) {
 		ret = -EIO;
 		dev_err(&dev->pdev->dev,
 			"smi controller failed on write enable\n");
-	} else {
+	} else if (ret > 0) {
 		/* check whether write mode status is set for required bank */
 		if (dev->status & (1 << (bank + WM_SHIFT)))
 			ret = 0;
@@ -483,10 +483,10 @@ static int spear_smi_erase_sector(struct spear_smi *dev,
 	ret = wait_event_interruptible_timeout(dev->cmd_complete,
 			dev->status & TFF, SMI_CMD_TIMEOUT);
 
-	if (ret <= 0) {
+	if (ret == 0) {
 		ret = -EIO;
 		dev_err(&dev->pdev->dev, "sector erase failed\n");
-	} else
+	} else if (ret > 0)
 		ret = 0; /* success */
 
 	/* restore ctrl regs */
