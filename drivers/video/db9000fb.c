@@ -54,11 +54,6 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
-#ifdef CONFIG_FB_DB9000_DRM
-#include <ump/ump_kernel_interface.h>
-#include <ump/ump_kernel_interface_ref_drv.h>
-#endif /* CONFIG_FB_DB9000_DRM */
-
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
@@ -82,21 +77,6 @@ static char *mode_option __devinitdata;
 			DB9000_ISR_LDDM | DB9000_ISR_ABLM | DB9000_ISR_ARIM |\
 			DB9000_ISR_ARSM | DB9000_ISR_FBEM | DB9000_ISR_FNCM |\
 			DB9000_ISR_FLCM)
-
-/* Mali DRM Integration */
-#ifdef CONFIG_FB_DB9000_DRM
-#include <linux/uaccess.h>
-
-static ump_dd_handle ump_wrapped_buffer;
-static ump_dd_physical_block ump_memory_description;
-static int got_ump_handle = 0;
-
-/*
- * Change this ioctl according to your specific UMP integration with LCD
- * kernel driver
- */
-#define GET_UMP_SECURE_ID _IOWR('m', 310, unsigned int) /* TODO: */
-#endif /* CONFIG_FB_DB9000_DRM */
 
 extern uint32_t __attribute__((weak)) __div64_32(uint64_t *n, uint32_t base);
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on);
@@ -622,33 +602,12 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	return 0;
 }
 
-#ifdef CONFIG_FB_DB9000_DRM
-/* handle additional 'ioctl' for secure ID */
-int db9000_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg) {
-	u32 __user *psecureid = (u32 __user *) arg;
-	ump_secure_id secure_id;
-	if(cmd == GET_UMP_SECURE_ID) {
-		if(!got_ump_handle){
-			ump_wrapped_buffer = ump_dd_handle_create_from_phys_blocks(&ump_memory_description, 1);
-			got_ump_handle = 1;
-		}
-		secure_id = ump_dd_secure_id_get( ump_wrapped_buffer );
-		return put_user( (unsigned int)secure_id, psecureid );
-	}
-
-	return -EINVAL;
-}
-#endif /* CONFIG_FB_DB9000_DRM */
-
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
 	.fb_check_var	= db9000fb_check_var,
 	.fb_set_par	= db9000fb_set_par,
 	.fb_setcolreg	= db9000fb_setcolreg,
 	.fb_pan_display = db9000fb_pan_display,
-#ifdef CONFIG_FB_DB9000_DRM
-	.fb_ioctl		= db9000_ioctl,
-#endif
 	.fb_setcmap	= db9000fb_setcmap,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
@@ -1808,11 +1767,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
 	}
 #endif
-
-#ifdef CONFIG_FB_DB9000_DRM
-	ump_memory_description.addr = fbi->fb.fix.smem_start;
-	ump_memory_description.size = ((fbi->fb.fix.smem_len / 4096) + 1)* 4096;
-#endif /* CONFIG_FB_DB9000_DRM */
 
 	return 0;
 
