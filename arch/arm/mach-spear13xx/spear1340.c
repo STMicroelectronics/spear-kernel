@@ -2316,6 +2316,13 @@ struct platform_device spear1340_vip_device = {
 	.resource = vip_resources,
 };
 
+#ifdef CONFIG_DRM_MALI
+struct platform_device spear1340_device_mali_drm = {
+        .name = "mali_drm",
+        .id   = -1,
+};
+#endif
+
 static int spear1340_sys_clk_init(void)
 {
 	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;
