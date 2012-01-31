@@ -31,9 +31,6 @@ USING_PMM ?= 1
 USING_UMP ?= 1
 CONFIG = SPEAr1340
 #MALI_FLEXIBLE_ALLOC = 1
-$(shell [ -L $(DRIVER_DIR)/arch ] && rm $(DRIVER_DIR)/arch)
-$(shell ln -sf $(DRIVER_DIR)/arch-$(CONFIG) $(DRIVER_DIR)/arch)
-$(shell touch $(DRIVER_DIR)/arch/config.h)
 endif
 
 ifeq ($(CONFIG_GPU_MALI_DEBUG),y)
