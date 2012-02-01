@@ -191,7 +191,7 @@ static struct pmx_dev spear1340_pmx_plgpios = {
 static struct pmx_mux_reg lsm303_plgpios_mux[] = {
 	{
 		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = 0x1180,
+		.mask = 0x1180, /* PLGPIO: 70, 71, 75 */
 		.value = 0x0,
 	},
 };
@@ -415,9 +415,9 @@ struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr = {
 
 /* lsm303dlh accelerometer board info */
 static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_acc = {
-		.type = "lsm303dlh_a",
-		.addr = 0x19,
-		.platform_data = &lsm303dlh_a_pdata,
+	.type = "lsm303dlh_a",
+	.addr = 0x19,
+	.platform_data = &lsm303dlh_a_pdata,
 };
 
 struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_a = {
@@ -427,9 +427,9 @@ struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_a = {
 
 /* lsm303dlh magnetometer board info */
 static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_mag = {
-		.type = "lsm303dlh_m",
-		.addr = 0x1E,
-		.platform_data = &lsm303dlh_m_pdata,
+	.type = "lsm303dlh_m",
+	.addr = 0x1E,
+	.platform_data = &lsm303dlh_m_pdata,
 };
 
 struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_m = {
