@@ -15,14 +15,9 @@
 #define __MACH_PLUG_BOARD_H
 
 #include <linux/amba/bus.h>
-#include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/spi/spi.h>
-
-struct i2c_dev_info {
-	struct i2c_board_info *board;
-	int busnum;
-};
+#include <plat/i2c.h>
 
 struct plug_board_info {
 	struct platform_device **pdevs;

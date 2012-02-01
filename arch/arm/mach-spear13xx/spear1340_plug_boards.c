@@ -68,6 +68,7 @@
 #include <video/db9000fb.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
+#include <plat/i2c.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/plug_board.h>

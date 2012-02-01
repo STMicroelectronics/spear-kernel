@@ -28,6 +28,7 @@
 #include <linux/stmmac.h>
 #include <video/db9000fb.h>
 #include <plat/fsmc.h>
+#include <plat/i2c.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
