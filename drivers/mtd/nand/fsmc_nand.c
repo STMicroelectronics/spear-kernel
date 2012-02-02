@@ -273,52 +273,25 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * provided through platform data
  */
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+#define DEFAULT_PARTITION_TABLE(name, ersz, xl, ub, kr)			\
+	static struct mtd_partition partition_info_##name##_blk[] = {	\
+		PARTITION("X-loader", 0, xl * ersz),			\
+		PARTITION("U-Boot", xl * ersz, ub * ersz),		\
+		PARTITION("Kernel", (xl + ub) * ersz, kr * ersz),	\
+		PARTITION("Root File System", (xl + ub + kr) * ersz, 0),\
+	}
 
 /*
- * Default partition layout for small page(= 512 bytes) devices
+ * Default partition layouts for nand devices
  * Size for "Root file system" is updated in driver based on actual device size
  */
-static struct mtd_partition partition_info_16KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x4000),
-	PARTITION("U-Boot", 0x10000, 20 * 0x4000),
-	PARTITION("Kernel", 0x60000, 256 * 0x4000),
-	PARTITION("Root File System", 0x460000, 0),
-};
-
-/*
- * Default partition layout for large page(> 512 bytes) devices
- * Size for "Root file system" is updated in driver based on actual device size
- */
-static struct mtd_partition partition_info_128KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x20000),
-	PARTITION("U-Boot", 0x80000, 12 * 0x20000),
-	PARTITION("Kernel", 0x200000, 48 * 0x20000),
-	PARTITION("Root File System", 0x800000, 0),
-};
-
-/*
- * Default partition layout for large page(> 512 bytes) devices with
- * erase block size equal to 256KB.
- * Size for "Root file system" is updated in driver based on actual device size
- */
-static struct mtd_partition partition_info_256KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x40000),
-	PARTITION("U-Boot", 0x100000, 6 * 0x40000),
-	PARTITION("Kernel", 0x280000, 24 * 0x40000),
-	PARTITION("Root File System", 0x880000, 0),
-};
-
-/*
- * Default partition layout for large page(> 512 bytes) devices with
- * erase block size equal to 1024KB.
- * Size for "Root file system" is updated in driver based on actual device size
- */
-static struct mtd_partition partition_info_1024KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x100000),
-	PARTITION("U-Boot", 0x400000, 2 * 0x100000),
-	PARTITION("Kernel", 0x600000, 4 * 0x100000),
-	PARTITION("Root File System", 0xA00000, 0),
-};
+DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 20, 256);
+DEFAULT_PARTITION_TABLE(64KB, 0x10000, 4, 20, 128);
+DEFAULT_PARTITION_TABLE(128KB, 0x20000, 4, 12, 48);
+DEFAULT_PARTITION_TABLE(256KB, 0x40000, 4, 6, 24);
+DEFAULT_PARTITION_TABLE(512KB, 0x80000, 4, 6, 24);
+DEFAULT_PARTITION_TABLE(1MB, 0x100000, 4, 4, 12);
+DEFAULT_PARTITION_TABLE(2MB, 0x200000, 4, 4, 6);
 
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 const char *part_probes[] = { "cmdlinepart", NULL };
@@ -971,48 +944,59 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			int i;
 
 			/* Select the default partitions info */
-			switch (host->mtd.size) {
-			case 0x01000000:
-			case 0x02000000:
-			case 0x04000000:
+			switch (host->mtd.erasesize) {
+			case 0x4000:
 				host->partitions = partition_info_16KB_blk;
 				host->nr_partitions =
 					sizeof(partition_info_16KB_blk) /
 					sizeof(struct mtd_partition);
 				break;
-			case 0x08000000:
-			case 0x10000000:
-			case 0x20000000:
-			case 0x40000000:
-			case 0x80000000:
-				switch (host->mtd.erasesize) {
-				case 0x100000:
-					host->partitions = partition_info_1024KB_blk;
-					host->nr_partitions =
-						sizeof(partition_info_1024KB_blk) /
-						sizeof(struct mtd_partition);
-					break;
-				case 0x20000:
-					host->partitions = partition_info_128KB_blk;
-					host->nr_partitions =
-						sizeof(partition_info_128KB_blk) /
-						sizeof(struct mtd_partition);
-					break;
-				case 0x40000:
-					host->partitions =
-						partition_info_256KB_blk;
-					host->nr_partitions =
-						sizeof(partition_info_256KB_blk) /
-						sizeof(struct mtd_partition);
-					break;
-				default:
-					break;
-				}
+			case 0x10000:
+				host->partitions = partition_info_64KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_64KB_blk) /
+					sizeof(struct mtd_partition);
+				break;
+			case 0x20000:
+				host->partitions =
+					partition_info_128KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_128KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x40000:
+				host->partitions =
+					partition_info_256KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_256KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x80000:
+				host->partitions =
+					partition_info_512KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_512KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x100000:
+				host->partitions =
+					partition_info_1MB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_1MB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x200000:
+				host->partitions =
+					partition_info_2MB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_2MB_blk) /
+					sizeof(struct mtd_partition);
 				break;
 			default:
 				ret = -ENXIO;
-				pr_err("Unsupported NAND size\n");
+				pr_err("Unsupported NAND erase size\n");
 				goto err_probe;
+				break;
 			}
 
 			partition = host->partitions;
