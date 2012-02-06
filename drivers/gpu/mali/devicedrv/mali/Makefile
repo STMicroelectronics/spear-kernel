@@ -67,7 +67,7 @@ ifeq ($(USING_UMP),1)
 endif
 
 # Check if a Mali Core sub module should be enabled, true or false returned
-submodule_enabled = $(shell gcc $(DEFINES) -E $1/arch/config.h | grep type | grep -c $(2))
+submodule_enabled = $(shell gcc $(DEFINES) -E $1/arch-$(CONFIG)/config.h | grep type | grep -c $(2))
 
 # linux build system integration
 ifneq ($(KERNELRELEASE),)
