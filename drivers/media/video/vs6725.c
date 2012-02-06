@@ -2502,73 +2502,68 @@ static int vs6725_try_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
-/* set the format we will capture in */
-static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+/* set sensor image format */
+static int vs6725_set_image_format(struct i2c_client *client,
+					struct v4l2_mbus_framefmt *mf)
 {
-	int ret = 0;
-
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
-
-	ret = vs6725_try_fmt(sd, mf);
-	if (ret)
-		return ret;
+	int ret = 0;
 
 	switch (mf->code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_YVYU8_2X8:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_RGB_444);
+				DATA_FORMAT_RGB_444);
 		ret |= vs6725_reg_write(client,
-			OPF_RGB_SETUP,
-			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
-			RGB444_ZERO_PADDING_ON);
+				OPF_RGB_SETUP,
+				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
+				RGB444_ZERO_PADDING_ON);
 		break;
 	case V4L2_MBUS_FMT_RGB565_2X8_BE:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_RGB_565);
+				DATA_FORMAT_RGB_565);
 		ret |= vs6725_reg_write(client,
-			OPF_RGB_SETUP,
-			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
+				OPF_RGB_SETUP,
+				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
 		break;
 	default:
 		/*
@@ -2582,92 +2577,122 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	}
 
-	/* set image size */
-	if (!ret) {
-		if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
-			vs6725_reg_write(client,
+	return ret;
+}
+
+/* set sensor image size */
+static int vs6725_set_image_size(struct i2c_client *client,
+					struct v4l2_mbus_framefmt *mf)
+{
+	struct vs6725 *priv = to_vs6725(client);
+	int ret = 0;
+
+	if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
 				IMAGE_SIZE_UXGA);
-		else if ((mf->width == SXGA_WIDTH) &&
-				(mf->height == SXGA_HEIGHT))
-			vs6725_reg_write(client,
+	else if ((mf->width == SXGA_WIDTH) &&
+			(mf->height == SXGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_SXGA);
-		else if ((mf->width == SVGA_WIDTH) &&
-				(mf->height == SVGA_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_SXGA);
+	else if ((mf->width == SVGA_WIDTH) &&
+			(mf->height == SVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_SVGA);
-		else if ((mf->width == VGA_WIDTH) &&
-				(mf->height == VGA_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_SVGA);
+	else if ((mf->width == VGA_WIDTH) &&
+			(mf->height == VGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_VGA);
-		else if ((mf->width == CIF_WIDTH) &&
-				(mf->height == CIF_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_VGA);
+	else if ((mf->width == CIF_WIDTH) &&
+			(mf->height == CIF_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_CIF);
-		else if ((mf->width == QVGA_WIDTH) &&
-				(mf->height == QVGA_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_CIF);
+	else if ((mf->width == QVGA_WIDTH) &&
+			(mf->height == QVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QVGA);
-		else if ((mf->width == QCIF_WIDTH) &&
-				(mf->height == QCIF_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_QVGA);
+	else if ((mf->width == QCIF_WIDTH) &&
+			(mf->height == QCIF_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QCIF);
-		else if ((mf->width == QQVGA_WIDTH) &&
-				(mf->height == QQVGA_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_QCIF);
+	else if ((mf->width == QQVGA_WIDTH) &&
+			(mf->height == QQVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QQVGA);
-		else if ((mf->width == QQCIF_WIDTH) &&
-				(mf->height == QQCIF_HEIGHT))
-			vs6725_reg_write(client,
+				IMAGE_SIZE_QQVGA);
+	else if ((mf->width == QQCIF_WIDTH) &&
+			(mf->height == QQCIF_HEIGHT))
+		ret = vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QQCIF);
-		else {
-			/* manual size */
-			vs6725_reg_write(client,
+				IMAGE_SIZE_QQCIF);
+	else {
+		/* manual size */
+		ret |= vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
 				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
 				IMAGE_SIZE_MANUAL);
-			vs6725_reg_write(client,
+		ret |= vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_HS_HI : PIPE1_MANUAL_HS_HI,
-					WRITE_HI_BYTE(mf->width));
-			vs6725_reg_write(client,
+				PIPE0_MANUAL_HS_HI : PIPE1_MANUAL_HS_HI,
+				WRITE_HI_BYTE(mf->width));
+		ret |= vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_HS_LO : PIPE1_MANUAL_HS_LO,
-					WRITE_LO_BYTE(mf->width));
-			vs6725_reg_write(client,
+				PIPE0_MANUAL_HS_LO : PIPE1_MANUAL_HS_LO,
+				WRITE_LO_BYTE(mf->width));
+		ret |= vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_VS_HI : PIPE1_MANUAL_VS_HI,
-					WRITE_HI_BYTE(mf->height));
-			vs6725_reg_write(client,
+				PIPE0_MANUAL_VS_HI : PIPE1_MANUAL_VS_HI,
+				WRITE_HI_BYTE(mf->height));
+		ret |= vs6725_reg_write(client,
 				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_VS_LO : PIPE1_MANUAL_VS_LO,
-					WRITE_LO_BYTE(mf->height));
-		}
+				PIPE0_MANUAL_VS_LO : PIPE1_MANUAL_VS_LO,
+				WRITE_LO_BYTE(mf->height));
 	}
+
+	return ret;
+}
+
+/* set the format we will capture in */
+static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+{
+	int ret = 0;
+
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+
+	ret = vs6725_try_fmt(sd, mf);
+	if (ret)
+		return ret;
+
+	/* set image format */
+	if (!ret)
+		ret = vs6725_set_image_format(client, mf);
+
+	/* set image size */
+	if (!ret)
+		ret = vs6725_set_image_size(client, mf);
 
 	if (!ret)
 		priv->fmt = *mf;
@@ -2685,7 +2710,47 @@ static int vs6725_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 	return 0;
 }
 
+static int vs6725_suspend(struct soc_camera_device *icd, pm_message_t state)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	int ret;
+
+	/* turn off CE pin of camera sensor */
+	ret = vs6725_s_power(sd, 0);
+
+	return ret;
+}
+
+static int vs6725_resume(struct soc_camera_device *icd)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	int ret;
+
+	/* turn on CE pin of camera sensor */
+	ret = vs6725_s_power(sd, 1);
+
+	/*
+	 * As per the last format set before we went for suspend,
+	 * reprogram sensor image size and image format
+	 */
+	if (!ret)
+		ret = vs6725_set_image_format(client, &priv->fmt);
+
+	if (!ret)
+		ret = vs6725_set_image_size(client, &priv->fmt);
+
+	/* set sensor in RUNning state */
+	if (!ret)
+		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
+
+	return ret;
+}
+
 static struct soc_camera_ops vs6725_ops = {
+	.suspend = vs6725_suspend,
+	.resume	= vs6725_resume,
 	.set_bus_param = vs6725_set_bus_param,
 	.query_bus_param = vs6725_query_bus_param,
 	.controls = vs6725_controls,
