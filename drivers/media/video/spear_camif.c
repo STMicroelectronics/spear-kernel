@@ -636,6 +636,9 @@ static void camif_do_idle(unsigned long arg)
 	struct camif *camif = (struct camif *)arg;
 	struct videobuf_buffer *vb;
 	struct camif_buffer *buf;
+	unsigned long flags;
+
+	spin_lock_irqsave(&camif->lock, flags);
 
 	/*
 	 * if camif was stopped earlier due to a empty dma_queue
@@ -680,6 +683,8 @@ static void camif_do_idle(unsigned long arg)
 		/* put camif in a recovery state */
 		camif_set_recovery_state(camif);
 	}
+
+	spin_unlock_irqrestore(&camif->lock, flags);
 }
 
 void camif_schedule_next_buffer(struct camif *camif, struct videobuf_buffer *vb,
