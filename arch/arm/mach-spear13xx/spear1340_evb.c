@@ -64,7 +64,7 @@ static struct i2c_board_info vs6725_camera_sensor_info = {
 /* Camera power: default is ON */
 static int vs6725_cam_power(struct device *dev, int val)
 {
-	int ret;
+	int ret = 0;
 	static bool gpio_avail;
 
 	if (!gpio_avail) {
@@ -74,7 +74,7 @@ static int vs6725_cam_power(struct device *dev, int val)
 			gpio_direction_output(STMPE801_GPIO_6, 0);
 		} else {
 			pr_err("gpio request fail for STMPE801_GPIO_6\n");
-			return ret;
+			goto out;
 		}
 
 		gpio_avail = true;
@@ -83,7 +83,18 @@ static int vs6725_cam_power(struct device *dev, int val)
 	/* turn on/off the CE pin for camera sensor */
 	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
 
-	return 0;
+	/*
+	 * Now check if we really were able to set the desired value on CE
+	 * pin of the sensor
+	 */
+	ret = gpio_get_value_cansleep(STMPE801_GPIO_6);
+	if (ret != val) {
+		pr_err("gpio get_val returned %d but expected %d\n", ret, val);
+		ret = -ERESTARTSYS;
+	}
+
+out:
+	return ret;
 }
 
 static struct soc_camera_link vs6725_cam3_sensor_iclink = {
