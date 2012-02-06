@@ -206,14 +206,15 @@ struct camif {
 	/* keep a track of 1st frame-end interrupt */
 	bool first_frame_end;
 
-	/* active buffer/frame present? */
-	bool no_active_frm;
-
 	/* timer to handle DMA hang case */
 	struct timer_list idle_timer;
 
 	/* camif instance id */
 	int id;
+
+	/* keep track of whether we have applied some quirks */
+	bool sw_workaround_applied;
+	bool hw_workaround_applied;
 };
 
 /* camif interrupt selection types */
@@ -475,6 +476,61 @@ static void camif_restore_regs(struct camif *camif)
 	writel(camif->banked_regs[i++], camif->base + CAMIF_CSTOPP);
 }
 
+/*
+ * Recover from the classic producer/consumer videobuf throttle mismatch issue.
+ */
+void camif_set_sw_recovery_state(struct camif *camif)
+{
+	/* stop all interrupts */
+	camif_configure_interrupts(camif, DISABLE_ALL);
+
+	/* bank the camif regs */
+	camif_save_regs(camif);
+
+	/* mark that we have no more active frames */
+	camif->cur_frm = NULL;
+
+	/* again ignore the 1st frame coming from the sensor */
+	camif->first_frame_end = true;
+
+	/* applied a SW throttle control */
+	camif->sw_workaround_applied = true;
+}
+
+/*
+ * Recover from undefined camif state:
+ * It has been noticed that the CAMIF module will hang the system
+ * while performing a DMA request. This is purel random and then we
+ * are left in an state where we need to disable the entire
+ * CAMIF module (as CAMIF has no specific bit to enable/disable the
+ * module and also there is no mechanism to flush the data present
+ * in the CAMIF line buffer
+ */
+static void camif_set_hw_recovery_state(struct camif *camif)
+{
+	/* stop all interrupts */
+	camif_configure_interrupts(camif, DISABLE_ALL);
+
+	/* bank the camif regs */
+	camif_save_regs(camif);
+
+	/* terminate any pending DMA transfers */
+	if (camif->chan)
+		dmaengine_terminate_all(camif->chan);
+
+	/* turn off camif module */
+	camif_module_enable(camif, false);
+
+	/* mark that we have no more active frames */
+	camif->cur_frm = NULL;
+
+	/* again ignore the 1st frame coming from the sensor */
+	camif->first_frame_end = true;
+
+	/* applied a HW reset */
+	camif->hw_workaround_applied = true;
+}
+
 /* Start/Resume CAMIF functionality and DMA transfers */
 static void camif_start_capture(struct camif *camif,
 			enum camif_power_state state)
@@ -488,7 +544,6 @@ static void camif_start_capture(struct camif *camif,
 
 	/* reset global flags */
 	camif->first_frame_end = true;
-	camif->no_active_frm = false;
 
 	/* setup a timer to keep track of the frame DMA completion */
 	init_timer(&camif->idle_timer);
@@ -502,6 +557,8 @@ static void camif_start_capture(struct camif *camif,
 		camif_module_enable(camif, true);
 
 		/* reset global status flags */
+		camif->sw_workaround_applied = false;
+		camif->hw_workaround_applied = false;
 		camif->frame_cnt = -1;
 
 		/*
@@ -536,35 +593,6 @@ static void camif_start_capture(struct camif *camif,
 	camif->is_running = true;
 }
 
-/*
- * Recover from undefined camif state:
- * It has been noticed that the CAMIF module will hang the system
- * while performing a DMA request. This is purel random and then we
- * are left in an state where we need to disable the entire
- * CAMIF module (as CAMIF has no specific bit to enable/disable the
- * module and also there is no mechanism to flush the data present
- * in the CAMIF line buffer
- */
-static void camif_set_recovery_state(struct camif *camif)
-{
-	/* stop all interrupts */
-	camif_configure_interrupts(camif, DISABLE_ALL);
-
-	/* bank the camif regs */
-	camif_save_regs(camif);
-
-	/* turn off camif module */
-	camif_module_enable(camif, false);
-
-	/* terminate any pending DMA transfers */
-	if (camif->chan)
-		dmaengine_terminate_all(camif->chan);
-
-	/* mark that we have no more active frames */
-	camif->cur_frm = NULL;
-	camif->no_active_frm = true;
-}
-
 /* Stop/Suspend CAMIF functionality and DMA transfers */
 static void camif_stop_capture(struct camif *camif,
 			enum camif_power_state state)
@@ -593,12 +621,13 @@ static void camif_stop_capture(struct camif *camif,
 	case CAMIF_SUSPEND:
 		/*
 		 * Save copies of CAMIF registers only if
-		 * we were SUSPENDed when there was
-		 * an active frame present. Otherwise the registers
-		 * already banked in 'camif_set_recovery_state' will
+		 * we were SUSPENDed when there were no quirks applied.
+		 * Otherwise the registers already banked in
+		 * 'camif_set_hw/sw_recovery_state' will
 		 * serve our purpose.
 		 */
-		if (!camif->no_active_frm)
+		if (!camif->sw_workaround_applied &&
+				!camif->hw_workaround_applied)
 			camif_save_regs(camif);
 
 		/* terminate all requests on the DMA channel */
@@ -644,8 +673,7 @@ static void camif_do_idle(unsigned long arg)
 	 * if camif was stopped earlier due to a empty dma_queue
 	 * we need to handle the same here.
 	 */
-	if (!camif->no_active_frm) {
-
+	if (!camif->sw_workaround_applied) {
 		/*
 		 * change states to error state of all active buffers
 		 * and delete them from queue
@@ -680,8 +708,8 @@ static void camif_do_idle(unsigned long arg)
 					struct camif_buffer, vb.queue);
 		}
 
-		/* put camif in a recovery state */
-		camif_set_recovery_state(camif);
+		/* put camif in a HW recovery state */
+		camif_set_hw_recovery_state(camif);
 	}
 
 	spin_unlock_irqrestore(&camif->lock, flags);
@@ -692,8 +720,8 @@ void camif_schedule_next_buffer(struct camif *camif, struct videobuf_buffer *vb,
 {
 	/* check if dma queue is empty */
 	if (list_empty(&camif->dma_queue)) {
-		/* put camif in a recovery state */
-		camif_set_recovery_state(camif);
+		/* put camif in a SW recovery state */
+		camif_set_sw_recovery_state(camif);
 		return;
 	}
 
@@ -855,9 +883,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 
 		/* increment total frame count */
 		camif->frame_cnt++;
-
-		/* we have a active frame now */
-		camif->no_active_frm = false;
 
 		/* enable DMA */
 		camif_configure_interrupts(camif,
@@ -1027,16 +1052,6 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		return;
 	}
 
-	/*
-	 * if camif was stopped earlier due to a empty dma_queue
-	 * we need to handle the same here.
-	 */
-	if (!camif->cur_frm && camif->no_active_frm) {
-		/* turn on CAMIF module and restore registers */
-		camif_module_enable(camif, true);
-		camif_restore_regs(camif);
-	}
-
 	/* submit the DMA descriptor */
 	cookie = buf->desc->tx_submit(buf->desc);
 	ret = dma_submit_error(cookie);
@@ -1046,8 +1061,29 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		return;
 	}
 
-	/* enable frame-end interrupt as we don't have a current frame */
-	if (!camif->cur_frm)
+	/*
+	 * if camif was stopped earlier due to a empty dma_queue
+	 * we need to handle the same here.
+	 */
+	if (camif->hw_workaround_applied) {
+		/* turn on CAMIF module and restore registers */
+		camif_module_enable(camif, true);
+		camif_restore_regs(camif);
+
+		/* enable frame-end interrupt as we don't have a cur_frm */
+		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
+
+		camif->hw_workaround_applied = false;
+	} else if (camif->sw_workaround_applied) {
+		/* restore saved CAMIF registers */
+		camif_restore_regs(camif);
+
+		/* enable frame-end interrupt as we don't have a cur_frm */
+		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
+
+		camif->sw_workaround_applied = false;
+	} else if (!camif->cur_frm)
+		/* enable frame-end interrupt as we don't have a cur_frm */
 		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 }
 
