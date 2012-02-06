@@ -107,6 +107,7 @@ static int ehci_spear_drv_suspend(struct device *dev)
 	 * the root hub is either suspended or stopped.
 	 */
 	spin_lock_irqsave(&ehci->lock, flags);
+	ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(dev));
 	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
 	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
 	spin_unlock_irqrestore(&ehci->lock, flags);
@@ -121,6 +122,17 @@ static int ehci_spear_drv_resume(struct device *dev)
 
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(100);
+
+	if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
+		int	mask = INTR_MASK;
+
+		ehci_prepare_ports_for_controller_resume(ehci);
+		if (!hcd->self.root_hub->do_remote_wakeup)
+			mask &= ~STS_PCD;
+		ehci_writel(ehci, mask, &ehci->regs->intr_enable);
+		ehci_readl(ehci, &ehci->regs->intr_enable);
+		return 0;
+	}
 
 	usb_root_hub_lost_power(hcd->self.root_hub);
 
