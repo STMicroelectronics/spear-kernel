@@ -201,7 +201,7 @@ struct camif {
 	struct v4l2_rect crop;
 
 	/* keep a track for present power state */
-	enum camif_power_state power_state;
+	bool is_running;
 
 	/* keep a track of 1st frame-end interrupt */
 	bool first_frame_end;
@@ -479,9 +479,10 @@ static void camif_restore_regs(struct camif *camif)
 static void camif_start_capture(struct camif *camif,
 			enum camif_power_state state)
 {
-	/* turn on the CAMIF module */
-	camif_module_enable(camif, true);
-
+	/*
+	 * CLK related changes are common to all bringup/power-alive
+	 * states
+	 */
 	/* enable CAMIF clk */
 	clk_enable(camif->clk);
 
@@ -497,6 +498,9 @@ static void camif_start_capture(struct camif *camif,
 
 	switch (state) {
 	case CAMIF_BRINGUP:
+		/* turn on the CAMIF module */
+		camif_module_enable(camif, true);
+
 		/* reset global status flags */
 		camif->frame_cnt = -1;
 
@@ -507,7 +511,6 @@ static void camif_start_capture(struct camif *camif,
 		 * settings, once SET_FMT is called from user-space
 		 */
 		camif_prog_default_ctrl(camif);
-		camif->power_state = CAMIF_BRINGUP;
 
 		/*
 		 * Keep all interrupts disabled for now and enable frame-end
@@ -516,10 +519,8 @@ static void camif_start_capture(struct camif *camif,
 		camif_configure_interrupts(camif, DISABLE_ALL);
 		break;
 	case CAMIF_RESUME:
-	default:
 		/* restore saved CAMIF registers */
 		camif_restore_regs(camif);
-		camif->power_state = CAMIF_RESUME;
 
 		/*
 		 * enable frame-end interrupts as we have already queued
@@ -527,7 +528,12 @@ static void camif_start_capture(struct camif *camif,
 		 */
 		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 		break;
+	default:
+		break;
 	}
+
+	/* change state to running */
+	camif->is_running = true;
 }
 
 /*
@@ -580,10 +586,11 @@ static void camif_stop_capture(struct camif *camif,
 		/* we have no more current frames to process */
 		camif->cur_frm = NULL;
 
-		camif->power_state = CAMIF_SHUTDOWN;
+		/* turn off camif module */
+		camif_module_enable(camif, false);
+
 		break;
 	case CAMIF_SUSPEND:
-	default:
 		/*
 		 * Save copies of CAMIF registers only if
 		 * we were SUSPENDed when there was
@@ -598,7 +605,8 @@ static void camif_stop_capture(struct camif *camif,
 		if (camif->chan)
 			dmaengine_terminate_all(camif->chan);
 
-		camif->power_state = CAMIF_SUSPEND;
+		break;
+	default:
 		break;
 	}
 
@@ -608,11 +616,15 @@ static void camif_stop_capture(struct camif *camif,
 	/* delete recovery timer */
 	del_timer_sync(&camif->idle_timer);
 
+	/*
+	 * CLK related changes are common to all shutdown/power-save
+	 * states
+	 */
 	/* disable CAMIF clk */
 	clk_disable(camif->clk);
 
-	/* turn off camif module */
-	camif_module_enable(camif, false);
+	/* change state to stopped */
+	camif->is_running = false;
 }
 
 /*
@@ -1747,10 +1759,83 @@ static unsigned int camif_camera_poll(struct file *file, poll_table *pt)
 	return 0;
 }
 
+static int camif_suspend(struct soc_camera_device *icd, pm_message_t pm_state)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+	int ret = 0;
+
+	/* check if CAMIF is in running state */
+	if (camif->is_running) {
+		camif_stop_capture(camif, CAMIF_SUSPEND);
+
+		/* put subdev in low-power state */
+		if ((camif->icd) && (camif->icd->ops->suspend))
+			ret = camif->icd->ops->suspend(camif->icd, pm_state);
+	}
+
+	return ret;
+}
+
+static int camif_resume(struct soc_camera_device *icd)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct camif *camif = ici->priv;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
+	dma_cookie_t cookie;
+	int ret = 0;
+
+	/* check if CAMIF is in power-save state */
+	if (!camif->is_running) {
+		/* bring subdev out of low-power state */
+		if ((camif->icd) && (camif->icd->ops->resume)) {
+			ret = camif->icd->ops->resume(camif->icd);
+			if (ret < 0)
+				goto out;
+		}
+
+		/*
+		 * As at the time of suspend, underlying DMA would have
+		 * terminated all existing DMA descriptor requests, we need
+		 * to again 'submit' the buffers present in our dma queue
+		 */
+		if (!ret && !list_empty(&camif->dma_queue)) {
+			list_for_each_entry(vb, &camif->dma_queue, queue) {
+				buf = container_of(vb, struct camif_buffer, vb);
+				ret = camif_init_dma_channel(camif, buf);
+				if (ret) {
+					dev_err(camif->icd->dev.parent,
+						"DMA initialization failed\n");
+					goto out;
+				}
+
+				/* submit the DMA descriptor */
+				cookie = buf->desc->tx_submit(buf->desc);
+				ret = dma_submit_error(cookie);
+				if (ret) {
+					dev_err(camif->icd->dev.parent,
+						"dma submit error %d\n",
+						cookie);
+					goto out;
+				}
+			}
+		}
+
+		/* Resume CAMIF frame capture */
+		camif_start_capture(camif, CAMIF_RESUME);
+	}
+
+out:
+	return ret;
+}
+
 static struct soc_camera_host_ops camif_soc_camera_host_ops = {
 	.owner = THIS_MODULE,
 	.add = camif_add_device,
 	.remove	= camif_remove_device,
+	.suspend = camif_suspend,
+	.resume	= camif_resume,
 	.get_formats = camif_get_formats,
 	.put_formats = camif_put_formats,
 	.cropcap = camif_cropcap,
@@ -1925,98 +2010,6 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int camif_suspend(struct device *dev)
-{
-	struct soc_camera_host *ici = to_soc_camera_host(dev);
-	struct camif *camif = ici->priv;
-	int ret = 0;
-
-	/* check if CAMIF is in UP(running) state */
-	if (camif->power_state == CAMIF_BRINGUP) {
-		camif_stop_capture(camif, CAMIF_SUSPEND);
-
-		/* put subdev in low-power state */
-		if (camif->icd) {
-			struct v4l2_subdev *sd =
-				soc_camera_to_subdev(camif->icd);
-			ret = v4l2_subdev_call(sd, core, s_power, 0);
-			if (ret == -ENOIOCTLCMD)
-				ret = 0;
-		}
-	}
-
-	return ret;
-}
-
-static int camif_resume(struct device *dev)
-{
-	struct soc_camera_host *ici = to_soc_camera_host(dev);
-	struct camif *camif = ici->priv;
-	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
-	dma_cookie_t cookie;
-	int ret = 0;
-
-	/* check if CAMIF is in SUSPENDed state */
-	if (camif->power_state == CAMIF_SUSPEND) {
-		/* bring subdev out of low-power state */
-		if (camif->icd) {
-			struct v4l2_subdev *sd =
-				soc_camera_to_subdev(camif->icd);
-			ret = v4l2_subdev_call(sd, core, s_power, 1);
-			if (ret == -ENOIOCTLCMD)
-				ret = 0;
-		}
-
-		/*
-		 * As at the time of suspend, underlying DMA would have
-		 * terminated all existing DMA descriptor requests, we need
-		 * to again 'submit' the buffers present in our dma queue
-		 */
-		if (!ret && !list_empty(&camif->dma_queue)) {
-			list_for_each_entry(vb, &camif->dma_queue, queue) {
-				buf = container_of(vb, struct camif_buffer, vb);
-				ret = camif_init_dma_channel(camif, buf);
-				if (ret) {
-					dev_err(camif->icd->dev.parent,
-						"DMA initialization failed\n");
-					goto out;
-				}
-
-				/* submit the DMA descriptor */
-				cookie = buf->desc->tx_submit(buf->desc);
-				ret = dma_submit_error(cookie);
-				if (ret) {
-					dev_err(camif->icd->dev.parent,
-						"dma submit error %d\n",
-						cookie);
-					goto out;
-				}
-			}
-		}
-
-		/* Resume CAMIF frame capture */
-		camif_start_capture(camif, CAMIF_RESUME);
-	}
-
-out:
-	return ret;
-}
-
-static const struct dev_pm_ops camif_pm_dev_ops = {
-	.suspend = camif_suspend,
-	.resume	= camif_resume,
-	.freeze = camif_suspend,
-	.restore = camif_resume,
-};
-
-#define CAMIF_DEV_PM_OPS (&camif_pm_dev_ops)
-
-#else
-#define CAMIF_DEV_PM_OPS NULL
-
-#endif /* CONFIG_PM */
 
 static struct platform_driver camif_driver = {
 	.probe = camif_probe,
@@ -2024,7 +2017,6 @@ static struct platform_driver camif_driver = {
 	.driver = {
 		.name = "spear_camif",
 		.owner = THIS_MODULE,
-		.pm = CAMIF_DEV_PM_OPS,
 	},
 };
 
