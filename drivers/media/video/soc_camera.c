@@ -476,7 +476,7 @@ esfmt:
 eresume:
 	ici->ops->remove(icd);
 eiciadd:
-	soc_camera_power_off(icd, icl);
+	ret = soc_camera_power_off(icd, icl);
 epower:
 	icd->use_count--;
 	mutex_unlock(&icd->video_lock);
@@ -489,6 +489,7 @@ static int soc_camera_close(struct file *file)
 {
 	struct soc_camera_device *icd = file->private_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	int ret = 0;
 
 	mutex_lock(&icd->video_lock);
 	icd->use_count--;
@@ -500,7 +501,7 @@ static int soc_camera_close(struct file *file)
 
 		ici->ops->remove(icd);
 
-		soc_camera_power_off(icd, icl);
+		ret = soc_camera_power_off(icd, icl);
 	}
 
 	if (icd->streamer == file)
@@ -512,7 +513,7 @@ static int soc_camera_close(struct file *file)
 
 	dev_dbg(&icd->dev, "camera device close\n");
 
-	return 0;
+	return ret;
 }
 
 static ssize_t soc_camera_read(struct file *file, char __user *buf,
@@ -1001,7 +1002,7 @@ static int soc_camera_probe(struct device *dev)
 	struct device *control = NULL;
 	struct v4l2_subdev *sd;
 	struct v4l2_mbus_framefmt mf;
-	int ret;
+	int ret = 0;
 
 	dev_info(dev, "Probing %s\n", dev_name(dev));
 
@@ -1090,11 +1091,11 @@ static int soc_camera_probe(struct device *dev)
 
 	ici->ops->remove(icd);
 
-	soc_camera_power_off(icd, icl);
+	ret = soc_camera_power_off(icd, icl);
 
 	mutex_unlock(&icd->video_lock);
 
-	return 0;
+	return ret;
 
 evidstart:
 	mutex_unlock(&icd->video_lock);
@@ -1112,7 +1113,7 @@ eadddev:
 evdc:
 	ici->ops->remove(icd);
 eadd:
-	soc_camera_power_off(icd, icl);
+	ret = soc_camera_power_off(icd, icl);
 epower:
 	return ret;
 }
