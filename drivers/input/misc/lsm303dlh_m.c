@@ -217,6 +217,9 @@ static ssize_t lsm303dlh_m_store_rate(struct device *dev,
 	if (error)
 		return error;
 
+	if (val < LSM303DLH_M_RATE_00_75 || val > LSM303DLH_M_RATE_75_00)
+		return -EINVAL;
+
 	mutex_lock(&ddata->lock);
 
 	data = ((val << LSM303DLH_M_CRA_DO_BIT) & LSM303DLH_M_CRA_DO_MASK);
@@ -493,6 +496,12 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 	/* if same mode as existing, return */
 	if (ddata->mode == mode)
 		return 0;
+
+	/* not in correct range */
+	if (!(mode == LSM303DLH_M_MODE_CONTINUOUS ||
+				mode == LSM303DLH_M_MODE_SINGLE ||
+				mode == LSM303DLH_M_MODE_SLEEP))
+		return -EINVAL;
 
 	/* turn on the supplies if already off */
 	if (ddata->mode == LSM303DLH_M_MODE_SLEEP) {
