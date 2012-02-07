@@ -29,11 +29,13 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	int ret = 0;
 	u32 channel;
 
-	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-			SND_SOC_DAIFMT_CBS_CFM);
-	if (ret < 0)
-		return ret;
+	if (cpu_is_spear320()) {
+		/* set codec DAI configuration */
+		ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+				SND_SOC_DAIFMT_CBS_CFM);
+		if (ret < 0)
+			return ret;
+	}
 
 	channel = params_channels(params);
 
