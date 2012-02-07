@@ -631,7 +631,8 @@ static ssize_t lsm303dlh_a_store_range(struct device *dev,
 	if (error)
 		return error;
 
-	if (val < LSM303DLH_A_RANGE_2G || val > LSM303DLH_A_RANGE_8G)
+	if (!(val == LSM303DLH_A_RANGE_2G || val == LSM303DLH_A_RANGE_4G ||
+				val == LSM303DLH_A_RANGE_8G))
 		return -EINVAL;
 
 	mutex_lock(&ddata->lock);
@@ -787,7 +788,7 @@ static ssize_t lsm303dlh_a_store_rate(struct device *dev,
 	if (error)
 		return error;
 
-	if (val < LSM303DLH_A_MODE_OFF || val > LSM303DLH_A_MODE_LP_10)
+	if (val < LSM303DLH_A_RATE_50 || val > LSM303DLH_A_RATE_1000)
 		return -EINVAL;
 
 	mutex_lock(&ddata->lock);
