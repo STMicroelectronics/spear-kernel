@@ -57,12 +57,12 @@
 #define INT1_CFG	0x30	/* interrupt 1 configuration */
 #define INT1_SRC	0x31	/* interrupt 1 source reg */
 #define INT1_THS	0x32	/* interrupt 1 threshold */
-#define INT1_DURATION	0x33	/* interrupt 1 threshold */
+#define INT1_DURATION	0x33	/* interrupt 1 duration */
 
 #define INT2_CFG	0x34	/* interrupt 2 configuration */
 #define INT2_SRC	0x35	/* interrupt 2 source reg */
 #define INT2_THS	0x36	/* interrupt 2 threshold */
-#define INT2_DURATION	0x37	/* interrupt 2 threshold */
+#define INT2_DURATION	0x37	/* interrupt 2 duration */
 
 /* Sensitivity adjustment */
 #define SHIFT_ADJ_2G	4 /*	1/16*/
@@ -120,7 +120,7 @@
 #define LSM303DLH_A_MODE_NORMAL 0x01
 #define LSM303DLH_A_MODE_LP_HALF 0x02
 #define LSM303DLH_A_MODE_LP_1 0x03
-#define LSM303DLH_A_MODE_LP_2 0x02
+#define LSM303DLH_A_MODE_LP_2 0x04
 #define LSM303DLH_A_MODE_LP_5 0x05
 #define LSM303DLH_A_MODE_LP_10 0x06
 
