@@ -467,6 +467,7 @@ extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
+extern struct platform_device spear13xx_pmu_device;
 extern struct platform_device spear13xx_pcie_gadget0_device;
 extern struct platform_device spear13xx_pcie_host0_device;
 extern struct platform_device spear13xx_pcm_device;

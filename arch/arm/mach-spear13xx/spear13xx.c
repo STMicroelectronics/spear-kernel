@@ -28,6 +28,7 @@
 #include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
+#include <asm/pmu.h>
 #include <asm/setup.h>
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
@@ -519,6 +520,26 @@ struct platform_device spear13xx_nand_device = {
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
 	.dev.platform_data = &nand_platform_data,
+};
+
+/* pmu device */
+static struct resource spear13xx_pmu_resources[] = {
+	{
+		.start	= SPEAR13XX_IRQ_PMU0,
+		.end	= SPEAR13XX_IRQ_PMU0,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.start	= SPEAR13XX_IRQ_PMU1,
+		.end	= SPEAR13XX_IRQ_PMU1,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pmu_device = {
+	.name		= "arm-pmu",
+	.id		= ARM_PMU_DEVICE_CPU,
+	.num_resources	= ARRAY_SIZE(spear13xx_pmu_resources),
+	.resource	= spear13xx_pmu_resources,
 };
 
 /* usb host device registeration */
