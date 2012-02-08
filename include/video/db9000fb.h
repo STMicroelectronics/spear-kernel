@@ -459,6 +459,7 @@ struct db9000fb_info {
 	/*	unsigned long	hsync_time; */
 
 	u_char			state;
+	u_char			old_state;
 	u_char			task_state;
 	struct mutex		ctrlr_lock;
 	wait_queue_head_t	ctrlr_wait;

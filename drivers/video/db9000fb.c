@@ -1201,10 +1201,10 @@ static int db9000fb_thaw(struct device *dev)
 {
 	struct db9000fb_info *fbi = dev_get_drvdata(dev);
 
-	if (!fbi->clk_enabled) {
-		fbi->clk_enabled =true;
+	if (!fbi->clk_enabled)
 		clk_enable(fbi->clk);
-	}
+
+	fbi->state = fbi->old_state;
 
 	return 0;
 }
@@ -1213,10 +1213,11 @@ static int db9000fb_freeze(struct device *dev)
 {
 	struct db9000fb_info *fbi = dev_get_drvdata(dev);
 
-	if (fbi->clk_enabled) {
-		fbi->clk_enabled = false;
+	if (fbi->clk_enabled)
 		clk_disable(fbi->clk);
-	}
+
+	fbi->old_state = fbi->state;
+	fbi->state = C_DISABLE_PM;
 
 	return 0;
 }
