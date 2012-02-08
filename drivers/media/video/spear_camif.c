@@ -536,9 +536,12 @@ static void camif_start_capture(struct camif *camif,
 			enum camif_power_state state)
 {
 	/*
-	 * CLK related changes are common to all bringup/power-alive
+	 * HW related changes are common to all bringup/power-alive
 	 * states
 	 */
+	/* turn on the CAMIF module */
+	camif_module_enable(camif, true);
+
 	/* enable CAMIF clk */
 	clk_enable(camif->clk);
 
@@ -553,8 +556,6 @@ static void camif_start_capture(struct camif *camif,
 
 	switch (state) {
 	case CAMIF_BRINGUP:
-		/* turn on the CAMIF module */
-		camif_module_enable(camif, true);
 
 		/* reset global status flags */
 		camif->sw_workaround_applied = false;
@@ -568,26 +569,20 @@ static void camif_start_capture(struct camif *camif,
 		 * settings, once SET_FMT is called from user-space
 		 */
 		camif_prog_default_ctrl(camif);
-
-		/*
-		 * Keep all interrupts disabled for now and enable frame-end
-		 * interrupts after QBUF call from user-space
-		 */
-		camif_configure_interrupts(camif, DISABLE_ALL);
 		break;
 	case CAMIF_RESUME:
 		/* restore saved CAMIF registers */
 		camif_restore_regs(camif);
-
-		/*
-		 * enable frame-end interrupts as we have already queued
-		 * data when we went to suspend state
-		 */
-		camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 		break;
 	default:
 		break;
 	}
+
+	/*
+	 * Keep all interrupts disabled for now and enable frame-end
+	 * interrupts after QBUF call from user-space
+	 */
+	camif_configure_interrupts(camif, DISABLE_ALL);
 
 	/* change state to running */
 	camif->is_running = true;
@@ -610,13 +605,6 @@ static void camif_stop_capture(struct camif *camif,
 			dmaengine_terminate_all(camif->chan);
 			dma_release_channel(camif->chan);
 		}
-
-		/* we have no more current frames to process */
-		camif->cur_frm = NULL;
-
-		/* turn off camif module */
-		camif_module_enable(camif, false);
-
 		break;
 	case CAMIF_SUSPEND:
 		/*
@@ -633,11 +621,13 @@ static void camif_stop_capture(struct camif *camif,
 		/* terminate all requests on the DMA channel */
 		if (camif->chan)
 			dmaengine_terminate_all(camif->chan);
-
 		break;
 	default:
 		break;
 	}
+
+	/* we have no more current frames to process */
+	camif->cur_frm = NULL;
 
 	/* clear global flags */
 	camif->first_frame_end = false;
@@ -646,11 +636,14 @@ static void camif_stop_capture(struct camif *camif,
 	del_timer_sync(&camif->idle_timer);
 
 	/*
-	 * CLK related changes are common to all shutdown/power-save
+	 * HW related changes are common to all shutdown/power-save
 	 * states
 	 */
 	/* disable CAMIF clk */
 	clk_disable(camif->clk);
+
+	/* turn off camif module */
+	camif_module_enable(camif, false);
 
 	/* change state to stopped */
 	camif->is_running = false;
