@@ -288,17 +288,12 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
-	&spear1340_nand_device,
-	&spear1340_i2s_play_device,
-	&spear1340_i2s_record_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
-	&spear1340_spdif_in_device,
-	&spear1340_spdif_out_device,
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
@@ -306,19 +301,24 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+#ifdef CONFIG_DRM_MALI
+	&spear1340_device_mali_drm,
+#endif
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear1340_gpiokeys_device,
 #endif
 	&spear1340_i2c1_device,
-	&spear1340_pwm_device,
+	&spear1340_i2s_play_device,
+	&spear1340_i2s_record_device,
+	&spear1340_nand_device,
+	&spear1340_otg_device,
 	&spear1340_phy0_device,
 	&spear1340_plgpio_device,
-	&spear1340_otg_device,
+	&spear1340_pwm_device,
 	&spear1340_sata0_device,
+	&spear1340_spdif_in_device,
+	&spear1340_spdif_out_device,
 	&spear1340_thermal_device,
-#ifdef CONFIG_DRM_MALI
-	&spear1340_device_mali_drm,
-#endif
 };
 
 static struct arasan_cf_pdata cf_pdata = {
