@@ -50,7 +50,7 @@ config MACH_SPEAR1340_LCAD
 
 config SPEAR1340_PLUG_BOARDS
 	bool "SPEAr1340 Plug Boards"
-	depends on MACH_SPEAR1340_EVB
+	depends on MACH_SPEAR1340_EVB && SPEAR_PLUG_BOARDS
 	help
 	  Supports ST SPEAr1340 Plug boards
 

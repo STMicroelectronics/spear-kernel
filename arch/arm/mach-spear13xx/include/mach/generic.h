@@ -23,6 +23,7 @@
 #include <asm/mach/map.h>
 #include <asm/setup.h>
 #include <plat/padmux.h>
+#include <plat/plug_board.h>
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
@@ -622,6 +623,14 @@ extern struct platform_device spear1340_device_mali_drm;
 extern struct spi_board_info spear1340_evb_spi_m25p80;
 extern struct spi_board_info spear1340_evb_spi_stmpe610;
 extern struct spi_board_info spear1340_evb_spi_spidev;
+
+/* Add spear1340 i2c devices structure declaration */
+extern struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom0;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom1;
+extern struct i2c_dev_info spear1340_evb_i2c_sta529;
+
+int __init spear1340_pb_init(struct plug_board_info *pb_info);
 
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);

@@ -32,6 +32,11 @@ config ARCH_SPEAR6XX
 
 endchoice
 
+config SPEAR_PLUG_BOARDS
+	bool "SPEAr Plug Boards"
+	help
+	  Supports ST SPEAr Plug boards
+
 # Adding SPEAr machine specific configuration files
 source "arch/arm/mach-spear13xx/Kconfig"
 source "arch/arm/mach-spear3xx/Kconfig"

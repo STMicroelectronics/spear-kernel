@@ -30,20 +30,15 @@
 #include <plat/fsmc.h>
 #include <plat/i2c.h>
 #include <plat/keyboard.h>
+#include <plat/plug_board.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
-#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
-
-#ifdef CONFIG_SPEAR1340_PLUG_BOARDS
-/* Variable specifying which plug boards are requested */
-extern char spear1340_plug_board[50];
-#endif
 
 #if 0
 /* fsmc nor partition info */
@@ -641,7 +636,7 @@ static void __init spear1340_evb_init(void)
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 	/* Check if plug boards are requested or not */
-	if (spear1340_plug_board[0] != '\0') {
+	if (spear_pb_present()) {
 		struct plug_board_info pb_info;
 		int ret;
 
