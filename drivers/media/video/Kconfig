@@ -421,6 +421,8 @@ config VIDEO_VPX3220
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpx3220.
 
+source "drivers/media/video/spear/Kconfig"
+
 comment "Video and audio decoders"
 
 source "drivers/media/video/cx25840/Kconfig"
