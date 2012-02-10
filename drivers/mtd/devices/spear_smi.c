@@ -260,8 +260,8 @@ static int spear_smi_read_sr(struct spear_smi *dev, u32 bank)
 	/* copy dev->status (lower 16 bits) in order to release lock */
 	if (ret > 0)
 		ret = dev->status & 0xffff;
-	else
-		ret = -EIO;
+	else if (ret == 0)
+		ret = -ETIMEDOUT;
 
 	/* restore the ctrl regs state */
 	writel(ctrlreg1, dev->io_base + SMI_CR1);
@@ -289,16 +289,19 @@ static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 	finish = jiffies + timeout;
 	do {
 		status = spear_smi_read_sr(dev, bank);
-		if (status < 0)
-			continue; /* try till timeout */
-		else if (!(status & SR_WIP))
+		if (status < 0) {
+			if (status == -ETIMEDOUT)
+				continue; /* try till timeout */
+			return status;
+		} else if (!(status & SR_WIP)) {
 			return 0;
+		}
 
 		cond_resched();
 	} while (!time_after_eq(jiffies, finish));
 
 	dev_err(&dev->pdev->dev, "smi controller is busy, timeout\n");
-	return status;
+	return -EBUSY;
 }
 
 /**
