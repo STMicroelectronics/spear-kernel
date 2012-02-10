@@ -291,7 +291,7 @@ static const struct platform_hibernation_ops spear_hiber_ops = {
 	.leave = empty_exit,
 	.pre_restore = empty_enter,
 	.restore_cleanup = empty_exit,
-}
+};
 #endif
 
 static void spear_power_off(void)
