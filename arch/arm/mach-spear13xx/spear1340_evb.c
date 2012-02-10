@@ -319,6 +319,7 @@ static struct platform_device *plat_devs[] __initdata = {
 #ifdef CONFIG_DRM_MALI
 	&spear1340_device_mali_drm,
 #endif
+	&spear1340_video_dec_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {
