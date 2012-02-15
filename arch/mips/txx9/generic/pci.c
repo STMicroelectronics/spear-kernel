@@ -213,11 +213,8 @@ txx9_alloc_pci_controller(struct pci_controller *pcic,
 
 	pcic->mem_offset = 0;	/* busaddr == physaddr */
 
-	printk(KERN_INFO "PCI: IO 0x%08llx-0x%08llx MEM 0x%08llx-0x%08llx\n",
-	       (unsigned long long)pcic->mem_resource[1].start,
-	       (unsigned long long)pcic->mem_resource[1].end,
-	       (unsigned long long)pcic->mem_resource[0].start,
-	       (unsigned long long)pcic->mem_resource[0].end);
+	printk(KERN_INFO "PCI: IO %pR MEM %pR\n",
+	       &pcic->mem_resource[1], &pcic->mem_resource[0]);
 
 	/* register_pci_controller() will request MEM resource */
 	release_resource(&pcic->mem_resource[0]);
@@ -265,7 +262,7 @@ txx9_i8259_irq_setup(int irq)
 	int err;
 
 	init_i8259_irqs();
-	err = request_irq(irq, &i8259_interrupt, IRQF_DISABLED|IRQF_SHARED,
+	err = request_irq(irq, &i8259_interrupt, IRQF_SHARED,
 			  "cascade(i8259)", (void *)(long)irq);
 	if (!err)
 		printk(KERN_INFO "PCI-ISA bridge PIC (irq %d)\n", irq);

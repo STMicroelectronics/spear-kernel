@@ -13,6 +13,11 @@ config ARCH_SPEAR13XX
 	select ARM_GIC
 	select CPU_V7
 	select ARCH_SUPPORTS_MSI
+	select HAVE_SMP
+	select MIGHT_HAVE_CACHE_L2X0
+	select ARCH_SUPPORTS_MSI
+	select MIGHT_HAVE_PCI
+
 	help
 	  Supports for ARM's SPEAR13XX family
 

@@ -47,6 +47,9 @@ enum {
  * @muxval: a number usually used to poke into some mux regiser to
  * mux in the signal to this channel
  * @cctl_opt: default options for the channel control register
+ * @device_fc: Flow Controller Settings for ccfg register. Only valid for slave
+ * channels. Fill with 'true' if peripheral should be flow controller. Direction
+ * will be selected at Runtime.
  * @addr: source/target address in physical memory for this DMA channel,
  * can be the address of a FIFO register for burst requests for example.
  * This can be left undefined if the PrimeCell API is used for configuring
@@ -130,7 +133,7 @@ struct pl08x_txd {
 	struct dma_async_tx_descriptor tx;
 	struct list_head node;
 	struct list_head dsg_list;
-	enum dma_data_direction	direction;
+	enum dma_transfer_direction direction;
 	dma_addr_t llis_bus;
 	struct pl08x_lli *llis_va;
 	/* Default cctl value for LLIs */
@@ -196,7 +199,7 @@ struct pl08x_dma_chan {
 	dma_addr_t dst_addr;
 	u32 src_cctl;
 	u32 dst_cctl;
-	enum dma_data_direction	runtime_direction;
+	enum dma_transfer_direction runtime_direction;
 	dma_cookie_t lc;
 	struct list_head pend_list;
 	struct pl08x_txd *at;

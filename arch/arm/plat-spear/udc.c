@@ -10,8 +10,9 @@
  */
 
 #include <linux/platform_device.h>
-#include <plat/udc.h>
+#include <linux/string.h>
 #include <linux/usb/ch9.h>
+#include <plat/udc.h>
 
 #define EP(idx, nam, size, maxpkt, address)	\
 	[idx] = {				\

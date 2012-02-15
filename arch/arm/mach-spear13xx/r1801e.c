@@ -19,10 +19,9 @@
 #include <linux/mtd/nand.h>
 #include <linux/phy.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
 #include <mach/generic.h>
-#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
@@ -216,8 +215,17 @@ static struct platform_device *plat_devs[] __initdata = {
 	&r1801e_phy0_device,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.select_bank = nand_select_bank,
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW16,
+	.partitions = partition_info,
+	.nr_partitions = ARRAY_SIZE(partition_info),
+};
+
 #ifdef CONFIG_SPEAR_PCIE_REV341
- /* This function is needed for board specific PCIe initilization */
+/* This function is needed for board specific PCIe initilization */
 static void __init r1801e_pcie_board_init(void)
 {
 	void *plat_data;
@@ -259,16 +267,14 @@ static void __init r1801e_init(void)
 
 	/*
 	 * SPEAr1310 reva FSMC cannot used as NOR and NAND at the same time
-	 * For the moment, disable NAND and use NOR only
-	 * If NAND is needed, enable the following code and disable all
-	 * code for NOR. Also enable nand in padmux configuration to
-	 * use it.
+	 * For the moment, disable NOR and use NAND only
 	 */
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear13xx_nand_device, partition_info,
-			ARRAY_SIZE(partition_info), NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW16, NULL);
 	nand_mach_init(FSMC_NAND_BW16);
+	if (platform_device_add_data(&spear13xx_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_nand_device.name);
 
 	/* call spear1310 reva machine init function */
 	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
@@ -290,9 +296,11 @@ static void __init r1801e_init(void)
 }
 
 MACHINE_START(R1801E, "ST-SPEAR1310-REVA-R1801e")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.map_io		=	spear1310_reva_map_io,
 	.init_irq	=	spear13xx_init_irq,
+	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	r1801e_init,
+	.restart	=	spear_restart,
 MACHINE_END

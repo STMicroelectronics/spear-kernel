@@ -20,9 +20,9 @@
 #include <linux/time.h>
 #include <linux/irq.h>
 #include <asm/mach/time.h>
-#include <mach/irqs.h>
-#include <mach/hardware.h>
 #include <mach/generic.h>
+#include <mach/hardware.h>
+#include <mach/irqs.h>
 
 /*
  * We would use TIMER0 and TIMER1 as clockevent and clocksource.
@@ -70,11 +70,6 @@ static void clockevent_set_mode(enum clock_event_mode mode,
 static int clockevent_next_event(unsigned long evt,
 				 struct clock_event_device *clk_event_dev);
 
-static cycle_t clocksource_read_cycles(struct clocksource *cs)
-{
-	return (cycle_t) readw(gpt_base + COUNT(CLKSRC));
-}
-
 #ifdef CONFIG_PM
 static u16 gpt_ctrl_reg;
 
@@ -97,17 +92,6 @@ void spear_clocksource_resume(void)
 }
 #endif
 
-static struct clocksource clksrc = {
-	.name = "tmr1",
-	.rating = 200,		/* its a pretty decent clock */
-	.read = clocksource_read_cycles,
-	.mask = 0xFFFF,		/* 16 bits */
-	.mult = 0,		/* to be computed */
-	.shift = 0,		/* to be computed */
-	.flags = CLOCK_SOURCE_IS_CONTINUOUS,
-
-};
-
 static void spear_clocksource_init(void)
 {
 	u32 tick_rate;
@@ -127,10 +111,9 @@ static void spear_clocksource_init(void)
 	val |= CTRL_ENABLE ;
 	writew(val, gpt_base + CR(CLKSRC));
 
-	clocksource_calc_mult_shift(&clksrc, tick_rate, SPEAR_MIN_RANGE);
-
 	/* register the clocksource */
-	clocksource_register(&clksrc);
+	clocksource_mmio_init(gpt_base + COUNT(CLKSRC), "tmr1", tick_rate,
+		200, 16, clocksource_mmio_readw_up);
 }
 
 static struct clock_event_device clkevt = {

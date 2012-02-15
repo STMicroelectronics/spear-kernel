@@ -29,7 +29,7 @@ extern unsigned int sig_xstate_size;
 extern void fpu_init(void);
 extern void mxcsr_feature_mask_init(void);
 extern int init_fpu(struct task_struct *child);
-extern asmlinkage void math_state_restore(void);
+extern void math_state_restore(void);
 extern void __math_state_restore(void);
 extern int dump_fpu(struct pt_regs *, struct user_i387_struct *);
 
@@ -93,6 +93,17 @@ static inline int fxrstor_checking(struct i387_fxsave_struct *fx)
 	int err;
 
 	/* See comment in fxsave() below. */
+#ifdef CONFIG_AS_FXSAVEQ
+	asm volatile("1:  fxrstorq %[fx]\n\t"
+		     "2:\n"
+		     ".section .fixup,\"ax\"\n"
+		     "3:  movl $-1,%[err]\n"
+		     "    jmp  2b\n"
+		     ".previous\n"
+		     _ASM_EXTABLE(1b, 3b)
+		     : [err] "=r" (err)
+		     : [fx] "m" (*fx), "0" (0));
+#else
 	asm volatile("1:  rex64/fxrstor (%[fx])\n\t"
 		     "2:\n"
 		     ".section .fixup,\"ax\"\n"
@@ -102,6 +113,7 @@ static inline int fxrstor_checking(struct i387_fxsave_struct *fx)
 		     _ASM_EXTABLE(1b, 3b)
 		     : [err] "=r" (err)
 		     : [fx] "R" (fx), "m" (*fx), "0" (0));
+#endif
 	return err;
 }
 
@@ -119,6 +131,17 @@ static inline int fxsave_user(struct i387_fxsave_struct __user *fx)
 		return -EFAULT;
 
 	/* See comment in fxsave() below. */
+#ifdef CONFIG_AS_FXSAVEQ
+	asm volatile("1:  fxsaveq %[fx]\n\t"
+		     "2:\n"
+		     ".section .fixup,\"ax\"\n"
+		     "3:  movl $-1,%[err]\n"
+		     "    jmp  2b\n"
+		     ".previous\n"
+		     _ASM_EXTABLE(1b, 3b)
+		     : [err] "=r" (err), [fx] "=m" (*fx)
+		     : "0" (0));
+#else
 	asm volatile("1:  rex64/fxsave (%[fx])\n\t"
 		     "2:\n"
 		     ".section .fixup,\"ax\"\n"
@@ -128,6 +151,7 @@ static inline int fxsave_user(struct i387_fxsave_struct __user *fx)
 		     _ASM_EXTABLE(1b, 3b)
 		     : [err] "=r" (err), "=m" (*fx)
 		     : [fx] "R" (fx), "0" (0));
+#endif
 	if (unlikely(err) &&
 	    __clear_user(fx, sizeof(struct i387_fxsave_struct)))
 		err = -EFAULT;
@@ -194,7 +218,7 @@ static inline void fpu_fxsave(struct fpu *fpu)
 #ifdef CONFIG_SMP
 #define safe_address (__per_cpu_offset[0])
 #else
-#define safe_address (kstat_cpu(0).cpustat.user)
+#define safe_address (__get_cpu_var(kernel_cpustat).cpustat[CPUTIME_USER])
 #endif
 
 /*
@@ -213,7 +237,7 @@ static inline void fpu_save_init(struct fpu *fpu)
 	} else if (use_fxsr()) {
 		fpu_fxsave(fpu);
 	} else {
-		asm volatile("fsave %[fx]; fwait"
+		asm volatile("fnsave %[fx]; fwait"
 			     : [fx] "=m" (fpu->state->fsave));
 		return;
 	}
@@ -283,9 +307,54 @@ static inline void __clear_fpu(struct task_struct *tsk)
 	}
 }
 
+/*
+ * Were we in an interrupt that interrupted kernel mode?
+ *
+ * We can do a kernel_fpu_begin/end() pair *ONLY* if that
+ * pair does nothing at all: TS_USEDFPU must be clear (so
+ * that we don't try to save the FPU state), and TS must
+ * be set (so that the clts/stts pair does nothing that is
+ * visible in the interrupted kernel thread).
+ */
+static inline bool interrupted_kernel_fpu_idle(void)
+{
+	return !(current_thread_info()->status & TS_USEDFPU) &&
+		(read_cr0() & X86_CR0_TS);
+}
+
+/*
+ * Were we in user mode (or vm86 mode) when we were
+ * interrupted?
+ *
+ * Doing kernel_fpu_begin/end() is ok if we are running
+ * in an interrupt context from user mode - we'll just
+ * save the FPU state as required.
+ */
+static inline bool interrupted_user_mode(void)
+{
+	struct pt_regs *regs = get_irq_regs();
+	return regs && user_mode_vm(regs);
+}
+
+/*
+ * Can we use the FPU in kernel mode with the
+ * whole "kernel_fpu_begin/end()" sequence?
+ *
+ * It's always ok in process context (ie "not interrupt")
+ * but it is sometimes ok even from an irq.
+ */
+static inline bool irq_fpu_usable(void)
+{
+	return !in_interrupt() ||
+		interrupted_user_mode() ||
+		interrupted_kernel_fpu_idle();
+}
+
 static inline void kernel_fpu_begin(void)
 {
 	struct thread_info *me = current_thread_info();
+
+	WARN_ON_ONCE(!irq_fpu_usable());
 	preempt_disable();
 	if (me->status & TS_USEDFPU)
 		__save_init_fpu(me->task);
@@ -297,14 +366,6 @@ static inline void kernel_fpu_end(void)
 {
 	stts();
 	preempt_enable();
-}
-
-static inline bool irq_fpu_usable(void)
-{
-	struct pt_regs *regs;
-
-	return !in_interrupt() || !(regs = get_irq_regs()) || \
-		user_mode(regs) || (read_cr0() & X86_CR0_TS);
 }
 
 /*
@@ -343,6 +404,7 @@ static inline void irq_ts_restore(int TS_state)
  */
 static inline void save_init_fpu(struct task_struct *tsk)
 {
+	WARN_ON_ONCE(task_thread_info(tsk)->status & TS_USEDFPU);
 	preempt_disable();
 	__save_init_fpu(tsk);
 	stts();

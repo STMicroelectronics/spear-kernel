@@ -11,24 +11,24 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <asm/irq.h>
 #include <linux/ahci_platform.h>
 #include <linux/amba/serial.h>
 #include <linux/delay.h>
+#include <linux/designware_i2s.h>
+#include <linux/dw_dmac.h>
+#include <linux/gpio.h>
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #endif
 
-#include <linux/mtd/fsmc.h>
-#include <linux/designware_i2s.h>
-#include <linux/dw_dmac.h>
 #include <linux/i2c-designware.h>
+#include <linux/irq.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/spear_thermal.h>
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
-#include <plat/gpio.h>
 #include <plat/clock.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
@@ -1767,10 +1767,6 @@ struct platform_device spear1340_gpiokeys_device = {
 };
 #endif
 
-static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
-	.select_bank = nand_select_bank,
-};
-
 static struct resource nand_resources[] = {
 	{
 		.name = "nand_data",
@@ -1790,7 +1786,6 @@ struct platform_device spear1340_nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &spear1340_nand_platform_data,
 };
 
 /*

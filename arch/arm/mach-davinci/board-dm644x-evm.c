@@ -23,6 +23,7 @@
 #include <linux/phy.h>
 #include <linux/clk.h>
 #include <linux/videodev2.h>
+#include <linux/export.h>
 
 #include <media/tvp514x.h>
 
@@ -39,7 +40,7 @@
 #include <mach/usb.h>
 #include <mach/aemif.h>
 
-#define DM644X_EVM_PHY_ID		"0:01"
+#define DM644X_EVM_PHY_ID		"davinci_mdio-0:01"
 #define LXT971_PHY_ID	(0x001378e2)
 #define LXT971_PHY_MASK	(0xfffffff0)
 
@@ -150,7 +151,7 @@ static struct davinci_nand_pdata davinci_evm_nandflash_data = {
 	.parts		= davinci_evm_nandflash_partition,
 	.nr_parts	= ARRAY_SIZE(davinci_evm_nandflash_partition),
 	.ecc_mode	= NAND_ECC_HW,
-	.options	= NAND_USE_FLASH_BBT,
+	.bbt_options	= NAND_BBT_USE_FLASH,
 	.timing		= &davinci_evm_nandflash_timing,
 };
 
@@ -440,11 +441,6 @@ evm_u35_setup(struct i2c_client *client, int gpio, unsigned ngpio, void *c)
 	gpio_request(gpio + 7, "nCF_SEL");
 	gpio_direction_output(gpio + 7, 1);
 
-	/* irlml6401 switches over 1A, in under 8 msec;
-	 * now it can be managed by nDRV_VBUS ...
-	 */
-	davinci_setup_usb(1000, 8);
-
 	return 0;
 }
 
@@ -705,6 +701,9 @@ static __init void davinci_evm_init(void)
 	davinci_serial_init(&uart_config);
 	dm644x_init_asp(&dm644x_evm_snd_data);
 
+	/* irlml6401 switches over 1A, in under 8 msec */
+	davinci_setup_usb(1000, 8);
+
 	soc_info->emac_pdata->phy_id = DM644X_EVM_PHY_ID;
 	/* Register the fixup for PHY on DaVinci */
 	phy_register_fixup_for_uid(LXT971_PHY_ID, LXT971_PHY_MASK,
@@ -714,9 +713,11 @@ static __init void davinci_evm_init(void)
 
 MACHINE_START(DAVINCI_EVM, "DaVinci DM644x EVM")
 	/* Maintainer: MontaVista Software <source@mvista.com> */
-	.boot_params  = (DAVINCI_DDR_BASE + 0x100),
+	.atag_offset  = 0x100,
 	.map_io	      = davinci_evm_map_io,
 	.init_irq     = davinci_irq_init,
 	.timer	      = &davinci_timer,
 	.init_machine = davinci_evm_init,
+	.dma_zone_size	= SZ_128M,
+	.restart	= davinci_restart,
 MACHINE_END

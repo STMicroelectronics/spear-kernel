@@ -20,7 +20,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -28,37 +27,13 @@
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/list.h>
-#include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 
 #include <linux/can/dev.h>
-#include <linux/can/platform/c_can.h>
 
 #include "c_can.h"
-
-/*
- * message object split:
- * Do not change this unless you are sure about what you are doing.
- * Note that normally a CAN node has to receive more than transmit.
- * So, it makes sense to keep more objects for RX purpose than for
- * TX.
- */
-static const struct c_can_devtype_data c_can_devtype_data[] __devinitconst = {
-	[C_CAN_DEVTYPE_SPEA320] = {
-		.rx_first = 1,
-		.rx_split = 25,
-		.rx_last = 31,
-		.tx_num = 1,
-	},
-	[C_CAN_DEVTYPE_SPEA320S] = {
-		.rx_first = 1,
-		.rx_split = 20,
-		.rx_last = 26,
-		.tx_num = 6,
-	},
-};
 
 /*
  * 16-bit c_can registers can be arranged differently in the memory
@@ -90,73 +65,17 @@ static void c_can_plat_write_reg_aligned_to_32bit(struct c_can_priv *priv,
 	writew(val, reg + (long)reg - (long)priv->regs);
 }
 
-#ifdef CONFIG_PM
-static int c_can_plat_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct c_can_priv *priv = netdev_priv(ndev);
-
-	if (!ndev || !netif_running(ndev))
-		return 0;
-
-	netif_stop_queue(ndev);
-	netif_device_detach(ndev);
-	napi_disable(&priv->napi);
-	priv->can_stop(ndev);
-
-	return 0;
-}
-
-static int c_can_plat_resume(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct c_can_priv *priv = netdev_priv(ndev);
-
-	if (!netif_running(ndev))
-		return 0;
-
-	priv->can_start(ndev);
-	napi_enable(&priv->napi);
-	netif_device_attach(ndev);
-	netif_start_queue(ndev);
-
-	return 0;
-}
-
-static const struct dev_pm_ops c_can_dev_pm_ops = {
-	.suspend = c_can_plat_suspend,
-	.resume = c_can_plat_resume,
-};
-
-#define C_CAN_DEV_PM_OPS (&c_can_dev_pm_ops)
-#else
-#define C_CAN_DEV_PM_OPS NULL
-#endif
-
 static int __devinit c_can_plat_probe(struct platform_device *pdev)
 {
 	int ret;
 	void __iomem *addr;
 	struct net_device *dev;
 	struct c_can_priv *priv;
-	struct c_can_platform_data *pdata;
-	struct resource *mem, *irq;
-	const struct c_can_devtype_data *devtype_data;
-	enum c_can_devtype devtype;
+	struct resource *mem;
+	int irq;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
-#endif
 
-	/* must have platform data */
-	if (!pdev || !pdev->dev.platform_data) {
-		dev_err(&pdev->dev, "missing platform data\n");
-		ret = -ENODEV;
-		goto exit;
-	}
-
-#ifdef CONFIG_HAVE_CLK
 	/* get the appropriate clk */
 	clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(clk)) {
@@ -165,9 +84,11 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit;
 	}
 #endif
+
+	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!mem || (irq <= 0)) {
+	irq = platform_get_irq(pdev, 0);
+	if (!mem || irq <= 0) {
 		ret = -ENODEV;
 		goto exit_free_clk;
 	}
@@ -186,14 +107,8 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit_release_mem;
 	}
 
-	/* get the soc-id from the platform data */
-	pdata = pdev->dev.platform_data;
-	devtype = pdata->is_quirk_required ?
-		C_CAN_DEVTYPE_SPEA320 : C_CAN_DEVTYPE_SPEA320S;
-	devtype_data = &c_can_devtype_data[devtype];
-
 	/* allocate the c_can device */
-	dev = alloc_c_can_dev(devtype_data->tx_num);
+	dev = alloc_c_can_dev();
 	if (!dev) {
 		ret = -ENOMEM;
 		goto exit_iounmap;
@@ -201,11 +116,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 
 	priv = netdev_priv(dev);
 
-	priv->is_quirk_required = pdata->is_quirk_required;
-	priv->devtype_data.type = devtype;
-	priv->devtype_data = *devtype_data;
-
-	dev->irq = irq->start;
+	dev->irq = irq;
 	priv->regs = addr;
 #ifdef CONFIG_HAVE_CLK
 	priv->can.clock.freq = clk_get_rate(clk);
@@ -281,23 +192,12 @@ static struct platform_driver c_can_plat_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
 		.owner = THIS_MODULE,
-		.pm = C_CAN_DEV_PM_OPS,
 	},
 	.probe = c_can_plat_probe,
 	.remove = __devexit_p(c_can_plat_remove),
 };
 
-static int __init c_can_plat_init(void)
-{
-	return platform_driver_register(&c_can_plat_driver);
-}
-module_init(c_can_plat_init);
-
-static void __exit c_can_plat_exit(void)
-{
-	platform_driver_unregister(&c_can_plat_driver);
-}
-module_exit(c_can_plat_exit);
+module_platform_driver(c_can_plat_driver);
 
 MODULE_AUTHOR("Bhupesh Sharma <bhupesh.sharma@st.com>");
 MODULE_LICENSE("GPL v2");

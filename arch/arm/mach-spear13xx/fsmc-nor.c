@@ -14,9 +14,9 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/init.h>
-#include <linux/err.h>
 #include <linux/io.h>
-#include <plat/fsmc.h>
+#include <linux/mtd/fsmc.h>
+#include <linux/platform_device.h>
 
 int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 		u32 bank, u32 width)
@@ -75,11 +75,4 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 	iounmap(fsmc_nor_base);
 
 	return 0;
-}
-
-void __init fsmc_init_board_info(struct platform_device *pdev,
-		struct mtd_partition *partitions, unsigned int nr_partitions,
-		unsigned int width)
-{
-	fsmc_nor_set_plat_data(pdev, partitions, nr_partitions, width);
 }

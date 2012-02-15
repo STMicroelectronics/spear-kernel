@@ -5,6 +5,8 @@
 # Rewritten to use lists instead of if-statements.
 #
 
+ccflags-$(CONFIG_IRDA_DEBUG_DEVICES) := -DDEBUG
+
 # FIR drivers
 obj-$(CONFIG_USB_IRDA)		+= irda-usb.o
 obj-$(CONFIG_SIGMATEL_FIR)	+= stir4200.o
@@ -43,5 +45,3 @@ obj-$(CONFIG_KS959_DONGLE)    	+= ks959-sir.o
 
 # The SIR helper module
 sir-dev-objs := sir_dev.o sir_dongle.o
-
-ccflags-$(CONFIG_IRDA_DEBUG_DEVICES) := -DDEBUG

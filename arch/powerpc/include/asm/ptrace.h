@@ -86,7 +86,18 @@ struct pt_regs {
 #define instruction_pointer(regs) ((regs)->nip)
 #define user_stack_pointer(regs) ((regs)->gpr[1])
 #define kernel_stack_pointer(regs) ((regs)->gpr[1])
-#define regs_return_value(regs) ((regs)->gpr[3])
+static inline int is_syscall_success(struct pt_regs *regs)
+{
+	return !(regs->ccr & 0x10000000);
+}
+
+static inline long regs_return_value(struct pt_regs *regs)
+{
+	if (is_syscall_success(regs))
+		return regs->gpr[3];
+	else
+		return -regs->gpr[3];
+}
 
 #ifdef CONFIG_SMP
 extern unsigned long profile_pc(struct pt_regs *regs);
@@ -125,8 +136,10 @@ extern int ptrace_put_reg(struct task_struct *task, int regno,
 #endif /* ! __powerpc64__ */
 #define TRAP(regs)		((regs)->trap & ~0xF)
 #ifdef __powerpc64__
+#define NV_REG_POISON		0xdeadbeefdeadbeefUL
 #define CHECK_FULL_REGS(regs)	BUG_ON(regs->trap & 1)
 #else
+#define NV_REG_POISON		0xdeadbeef
 #define CHECK_FULL_REGS(regs)						      \
 do {									      \
 	if ((regs)->trap & 1)						      \

@@ -12,6 +12,7 @@
  */
 
 #include <linux/bitops.h>
+#include <linux/cpu_pm.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/suspend.h>
@@ -23,7 +24,6 @@
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <mach/suspend.h>
-#include <asm/cpu_pm.h>
 #include <asm/hardware/gic.h>
 
 #define PLAT_PHYS_OFFSET	0x00000000
@@ -97,7 +97,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	/* Do the GIC restoration for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
 #ifdef CPU_PWR_DOMAIN_OFF
-		gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
+		gic_secondary_init(0);
 		gic_dist_restore(0);
 #endif
 #ifdef CONFIG_PCI

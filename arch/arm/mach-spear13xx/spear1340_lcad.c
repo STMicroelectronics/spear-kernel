@@ -23,24 +23,12 @@
 #include <linux/spi/spi.h>
 #include <media/soc_camera.h>
 #include <video/db9000fb.h>
-#include <plat/fsmc.h>
+#include <asm/hardware/gic.h>
 #include <plat/i2c.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
-#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
-
-#if 0
-/* fsmc nor partition info */
-#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
-static struct mtd_partition partition_info[] = {
-	PARTITION("X-loader", 0, 1 * 0x20000),
-	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
-	PARTITION("Kernel", 0x80000, 24 * 0x20000),
-	PARTITION("Root File System", 0x380000, 84 * 0x20000),
-};
-#endif
 
 /* camera sensor registeration */
 static struct i2c_board_info vs6725_camera_sensor_info = {
@@ -239,6 +227,13 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_thermal_device,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.select_bank = nand_select_bank,
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
 /* I2S STA529 i2c board info */
 static struct i2c_board_info i2c_sta529 = {
 	.type = "sta529",
@@ -301,8 +296,8 @@ static struct i2c_dev_info *i2c_devs[] __initdata = {
 	&i2c_dev_lsm303dlh_mag,
 };
 
-static void lcad_fixup(struct machine_desc *desc, struct tag *tags,
-		char **cmdline, struct meminfo *mi)
+static void
+lcad_fixup(struct tag *tags, char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
@@ -325,9 +320,11 @@ static void __init lcad_init(void)
 	gpio0_pdata->values = 0x08;
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 	nand_mach_init(FSMC_NAND_BW8);
+	if (platform_device_add_data(&spear1340_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear1340_nand_device.name);
 
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
@@ -346,10 +343,12 @@ static void __init lcad_init(void)
 }
 
 MACHINE_START(SPEAR1340_LCAD, "SPEAR1340-LCAD")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.fixup		=	lcad_fixup,
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_init_irq,
+	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	lcad_init,
+	.restart	=	spear_restart,
 MACHINE_END

@@ -20,7 +20,7 @@
 #include <linux/spinlock.h>
 #include <mach/misc_regs.h>
 
-static spinlock_t lock = SPIN_LOCK_UNLOCKED;
+DEFINE_SPINLOCK(lock);
 
 struct {
 	unsigned char busy;

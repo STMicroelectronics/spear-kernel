@@ -13,9 +13,9 @@
 
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <plat/clock.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
-#include <plat/clock.h>
 
 /* root clks */
 /* 32 KHz oscillator clock */

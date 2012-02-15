@@ -15,15 +15,15 @@
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
 #include <plat/keyboard.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -110,14 +110,20 @@ static struct sdhci_plat_data sdhci_plat_data = {
 	.card_int_gpio = RAS_GPIO_0,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand0_plat_data __initconst = {
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
 /* keyboard specific platform data */
-static DECLARE_9x9_KEYMAP(keymap);
-static struct matrix_keymap_data keymap_data = {
+static const __initconst DECLARE_9x9_KEYMAP(keymap);
+static const struct matrix_keymap_data keymap_data __initconst = {
 	.keymap = keymap,
 	.keymap_size = ARRAY_SIZE(keymap),
 };
 
-static struct kbd_platform_data kbd_data = {
+static const struct kbd_platform_data kbd_data __initconst = {
 	.keymap = &keymap_data,
 	.rep = 1,
 };
@@ -164,12 +170,21 @@ static void __init spear300_evb_init(void)
 {
 	unsigned int i;
 
-	/* set keyboard plat data */
-	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
+	/* call spear300 machine init function */
+	spear300_init(&spear300_photo_frame_mode, pmx_devs,
+			ARRAY_SIZE(pmx_devs));
 
 	/* set nand0 device's plat data */
-	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+	if (platform_device_add_data(&spear300_nand0_device, &nand0_plat_data,
+				sizeof(nand0_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear300_nand0_device.name);
+
+	/* set keyboard plat data */
+	if (platform_device_add_data(&spear300_kbd_device, &kbd_data,
+				sizeof(kbd_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear300_kbd_device.name);
 
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);
@@ -177,15 +192,13 @@ static void __init spear300_evb_init(void)
 	/* Enable sdhci memory */
 	sdhci_i2s_mem_enable(SDHCI_MEM_ENB);
 
-	/* call spear300 machine init function */
-	spear300_init(&spear300_photo_frame_mode, pmx_devs,
-			ARRAY_SIZE(pmx_devs));
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&spear3xx_smi_device);
 
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
 
-	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&spear3xx_smi_device);
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
@@ -193,14 +206,14 @@ static void __init spear300_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(SPEAR300_EVB, "ST-SPEAR300-EVB")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.map_io		=	spear3xx_map_io,
 	.init_irq	=	spear3xx_init_irq,
+	.handle_irq	=	vic_handle_irq,
 	.timer		=	&spear3xx_timer,
 	.init_machine	=	spear300_evb_init,
+	.restart	=	spear_restart,
 MACHINE_END

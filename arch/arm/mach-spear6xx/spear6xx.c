@@ -19,7 +19,6 @@
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
-#include <linux/mtd/fsmc.h>
 #include <linux/spear_adc_usr.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/pl080.h>
@@ -30,10 +29,10 @@
 #include <plat/jpeg.h>
 #include <plat/touchscreen.h>
 #include <plat/udc.h>
-#include <mach/irqs.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
+#include <mach/irqs.h>
 
 /* The wake sources are routed through vic-2 */
 #define SPEAR6XX_WKUP_SRCS_VIC2		(1 << (IRQ_GMAC_1 - 32) | \
@@ -385,8 +384,6 @@ struct platform_device irda_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
-
 static struct resource nand_resources[] = {
 	{
 		.name = "nand_data",
@@ -406,7 +403,6 @@ struct platform_device nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
 };
 
 /* usb host device registeration */

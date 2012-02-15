@@ -13,7 +13,6 @@
 #include <linux/kernel.h>
 #include <linux/security.h>
 #include <linux/syscalls.h>
-#include <linux/buffer_head.h>
 #include <linux/capability.h>
 #include <linux/quotaops.h>
 #include <linux/types.h>
@@ -64,18 +63,15 @@ static int quota_sync_all(int type)
 }
 
 static int quota_quotaon(struct super_block *sb, int type, int cmd, qid_t id,
-		         void __user *addr)
+		         struct path *path)
 {
-	char *pathname;
-	int ret = -ENOSYS;
-
-	pathname = getname(addr);
-	if (IS_ERR(pathname))
-		return PTR_ERR(pathname);
-	if (sb->s_qcop->quota_on)
-		ret = sb->s_qcop->quota_on(sb, type, id, pathname);
-	putname(pathname);
-	return ret;
+	if (!sb->s_qcop->quota_on && !sb->s_qcop->quota_on_meta)
+		return -ENOSYS;
+	if (sb->s_qcop->quota_on_meta)
+		return sb->s_qcop->quota_on_meta(sb, type, id);
+	if (IS_ERR(path))
+		return PTR_ERR(path);
+	return sb->s_qcop->quota_on(sb, type, id, path);
 }
 
 static int quota_getfmt(struct super_block *sb, int type, void __user *addr)
@@ -241,7 +237,7 @@ static int quota_getxquota(struct super_block *sb, int type, qid_t id,
 
 /* Copy parameters and call proper function */
 static int do_quotactl(struct super_block *sb, int type, int cmd, qid_t id,
-		       void __user *addr)
+		       void __user *addr, struct path *path)
 {
 	int ret;
 
@@ -256,7 +252,7 @@ static int do_quotactl(struct super_block *sb, int type, int cmd, qid_t id,
 
 	switch (cmd) {
 	case Q_QUOTAON:
-		return quota_quotaon(sb, type, cmd, id, addr);
+		return quota_quotaon(sb, type, cmd, id, path);
 	case Q_QUOTAOFF:
 		if (!sb->s_qcop->quota_off)
 			return -ENOSYS;
@@ -289,7 +285,7 @@ static int do_quotactl(struct super_block *sb, int type, int cmd, qid_t id,
 		/* caller already holds s_umount */
 		if (sb->s_flags & MS_RDONLY)
 			return -EROFS;
-		writeback_inodes_sb(sb);
+		writeback_inodes_sb(sb, WB_REASON_SYNC);
 		return 0;
 	default:
 		return -EINVAL;
@@ -335,6 +331,7 @@ SYSCALL_DEFINE4(quotactl, unsigned int, cmd, const char __user *, special,
 {
 	uint cmds, type;
 	struct super_block *sb = NULL;
+	struct path path, *pathp = NULL;
 	int ret;
 
 	cmds = cmd >> SUBCMDSHIFT;
@@ -351,12 +348,30 @@ SYSCALL_DEFINE4(quotactl, unsigned int, cmd, const char __user *, special,
 		return -ENODEV;
 	}
 
-	sb = quotactl_block(special);
-	if (IS_ERR(sb))
-		return PTR_ERR(sb);
+	/*
+	 * Path for quotaon has to be resolved before grabbing superblock
+	 * because that gets s_umount sem which is also possibly needed by path
+	 * resolution (think about autofs) and thus deadlocks could arise.
+	 */
+	if (cmds == Q_QUOTAON) {
+		ret = user_path_at(AT_FDCWD, addr, LOOKUP_FOLLOW|LOOKUP_AUTOMOUNT, &path);
+		if (ret)
+			pathp = ERR_PTR(ret);
+		else
+			pathp = &path;
+	}
 
-	ret = do_quotactl(sb, type, cmds, id, addr);
+	sb = quotactl_block(special);
+	if (IS_ERR(sb)) {
+		ret = PTR_ERR(sb);
+		goto out;
+	}
+
+	ret = do_quotactl(sb, type, cmds, id, addr, pathp);
 
 	drop_super(sb);
+out:
+	if (pathp && !IS_ERR(pathp))
+		path_put(pathp);
 	return ret;
 }

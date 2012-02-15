@@ -16,11 +16,8 @@
 #include <linux/amba/serial.h>
 #include <linux/can/platform/c_can.h>
 #include <linux/designware_i2s.h>
-#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
-#include <linux/types.h>
 #include <linux/mmc/sdhci-spear.h>
-#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/clock.h>
 #include <plat/pl080.h>
@@ -2974,14 +2971,6 @@ struct platform_device spear320_can1_device = {
 	.dev.platform_data = &c_can_pdata,
 };
 
-/* emi nor flash device registeration */
-static struct physmap_flash_data emi_norflash_data;
-struct platform_device spear320_emi_nor_device = {
-	.name	= "physmap-flash",
-	.id	= -1,
-	.dev.platform_data = &emi_norflash_data,
-};
-
 /* SPEAr320 RAS ethernet devices */
 static u64 macb0_dmamask = ~0;
 static struct resource eth0_resources[] = {
@@ -3111,8 +3100,6 @@ struct platform_device spear320_pcm_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
-
 static struct resource nand_resources[] = {
 	{
 		.name = "nand_data",
@@ -3132,7 +3119,6 @@ struct platform_device spear320_nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
 };
 
 /* plgpio device registeration */

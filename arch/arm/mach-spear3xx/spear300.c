@@ -15,7 +15,6 @@
 #include <linux/amba/pl061.h>
 #include <linux/amba/pl08x.h>
 #include <linux/ptrace.h>
-#include <linux/mtd/fsmc.h>
 #include <linux/spear_adc_usr.h>
 #include <asm/irq.h>
 #include <plat/pl080.h>
@@ -127,6 +126,7 @@ static struct pmx_mux_reg pmx_fsmc_2_mux[] = {
 	},
 };
 
+/* devices */
 static struct pmx_dev_mode pmx_fsmc_2_chips_modes[] = {
 	{
 		.ids = NAND_MODE | NOR_MODE | PHOTO_FRAME_MODE |
@@ -771,8 +771,6 @@ struct platform_device spear300_kbd_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand0_platform_data;
-
 static struct resource nand0_resources[] = {
 	{
 		.name = "nand_data",
@@ -792,10 +790,7 @@ struct platform_device spear300_nand0_device = {
 	.id = 0,
 	.resource = nand0_resources,
 	.num_resources = ARRAY_SIZE(nand0_resources),
-	.dev.platform_data = &nand0_platform_data,
 };
-
-static struct fsmc_nand_platform_data nand1_platform_data;
 
 static struct resource nand1_resources[] = {
 	{
@@ -816,10 +811,7 @@ struct platform_device spear300_nand1_device = {
 	.id = 1,
 	.resource = nand1_resources,
 	.num_resources = ARRAY_SIZE(nand1_resources),
-	.dev.platform_data = &nand1_platform_data,
 };
-
-static struct fsmc_nand_platform_data nand2_platform_data;
 
 static struct resource nand2_resources[] = {
 	{
@@ -840,10 +832,7 @@ struct platform_device spear300_nand2_device = {
 	.id = 2,
 	.resource = nand2_resources,
 	.num_resources = ARRAY_SIZE(nand2_resources),
-	.dev.platform_data = &nand2_platform_data,
 };
-
-static struct fsmc_nand_platform_data nand3_platform_data;
 
 static struct resource nand3_resources[] = {
 	{
@@ -864,7 +853,6 @@ struct platform_device spear300_nand3_device = {
 	.id = 3,
 	.resource = nand3_resources,
 	.num_resources = ARRAY_SIZE(nand3_resources),
-	.dev.platform_data = &nand3_platform_data,
 };
 
 /* sdhci (sdio) device declaration */
@@ -961,7 +949,6 @@ static struct spear_shirq shirq_ras1 = {
 };
 
 /* Function handling sdhci and i2s memory sharing */
-#define SDHCI_MEM_SELECT	0x20000000
 void sdhci_i2s_mem_enable(u8 mask)
 {
 	u32 val;

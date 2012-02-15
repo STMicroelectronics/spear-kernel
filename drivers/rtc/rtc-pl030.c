@@ -35,11 +35,6 @@ static irqreturn_t pl030_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int pl030_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
-{
-	return -ENOIOCTLCMD;
-}
-
 static int pl030_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	struct pl030_rtc *rtc = dev_get_drvdata(dev);
@@ -96,7 +91,6 @@ static int pl030_set_time(struct device *dev, struct rtc_time *tm)
 }
 
 static const struct rtc_class_ops pl030_ops = {
-	.ioctl		= pl030_ioctl,
 	.read_time	= pl030_read_time,
 	.set_time	= pl030_set_time,
 	.read_alarm	= pl030_read_alarm,
@@ -179,6 +173,8 @@ static struct amba_id pl030_ids[] = {
 	},
 	{ 0, 0 },
 };
+
+MODULE_DEVICE_TABLE(amba, pl030_ids);
 
 static struct amba_driver pl030_driver = {
 	.drv		= {

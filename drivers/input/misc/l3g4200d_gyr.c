@@ -20,6 +20,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/l3g4200d.h>
 #include <linux/input-polldev.h>
+#include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
 

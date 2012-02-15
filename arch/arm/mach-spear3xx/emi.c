@@ -18,8 +18,7 @@
 #include <mach/hardware.h>
 #include <mach/emi.h>
 
-int __init emi_init(struct platform_device *pdev, unsigned long base,
-		u32 bank, u32 width)
+int __init emi_init(unsigned long base, u32 bank, u32 width)
 {
 	void __iomem *emi_reg_base;
 	struct clk *clk;
@@ -96,22 +95,4 @@ int __init emi_init(struct platform_device *pdev, unsigned long base,
 	iounmap(emi_reg_base);
 
 	return 0;
-}
-
-void __init
-emi_init_board_info(struct platform_device *pdev, struct resource *resources,
-		int res_num, struct mtd_partition *partitions,
-		unsigned int nr_partitions, unsigned int width)
-{
-	struct physmap_flash_data *emi_plat_data = dev_get_platdata(&pdev->dev);
-
-	pdev->resource = resources;
-	pdev->num_resources = res_num;
-
-	if (partitions) {
-		emi_plat_data->parts = partitions;
-		emi_plat_data->nr_parts = nr_partitions;
-	}
-
-	emi_plat_data->width = width;
 }

@@ -15,7 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/spinlock.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/capability.h>
 #include <linux/delay.h>
@@ -24,6 +24,7 @@
 #include <linux/cpumask.h>
 #include <linux/memblock.h>
 #include <linux/slab.h>
+#include <linux/reboot.h>
 
 #include <asm/prom.h>
 #include <asm/rtas.h>
@@ -38,9 +39,11 @@
 #include <asm/udbg.h>
 #include <asm/syscalls.h>
 #include <asm/smp.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <asm/time.h>
 #include <asm/mmu.h>
+#include <asm/topology.h>
+#include <asm/pSeries_reconfig.h>
 
 struct rtas_t rtas = {
 	.lock = __ARCH_SPIN_LOCK_UNLOCKED
@@ -493,7 +496,7 @@ unsigned int rtas_busy_delay(int status)
 
 	might_sleep();
 	ms = rtas_busy_delay_time(status);
-	if (ms)
+	if (ms && need_resched())
 		msleep(ms);
 
 	return ms;
@@ -713,6 +716,7 @@ static int __rtas_suspend_last_cpu(struct rtas_suspend_me_data *data, int wake_w
 	int cpu;
 
 	slb_set_size(SLB_MIN_SIZE);
+	stop_topology_update();
 	printk(KERN_DEBUG "calling ibm,suspend-me on cpu %i\n", smp_processor_id());
 
 	while (rc == H_MULTI_THREADS_ACTIVE && !atomic_read(&data->done) &&
@@ -728,6 +732,8 @@ static int __rtas_suspend_last_cpu(struct rtas_suspend_me_data *data, int wake_w
 		rc = atomic_read(&data->error);
 
 	atomic_set(&data->error, rc);
+	start_topology_update();
+	pSeries_coalesce_init();
 
 	if (wake_when_done) {
 		atomic_set(&data->done, 1);

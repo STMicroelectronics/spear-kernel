@@ -13,9 +13,7 @@
 
 #include <linux/amba/pl08x.h>
 #include <linux/amba/serial.h>
-#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
-#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
 #include <plat/pl080.h>
@@ -575,8 +573,6 @@ struct platform_device spear310_eth_macb4_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
-
 static struct resource nand_resources[] = {
 	{
 		.name = "nand_data",
@@ -596,7 +592,6 @@ struct platform_device spear310_nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
 };
 
 /* plgpio device registeration */
@@ -634,14 +629,6 @@ int spear300_o2p(int offset)
 	else
 		return offset + 2;
 }
-
-/* emi nor flash device registeration */
-static struct physmap_flash_data emi_norflash_data;
-struct platform_device spear310_emi_nor_device = {
-	.name	= "physmap-flash",
-	.id	= -1,
-	.dev.platform_data = &emi_norflash_data,
-};
 
 static struct plgpio_platform_data plgpio_plat_data = {
 	.gpio_base = 8,
@@ -684,34 +671,6 @@ struct platform_device spear310_plgpio_device = {
 	.resource = plgpio_resources,
 };
 
-static struct tdm_hdlc_platform_data tdm_hdlc_plat_data = {
-	.ip_type = SPEAR310_TDM_HDLC,
-	.nr_channel = 2,
-	.nr_timeslot = 128,
-};
-
-static struct resource tdm_hdlc_resources[] = {
-	{
-		.start = SPEAR310_HDLC_BASE,
-		.end = SPEAR310_HDLC_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	}, {
-		.start = SPEAR310_VIRQ_TDM_HDLC,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device spear310_tdm_hdlc_device = {
-	.name = "tdm_hdlc",
-	.id = -1,
-	.dev = {
-		.platform_data = &tdm_hdlc_plat_data,
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(tdm_hdlc_resources),
-	.resource = tdm_hdlc_resources,
-};
-
 static struct rs485_hdlc_platform_data rs485_0_plat_data = {
 	.tx_falling_edge = 1,
 	.rx_rising_edge = 1,
@@ -719,6 +678,7 @@ static struct rs485_hdlc_platform_data rs485_0_plat_data = {
 	.cts_delay = 24,
 };
 
+/* hdlc/tdm device registeration */
 static struct rs485_hdlc_platform_data rs485_1_plat_data = {
 	.tx_falling_edge = 1,
 	.rx_rising_edge = 1,
@@ -768,6 +728,34 @@ struct platform_device spear310_rs485_1_device = {
 	},
 	.num_resources = ARRAY_SIZE(rs485_1_resources),
 	.resource = rs485_1_resources,
+};
+
+static struct tdm_hdlc_platform_data tdm_hdlc_plat_data = {
+	.ip_type = SPEAR310_TDM_HDLC,
+	.nr_channel = 2,
+	.nr_timeslot = 128,
+};
+
+static struct resource tdm_hdlc_resources[] = {
+	{
+		.start = SPEAR310_HDLC_BASE,
+		.end = SPEAR310_HDLC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR310_VIRQ_TDM_HDLC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear310_tdm_hdlc_device = {
+	.name = "tdm_hdlc",
+	.id = -1,
+	.dev = {
+		.platform_data = &tdm_hdlc_plat_data,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(tdm_hdlc_resources),
+	.resource = tdm_hdlc_resources,
 };
 
 /* spear3xx shared irq */

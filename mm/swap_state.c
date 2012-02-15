@@ -6,7 +6,6 @@
  *
  *  Rewritten to use page cache, (C) 1998 Stephen Tweedie
  */
-#include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/gfp.h>
 #include <linux/kernel_stat.h>
@@ -14,7 +13,6 @@
 #include <linux/swapops.h>
 #include <linux/init.h>
 #include <linux/pagemap.h>
-#include <linux/buffer_head.h>
 #include <linux/backing-dev.h>
 #include <linux/pagevec.h>
 #include <linux/migrate.h>
@@ -24,12 +22,10 @@
 
 /*
  * swapper_space is a fiction, retained to simplify the path through
- * vmscan's shrink_page_list, to make sync_page look nicer, and to allow
- * future use of radix_tree tags in the swap cache.
+ * vmscan's shrink_page_list.
  */
 static const struct address_space_operations swap_aops = {
 	.writepage	= swap_writepage,
-	.sync_page	= block_sync_page,
 	.set_page_dirty	= __set_page_dirty_nobuffers,
 	.migratepage	= migrate_page,
 };
@@ -37,7 +33,6 @@ static const struct address_space_operations swap_aops = {
 static struct backing_dev_info swap_backing_dev_info = {
 	.name		= "swap",
 	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK | BDI_CAP_SWAP_BACKED,
-	.unplug_io_fn	= swap_unplug_io_fn,
 };
 
 struct address_space swapper_space = {
@@ -156,6 +151,12 @@ int add_to_swap(struct page *page)
 	entry = get_swap_page();
 	if (!entry.val)
 		return 0;
+
+	if (unlikely(PageTransHuge(page)))
+		if (unlikely(split_huge_page(page))) {
+			swapcache_free(entry, NULL);
+			return 0;
+		}
 
 	/*
 	 * Radix-tree node allocations from PF_MEMALLOC contexts could
@@ -299,6 +300,16 @@ struct page *read_swap_cache_async(swp_entry_t entry, gfp_t gfp_mask,
 			new_page = alloc_page_vma(gfp_mask, vma, addr);
 			if (!new_page)
 				break;		/* Out of memory */
+			/*
+			 * The memcg-specific accounting when moving
+			 * pages around the LRU lists relies on the
+			 * page's owner (memcg) to be valid.  Usually,
+			 * pages are assigned to a new owner before
+			 * being put on the LRU list, but since this
+			 * is not the case here, the stale owner from
+			 * a previous allocation cycle must be reset.
+			 */
+			mem_cgroup_reset_owner(new_page);
 		}
 
 		/*

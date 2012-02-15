@@ -18,14 +18,15 @@
 #include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/mtd/physmap.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/spi/spi.h>
 #include <video/db9000fb.h>
+#include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
 #include <plat/hdlc.h>
 #include <plat/keyboard.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -165,6 +166,21 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1310_otg_device,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.select_bank = nand_select_bank,
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
+/* fsmc nor platform data */
+static const struct physmap_flash_data nor_plat_data __initconst = {
+	.parts = partition_info,
+	.nr_parts = ARRAY_SIZE(partition_info),
+	.width = FSMC_FLASH_WIDTH8,
+};
+
+/* arasan compact flash controller's platform data */
 static struct arasan_cf_pdata cf_pdata = {
 	.cf_if_clk = CF_IF_CLK_166M,
 	.quirk = CF_BROKEN_UDMA,
@@ -172,13 +188,13 @@ static struct arasan_cf_pdata cf_pdata = {
 };
 
 /* keyboard specific platform data */
-static DECLARE_9x9_KEYMAP(keymap);
-static struct matrix_keymap_data keymap_data = {
+static const __initconst DECLARE_9x9_KEYMAP(keymap);
+static const struct matrix_keymap_data keymap_data __initconst = {
 	.keymap = keymap,
 	.keymap_size = ARRAY_SIZE(keymap),
 };
 
-static struct kbd_platform_data kbd_data = {
+static const struct kbd_platform_data kbd_data __initconst = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_9x9,
@@ -322,8 +338,8 @@ static void __init select_e1_interface(struct platform_device *pdev)
 }
 #endif
 
-static void spear1310_evb_fixup(struct machine_desc *desc,
-		struct tag *tags, char **cmdline, struct meminfo *mi)
+static void
+spear1310_evb_fixup(struct tag *tags, char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
@@ -342,8 +358,8 @@ static void __init spear1310_evb_init(void)
 	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
 
-	/* set keyboard plat data */
-	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+	/* call spear1310 machine init function */
+	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
@@ -354,27 +370,28 @@ static void __init spear1310_evb_init(void)
 	 * If NAND is needed, enable the following code and disable all code for
 	 * NOR. Also enable nand in padmux configuration to use it.
 	 */
-	/* set nand device's plat data */
 #if 0
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 	nand_mach_init(FSMC_NAND_BW8);
+	if (platform_device_add_data(&spear13xx_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_nand_device.name);
 #endif
 
-	/* fixed part fsmc nor device */
+	/* set keyboard plat data */
+	if (platform_device_add_data(&spear13xx_kbd_device, &kbd_data,
+				sizeof(kbd_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_kbd_device.name);
+
 	/* initialize fsmc related data in fsmc plat data */
-	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
-			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
-	/* Initialize fsmc regiters */
 	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
 			FSMC_FLASH_WIDTH8);
-
-	/* call spear1310 machine init function */
-	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
-
-	/* Register slave devices on the I2C buses */
-	i2c_register_default_devices();
+	if (platform_device_add_data(&spear13xx_fsmc_nor_device, &nor_plat_data,
+				sizeof(nor_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_fsmc_nor_device.name);
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
 	spear1310_pcie_board_init();
@@ -386,27 +403,32 @@ static void __init spear1310_evb_init(void)
 	 * VA_SPEAR1310_PCIE_MIPHY_CFG_1);
 	 */
 
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear1310_tdm_hdlc_0_device); */
+	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
+
+	/* Register slave devices on the I2C buses */
+	i2c_register_default_devices();
+
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
 
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-
-	/*
-	 * Note: Remove the comment to enable E1 interface for one HDLC port
-	 */
-	/* select_e1_interface(&spear1310_tdm_hdlc_0_device); */
-	/* select_e1_interface(&spear1310_tdm_hdlc_1_device); */
 }
 
 MACHINE_START(SPEAR1310_EVB, "ST-SPEAR1310-EVB")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.fixup		=	spear1310_evb_fixup,
 	.map_io		=	spear1310_map_io,
 	.init_irq	=	spear13xx_init_irq,
+	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	spear1310_evb_init,
+	.restart	=	spear_restart,
 MACHINE_END

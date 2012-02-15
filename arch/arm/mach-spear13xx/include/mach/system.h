@@ -30,20 +30,6 @@ static inline void arch_idle(void)
 	cpu_do_idle();
 }
 
-static inline void arch_reset(char mode, const char *cmd)
-{
-	if (cpu_is_spear1340()) {
-#ifdef CONFIG_CPU_SPEAR1340
-		writel_relaxed(0x01, VA_SPEAR1340_SYS_SW_RES);
-#endif
-	} else if (cpu_is_spear1310()) {
-#ifdef CONFIG_CPU_SPEAR1310
-		writel_relaxed(0x01, VA_SPEAR1310_SYS_SW_RES);
-#endif
-	} else
-		writel_relaxed(0x01, VA_SYS_SW_RES);
-}
-
 static inline int arch_change_mode(int mode)
 {
 	u32 val, mode_sts;

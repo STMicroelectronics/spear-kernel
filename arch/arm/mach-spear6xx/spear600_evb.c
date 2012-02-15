@@ -14,14 +14,14 @@
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -81,6 +81,13 @@ static struct platform_device *plat_devs[] __initdata = {
 	&udc_device,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
+/* spi board information */
 /* Currently no gpios are free on eval board so it is kept commented */
 #if 0
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
@@ -120,17 +127,21 @@ static void __init spear600_evb_init(void)
 	unsigned int i;
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8, NULL);
+	if (platform_device_add_data(&nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				nand_device.name);
 
 	/* call spear600 machine init function */
 	spear600_init();
 
+	/* initialize serial nor related data in smi plat data */
+	smi_init_board_info(&smi_device);
+
 	/* Register slave devices on the I2C buses */
 	i2c_register_default_devices();
 
-	/* initialize serial nor related data in smi plat data */
-	smi_init_board_info(&smi_device);
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
@@ -138,14 +149,14 @@ static void __init spear600_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(SPEAR600_EVB, "ST-SPEAR600-EVB")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.map_io		=	spear6xx_map_io,
 	.init_irq	=	spear6xx_init_irq,
+	.handle_irq	=	vic_handle_irq,
 	.timer		=	&spear6xx_timer,
 	.init_machine	=	spear600_evb_init,
+	.restart	=	spear_restart,
 MACHINE_END

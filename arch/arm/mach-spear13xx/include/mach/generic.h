@@ -504,6 +504,7 @@ extern struct dw_dma_slave cf_dma_priv;
 bool dw_dma_filter(struct dma_chan *chan, void *slave);
 void __init spear13xx_clk_init(void);
 void __init i2c_register_default_devices(void);
+void spear_restart(char, const char *);
 void __init spear_setup_timer(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_init_irq(void);

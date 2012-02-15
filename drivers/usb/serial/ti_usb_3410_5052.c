@@ -106,14 +106,14 @@ static int ti_write_room(struct tty_struct *tty);
 static int ti_chars_in_buffer(struct tty_struct *tty);
 static void ti_throttle(struct tty_struct *tty);
 static void ti_unthrottle(struct tty_struct *tty);
-static int ti_ioctl(struct tty_struct *tty, struct file *file,
+static int ti_ioctl(struct tty_struct *tty,
 		unsigned int cmd, unsigned long arg);
 static int ti_get_icount(struct tty_struct *tty,
 		struct serial_icounter_struct *icount);
 static void ti_set_termios(struct tty_struct *tty,
 		struct usb_serial_port *port, struct ktermios *old_termios);
-static int ti_tiocmget(struct tty_struct *tty, struct file *file);
-static int ti_tiocmset(struct tty_struct *tty, struct file *file,
+static int ti_tiocmget(struct tty_struct *tty);
+static int ti_tiocmset(struct tty_struct *tty,
 		unsigned int set, unsigned int clear);
 static void ti_break(struct tty_struct *tty, int break_state);
 static void ti_interrupt_callback(struct urb *urb);
@@ -150,7 +150,7 @@ static int ti_download_firmware(struct ti_device *tdev);
 /* Data */
 
 /* module parameters */
-static int debug;
+static bool debug;
 static int closing_wait = TI_DEFAULT_CLOSING_WAIT;
 static ushort vendor_3410[TI_EXTRA_VID_PID_COUNT];
 static unsigned int vendor_3410_count;
@@ -369,9 +369,9 @@ failed_1port:
 
 static void __exit ti_exit(void)
 {
+	usb_deregister(&ti_usb_driver);
 	usb_serial_deregister(&ti_1port_device);
 	usb_serial_deregister(&ti_2port_device);
-	usb_deregister(&ti_usb_driver);
 }
 
 
@@ -535,9 +535,7 @@ static int ti_open(struct tty_struct *tty, struct usb_serial_port *port)
 			status = -EINVAL;
 			goto release_lock;
 		}
-		urb->complete = ti_interrupt_callback;
 		urb->context = tdev;
-		urb->dev = dev;
 		status = usb_submit_urb(urb, GFP_KERNEL);
 		if (status) {
 			dev_err(&port->dev,
@@ -619,9 +617,7 @@ static int ti_open(struct tty_struct *tty, struct usb_serial_port *port)
 		goto unlink_int_urb;
 	}
 	tport->tp_read_urb_state = TI_READ_URB_RUNNING;
-	urb->complete = ti_bulk_in_callback;
 	urb->context = tport;
-	urb->dev = dev;
 	status = usb_submit_urb(urb, GFP_KERNEL);
 	if (status) {
 		dev_err(&port->dev, "%s - submit read urb failed, %d\n",
@@ -818,7 +814,7 @@ static int ti_get_icount(struct tty_struct *tty,
 	return 0;
 }
 
-static int ti_ioctl(struct tty_struct *tty, struct file *file,
+static int ti_ioctl(struct tty_struct *tty,
 	unsigned int cmd, unsigned long arg)
 {
 	struct usb_serial_port *port = tty->driver_data;
@@ -1000,7 +996,7 @@ static void ti_set_termios(struct tty_struct *tty,
 }
 
 
-static int ti_tiocmget(struct tty_struct *tty, struct file *file)
+static int ti_tiocmget(struct tty_struct *tty)
 {
 	struct usb_serial_port *port = tty->driver_data;
 	struct ti_port *tport = usb_get_serial_port_data(port);
@@ -1033,8 +1029,8 @@ static int ti_tiocmget(struct tty_struct *tty, struct file *file)
 }
 
 
-static int ti_tiocmset(struct tty_struct *tty, struct file *file,
-	unsigned int set, unsigned int clear)
+static int ti_tiocmset(struct tty_struct *tty,
+				unsigned int set, unsigned int clear)
 {
 	struct usb_serial_port *port = tty->driver_data;
 	struct ti_port *tport = usb_get_serial_port_data(port);
@@ -1236,12 +1232,11 @@ static void ti_bulk_in_callback(struct urb *urb)
 exit:
 	/* continue to read unless stopping */
 	spin_lock(&tport->tp_lock);
-	if (tport->tp_read_urb_state == TI_READ_URB_RUNNING) {
-		urb->dev = port->serial->dev;
+	if (tport->tp_read_urb_state == TI_READ_URB_RUNNING)
 		retval = usb_submit_urb(urb, GFP_ATOMIC);
-	} else if (tport->tp_read_urb_state == TI_READ_URB_STOPPING) {
+	else if (tport->tp_read_urb_state == TI_READ_URB_STOPPING)
 		tport->tp_read_urb_state = TI_READ_URB_STOPPED;
-	}
+
 	spin_unlock(&tport->tp_lock);
 	if (retval)
 		dev_err(dev, "%s - resubmit read urb failed, %d\n",
@@ -1574,9 +1569,7 @@ static int ti_restart_read(struct ti_port *tport, struct tty_struct *tty)
 		tport->tp_read_urb_state = TI_READ_URB_RUNNING;
 		urb = tport->tp_port->read_urb;
 		spin_unlock_irqrestore(&tport->tp_lock, flags);
-		urb->complete = ti_bulk_in_callback;
 		urb->context = tport;
-		urb->dev = tport->tp_port->serial->dev;
 		status = usb_submit_urb(urb, GFP_KERNEL);
 	} else  {
 		tport->tp_read_urb_state = TI_READ_URB_RUNNING;
@@ -1745,6 +1738,7 @@ static int ti_download_firmware(struct ti_device *tdev)
 	}
 	if (fw_p->size > TI_FIRMWARE_BUF_SIZE) {
 		dev_err(&dev->dev, "%s - firmware too large %zu\n", __func__, fw_p->size);
+		release_firmware(fw_p);
 		return -ENOENT;
 	}
 

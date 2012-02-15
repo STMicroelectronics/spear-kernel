@@ -14,11 +14,11 @@
 #ifndef __MACH_GENERIC_H
 #define __MACH_GENERIC_H
 
-#include <asm/mach/time.h>
-#include <asm/mach/map.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
+#include <asm/mach/time.h>
+#include <asm/mach/map.h>
 
 /*
  * Each GPT has 2 timer channels
@@ -53,6 +53,7 @@ extern struct sys_timer spear6xx_timer;
 
 /* Add spear6xx family function declarations here */
 void __init i2c_register_default_devices(void);
+void spear_restart(char, const char *);
 void __init spear_setup_timer(void);
 void __init spear6xx_map_io(void);
 void __init spear6xx_init_irq(void);

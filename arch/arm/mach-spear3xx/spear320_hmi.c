@@ -16,12 +16,12 @@
 #include <linux/irq.h>
 #include <linux/mfd/stmpe.h>
 #include <linux/mmc/sdhci-spear.h>
-#include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/mtd/nand.h>
+#include <linux/mtd/spear_smi.h>
+#include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
@@ -148,6 +148,12 @@ static struct sdhci_plat_data sdhci_plat_data = {
 	.card_int_gpio = -1,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
 static void __init spear320_hmi_init(void)
 {
 	unsigned int i;
@@ -156,8 +162,10 @@ static void __init spear320_hmi_init(void)
 	sdhci_set_plat_data(&spear320_sdhci_device, &sdhci_plat_data);
 
 	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+	if (platform_device_add_data(&spear320_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear320_nand_device.name);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();
@@ -185,9 +193,11 @@ static void __init spear320_hmi_init(void)
 }
 
 MACHINE_START(SPEAR320_HMI, "ST-SPEAR320-HMI")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.map_io		=	spear320_map_io,
 	.init_irq	=	spear3xx_init_irq,
+	.handle_irq	=	vic_handle_irq,
 	.timer		=	&spear3xx_timer,
 	.init_machine	=	spear320_hmi_init,
+	.restart	=	spear_restart,
 MACHINE_END

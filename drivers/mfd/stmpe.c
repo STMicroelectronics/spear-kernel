@@ -8,6 +8,7 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -763,16 +764,16 @@ static irqreturn_t stmpe_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void stmpe_irq_lock(unsigned int irq)
+static void stmpe_irq_lock(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
 
 	mutex_lock(&stmpe->irq_lock);
 }
 
-static void stmpe_irq_sync_unlock(unsigned int irq)
+static void stmpe_irq_sync_unlock(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
 	struct stmpe_variant_info *variant = stmpe->variant;
 	int num = DIV_ROUND_UP(variant->num_irqs, 8);
 	int i;
@@ -791,20 +792,20 @@ static void stmpe_irq_sync_unlock(unsigned int irq)
 	mutex_unlock(&stmpe->irq_lock);
 }
 
-static void stmpe_irq_mask(unsigned int irq)
+static void stmpe_irq_mask(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
-	int offset = irq - stmpe->irq_base;
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
+	int offset = data->irq - stmpe->irq_base;
 	int regoffset = offset / 8;
 	int mask = 1 << (offset % 8);
 
 	stmpe->ier[regoffset] &= ~mask;
 }
 
-static void stmpe_irq_unmask(unsigned int irq)
+static void stmpe_irq_unmask(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
-	int offset = irq - stmpe->irq_base;
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
+	int offset = data->irq - stmpe->irq_base;
 	int regoffset = offset / 8;
 	int mask = 1 << (offset % 8);
 
@@ -813,10 +814,10 @@ static void stmpe_irq_unmask(unsigned int irq)
 
 static struct irq_chip stmpe_irq_chip = {
 	.name			= "stmpe",
-	.bus_lock		= stmpe_irq_lock,
-	.bus_sync_unlock	= stmpe_irq_sync_unlock,
-	.mask			= stmpe_irq_mask,
-	.unmask			= stmpe_irq_unmask,
+	.irq_bus_lock		= stmpe_irq_lock,
+	.irq_bus_sync_unlock	= stmpe_irq_sync_unlock,
+	.irq_mask		= stmpe_irq_mask,
+	.irq_unmask		= stmpe_irq_unmask,
 };
 
 static int __devinit stmpe_irq_init(struct stmpe *stmpe)
@@ -830,13 +831,13 @@ static int __devinit stmpe_irq_init(struct stmpe *stmpe)
 		chip = &stmpe_irq_chip;
 
 	for (irq = base; irq < base + num_irqs; irq++) {
-		set_irq_chip_data(irq, stmpe);
-		set_irq_chip_and_handler(irq, chip, handle_edge_irq);
-		set_irq_nested_thread(irq, 1);
+		irq_set_chip_data(irq, stmpe);
+		irq_set_chip_and_handler(irq, chip, handle_edge_irq);
+		irq_set_nested_thread(irq, 1);
 #ifdef CONFIG_ARM
 		set_irq_flags(irq, IRQF_VALID);
 #else
-		set_irq_noprobe(irq);
+		irq_set_noprobe(irq);
 #endif
 	}
 
@@ -853,8 +854,8 @@ static void stmpe_irq_remove(struct stmpe *stmpe)
 #ifdef CONFIG_ARM
 		set_irq_flags(irq, 0);
 #endif
-		set_irq_chip_and_handler(irq, NULL, NULL);
-		set_irq_chip_data(irq, NULL);
+		irq_set_chip_and_handler(irq, NULL, NULL);
+		irq_set_chip_data(irq, NULL);
 	}
 }
 
@@ -957,7 +958,7 @@ static int __devinit stmpe_devices_init(struct stmpe *stmpe)
 }
 
 /* Called from client specific probe routines */
-int stmpe_probe(struct stmpe_client_info *ci, int partnum)
+int __devinit stmpe_probe(struct stmpe_client_info *ci, int partnum)
 {
 	struct stmpe_platform_data *pdata = dev_get_platdata(ci->dev);
 	struct stmpe *stmpe;

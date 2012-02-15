@@ -18,11 +18,11 @@
 #include <linux/amba/serial.h>
 #include <linux/dw_dmac.h>
 #include <linux/designware_i2s.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/phy.h>
 #include <linux/io.h>
-#include <linux/mtd/fsmc.h>
 #include <linux/netdevice.h>
 #include <linux/spear_thermal.h>
 #include <linux/stmmac.h>
@@ -315,6 +315,34 @@ struct platform_device spear13xx_cf_device = {
 	.resource = cf_resources,
 };
 
+/* clcd db9000 devide registration */
+static struct resource db9000fb_resources[] = {
+	[0] = {
+		.start = SPEAR13XX_CLCD_BASE,
+		.end = SPEAR13XX_CLCD_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = SPEAR13XX_IRQ_CLCD,
+		.end = SPEAR13XX_IRQ_CLCD,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static u64 fb_dma_mask = ~(u64)0;
+
+struct platform_device spear13xx_db9000_clcd_device = {
+	.name = "clcd-db9000",
+	.id = -1,
+	.dev = {
+		.parent = NULL,
+		.dma_mask = &fb_dma_mask,
+		.coherent_dma_mask = ~0,
+	},
+	.num_resources = ARRAY_SIZE(db9000fb_resources),
+	.resource = db9000fb_resources,
+};
+
 /* dmac device registeration */
 static struct dw_dma_platform_data dmac_plat_data = {
 	.nr_channels = 8,
@@ -496,10 +524,6 @@ void nand_select_bank(u32 bank, u32 busw)
 	writel(fsmc_cfg, VA_FSMC_CFG);
 }
 
-static struct fsmc_nand_platform_data nand_platform_data = {
-	.select_bank = nand_select_bank,
-};
-
 static struct resource nand_resources[] = {
 	{
 		.name = "nand_data",
@@ -519,7 +543,6 @@ struct platform_device spear13xx_nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
 };
 
 /* pmu device */
@@ -667,34 +690,6 @@ struct platform_device spear13xx_kbd_device = {
 	.resource = kbd_resources,
 };
 
-/* clcd db9000 devide registration */
-static struct resource db9000fb_resources[] = {
-	[0] = {
-		.start = SPEAR13XX_CLCD_BASE,
-		.end = SPEAR13XX_CLCD_BASE + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = SPEAR13XX_IRQ_CLCD,
-		.end = SPEAR13XX_IRQ_CLCD,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-static u64 fb_dma_mask = ~(u64)0;
-
-struct platform_device spear13xx_db9000_clcd_device = {
-	.name = "clcd-db9000",
-	.id = -1,
-	.dev = {
-		.parent = NULL,
-		.dma_mask = &fb_dma_mask,
-		.coherent_dma_mask = ~0,
-	},
-	.num_resources = ARRAY_SIZE(db9000fb_resources),
-	.resource = db9000fb_resources,
-};
-
 /* rtc device registration */
 static struct resource rtc_resources[] = {
 	{
@@ -838,15 +833,15 @@ static struct dw_dma_slave i2s0_dma_data[] = {
 		.dma_dev = &spear13xx_dmac_device[0].dev,
 		.cfg_hi = DWC_CFGH_DST_PER(SPEAR13XX_DMA_REQ_I2S_TX),
 		.cfg_lo = 0,
-		.src_master = 0,
-		.dst_master = 1,
+		.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+		.dst_master = SPEAR13XX_DMA_MASTER_I2S,
 	}, {
 		/* Record */
 		.dma_dev = &spear13xx_dmac_device[0].dev,
 		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR13XX_DMA_REQ_I2S_RX),
 		.cfg_lo = 0,
-		.src_master = 1,
-		.dst_master = 0,
+		.src_master = SPEAR13XX_DMA_MASTER_I2S,
+		.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
 	}
 };
 
@@ -1375,13 +1370,20 @@ void spear13xx_init(void)
 	ret = clk_set_rate_sys("sdhci", NULL, 50000000);
 	if (ret)
 		pr_err("clk_set_rate failed for sdhci: %d\n", ret);
+
+#ifdef CONFIG_PCI
+	/* PCI specific initializations */
+	pcibios_min_io = 0x1000;
+	pcibios_min_mem = 0;
+	pci_set_flags(0);
+#endif
 }
 
 /* This will initialize vic */
 void __init spear13xx_init_irq(void)
 {
-	gic_dist_init(0, __io_address(SPEAR13XX_GIC_DIST_BASE), 29);
-	gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
+	gic_init(0, 29, __io_address(SPEAR13XX_GIC_DIST_BASE),
+			__io_address(SPEAR13XX_GIC_CPU_BASE));
 }
 
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size)

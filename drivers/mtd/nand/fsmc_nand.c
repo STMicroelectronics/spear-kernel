@@ -31,9 +31,10 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/amba/bus.h>
 #include <mtd/mtd-abi.h>
 
-static struct nand_ecclayout fsmc_ecc1_128_layout = {
+static struct nand_ecclayout fsmc_ecc1_layout = {
 	.eccbytes = 24,
 	.eccpos = {2, 3, 4, 18, 19, 20, 34, 35, 36, 50, 51, 52,
 		66, 67, 68, 82, 83, 84, 98, 99, 100, 114, 115, 116},
@@ -49,127 +50,7 @@ static struct nand_ecclayout fsmc_ecc1_128_layout = {
 	}
 };
 
-static struct nand_ecclayout fsmc_ecc1_64_layout = {
-	.eccbytes = 12,
-	.eccpos = {2, 3, 4, 18, 19, 20, 34, 35, 36, 50, 51, 52},
-	.oobfree = {
-		{.offset = 8, .length = 8},
-		{.offset = 24, .length = 8},
-		{.offset = 40, .length = 8},
-		{.offset = 56, .length = 8},
-	}
-};
-
-static struct nand_ecclayout fsmc_ecc1_16_layout = {
-	.eccbytes = 3,
-	.eccpos = {2, 3, 4},
-	.oobfree = {
-		{.offset = 8, .length = 8},
-	}
-};
-
-/*
- * ECC4 layout for NAND of pagesize 8192 bytes & OOBsize 256 bytes. 13*16 bytes
- * of OB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block and 46
- * bytes are free for use.
- */
-static struct nand_ecclayout fsmc_ecc4_256_layout = {
-	.eccbytes = 208,
-	.eccpos = {  2,   3,   4,   5,   6,   7,   8,
-		9,  10,  11,  12,  13,  14,
-		18,  19,  20,  21,  22,  23,  24,
-		25,  26,  27,  28,  29,  30,
-		34,  35,  36,  37,  38,  39,  40,
-		41,  42,  43,  44,  45,  46,
-		50,  51,  52,  53,  54,  55,  56,
-		57,  58,  59,  60,  61,  62,
-		66,  67,  68,  69,  70,  71,  72,
-		73,  74,  75,  76,  77,  78,
-		82,  83,  84,  85,  86,  87,  88,
-		89,  90,  91,  92,  93,  94,
-		98,  99, 100, 101, 102, 103, 104,
-		105, 106, 107, 108, 109, 110,
-		114, 115, 116, 117, 118, 119, 120,
-		121, 122, 123, 124, 125, 126,
-		130, 131, 132, 133, 134, 135, 136,
-		137, 138, 139, 140, 141, 142,
-		146, 147, 148, 149, 150, 151, 152,
-		153, 154, 155, 156, 157, 158,
-		162, 163, 164, 165, 166, 167, 168,
-		169, 170, 171, 172, 173, 174,
-		178, 179, 180, 181, 182, 183, 184,
-		185, 186, 187, 188, 189, 190,
-		194, 195, 196, 197, 198, 199, 200,
-		201, 202, 203, 204, 205, 206,
-		210, 211, 212, 213, 214, 215, 216,
-		217, 218, 219, 220, 221, 222,
-		226, 227, 228, 229, 230, 231, 232,
-		233, 234, 235, 236, 237, 238,
-		242, 243, 244, 245, 246, 247, 248,
-		249, 250, 251, 252, 253, 254
-	},
-	.oobfree = {
-		{.offset = 15, .length = 3},
-		{.offset = 31, .length = 3},
-		{.offset = 47, .length = 3},
-		{.offset = 63, .length = 3},
-		{.offset = 79, .length = 3},
-		{.offset = 95, .length = 3},
-		{.offset = 111, .length = 3},
-		{.offset = 127, .length = 3},
-		{.offset = 143, .length = 3},
-		{.offset = 159, .length = 3},
-		{.offset = 175, .length = 3},
-		{.offset = 191, .length = 3},
-		{.offset = 207, .length = 3},
-		{.offset = 223, .length = 3},
-		{.offset = 239, .length = 3},
-		{.offset = 255, .length = 1}
-	}
-};
-
-/*
- * ECC4 layout for NAND of pagesize 4096 bytes & OOBsize 224 bytes. 13*8 bytes
- * of OOB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block & 118
- * bytes are free for use.
- */
-static struct nand_ecclayout fsmc_ecc4_224_layout = {
-	.eccbytes = 104,
-	.eccpos = {  2,   3,   4,   5,   6,   7,   8,
-		9,  10,  11,  12,  13,  14,
-		18,  19,  20,  21,  22,  23,  24,
-		25,  26,  27,  28,  29,  30,
-		34,  35,  36,  37,  38,  39,  40,
-		41,  42,  43,  44,  45,  46,
-		50,  51,  52,  53,  54,  55,  56,
-		57,  58,  59,  60,  61,  62,
-		66,  67,  68,  69,  70,  71,  72,
-		73,  74,  75,  76,  77,  78,
-		82,  83,  84,  85,  86,  87,  88,
-		89,  90,  91,  92,  93,  94,
-		98,  99, 100, 101, 102, 103, 104,
-		105, 106, 107, 108, 109, 110,
-		114, 115, 116, 117, 118, 119, 120,
-		121, 122, 123, 124, 125, 126
-	},
-	.oobfree = {
-		{.offset = 15, .length = 3},
-		{.offset = 31, .length = 3},
-		{.offset = 47, .length = 3},
-		{.offset = 63, .length = 3},
-		{.offset = 79, .length = 3},
-		{.offset = 95, .length = 3},
-		{.offset = 111, .length = 3},
-		{.offset = 127, .length = 97}
-	}
-};
-
-/*
- * ECC4 layout for NAND of pagesize 4096 bytes & OOBsize 128 bytes. 13*8 bytes
- * of OOB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block & 22
- * bytes are free for use.
- */
-static struct nand_ecclayout fsmc_ecc4_128_layout = {
+static struct nand_ecclayout fsmc_ecc4_lp_layout = {
 	.eccbytes = 104,
 	.eccpos = {  2,   3,   4,   5,   6,   7,   8,
 		9,  10,  11,  12,  13,  14,
@@ -201,45 +82,6 @@ static struct nand_ecclayout fsmc_ecc4_128_layout = {
 };
 
 /*
- * ECC4 layout for NAND of pagesize 2048 bytes & OOBsize 64 bytes. 13*4 bytes of
- * OOB size is reserved for ECC, Byte no. 0 & 1 reserved for bad block and 10
- * bytes are free for use.
- */
-static struct nand_ecclayout fsmc_ecc4_64_layout = {
-	.eccbytes = 52,
-	.eccpos = {  2,   3,   4,   5,   6,   7,   8,
-		9,  10,  11,  12,  13,  14,
-		18,  19,  20,  21,  22,  23,  24,
-		25,  26,  27,  28,  29,  30,
-		34,  35,  36,  37,  38,  39,  40,
-		41,  42,  43,  44,  45,  46,
-		50,  51,  52,  53,  54,  55,  56,
-		57,  58,  59,  60,  61,  62,
-	},
-	.oobfree = {
-		{.offset = 15, .length = 3},
-		{.offset = 31, .length = 3},
-		{.offset = 47, .length = 3},
-		{.offset = 63, .length = 1},
-	}
-};
-
-/*
- * ECC4 layout for NAND of pagesize 512 bytes & OOBsize 16 bytes. 13 bytes of
- * OOB size is reserved for ECC, Byte no. 4 & 5 reserved for bad block and One
- * byte is free for use.
- */
-static struct nand_ecclayout fsmc_ecc4_16_layout = {
-	.eccbytes = 13,
-	.eccpos = { 0,  1,  2,  3,  6,  7, 8,
-		9, 10, 11, 12, 13, 14
-	},
-	.oobfree = {
-		{.offset = 15, .length = 1},
-	}
-};
-
-/*
  * ECC placement definitions in oobfree type format.
  * There are 13 bytes of ecc for every 512 byte block and it has to be read
  * consecutively and immediately after the 512 byte data block for hardware to
@@ -261,6 +103,16 @@ static struct fsmc_eccplace fsmc_ecc4_lp_place = {
 	}
 };
 
+static struct nand_ecclayout fsmc_ecc4_sp_layout = {
+	.eccbytes = 13,
+	.eccpos = { 0,  1,  2,  3,  6,  7, 8,
+		9, 10, 11, 12, 13, 14
+	},
+	.oobfree = {
+		{.offset = 15, .length = 1},
+	}
+};
+
 static struct fsmc_eccplace fsmc_ecc4_sp_place = {
 	.eccplace = {
 		{.offset = 0, .length = 4},
@@ -270,40 +122,68 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
 
 /*
  * Default partition tables to be used if the partition information not
- * provided through platform data
- */
-#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
-#define DEFAULT_PARTITION_TABLE(name, ersz, xl, ub, kr)			\
-	static struct mtd_partition partition_info_##name##_blk[] = {	\
-		PARTITION("X-loader", 0, xl * ersz),			\
-		PARTITION("U-Boot", xl * ersz, ub * ersz),		\
-		PARTITION("Kernel", (xl + ub) * ersz, kr * ersz),	\
-		PARTITION("Root File System", (xl + ub + kr) * ersz, 0),\
-	}
-
-/*
- * Default partition layouts for nand devices
+ * provided through platform data.
+ *
+ * Default partition layout for small page(= 512 bytes) devices
  * Size for "Root file system" is updated in driver based on actual device size
  */
-DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 20, 256);
-DEFAULT_PARTITION_TABLE(64KB, 0x10000, 4, 20, 128);
-DEFAULT_PARTITION_TABLE(128KB, 0x20000, 4, 12, 48);
-DEFAULT_PARTITION_TABLE(256KB, 0x40000, 4, 6, 24);
-DEFAULT_PARTITION_TABLE(512KB, 0x80000, 4, 6, 24);
-DEFAULT_PARTITION_TABLE(1MB, 0x100000, 4, 4, 12);
-DEFAULT_PARTITION_TABLE(2MB, 0x200000, 4, 4, 6);
+static struct mtd_partition partition_info_16KB_blk[] = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4*0x4000,
+	},
+	{
+		.name = "U-Boot",
+		.offset = 0x10000,
+		.size = 20*0x4000,
+	},
+	{
+		.name = "Kernel",
+		.offset = 0x60000,
+		.size = 256*0x4000,
+	},
+	{
+		.name = "Root File System",
+		.offset = 0x460000,
+		.size = MTDPART_SIZ_FULL,
+	},
+};
 
-#ifdef CONFIG_MTD_CMDLINE_PARTS
-const char *part_probes[] = { "cmdlinepart", NULL };
-#endif
+/*
+ * Default partition layout for large page(> 512 bytes) devices
+ * Size for "Root file system" is updated in driver based on actual device size
+ */
+static struct mtd_partition partition_info_128KB_blk[] = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4*0x20000,
+	},
+	{
+		.name = "U-Boot",
+		.offset = 0x80000,
+		.size = 12*0x20000,
+	},
+	{
+		.name = "Kernel",
+		.offset = 0x200000,
+		.size = 48*0x20000,
+	},
+	{
+		.name = "Root File System",
+		.offset = 0x800000,
+		.size = MTDPART_SIZ_FULL,
+	},
+};
+
 
 /**
- * struct fsmc_nand_data - atructure for FSMC NAND device state
+ * struct fsmc_nand_data - structure for FSMC NAND device state
  *
+ * @pid:		Part ID on the AMBA PrimeCell format
  * @mtd:		MTD info for a NAND flash.
  * @nand:		Chip related info for a NAND flash.
- * @partitions:		Partition info for a NAND Flash.
- * @nr_partitions:	Total number of partition of a NAND flash.
  *
  * @ecc_place:		ECC placing locations in oobfree type format.
  * @bank:		Bank number for probed device.
@@ -315,10 +195,9 @@ const char *part_probes[] = { "cmdlinepart", NULL };
  * @regs_va:		FSMC regs base address.
  */
 struct fsmc_nand_data {
+	u32			pid;
 	struct mtd_info		mtd;
 	struct nand_chip	nand;
-	struct mtd_partition	*partitions;
-	unsigned int		nr_partitions;
 
 	struct fsmc_eccplace	*ecc_place;
 	unsigned int		bank;
@@ -328,8 +207,6 @@ struct fsmc_nand_data {
 	struct resource		*rescmd;
 	struct resource		*resaddr;
 	struct resource		*resdata;
-
-	struct fsmc_nand_timings *dev_timings;
 
 	void __iomem		*data_va;
 	void __iomem		*cmd_va;
@@ -410,42 +287,22 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  * This routine initializes timing parameters related to NAND memory access in
  * FSMC registers
  */
-static void fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
-			   uint32_t busw, struct fsmc_nand_timings *timings)
+static void __init fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
+				   uint32_t busw)
 {
 	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
-	uint32_t tclr, tar, thiz, thold, twait, tset;
-	struct fsmc_nand_timings *tims;
-	struct fsmc_nand_timings default_timings = {
-		.tclr	= FSMC_TCLR_1,
-		.tar	= FSMC_TAR_1,
-		.thiz	= FSMC_THIZ_1,
-		.thold	= FSMC_THOLD_4,
-		.twait	= FSMC_TWAIT_6,
-		.tset	= FSMC_TSET_0,
-	};
-
-	if (timings)
-		tims = timings;
-	else
-		tims = &default_timings;
-
-	tclr = (tims->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
-	tar = (tims->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
-	thiz = (tims->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
-	thold = (tims->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
-	twait = (tims->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
-	tset = (tims->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
 
 	if (busw)
 		writel(value | FSMC_DEVWID_16, &regs->bank_regs[bank].pc);
 	else
 		writel(value | FSMC_DEVWID_8, &regs->bank_regs[bank].pc);
 
-	writel(readl(&regs->bank_regs[bank].pc) | tclr | tar,
+	writel(readl(&regs->bank_regs[bank].pc) | FSMC_TCLR_1 | FSMC_TAR_1,
 	       &regs->bank_regs[bank].pc);
-	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].comm);
-	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].attrib);
+	writel(FSMC_THIZ_1 | FSMC_THOLD_4 | FSMC_TWAIT_6 | FSMC_TSET_0,
+	       &regs->bank_regs[bank].comm);
+	writel(FSMC_THIZ_1 | FSMC_THOLD_4 | FSMC_TWAIT_6 | FSMC_TSET_0,
+	       &regs->bank_regs[bank].attrib);
 }
 
 /*
@@ -468,7 +325,7 @@ static void fsmc_enable_hwecc(struct mtd_info *mtd, int mode)
 
 /*
  * fsmc_read_hwecc_ecc4 - Hardware ECC calculator for ecc4 option supported by
- * FSMC. ECC is 13 bytes for 512 bytes of data (supports error correction upto
+ * FSMC. ECC is 13 bytes for 512 bytes of data (supports error correction up to
  * max of 8-bits)
  */
 static int fsmc_read_hwecc_ecc4(struct mtd_info *mtd, const uint8_t *data,
@@ -514,7 +371,7 @@ static int fsmc_read_hwecc_ecc4(struct mtd_info *mtd, const uint8_t *data,
 
 /*
  * fsmc_read_hwecc_ecc1 - Hardware ECC calculator for ecc1 option supported by
- * FSMC. ECC is 3 bytes for 512 bytes of data (supports error correction upto
+ * FSMC. ECC is 3 bytes for 512 bytes of data (supports error correction up to
  * max of 1-bit)
  */
 static int fsmc_read_hwecc_ecc1(struct mtd_info *mtd, const uint8_t *data,
@@ -534,20 +391,6 @@ static int fsmc_read_hwecc_ecc1(struct mtd_info *mtd, const uint8_t *data,
 	return 0;
 }
 
-/* Count the number of 0's in buff upto a max of max_bits */
-static int count_written_bits(uint8_t *buff, int size, int max_bits)
-{
-	int k, written_bits = 0;
-
-	for (k = 0; k < size; k++) {
-		written_bits += hweight8(~buff[k]);
-		if (written_bits > max_bits)
-			break;
-	}
-
-	return written_bits;
-}
-
 /*
  * fsmc_read_page_hwecc
  * @mtd:	mtd info structure
@@ -555,10 +398,10 @@ static int count_written_bits(uint8_t *buff, int size, int max_bits)
  * @buf:	buffer to store read data
  * @page:	page number to read
  *
- * This routine is needed for fsmc verison 8 as reading from NAND chip has to be
+ * This routine is needed for fsmc version 8 as reading from NAND chip has to be
  * performed in a strict sequence as follows:
  * data(512 byte) -> ecc(13 byte)
- * After this read, fsmc hardware generates and reports error data bits(upto a
+ * After this read, fsmc hardware generates and reports error data bits(up to a
  * max of 8 bits)
  */
 static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
@@ -583,6 +426,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	uint8_t *oob = (uint8_t *)&ecc_oob[0];
 
 	for (i = 0, s = 0; s < eccsteps; s++, i += eccbytes, p += eccsize) {
+
 		chip->cmdfunc(mtd, NAND_CMD_READ0, s * eccsize, page);
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
 		chip->read_buf(mtd, p, eccsize);
@@ -593,13 +437,11 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 			group++;
 
 			/*
-			 * length is intentionally kept a higher multiple of 2
-			 * to read at least 13 bytes even in case of 16 bit NAND
-			 * devices
-			 */
-			if (chip->options & NAND_BUSWIDTH_16)
-				len = roundup(len, 2);
-
+			* length is intentionally kept a higher multiple of 2
+			* to read at least 13 bytes even in case of 16 bit NAND
+			* devices
+			*/
+			len = roundup(len, 2);
 			chip->cmdfunc(mtd, NAND_CMD_READOOB, off, page);
 			chip->read_buf(mtd, oob + j, len);
 			j += len;
@@ -608,8 +450,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		memcpy(&ecc_code[i], oob, 13);
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 
-		stat = chip->ecc.correct(mtd, p, &ecc_code[i],
-				&ecc_calc[i]);
+		stat = chip->ecc.correct(mtd, p, &ecc_code[i], &ecc_calc[i]);
 		if (stat < 0)
 			mtd->ecc_stats.failed++;
 		else
@@ -620,7 +461,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 /*
- * fsmc_bch8_correct_data
+ * fsmc_correct_data
  * @mtd:	mtd info structure
  * @dat:	buffer of read data
  * @read_ecc:	ecc read from device spare area
@@ -629,50 +470,19 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
  * calc_ecc is a 104 bit information containing maximum of 8 error
  * offset informations of 13 bits each in 512 bytes of read data.
  */
-static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
+static int fsmc_correct_data(struct mtd_info *mtd, uint8_t *dat,
 			     uint8_t *read_ecc, uint8_t *calc_ecc)
 {
 	struct fsmc_nand_data *host = container_of(mtd,
 					struct fsmc_nand_data, mtd);
 	struct fsmc_regs *regs = host->regs_va;
 	unsigned int bank = host->bank;
-	uint32_t err_idx[8];
+	uint16_t err_idx[8];
+	uint64_t ecc_data[2];
 	uint32_t num_err, i;
-	uint32_t ecc1, ecc2, ecc3, ecc4;
 
-	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
-
-	/* no bit flipping */
-	if (likely(num_err == 0))
-		return 0;
-
-	/* too many errors */
-	if (unlikely(num_err > 8)) {
-		/*
-		 * This is a temporary erase check. A newly erased page read
-		 * would result in an ecc error because the oob data is also
-		 * erased to FF and the calculated ecc for an FF data is not
-		 * FF..FF.
-		 * This is a workaround to skip performing correction in case
-		 * data is FF..FF
-		 *
-		 * Logic:
-		 * For every page, each bit written as 0 is counted until these
-		 * number of bits are greater than 8 (the maximum correction
-		 * capability of FSMC for each 512 + 13 bytes)
-		 */
-
-		int bits_ecc = count_written_bits(read_ecc, 13, 8);
-		int bits_data = count_written_bits(dat, 512, 8);
-
-		if ((bits_ecc + bits_data) <= 8) {
-			if (bits_data)
-				memset(dat, 0xff, 512);
-			return bits_data;
-		}
-
-		return -EBADMSG;
-	}
+	/* The calculated ecc is actually the correction index in data */
+	memcpy(ecc_data, calc_ecc, 13);
 
 	/*
 	 * ------------------- calc_ecc[] bit wise -----------|--13 bits--|
@@ -683,26 +493,27 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	 * uint64_t array and error offset indexes are populated in err_idx
 	 * array
 	 */
-	ecc1 = readl(&regs->bank_regs[bank].ecc1);
-	ecc2 = readl(&regs->bank_regs[bank].ecc2);
-	ecc3 = readl(&regs->bank_regs[bank].ecc3);
-	ecc4 = readl(&regs->bank_regs[bank].sts);
+	for (i = 0; i < 8; i++) {
+		if (i == 4) {
+			err_idx[4] = ((ecc_data[1] & 0x1) << 12) | ecc_data[0];
+			ecc_data[1] >>= 1;
+			continue;
+		}
+		err_idx[i] = (ecc_data[i/4] & 0x1FFF);
+		ecc_data[i/4] >>= 13;
+	}
 
-	err_idx[0] = (ecc1 >> 0) & 0x1FFF;
-	err_idx[1] = (ecc1 >> 13) & 0x1FFF;
-	err_idx[2] = (((ecc2 >> 0) & 0x7F) << 6) | ((ecc1 >> 26) & 0x3F);
-	err_idx[3] = (ecc2 >> 7) & 0x1FFF;
-	err_idx[4] = (((ecc3 >> 0) & 0x1) << 12) | ((ecc2 >> 20) & 0xFFF);
-	err_idx[5] = (ecc3 >> 1) & 0x1FFF;
-	err_idx[6] = (ecc3 >> 14) & 0x1FFF;
-	err_idx[7] = (((ecc4 >> 16) & 0xFF) << 5) | ((ecc3 >> 27) & 0x1F);
+	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
+
+	if (num_err == 0xF)
+		return -EBADMSG;
 
 	i = 0;
 	while (num_err--) {
 		change_bit(0, (unsigned long *)&err_idx[i]);
 		change_bit(1, (unsigned long *)&err_idx[i]);
 
-		if (err_idx[i] < 512 * 8) {
+		if (err_idx[i] <= 512 * 8) {
 			change_bit(err_idx[i], (unsigned long *)dat);
 			i++;
 		}
@@ -722,7 +533,9 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct nand_chip *nand;
 	struct fsmc_regs *regs;
 	struct resource *res;
-	int nr_parts, ret = 0;
+	int ret = 0;
+	u32 pid;
+	int i;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "platform data is NULL\n");
@@ -755,28 +568,27 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		goto err_probe1;
 	}
 
-	host->resaddr = request_mem_region(res->start + pdata->ale_off,
+	host->resaddr = request_mem_region(res->start + PLAT_NAND_ALE,
 			resource_size(res), pdev->name);
 	if (!host->resaddr) {
 		ret = -EIO;
 		goto err_probe1;
 	}
 
-	host->addr_va = ioremap(res->start + pdata->ale_off,
-			resource_size(res));
+	host->addr_va = ioremap(res->start + PLAT_NAND_ALE, resource_size(res));
 	if (!host->addr_va) {
 		ret = -EIO;
 		goto err_probe1;
 	}
 
-	host->rescmd = request_mem_region(res->start + pdata->cle_off,
+	host->rescmd = request_mem_region(res->start + PLAT_NAND_CLE,
 			resource_size(res), pdev->name);
 	if (!host->rescmd) {
 		ret = -EIO;
 		goto err_probe1;
 	}
 
-	host->cmd_va = ioremap(res->start + pdata->cle_off, resource_size(res));
+	host->cmd_va = ioremap(res->start + PLAT_NAND_CLE, resource_size(res));
 	if (!host->cmd_va) {
 		ret = -EIO;
 		goto err_probe1;
@@ -813,9 +625,20 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_probe1;
 
+	/*
+	 * This device ID is actually a common AMBA ID as used on the
+	 * AMBA PrimeCell bus. However it is not a PrimeCell.
+	 */
+	for (pid = 0, i = 0; i < 4; i++)
+		pid |= (readl(host->regs_va + resource_size(res) - 0x20 + 4 * i) & 255) << (i * 8);
+	host->pid = pid;
+	dev_info(&pdev->dev, "FSMC device partno %03x, manufacturer %02x, "
+		 "revision %02x, config %02x\n",
+		 AMBA_PART_BITS(pid), AMBA_MANF_BITS(pid),
+		 AMBA_REV_BITS(pid), AMBA_CONFIG_BITS(pid));
+
 	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
-	host->dev_timings = pdata->nand_timings;
 	regs = host->regs_va;
 
 	/* Link all private pointers */
@@ -835,18 +658,16 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	nand->ecc.size = 512;
 	nand->options = pdata->options;
 	nand->select_chip = fsmc_select_chip;
-	nand->badblockbits = 7;
 
 	if (pdata->width == FSMC_NAND_BW16)
 		nand->options |= NAND_BUSWIDTH_16;
 
-	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16,
-			host->dev_timings);
+	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16);
 
-	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
+	if (AMBA_REV_BITS(host->pid) >= 8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
 		nand->ecc.calculate = fsmc_read_hwecc_ecc4;
-		nand->ecc.correct = fsmc_bch8_correct_data;
+		nand->ecc.correct = fsmc_correct_data;
 		nand->ecc.bytes = 13;
 	} else {
 		nand->ecc.calculate = fsmc_read_hwecc_ecc1;
@@ -855,7 +676,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	}
 
 	/*
-	 * Scan to find existance of the device
+	 * Scan to find existence of the device
 	 */
 	if (nand_scan_ident(&host->mtd, 1, NULL)) {
 		ret = -ENXIO;
@@ -863,49 +684,16 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		goto err_probe;
 	}
 
-	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
-		switch (host->mtd.oobsize) {
-		case 16:
-			nand->ecc.layout = &fsmc_ecc4_16_layout;
+	if (AMBA_REV_BITS(host->pid) >= 8) {
+		if (host->mtd.writesize == 512) {
+			nand->ecc.layout = &fsmc_ecc4_sp_layout;
 			host->ecc_place = &fsmc_ecc4_sp_place;
-			break;
-		case 64:
-			nand->ecc.layout = &fsmc_ecc4_64_layout;
+		} else {
+			nand->ecc.layout = &fsmc_ecc4_lp_layout;
 			host->ecc_place = &fsmc_ecc4_lp_place;
-			break;
-		case 128:
-			nand->ecc.layout = &fsmc_ecc4_128_layout;
-			host->ecc_place = &fsmc_ecc4_lp_place;
-			break;
-		case 224:
-			nand->ecc.layout = &fsmc_ecc4_224_layout;
-			host->ecc_place = &fsmc_ecc4_lp_place;
-			break;
-		case 256:
-			nand->ecc.layout = &fsmc_ecc4_256_layout;
-			host->ecc_place = &fsmc_ecc4_lp_place;
-			break;
-		default:
-			printk(KERN_WARNING "No oob scheme defined for "
-			       "oobsize %d\n", mtd->oobsize);
-			BUG();
 		}
 	} else {
-		switch (host->mtd.oobsize) {
-		case 16:
-			nand->ecc.layout = &fsmc_ecc1_16_layout;
-			break;
-		case 64:
-			nand->ecc.layout = &fsmc_ecc1_64_layout;
-			break;
-		case 128:
-			nand->ecc.layout = &fsmc_ecc1_128_layout;
-			break;
-		default:
-			printk(KERN_WARNING "No oob scheme defined for "
-			       "oobsize %d\n", mtd->oobsize);
-			BUG();
-		}
+		nand->ecc.layout = &fsmc_ecc1_layout;
 	}
 
 	/* Second stage of scan to fill MTD data-structures */
@@ -921,110 +709,19 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	 * platform data,
 	 * default partition information present in driver.
 	 */
-#ifdef CONFIG_MTD_PARTITIONS
-#ifdef CONFIG_MTD_CMDLINE_PARTS
 	/*
-	 * Check if partition info passed via command line
+	 * Check for partition info passed
 	 */
 	host->mtd.name = "nand";
-	nr_parts = parse_mtd_partitions(&host->mtd, part_probes,
-			&host->partitions, 0);
-	if (nr_parts > 0) {
-		host->nr_partitions = nr_parts;
-	} else {
-#endif
-		/*
-		 * Check if partition info passed via command line
-		 */
-		if (pdata->partitions) {
-			host->partitions = pdata->partitions;
-			host->nr_partitions = pdata->nr_partitions;
-		} else {
-			struct mtd_partition *partition;
-			int i;
-
-			/* Select the default partitions info */
-			switch (host->mtd.erasesize) {
-			case 0x4000:
-				host->partitions = partition_info_16KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_16KB_blk) /
-					sizeof(struct mtd_partition);
-				break;
-			case 0x10000:
-				host->partitions = partition_info_64KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_64KB_blk) /
-					sizeof(struct mtd_partition);
-				break;
-			case 0x20000:
-				host->partitions =
-					partition_info_128KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_128KB_blk)
-					/ sizeof(struct mtd_partition);
-				break;
-			case 0x40000:
-				host->partitions =
-					partition_info_256KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_256KB_blk)
-					/ sizeof(struct mtd_partition);
-				break;
-			case 0x80000:
-				host->partitions =
-					partition_info_512KB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_512KB_blk)
-					/ sizeof(struct mtd_partition);
-				break;
-			case 0x100000:
-				host->partitions =
-					partition_info_1MB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_1MB_blk)
-					/ sizeof(struct mtd_partition);
-				break;
-			case 0x200000:
-				host->partitions =
-					partition_info_2MB_blk;
-				host->nr_partitions =
-					sizeof(partition_info_2MB_blk) /
-					sizeof(struct mtd_partition);
-				break;
-			default:
-				ret = -ENXIO;
-				pr_err("Unsupported NAND erase size\n");
-				goto err_probe;
-				break;
-			}
-
-			partition = host->partitions;
-			for (i = 0; i < host->nr_partitions; i++, partition++) {
-				if (partition->size == 0) {
-					partition->size = host->mtd.size -
-						partition->offset;
-					break;
-				}
-			}
-		}
-#ifdef CONFIG_MTD_CMDLINE_PARTS
-	}
-#endif
-
-	if (host->partitions) {
-		ret = add_mtd_partitions(&host->mtd, host->partitions,
-				host->nr_partitions);
-		if (ret)
-			goto err_probe;
-	}
-#else
-	dev_info(&pdev->dev, "Registering %s as whole device\n", mtd->name);
-	if (!add_mtd_device(mtd)) {
-		ret = -ENXIO;
+	ret = mtd_device_parse_register(&host->mtd, NULL, 0,
+			host->mtd.size <= 0x04000000 ?
+				partition_info_16KB_blk :
+				partition_info_128KB_blk,
+			host->mtd.size <= 0x04000000 ?
+				ARRAY_SIZE(partition_info_16KB_blk) :
+				ARRAY_SIZE(partition_info_128KB_blk));
+	if (ret)
 		goto err_probe;
-	}
-#endif
 
 	platform_set_drvdata(pdev, host);
 	dev_info(&pdev->dev, "FSMC NAND driver registration successful\n");
@@ -1070,11 +767,7 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	if (host) {
-#ifdef CONFIG_MTD_PARTITIONS
-		del_mtd_partitions(&host->mtd);
-#else
-		del_mtd_device(&host->mtd);
-#endif
+		nand_release(&host->mtd);
 		clk_disable(host->clk);
 		clk_put(host->clk);
 
@@ -1100,28 +793,23 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 static int fsmc_nand_suspend(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
-
 	if (host)
 		clk_disable(host->clk);
-
 	return 0;
 }
 
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
-
-	if (host) {
+	if (host)
 		clk_enable(host->clk);
-		fsmc_nand_setup(host->regs_va, host->bank,
-				host->nand.options & NAND_BUSWIDTH_16,
-				host->dev_timings);
-	}
-
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(fsmc_nand_pm_ops, fsmc_nand_suspend, fsmc_nand_resume);
+static const struct dev_pm_ops fsmc_nand_pm_ops = {
+	.suspend = fsmc_nand_suspend,
+	.resume = fsmc_nand_resume,
+};
 #endif
 
 static struct platform_driver fsmc_nand_driver = {

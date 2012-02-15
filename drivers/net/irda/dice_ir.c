@@ -22,6 +22,7 @@
 #include <asm/byteorder.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/interrupt.h>
 #include <linux/irqreturn.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -1007,5 +1008,5 @@ static void __exit dice_ir_exit(void)
 module_exit(dice_ir_exit);
 
 MODULE_AUTHOR("Amit Virdi <amit.virdi@st.com>");
-MODULE_DESCRIPTION("Fast IrDA Controller Driver")
+MODULE_DESCRIPTION("Fast IrDA Controller Driver");
 MODULE_LICENSE("GPL");

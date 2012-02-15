@@ -16,7 +16,6 @@
 
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#include <linux/mtd/physmap.h>
 
 #define EMI_FLASH_WIDTH8	1
 #define EMI_FLASH_WIDTH16	2
@@ -52,9 +51,5 @@
 #define EMI_CNTL_ENBBYTER	(1 << 3)
 #define EMI_CNTL_ENBBYTERW	(EMI_CNTL_ENBBYTER | EMI_CNTL_ENBBYTEW)
 
-extern int __init emi_init(struct platform_device *pdev, unsigned long base,
-		u32 bank, u32 width);
-extern void __init emi_init_board_info(struct platform_device *pdev,
-		struct resource *resources, int res_num, struct mtd_partition
-		*partitions, unsigned int nr_partitions, unsigned int width);
+extern int __init emi_init(unsigned long base, u32 bank, u32 width);
 #endif

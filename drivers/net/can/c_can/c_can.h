@@ -22,23 +22,6 @@
 #ifndef C_CAN_H
 #define C_CAN_H
 
-/*
- * Depending on the underlying platfrom, the message object configuration
- * for c_can controller can change
- */
-enum c_can_devtype {
-	C_CAN_DEVTYPE_SPEA320 = 0,
-	C_CAN_DEVTYPE_SPEA320S,
-};
-
-struct c_can_devtype_data {
-	unsigned int rx_first;
-	unsigned int rx_split;
-	unsigned int rx_last;
-	unsigned int tx_num;
-	enum c_can_devtype type;
-};
-
 /* c_can IF registers */
 struct c_can_if_regs {
 	u16 com_req;
@@ -89,18 +72,13 @@ struct c_can_priv {
 	u16 (*read_reg) (struct c_can_priv *priv, void *reg);
 	void (*write_reg) (struct c_can_priv *priv, void *reg, u16 val);
 	struct c_can_regs __iomem *regs;
-	bool is_quirk_required;
 	unsigned long irq_flags; /* for request_irq() */
 	unsigned int tx_next;
-	unsigned int rx_next;
-	unsigned int rx_flag;
+	unsigned int tx_echo;
 	void *priv;		/* for board-specific data */
-	void (*can_stop)(struct net_device *dev);
-	void (*can_start)(struct net_device *dev);
-	struct c_can_devtype_data devtype_data;
 };
 
-struct net_device *alloc_c_can_dev(unsigned int echo_count);
+struct net_device *alloc_c_can_dev(void);
 void free_c_can_dev(struct net_device *dev);
 int register_c_can_dev(struct net_device *dev);
 void unregister_c_can_dev(struct net_device *dev);

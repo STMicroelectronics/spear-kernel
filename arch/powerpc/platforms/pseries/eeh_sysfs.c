@@ -23,9 +23,9 @@
  * Send comments and feedback to Linas Vepstas <linas@austin.ibm.com>
  */
 #include <linux/pci.h>
+#include <linux/stat.h>
 #include <asm/ppc-pci.h>
 #include <asm/pci-bridge.h>
-#include <linux/kobject.h>
 
 /**
  * EEH_SHOW_ATTR -- create sysfs entry for eeh statistic

@@ -11,17 +11,17 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/spinlock.h>
-#include <linux/errno.h>
-#include <linux/list.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/errno.h>
+#include <linux/init.h>
 #include <linux/ioport.h>
+#include <linux/kernel.h>
+#include <linux/list.h>
+#include <linux/spinlock.h>
+#include <mach/gpt.h>
 #include <mach/hardware.h>
 #include <mach/irqs.h>
-#include <mach/gpt.h>
 
 static struct spear_timer spear3xx_gp_timers[] = {
 	{

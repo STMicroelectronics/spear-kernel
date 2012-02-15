@@ -16,6 +16,7 @@
 
 #include <linux/clk.h>
 #include <linux/device.h>
+#include <linux/mod_devicetable.h>
 #include <linux/err.h>
 #include <linux/resource.h>
 #include <linux/regulator/consumer.h>
@@ -35,12 +36,6 @@ struct amba_device {
 	unsigned int		irq[AMBA_NR_IRQS];
 };
 
-struct amba_id {
-	unsigned int		id;
-	unsigned int		mask;
-	void			*data;
-};
-
 struct amba_driver {
 	struct device_driver	drv;
 	int			(*probe)(struct amba_device *, const struct amba_id *);
@@ -48,13 +43,17 @@ struct amba_driver {
 	void			(*shutdown)(struct amba_device *);
 	int			(*suspend)(struct amba_device *, pm_message_t);
 	int			(*resume)(struct amba_device *);
-	struct amba_id		*id_table;
+	const struct amba_id	*id_table;
 };
 
 enum amba_vendor {
 	AMBA_VENDOR_ARM = 0x41,
 	AMBA_VENDOR_ST = 0x80,
 };
+
+extern struct bus_type amba_bustype;
+
+#define to_amba_device(d)	container_of(d, struct amba_device, dev)
 
 #define amba_get_drvdata(d)	dev_get_drvdata(&d->dev)
 #define amba_set_drvdata(d,p)	dev_set_drvdata(&d->dev, p)

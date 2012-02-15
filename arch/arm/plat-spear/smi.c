@@ -42,11 +42,11 @@ static struct mtd_partition m25p64_partition_info[] = {
 static struct spear_smi_flash_info nor_flash_info[] = {
 	{
 		.name = "m25p64",
-		.fast_mode = 1,
 		.mem_base = FLASH_MEM_BASE,
 		.size = 8 * 1024 * 1024,
-		.num_parts = ARRAY_SIZE(m25p64_partition_info),
-		.parts = m25p64_partition_info,
+		.partitions = m25p64_partition_info,
+		.nr_partitions = ARRAY_SIZE(m25p64_partition_info),
+		.fast_mode = 1,
 	},
 };
 

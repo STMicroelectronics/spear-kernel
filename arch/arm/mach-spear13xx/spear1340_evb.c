@@ -21,35 +21,23 @@
 #include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/netdevice.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <video/db9000fb.h>
-#include <plat/fsmc.h>
+#include <asm/hardware/gic.h>
 #include <plat/i2c.h>
 #include <plat/keyboard.h>
 #include <plat/plug_board.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
-#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/spear1340_misc_regs.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
-
-#if 0
-/* fsmc nor partition info */
-#define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
-static struct mtd_partition partition_info[] = {
-	PARTITION("X-loader", 0, 1 * 0x20000),
-	PARTITION("U-Boot", 0x20000, 3 * 0x20000),
-	PARTITION("Kernel", 0x80000, 24 * 0x20000),
-	PARTITION("Root File System", 0x380000, 84 * 0x20000),
-};
-#endif
 
 /* camera sensor registeration */
 static struct i2c_board_info vs6725_camera_sensor_info = {
@@ -316,6 +304,14 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_thermal_device,
 };
 
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.select_bank = nand_select_bank,
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
+
+/* arasan compact flash controller's platform data */
 static struct arasan_cf_pdata cf_pdata = {
 	.cf_if_clk = CF_IF_CLK_166M,
 	.quirk = CF_BROKEN_UDMA,
@@ -323,13 +319,13 @@ static struct arasan_cf_pdata cf_pdata = {
 };
 
 /* keyboard specific platform data */
-static DECLARE_6x6_KEYMAP(keymap);
-static struct matrix_keymap_data keymap_data = {
+static const __initconst DECLARE_6x6_KEYMAP(keymap);
+static const struct matrix_keymap_data keymap_data __initconst = {
 	.keymap = keymap,
 	.keymap_size = ARRAY_SIZE(keymap),
 };
 
-static struct kbd_platform_data kbd_data = {
+static const struct kbd_platform_data kbd_data __initconst = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_2x2,
@@ -574,8 +570,8 @@ static struct spi_board_info *spi_board[] __initdata = {
 	&spear1340_evb_spi_spidev,
 };
 
-static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
-		char **cmdline, struct meminfo *mi)
+static void
+spear1340_evb_fixup(struct tag *tags, char **cmdline, struct meminfo *mi)
 {
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
@@ -598,8 +594,8 @@ static void __init spear1340_evb_init(void)
 	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
 
-	/* set keyboard plat data */
-	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
+	/* call spear1340 machine init function */
+	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
 	/*
 	 * SPEAr1340 has gmac configured differently. Hence set its plat
@@ -610,29 +606,23 @@ static void __init spear1340_evb_init(void)
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
 
+	/* set keyboard plat data */
+	if (platform_device_add_data(&spear13xx_kbd_device, &kbd_data,
+				sizeof(kbd_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_kbd_device.name);
+
 	/*
 	 * SPEAr1340 FSMC cannot used as NOR and NAND at the same time
 	 * For the moment, disable NOR and use NAND only
 	 * If NOR is needed, enable NOR's code and disable all code for NOR.
 	 */
 	/* set nand device's plat data */
-	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 	nand_mach_init(FSMC_NAND_BW8);
-
-#if 0
-	/* fixed part fsmc nor device */
-	/* initialize fsmc related data in fsmc plat data */
-	fsmc_init_board_info(&spear13xx_fsmc_nor_device, partition_info,
-			ARRAY_SIZE(partition_info), FSMC_FLASH_WIDTH8);
-	/* Initialize fsmc regiters */
-	fsmc_nor_init(&spear13xx_fsmc_nor_device, SPEAR13XX_FSMC_BASE, 0,
-			FSMC_FLASH_WIDTH8);
-#endif
-
-	/* call spear1340 machine init function */
-	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+	if (platform_device_add_data(&spear1340_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear1340_nand_device.name);
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 	/* Check if plug boards are requested or not */
@@ -672,10 +662,12 @@ static void __init spear1340_evb_init(void)
 }
 
 MACHINE_START(SPEAR1340_EVB, "ST-SPEAR1340-EVB")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.fixup		=	spear1340_evb_fixup,
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_init_irq,
+	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	spear1340_evb_init,
+	.restart	=	spear_restart,
 MACHINE_END

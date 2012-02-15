@@ -265,6 +265,7 @@ struct platform_device spear3xx_i2c_device = {
 };
 
 /* usb host device registeration */
+static int usbh_id = -1;
 static struct resource ehci_resources[] = {
 	[0] = {
 		.start = SPEAR3XX_ICM4_USB_EHCI0_1_BASE,
@@ -302,8 +303,6 @@ static struct resource ohci1_resources[] = {
 };
 
 static u64 ehci_dmamask = ~0;
-static int usbh_id = -1;
-
 struct platform_device spear3xx_ehci_device = {
 	.name = "spear-ehci",
 	.id = -1,
@@ -317,7 +316,6 @@ struct platform_device spear3xx_ehci_device = {
 };
 
 static u64 ohci0_dmamask = ~0;
-
 struct platform_device spear3xx_ohci0_device = {
 	.name = "spear-ohci",
 	.id = 0,
@@ -331,7 +329,6 @@ struct platform_device spear3xx_ohci0_device = {
 };
 
 static u64 ohci1_dmamask = ~0;
-
 struct platform_device spear3xx_ohci1_device = {
 	.name = "spear-ohci",
 	.id = 1,
@@ -1158,6 +1155,7 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 	.modes = pmx_plgpio_45_46_49_50_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
 };
+#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 void spear3xx_macb_plat_mdio_control(struct platform_device *pdev)
 {
@@ -1219,7 +1217,6 @@ void spear3xx_macb_setup(void)
 		writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
 	}
 }
-#endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 static void __init spear3xx_timer_init(void)
 {

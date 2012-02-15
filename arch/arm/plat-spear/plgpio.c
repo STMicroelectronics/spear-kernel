@@ -263,10 +263,10 @@ static int plgpio_to_irq(struct gpio_chip *chip, unsigned offset)
 }
 
 /* PLGPIO IRQ */
-static void plgpio_irq_mask(unsigned irq)
+static void plgpio_irq_disable(struct irq_data *d)
 {
-	struct plgpio *plgpio = get_irq_chip_data(irq);
-	int offset = irq - plgpio->irq_base;
+	struct plgpio *plgpio = irq_data_get_irq_chip_data(d);
+	int offset = d->irq - plgpio->irq_base;
 	unsigned long flags;
 
 	/* get correct offset for "offset" pin */
@@ -281,10 +281,10 @@ static void plgpio_irq_mask(unsigned irq)
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 }
 
-static void plgpio_irq_unmask(unsigned irq)
+static void plgpio_irq_enable(struct irq_data *d)
 {
-	struct plgpio *plgpio = get_irq_chip_data(irq);
-	int offset = irq - plgpio->irq_base;
+	struct plgpio *plgpio = irq_data_get_irq_chip_data(d);
+	int offset = d->irq - plgpio->irq_base;
 	unsigned long flags;
 
 	/* get correct offset for "offset" pin */
@@ -299,11 +299,11 @@ static void plgpio_irq_unmask(unsigned irq)
 	spin_unlock_irqrestore(&plgpio->lock, flags);
 }
 
-static int plgpio_irq_type(unsigned irq, unsigned trigger)
+static int plgpio_irq_type(struct irq_data *d, unsigned trigger)
 {
-	struct plgpio *plgpio = get_irq_chip_data(irq);
+	struct plgpio *plgpio = irq_data_get_irq_chip_data(d);
+	int offset = d->irq - plgpio->irq_base;
 	int size = plgpio->grp_size ? plgpio->grp_size : 1;
-	int offset = irq - plgpio->irq_base;
 	void __iomem *reg_off;
 	unsigned int supported_type = 0, val;
 
@@ -342,14 +342,14 @@ static int plgpio_irq_type(unsigned irq, unsigned trigger)
 
 static struct irq_chip plgpio_irqchip = {
 	.name		= "PLGPIO",
-	.mask		= plgpio_irq_mask,
-	.unmask		= plgpio_irq_unmask,
-	.set_type	= plgpio_irq_type,
+	.irq_enable	= plgpio_irq_enable,
+	.irq_disable	= plgpio_irq_disable,
+	.irq_set_type	= plgpio_irq_type,
 };
 
 static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 {
-	struct plgpio *plgpio = get_irq_data(irq);
+	struct plgpio *plgpio = irq_get_handler_data(irq);
 	unsigned long pending;
 	int regs_count, size, count, pin, offset, i = 0;
 
@@ -357,7 +357,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 	count = DIV_ROUND_UP(plgpio->chip.ngpio, size);
 	regs_count = DIV_ROUND_UP(count, MAX_GPIO_PER_REG);
 
-	desc->chip->ack(irq);
+	desc->irq_data.chip->irq_ack(&desc->irq_data);
 	/* check all plgpio MIS registers for a possible interrupt */
 	for (; i < regs_count; i++) {
 		pending = readl(plgpio->base + plgpio->regs.mis +
@@ -395,7 +395,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 			generic_handle_irq(plgpio_to_irq(&plgpio->chip, pin));
 		}
 	}
-	desc->chip->unmask(irq);
+	desc->irq_data.chip->irq_unmask(&desc->irq_data);
 }
 
 static int __devinit plgpio_probe(struct platform_device *pdev)
@@ -503,14 +503,14 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 
 	count = pdata->grp_size ? pdata->grp_size : 1;
 	count = DIV_ROUND_UP(pdata->gpio_count, count);
-	set_irq_chained_handler(irq, plgpio_irq_handler);
+	irq_set_chained_handler(irq, plgpio_irq_handler);
 	for (i = 0; i < count; i++) {
-		set_irq_chip(i+plgpio->irq_base, &plgpio_irqchip);
-		set_irq_handler(i+plgpio->irq_base, handle_simple_irq);
+		irq_set_chip_and_handler(i + plgpio->irq_base, &plgpio_irqchip,
+					 handle_simple_irq);
 		set_irq_flags(i+plgpio->irq_base, IRQF_VALID);
-		set_irq_chip_data(i+plgpio->irq_base, plgpio);
+		irq_set_chip_data(i + plgpio->irq_base, plgpio);
 	}
-	set_irq_data(irq, plgpio);
+	irq_set_handler_data(irq, plgpio);
 
 	platform_set_drvdata(pdev, plgpio);
 	dev_info(&pdev->dev, "Initialization successful\n");

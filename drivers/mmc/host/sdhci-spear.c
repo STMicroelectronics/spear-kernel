@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/highmem.h>
+#include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/platform_device.h>
@@ -51,7 +52,7 @@ static irqreturn_t sdhci_gpio_irq(int irq, void *dev_id)
 	/* val == 1 -> card removed, val == 0 -> card inserted */
 	/* if card removed - set irq for low level, else vice versa */
 	gpio_irq_type = val ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH;
-	set_irq_type(irq, gpio_irq_type);
+	irq_set_irq_type(irq, gpio_irq_type);
 
 	if (sdhci->data->card_power_gpio >= 0) {
 		if (!sdhci->data->power_always_enb) {
@@ -276,10 +277,9 @@ static int sdhci_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct spear_sdhci *sdhci = dev_get_platdata(dev);
-	pm_message_t state = {.event = 0};
 	int ret;
 
-	ret = sdhci_suspend_host(host, state);
+	ret = sdhci_suspend_host(host);
 	if (!ret)
 		clk_disable(sdhci->clk);
 
@@ -316,17 +316,7 @@ static struct platform_driver sdhci_driver = {
 	.remove		= __devexit_p(sdhci_remove),
 };
 
-static int __init sdhci_init(void)
-{
-	return platform_driver_register(&sdhci_driver);
-}
-module_init(sdhci_init);
-
-static void __exit sdhci_exit(void)
-{
-	platform_driver_unregister(&sdhci_driver);
-}
-module_exit(sdhci_exit);
+module_platform_driver(sdhci_driver);
 
 MODULE_DESCRIPTION("SPEAr Secure Digital Host Controller Interface driver");
 MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");

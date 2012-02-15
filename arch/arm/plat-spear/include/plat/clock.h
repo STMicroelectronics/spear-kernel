@@ -15,7 +15,7 @@
 #define __PLAT_CLOCK_H
 
 #include <linux/list.h>
-#include <asm/clkdev.h>
+#include <linux/clkdev.h>
 #include <linux/types.h>
 
 /* clk structure flags */
@@ -92,7 +92,7 @@ struct rate_config {
  * @sibling: node for list of clocks having same parents
  * @private_data: clock specific private data
  * @node: list to maintain clocks linearly
- * @cl: clocklook up assoicated with this clock
+ * @cl: clocklook up associated with this clock
  * @dent: object for debugfs
  */
 struct clk {
@@ -243,7 +243,7 @@ struct ddr_rate_tbl {
  * Actually before changing rate of DDRs ancestor, we must put ddr in refresh
  * state and then change parent.
  */
-void clk_init(struct clk *dclk);
+void __init clk_init(struct clk *dclk);
 void clk_register(struct clk_lookup *cl);
 int clk_set_parent_sys(char *dev_id, char *con_id, char *pdev_id, char
 		*pcon_id);

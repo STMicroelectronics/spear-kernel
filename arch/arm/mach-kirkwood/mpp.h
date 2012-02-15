@@ -22,13 +22,7 @@
 	/* available on F6281 */	((!!(_F6281)) << 17) | \
 	/* available on F6282 */	((!!(_F6282)) << 18))
 
-#define MPP_NUM(x)	((x) & 0xff)
-#define MPP_SEL(x)	(((x) >> 8) & 0xf)
-
 				/*   num sel  i  o  6180 6190 6192 6281 6282 */
-
-#define MPP_INPUT_MASK		MPP(  0, 0x0, 1, 0, 0,   0,   0,   0,   0 )
-#define MPP_OUTPUT_MASK		MPP(  0, 0x0, 0, 1, 0,   0,   0,   0,   0 )
 
 #define MPP_F6180_MASK		MPP(  0, 0x0, 0, 0, 1,   0,   0,   0,   0 )
 #define MPP_F6190_MASK		MPP(  0, 0x0, 0, 0, 0,   1,   0,   0,   0 )
@@ -108,6 +102,7 @@
 #define MPP11_SATA0_ACTn	MPP( 11, 0x5, 0, 1, 0,   1,   1,   1,   1 )
 
 #define MPP12_GPO		MPP( 12, 0x0, 0, 1, 1,   1,   1,   1,   1 )
+#define MPP12_GPIO		MPP( 12, 0x0, 1, 1, 0,   0,   0,   1,   0 )
 #define MPP12_SD_CLK		MPP( 12, 0x1, 0, 1, 1,   1,   1,   1,   1 )
 #define MPP12_AU_SPDIF0		MPP( 12, 0xa, 0, 1, 0,   0,   0,   0,   1 )
 #define MPP12_SPI_MOSI		MPP( 12, 0xb, 0, 1, 0,   0,   0,   0,   1 )

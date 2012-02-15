@@ -17,7 +17,6 @@
 #include <linux/uaccess.h>
 #include <linux/usb.h>
 #include <linux/mutex.h>
-#include <linux/version.h>
 #include <linux/workqueue.h>
 
 #include <linux/videodev2.h>
@@ -574,7 +573,6 @@ static int vidioc_querycap(struct file *file, void  *priv,
 	strcpy(cap->driver, "hdpvr");
 	strcpy(cap->card, "Hauppauge HD PVR");
 	usb_make_path(dev->udev, cap->bus_info, sizeof(cap->bus_info));
-	cap->version = HDPVR_VERSION;
 	cap->capabilities =     V4L2_CAP_VIDEO_CAPTURE |
 				V4L2_CAP_AUDIO         |
 				V4L2_CAP_READWRITE;
@@ -1220,12 +1218,9 @@ static void hdpvr_device_release(struct video_device *vdev)
 	v4l2_device_unregister(&dev->v4l2_dev);
 
 	/* deregister I2C adapter */
-#ifdef CONFIG_I2C
+#if defined(CONFIG_I2C) || (CONFIG_I2C_MODULE)
 	mutex_lock(&dev->i2c_mutex);
-	if (dev->i2c_adapter)
-		i2c_del_adapter(dev->i2c_adapter);
-	kfree(dev->i2c_adapter);
-	dev->i2c_adapter = NULL;
+	i2c_del_adapter(&dev->i2c_adapter);
 	mutex_unlock(&dev->i2c_mutex);
 #endif /* CONFIG_I2C */
 

@@ -14,15 +14,16 @@
 #include <linux/gpio.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/fsmc.h>
+#include <linux/mtd/physmap.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/phy.h>
 #include <linux/spi/flash.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
+#include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/fsmc.h>
 #include <plat/hdlc.h>
-#include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/emi.h>
 #include <mach/generic.h>
@@ -46,6 +47,19 @@ static struct resource emi_nor_resources[] = {
 		.end	= SPEAR310_EMI_MEM_0_BASE + SPEAR310_EMI_MEM_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+};
+
+static struct physmap_flash_data emi_norflash_data = {
+	.parts = partition_info,
+	.nr_parts = ARRAY_SIZE(partition_info),
+	.width = 4,
+};
+static struct platform_device spear310_emi_nor_device = {
+	.name	= "physmap-flash",
+	.id	= -1,
+	.dev.platform_data = &emi_norflash_data,
+	.resource = emi_nor_resources,
+	.num_resources = ARRAY_SIZE(emi_nor_resources),
 };
 
 /* ethernet device */
@@ -171,25 +185,11 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_plgpio_device,
 };
 
-/*
- * select_e1_interface: config CPLD to enable select E1 interface
- *
- * By default, TDM is selected. To switch the hardware connection, SW should
- * call this function in machine init routine to enable E1 interface
- */
-#if 0
-static void __init select_e1_interface(struct platform_device *pdev)
-{
-	/*
-	 * selection is through CPLD which is connected on EMI bus
-	 * before config, initialize EMI controller here
-	 */
-	emi_init(&spear310_tdm_hdlc_device, SPEAR310_EMI_REG_BASE, 2, EMI_FLASH_WIDTH8);
-
-	e1phy_init(SPEAR310_EMI_MEM_2_BASE, 2);
-	tdm_hdlc_set_plat_data(pdev, 32);
-}
-#endif
+/* fsmc platform data */
+static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
+	.options = NAND_SKIP_BBTSCAN,
+	.width = FSMC_NAND_BW8,
+};
 
 /* spi board information */
 /* spi0 flash Chip Select Control function, controlled by gpio pin mentioned */
@@ -221,19 +221,41 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}
 };
 
+/*
+ * select_e1_interface: config CPLD to enable select E1 interface
+ *
+ * By default, TDM is selected. To switch the hardware connection, SW should
+ * call this function in machine init routine to enable E1 interface
+ */
+#if 0
+static void __init select_e1_interface(struct platform_device *pdev)
+{
+	/*
+	 * selection is through CPLD which is connected on EMI bus
+	 * before config, initialize EMI controller here
+	 */
+	emi_init(&spear310_tdm_hdlc_device, SPEAR310_EMI_REG_BASE, 2, EMI_FLASH_WIDTH8);
+
+	e1phy_init(SPEAR310_EMI_MEM_2_BASE, 2);
+	tdm_hdlc_set_plat_data(pdev, 32);
+}
+#endif
+
 static void __init spear310_evb_init(void)
 {
 	unsigned int i;
 
-	/* set nand device's plat data */
-	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
-
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
-	/* Register slave devices on the I2C buses */
-	i2c_register_default_devices();
+	/* Initialize emi regiters */
+	emi_init(SPEAR310_EMI_REG_BASE, 0, EMI_FLASH_WIDTH32);
+
+	/* set nand device's plat data */
+	if (platform_device_add_data(&spear310_nand_device, &nand_plat_data,
+				sizeof(nand_plat_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear310_nand_device.name);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();
@@ -245,14 +267,15 @@ static void __init spear310_evb_init(void)
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear3xx_smi_device);
 
-	/* initialize emi related data in emi plat data */
-	emi_init_board_info(&spear310_emi_nor_device, emi_nor_resources,
-			ARRAY_SIZE(emi_nor_resources), partition_info,
-			ARRAY_SIZE(partition_info), EMI_FLASH_WIDTH32);
+	/*
+	 * Note: Remove the comment to enable E1 interface for one HDLC port
+	 */
+	/* select_e1_interface(&spear310_tdm_hdlc_device); */
+	/* Register slave devices on the I2C buses */
 
-	/* Initialize emi regiters */
-	emi_init(&spear310_emi_nor_device, SPEAR310_EMI_REG_BASE, 0,
-			EMI_FLASH_WIDTH32);
+	i2c_register_default_devices();
+
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 
 	/* Add Platform Devices */
 	platform_add_devices(plat_devs, ARRAY_SIZE(plat_devs));
@@ -260,19 +283,14 @@ static void __init spear310_evb_init(void)
 	/* Add Amba Devices */
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++)
 		amba_device_register(amba_devs[i], &iomem_resource);
-
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-
-	/*
-	 * Note: Remove the comment to enable E1 interface for one HDLC port
-	 */
-	/* select_e1_interface(&spear310_tdm_hdlc_device); */
 }
 
 MACHINE_START(SPEAR310_EVB, "ST-SPEAR310-EVB")
-	.boot_params	=	0x00000100,
+	.atag_offset	=	0x100,
 	.map_io		=	spear310_map_io,
 	.init_irq	=	spear3xx_init_irq,
+	.handle_irq	=	vic_handle_irq,
 	.timer		=	&spear3xx_timer,
 	.init_machine	=	spear310_evb_init,
+	.restart	=	spear_restart,
 MACHINE_END
