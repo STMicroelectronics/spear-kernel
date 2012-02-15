@@ -706,7 +706,7 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 
 	/* if same mode as existing, return */
 	if (ddata->mode == val)
-		return 0;
+		return count;
 
 	/* turn on the supplies if already off */
 	if (ddata->regulator && ddata->mode == LSM303DLH_A_MODE_OFF) {
