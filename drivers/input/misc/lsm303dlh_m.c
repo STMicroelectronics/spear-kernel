@@ -495,7 +495,7 @@ static ssize_t lsm303dlh_m_store_mode(struct device *dev,
 
 	/* if same mode as existing, return */
 	if (ddata->mode == mode)
-		return 0;
+		return count;
 
 	/* not in correct range */
 	if (!(mode == LSM303DLH_M_MODE_CONTINUOUS ||
