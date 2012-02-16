@@ -243,7 +243,7 @@ db9000fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue, u_int trans,
 		 * RGB bitfield information.
 		 */
 		if (regno < 16) {
-			u16 *pal = fbi->fb.pseudo_palette;
+			u32 *pal = fbi->fb.pseudo_palette;
 
 			val = convert_bitfield(red, &fbi->fb.var.red);
 			val |= convert_bitfield(green, &fbi->fb.var.green);
@@ -1805,15 +1805,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_clear_plat_data;
 	}
 
-#if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
-	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
-		/* Start display and show logo on boot */
-		fb_set_cmap(&fbi->fb.cmap, &fbi->fb);
-
-		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
-	}
-#endif
-
 #ifdef CONFIG_FB_DB9000_DRM
 	ump_memory_description.addr = fbi->fb.fix.smem_start;
 	ump_memory_description.size = ((fbi->fb.fix.smem_len / 4096) + 1)* 4096;
@@ -1926,7 +1917,7 @@ static int __init db9000fb_init(void)
 
 	return platform_driver_register(&db9000fb_driver);
 }
-subsys_initcall(db9000fb_init);
+module_init(db9000fb_init);
 
 static void __exit db9000fb_exit(void)
 {
