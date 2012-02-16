@@ -129,6 +129,33 @@ static struct snd_soc_card spear320s_snd_card = {
 	.num_links	= ARRAY_SIZE(spear320s_evb_dai),
 };
 
+/* LCAD audio interface glue - connects codec <--> CPU <--> platform */
+static struct snd_soc_dai_link lcad_evb_dai[] = {
+	{
+		.name		= "sta529-pcm0",
+		.stream_name	= "I2S Playback",
+		.cpu_dai_name	= "designware-i2s.0",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_ops,
+	}, {
+		.name		= "sta529-pcm1",
+		.stream_name	= "I2S Capture",
+		.cpu_dai_name	= "designware-i2s.1",
+		.platform_name	= "spear-pcm-audio",
+		.codec_dai_name	= "sta529-audio",
+		.codec_name	= "sta529-codec.0-001a",
+		.ops		= &sta529_ops,
+	},
+};
+
+static struct snd_soc_card lcad_snd_card = {
+	.name		= "lcad-evb",
+	.dai_link	= lcad_evb_dai,
+	.num_links	= ARRAY_SIZE(lcad_evb_dai),
+};
+
 /* Audio machine driver for SPEAr1340 evb */
 
 /* SPEAr1340 audio interface glue - connects codec <--> CPU <--> platform */
@@ -185,7 +212,9 @@ static int __init spear_audio_init(void)
 	int ret;
 	struct snd_soc_card *spear_soc_card;
 
-	if (cpu_is_spear1340())
+	if (machine_is_spear1340_lcad())
+		spear_soc_card = &lcad_snd_card;
+	else if (cpu_is_spear1340())
 		spear_soc_card = &spear1340_snd_card;
 	else if (cpu_is_spear320())
 		spear_soc_card = &spear320s_snd_card;
