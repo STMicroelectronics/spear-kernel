@@ -13,18 +13,8 @@
 
 #define ARCH_UMP_BACKEND_DEFAULT          0
 #define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x08000000 /*start at 128MiB*/
-//#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x0C000000 /*start at 192MiB*/
-//#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x0C000000 /*start at 192MiB*/
-/* #define ARCH_UMP_MEMORY_SIZE_DEFAULT 48UL * 1024UL * 1024UL */
-/* #define ARCH_UMP_MEMORY_SIZE_DEFAULT 16UL * 1024UL * 1024UL */
 
-/* trying 56 MiB reserved by UMP + 8 MiB reserved by Mali */
-//#define ARCH_UMP_MEMORY_SIZE_DEFAULT 56UL * 1024UL * 1024UL
-
-/* trying 48 MiB reserved by UMP + 16 MiB reserved by Mali */
-//#define ARCH_UMP_MEMORY_SIZE_DEFAULT 48UL * 1024UL * 1024UL
-
-/* trying 32 MiB reserved by UMP + 96 MiB reserved by Mali */
-#define ARCH_UMP_MEMORY_SIZE_DEFAULT 32UL * 1024UL * 1024UL
+/* 64 MiB reserved by UMP (+ 64 MiB reserved by Mali) */
+#define ARCH_UMP_MEMORY_SIZE_DEFAULT (64UL * 1024UL * 1024UL)
 
 #endif /* __ARCH_CONFIG_H__ */
