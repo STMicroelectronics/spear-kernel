@@ -574,20 +574,31 @@ static void camif_start_capture(struct camif *camif,
 		 * settings, once SET_FMT is called from user-space
 		 */
 		camif_prog_default_ctrl(camif);
+
+		/*
+		 * Keep all interrupts disabled for now and enable frame-end
+		 * interrupts after QBUF call from user-space
+		 */
+		camif_configure_interrupts(camif, DISABLE_ALL);
 		break;
 	case CAMIF_RESUME:
 		/* restore saved CAMIF registers */
 		camif_restore_regs(camif);
+
+		/*
+		 * we need to check for cur_frm when we resume.
+		 * If cur_frm is not NULL we should handle the
+		 * already queued cur_frm (when we went to suspend
+		 * state). This is done by simply enabling the FRAME_END
+		 * interrupt. Otherwise, we need to wait for new video-buffer
+		 * to be QUEUED before enabling the FRAME_END interrupt.
+		 */
+		if (camif->cur_frm)
+			camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 		break;
 	default:
 		break;
 	}
-
-	/*
-	 * Keep all interrupts disabled for now and enable frame-end
-	 * interrupts after QBUF call from user-space
-	 */
-	camif_configure_interrupts(camif, DISABLE_ALL);
 
 	/* change state to running */
 	camif->is_running = true;
@@ -631,8 +642,6 @@ static void camif_stop_capture(struct camif *camif,
 		break;
 	}
 
-	/* we have no more current frames to process */
-	camif->cur_frm = NULL;
 
 	/* clear global flags */
 	camif->first_frame_end = false;
