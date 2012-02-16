@@ -943,7 +943,9 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 	input_set_abs_params(ddata->input_dev2, ABS_Z, -32768, 32767, 0, 0);
 
 	ddata->input_dev->name = "accelerometer";
+	ddata->input_dev->phys = "accelerometer/input0";
 	ddata->input_dev2->name = "motion";
+	ddata->input_dev2->phys = "motion/input0";
 
 	ret = input_register_device(ddata->input_dev);
 	if (ret) {
