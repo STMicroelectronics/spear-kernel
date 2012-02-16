@@ -59,4 +59,7 @@ struct spear_smi_plat_data {
 	struct spear_smi_flash_info *board_flash_info;
 };
 
+/* function used to initialize default smi platform data */
+void smi_init_board_info(struct platform_device *pdev);
+
 #endif /* __MTD_SPEAR_SMI_H */

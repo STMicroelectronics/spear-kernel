@@ -11,8 +11,8 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/mtd/spear_smi.h>
 #include <asm/mach-types.h>
-#include <plat/smi.h>
 #include <mach/hardware.h>
 
 /*
@@ -59,5 +59,5 @@ static struct spear_smi_plat_data smi_plat_data = {
 
 void smi_init_board_info(struct platform_device *pdev)
 {
-	smi_set_plat_data(pdev, &smi_plat_data);
+	pdev->dev.platform_data = &smi_plat_data;
 }
