@@ -294,7 +294,11 @@ static void camif_module_enable(struct camif *camif, bool enable)
 		camif->pdata->config->camif_module_enable(camif->id, enable);
 }
 
-/* Helper routine to configure CAMIF interrupts */
+/*
+ * Helper routine to configure CAMIF interrupts:
+ * Note that we keep the SINGLE Requests from the CAMIF
+ * side disabled as this may cause a DMA stuck case
+ */
 static void camif_configure_interrupts(struct camif *camif,
 		enum camif_interrupt_config config)
 {
@@ -346,9 +350,8 @@ static void camif_configure_interrupts(struct camif *camif,
 		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
 		break;
 	case ENABLE_EVEN_FIELD_DMA:
-		intr_dma_mask_reg |= IR_DUR_DMA_EN;
-		intr_dma_mask_reg &= IR_DUR_DMA_DUAL_DIS & IR_DUR_UNMASK_BREQ &
-			IR_DUR_UNMASK_SREQ;
+		intr_dma_mask_reg |= IR_DUR_DMA_EN | IR_DUR_MASK_SREQ;
+		intr_dma_mask_reg &= IR_DUR_DMA_DUAL_DIS & IR_DUR_UNMASK_BREQ;
 		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
 		break;
 	case DISABLE_EVEN_FIELD_DMA:
@@ -357,8 +360,9 @@ static void camif_configure_interrupts(struct camif *camif,
 		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
 		break;
 	case ENABLE_BOTH_FIELD_DMA:
-		intr_dma_mask_reg |= IR_DUR_DMA_EN | IR_DUR_DMA_DUAL_EN;
-		intr_dma_mask_reg &= IR_DUR_UNMASK_BREQ & IR_DUR_UNMASK_SREQ;
+		intr_dma_mask_reg |= IR_DUR_DMA_EN | IR_DUR_DMA_DUAL_EN |
+			IR_DUR_MASK_SREQ;
+		intr_dma_mask_reg &= IR_DUR_UNMASK_BREQ;
 		writel(intr_dma_mask_reg, camif->base + CAMIF_IR_DUR);
 		break;
 	case DISABLE_BOTH_FIELD_DMA:
@@ -1221,15 +1225,16 @@ static void camif_put_formats(struct soc_camera_device *icd)
 }
 
 /* Alter DMA settings on the run as per the new format selected */
-static void camif_change_dma_settings(struct camif *camif, u32 bytesperline)
+static int camif_change_dma_settings(struct camif *camif, u32 bytesperline)
 {
 	struct dma_slave_config conf;
 	int dma_burst_size = 0, camif_burst_size = 0;
 	int dma_tx_width = DMA_SLAVE_BUSWIDTH_8_BYTES;
 	int camif_tx_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	int ret = 0;
 
 	/*
-	 * Note: There are two corner cases we need to take care of here
+	 * Note: There are three corner cases we need to take care of here
 	 * to ensure that DMA works for all possible resolutions
 	 * selected by user-space application:
 	 * 1. camif DMA_BURST_SIZE (programmed in CAM_IF_CTRL reg
@@ -1237,11 +1242,13 @@ static void camif_change_dma_settings(struct camif *camif, u32 bytesperline)
 	 * 2. For all resolutions:
 	 *    (bytes_per_line * 8) % (CAMIF.TR_WIDTH * CAMIF.BURST_SIZE)
 	 *    should be 0. If not, change the DMA settings to the next
-	 *    best possible ones. This is required because we have
-	 *    higher time penality for the SREQs performed via DMA.
+	 *    best possible ones. This is required because of the issue
+	 *    listed in (3) below.
+	 * 3. CAMIF cannot support SINGLE DMA requests with the V4L2
+	 *    framework as the.
 	 */
 	for (camif_burst_size = CAMIF_BURST_SIZE_256;
-			camif_burst_size >= CAMIF_BURST_SIZE_16;
+			camif_burst_size >= CAMIF_BURST_SIZE_4;
 			camif_burst_size = camif_burst_size / 2) {
 		if (bytesperline %
 				(camif_tx_width * camif_burst_size) == 0) {
@@ -1252,15 +1259,18 @@ static void camif_change_dma_settings(struct camif *camif, u32 bytesperline)
 		}
 	}
 
-	if (camif_burst_size < CAMIF_BURST_SIZE_16)
+	if (camif_burst_size < CAMIF_BURST_SIZE_4) {
 		/*
-		 * Now we are left with no option but to set the camif
-		 * burst size to CAMIF_BURST_SIZE_16 and expect that the
-		 * rest of the data (left after the last burst of
-		 * CAMIF_BURST_SIZE_16) will be completed via single
-		 * requests
+		 * CAMIF will stall while performing a SREQ, so
+		 * we need to warn the user and return an error here
 		 */
-		camif_burst_size = CAMIF_BURST_SIZE_16;
+		dev_err(camif->icd->dev.parent,
+				"CAMIF cannot support SINGLE DMA requests "
+				"program a different resolution\n");
+
+		ret = -EINVAL;
+		goto out;
+	}
 
 prog_dma:
 	/* program the new config settings */
@@ -1287,13 +1297,17 @@ prog_dma:
 
 	/* Re-program the camif side DMA burst settings */
 	camif_prog_dma_burst(camif, camif_burst_size);
+
+out:
+	return ret;
 }
 
-static void camif_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
+static int camif_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
 	struct v4l2_rect *rect = &crop->c;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct camif *camif = ici->priv;
+	int ret = 0;
 
 	/* check for image xtreme boundary */
 	if (rect->width > CAMIF_MAX_WIDTH)
@@ -1338,8 +1352,10 @@ static void camif_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 	 * values.
 	 */
 	if (camif->chan)
-		camif_change_dma_settings(camif,
+		ret = camif_change_dma_settings(camif,
 				camif->fmt.fmt.pix.bytesperline);
+
+	return ret;
 }
 
 /*
@@ -1436,7 +1452,9 @@ static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 	ret = v4l2_subdev_call(sd, video, s_crop, crop);
 	if (ret == -ENOIOCTLCMD) {
 		/* sensor does not support cropping but camif does */
-		camif_crop(icd, crop);
+		ret = camif_crop(icd, crop);
+		if (ret < 0)
+			goto out;
 	} else if (ret < 0 && (ret != -ENOIOCTLCMD)) {
 		dev_warn(dev, "subdev failed to crop to %ux%u@%u:%u\n",
 			 rect->width, rect->height, rect->left, rect->top);
@@ -1456,7 +1474,9 @@ static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 		 */
 		if (mf.width > CAMIF_MAX_WIDTH ||
 				mf.height > CAMIF_MAX_HEIGHT) {
-			camif_crop(icd, crop);
+			ret = camif_crop(icd, crop);
+			if (ret < 0)
+				goto out;
 			/*
 			 * Try to align the underlying camera to our cropped
 			 * subframe
@@ -1560,8 +1580,11 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	 * camif DMA interface must be re-programmed with new correct
 	 * values.
 	 */
-	if (camif->chan)
-		camif_change_dma_settings(camif, pix->bytesperline);
+	if (camif->chan) {
+		ret = camif_change_dma_settings(camif, pix->bytesperline);
+		if (ret < 0)
+			goto out;
+	}
 
 	/* keep a local copy of the format for later usage */
 	camif->fmt = *f;
