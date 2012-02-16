@@ -1207,37 +1207,62 @@ fail_get_input_pclk:
 #ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
-	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk;
-	struct clk *i2s_ref_clk, *i2s_sclk_clk, *i2s_src_pad_clk;
+	struct clk *i2s_ref_pad_clk, *i2s_sclk_clk;
+	char *src_pclk_name, *ref_pclk_name;
 
-	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
-	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+	if (machine_is_spear1340_lcad() || !cpu_is_spear1340()) {
+		if (machine_is_spear1340_lcad())
+			src_pclk_name = "pll2_clk";
+		else
+			src_pclk_name = "pll3_clk";
+
+		 ref_pclk_name = "i2s_prs1_clk";
+
+		/* set pll to 49.15 Mhz */
+		if (clk_set_rate_sys(NULL, src_pclk_name, 49152000)) {
+			pr_err("%s:set_rate of %s fail\n", __func__,
+					src_pclk_name);
+			return;
+		}
+	} else {
+		src_pclk_name = "i2s_src_pad_clk";
+		ref_pclk_name = "i2s_src_clk";
+	}
+
+	/*
+	 * After this this src_clk is correctly programmed, either to
+	 * pll2, pll3 or pad.
+	 */
+	if (clk_set_parent_sys(NULL, "i2s_src_clk", NULL, src_pclk_name)) {
+		pr_err("%s:set_parent to %s for i2s_src_clk fail\n",
+				__func__, src_pclk_name);
 		return;
 	}
 
-	pll3_clk = clk_get_sys(NULL, "pll3_clk");
-	if (IS_ERR(pll3_clk)) {
-		pr_err("%s:couldn't get pll3_clck\n", __func__);
-		goto put_src_clk;
+	/* program prescalar if required */
+	if (machine_is_spear1340_lcad() || !cpu_is_spear1340()) {
+		/* set to 12.288 Mhz */
+		if (clk_set_rate_sys(NULL, ref_pclk_name, 12288000)) {
+			pr_err("%s:set_rate of %s fail\n", __func__,
+					ref_pclk_name);
+			return;
+		}
 	}
 
-	i2s_prs1_clk = clk_get_sys(NULL, "i2s_prs1_clk");
-	if (IS_ERR(i2s_prs1_clk)) {
-		pr_err("%s:couldn't get i2s_prs1_clk\n", __func__);
-		goto put_pll3_clk;
-	}
-
-	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
-	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
-		goto put_prs1_clk;
+	/*
+	 * After this this ref_clk is correctly programmed to 12.288 and
+	 * sclk_clk to 1.536 MHz
+	 */
+	if (clk_set_parent_sys(NULL, "i2s_ref_clk", NULL, ref_pclk_name)) {
+		pr_err("%s:set_parent to %s of ref_clk fail\n",
+				__func__, ref_pclk_name);
+		return;
 	}
 
 	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
 	if (IS_ERR(i2s_sclk_clk)) {
 		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
-		goto put_ref_clk;
+		return;
 	}
 
 	i2s_ref_pad_clk = clk_get_sys(NULL, "i2s_ref_pad_clk");
@@ -1246,71 +1271,20 @@ static void i2s_clk_init(void)
 		goto put_sclk_clk;
 	}
 
-	i2s_src_pad_clk = clk_get_sys(NULL, "i2s_src_pad_clk");
-	if (IS_ERR(i2s_src_pad_clk)) {
-		pr_err("%s:couldn't get i2s_src_pad_clk\n", __func__);
-		goto put_ref_pad_clk;
-	}
-
-	if (cpu_is_spear1340()) {
-		if (clk_set_parent(i2s_src_clk, i2s_src_pad_clk)) {
-			pr_err("%s:set_parent pad clk to i2s_src_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-
-		if (clk_set_parent(i2s_ref_clk, i2s_src_clk)) {
-			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-	} else {
-		if (clk_set_parent(i2s_src_clk, pll3_clk)) {
-			pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-
-		if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
-			goto put_src_pad_clk;
-
-		if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
-			goto put_src_pad_clk;
-
-		if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
-			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-	}
-
 	if (clk_enable(i2s_ref_pad_clk)) {
 		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
-		goto put_src_pad_clk;
+		goto put_ref_pad_clk;
 	}
 
 	if (clk_enable(i2s_sclk_clk)) {
 		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-		goto put_src_pad_clk;
+		goto put_ref_pad_clk;
 	}
 
-	if (clk_enable(i2s_ref_clk))
-		pr_err("%s:enabling i2s_ref_clk\n", __func__);
-
-put_src_pad_clk:
-	clk_put(i2s_src_pad_clk);
 put_ref_pad_clk:
 	clk_put(i2s_ref_pad_clk);
 put_sclk_clk:
 	clk_put(i2s_sclk_clk);
-put_ref_clk:
-	clk_put(i2s_ref_clk);
-put_prs1_clk:
-	clk_put(i2s_prs1_clk);
-put_pll3_clk:
-	clk_put(pll3_clk);
-put_src_clk:
-	clk_put(i2s_src_clk);
 }
 #endif
 
