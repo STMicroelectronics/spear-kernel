@@ -63,8 +63,6 @@
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
 
-#define SYNTH_MIN 55555
-
 static char *mode_option __devinitdata;
 
 /* Bits which should not be set in machine configuration structures */
@@ -386,7 +384,7 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		var->red.length		= var->bits_per_pixel;
 		var->green.length	= var->bits_per_pixel;
 		var->blue.length	= var->bits_per_pixel;
-		var->transp.length	= var->bits_per_pixel;
+		var->transp.length	= 0;
 		break;
 	case 16:
 		var->red.offset		= 11;
@@ -744,12 +742,11 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 	clk_rate = PICOS2KHZ(var->pixclock) * 1000;
 	pr_debug("Clock value is %d", clk_rate);
 
-	fbi->reg_pctr &= ~DB9000_PCTR_PCR;
+	fbi->reg_pctr &= ~0x7FF;
 
 	pcd = get_pcd(fbi, var->pixclock);
 	if (pcd >= 0) {
 		/* first try bus clk src */
-		fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
 		fbi->reg_pctr |= DB9000_PCTR_PCD(pcd);
 		set_hsync_time(fbi, pcd);
 		clk_set_parent(fbi->clk, fbi->bus_clk);
@@ -1299,6 +1296,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->state		= C_STARTUP;
 	fbi->task_state		= (u_char)-1;
 	fbi->frame_base		= inf->frame_buf_base;
+	fbi->video_mem_size	= inf->mem_size;
 	db9000fb_decode_mach_info(fbi, inf);
 
 	init_waitqueue_head(&fbi->ctrlr_wait);
@@ -1723,7 +1721,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (inf->ctrl_info->bpp < 16)
 		fbi->video_mem_size += PALETTE_SIZE;
 
-	fbi->video_mem_size = inf->mem_size;
 	/* Initialize video memory */
 	addr = ioremap(fbi->frame_base, fbi->video_mem_size);
 	if (!addr) {
