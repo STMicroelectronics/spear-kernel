@@ -50,14 +50,8 @@ static _mali_osk_resource_t arch_configuration [] =
 		.description = "Mali(SPEAr) SDRAM remapped to baseboard",
 		.cpu_usage_adjust = 0x0,
 		.alloc_order = 0, /* Highest preference for this memory */
-		/* trying 56 MiB reserved by UMP + 8 MiB reserved by Mali */
-		//.base = 0x0F800000, /* start at (192 + 56) MiB */
-		//.size = 0x00800000, /* 8 Mib */
-		/* trying 48 MiB reserved by UMP + 16 MiB reserved by Mali */
-		//.base = 0x0F000000, /* start at (192 + 48) MiB */
-		//.size = 0x01000000, /* 16 Mib */
-		.base = 0x0A000000, /* start at (128 + 32) MiB */
-		.size = 0x06000000, /* 96 Mib */
+		.base = 0x0C000000, /* start at (128 + 64) MiB */
+		.size = 0x04000000, /* 64 Mib */
 		.flags = _MALI_CPU_WRITEABLE | _MALI_CPU_READABLE | _MALI_MMU_READABLE | _MALI_MMU_WRITEABLE
 	},
 #endif /** USING_OS_MEMORY */
@@ -66,7 +60,6 @@ static _mali_osk_resource_t arch_configuration [] =
 		.type = MEM_VALIDATION,
 		.description = "Framebuffer",
 		.base = 0x00000000,
-		//.size = 0x10000000, /* Max memory in system */
 		.size = 0x40000000, /* Max memory in system */
 		.flags = _MALI_CPU_WRITEABLE | _MALI_CPU_READABLE | _MALI_PP_WRITEABLE | _MALI_PP_READABLE
 	},
