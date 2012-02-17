@@ -302,12 +302,12 @@ static struct file_operations hx170dec_fops = {
 #ifdef CONFIG_PM
 static int spear_video_dec_suspend(struct device *dev)
 {
-	return -EFAULT;
+	return 0;
 }
 
 static int spear_video_dec_resume(struct device *dev)
 {
-	return -EFAULT;
+	return 0;
 }
 
 static const struct dev_pm_ops spear_video_dec_pm_ops = {
