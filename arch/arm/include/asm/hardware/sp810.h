@@ -14,6 +14,7 @@
 #ifndef __ASM_ARM_SP810_H
 #define __ASM_ARM_SP810_H
 
+#include <linux/err.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
