@@ -28,8 +28,6 @@
 #include <linux/param.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
-#include <mach/db9000fb_info.h>
-#include <media/ad9889b.h>
 
 /* Interrupt MASK/STATUS bits */
 #define MASK_AD9889B_EDID_RDY_INT	0x04
@@ -50,123 +48,16 @@
 #define I2C_WRITE_TRIES		10
 #define I2C_READ_TRIES		10
 
-/*
- * TODO
- * Since , following structures are part of standard, so must be defined
- * in a common file, accesible to all video device.
- */
-
-/* 640x480p@60Hz */
-static struct fb_videomode cea_video_code_1 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 640,
-	.yres = 480,
-	.pixclock = 39682,
-	.left_margin = 48,
-	.right_margin = 16,
-	.upper_margin = 33,
-	.lower_margin = 10,
-	.hsync_len = 96,
-	.vsync_len = 2
-};
-
-/* 720x480p@60Hz-4:3 */
-static struct fb_videomode cea_video_code_2 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 720,
-	.yres = 480,
-	.pixclock = 37000,
-	.left_margin = 60,
-	.right_margin = 16,
-	.upper_margin = 30,
-	.lower_margin = 9,
-	.hsync_len = 62,
-	.vsync_len = 26
-};
-
-/* 720x480p@60Hz-16:9 */
-static struct fb_videomode cea_video_code_3 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 720,
-	.yres = 480,
-	.pixclock = 37000,
-	.left_margin = 60,
-	.right_margin = 16,
-	.upper_margin = 30,
-	.lower_margin = 9,
-	.hsync_len = 62,
-	.vsync_len = 6
-};
-
-/* 1280x720p@60Hz-16:9 */
-static struct fb_videomode cea_video_code_4 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 1280,
-	.yres = 720,
-	.pixclock = 13468,
-	.left_margin = 220,
-	.right_margin = 110,
-	.upper_margin = 20,
-	.lower_margin = 5,
-	.hsync_len = 40,
-	.vsync_len = 5
-};
-
-/* 1920x1080i@60Hz-16:9 */
-static struct fb_videomode cea_video_code_5 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 1920,
-	.yres = 540,
-	.pixclock = 13468,
-	.left_margin = 148,
-	.right_margin = 88,
-	.upper_margin = 15,
-	.lower_margin = 2,
-	.hsync_len = 44,
-	.vsync_len = 5
-};
-
-/* 1920x1080p@25Hz-16:9 */
-static struct fb_videomode cea_video_code_33 = {
-	.name = NULL,
-	.refresh = 60,
-	.xres = 1920,
-	.yres = 1080,
-	.pixclock = 6734,
-	.left_margin = 148,
-	.right_margin = 88,
-	.upper_margin = 36,
-	.lower_margin = 4,
-	.hsync_len = 44,
-	.vsync_len = 5
-};
-
-static struct fb_videomode *cea_std_formats[] = {
-	[0] = &cea_video_code_1,
-	[1] = &cea_video_code_2,
-	[2] = &cea_video_code_3,
-	[3] = &cea_video_code_4,
-	[4] = &cea_video_code_5,
-	[32] = &cea_video_code_33,
+struct ad9889b_monitor_detect {
+	int present;
 };
 
 /* AD9889B edid status */
 struct ad9889b_state_edid {
-	/* Do we have EDID segment 0? */
-	u8 have_segment0;
-	/* The last read EDID segment 0 */
-	u8 segment0[256];
-	/* The last read extra segment */
-	int ex_segment;
-	u8 ex_seg[256];
-	/* Number of EDID read retries left */
+	u8 edid_data[256];
 	unsigned read_retries;
 	u8 edid_read_incomplete;
+	int segment;
 };
 
 /* AD9889B status */
@@ -174,15 +65,15 @@ struct ad9889b_state {
 	u8 power_on;
 	/* Did we receive hotplug and rx-sense signals? */
 	u8 have_monitor;
-	struct ad9889b_state_edid edid;
+	int status;
 	/* Running counter of the number of detected EDIDs (for debugging) */
-	unsigned edid_detect_counter;
+	struct ad9889b_state_edid edid;
 	struct workqueue_struct *work_queue;
 	struct i2c_client *client;
+	int edid_detect_counter;
 	struct i2c_client *edid_client;
 	struct delayed_work edid_handler;
 	struct mutex lock_sync;
-	struct sink_edid_info edid_info;
 };
 
 /* Get AD9889B register values */
@@ -253,25 +144,6 @@ static void ad9889b_av_mute_off(struct i2c_client *client)
 	ad9889b_wr(client, 0x45, 0x80);
 }
 
-/* Dump EDID segment */
-static void ad9889b_dbg_dump_edid(int segment, u8 *buf)
-{
-	int i, j;
-	pr_info("edid segement %d\n", segment);
-	for (i = 0; i < 256; i += 16) {
-		u8 buf[128];
-		u8 *bp = buf;
-		if (i == 128)
-			pr_info("\n");
-		for (j = i; j < i + 16; j++) {
-			sprintf(bp, "0x%02x, ", buf[j]);
-			bp += 6;
-		}
-		bp[0] = '\0';
-		pr_info("%s\n", buf);
-	}
-}
-
 /* Read edid from edid registers */
 static void ad9889b_edid_rd(struct i2c_client *client, u16 len, u8 *buf)
 {
@@ -281,124 +153,69 @@ static void ad9889b_edid_rd(struct i2c_client *client, u16 len, u8 *buf)
 		buf[i] = ad9889b_rd(client, i);
 }
 
-static void display_sink_edid(struct sink_edid_info *edid)
-{
-	int dtb_count;
-
-	pr_info(" The Detailed Timing Blocks of the sink are :\n");
-	for (dtb_count = 0; dtb_count < edid->dtb_count; dtb_count++) {
-		pr_info(" Detailed Timing Block No. : %d\n", dtb_count);
-		pr_info(" Pixel Clock : %d\n", edid->dtb[dtb_count].pix_clk);
-		pr_info(" H Active : %d\n", edid->dtb[dtb_count].h_active);
-		pr_info(" H Blank : %d\n", edid->dtb[dtb_count].h_blank);
-		pr_info(" V Active : %d\n", edid->dtb[dtb_count].v_active);
-		pr_info(" V Blank : %d\n", edid->dtb[dtb_count].v_blank);
-		pr_info(" HSync offset : %d\n",
-				edid->dtb[dtb_count].hsync_offset);
-		pr_info(" HSync pulse width : %d\n",
-				edid->dtb[dtb_count].hsync_pw);
-		pr_info(" VSync offset : %d\n",
-				edid->dtb[dtb_count].vsync_offset);
-		pr_info(" VSync pulse width : %d\n",
-				edid->dtb[dtb_count].vsync_pw);
-		pr_info(" Horizontal image size : %d\n",
-				edid->dtb[dtb_count].h_image_size);
-		pr_info(" Vertical image size : %d\n",
-				edid->dtb[dtb_count].v_image_size);
-		pr_info(" Horizontal border : %d\n",
-				edid->dtb[dtb_count].h_border);
-		pr_info(" Vertical border : %d\n",
-				edid->dtb[dtb_count].v_border);
-	}
-
-}
-
-/* Find HDMI-1.3 compliant native display format of sink */
-static int select_sink_native_format(struct sink_edid_info *edid)
-{
-	int svd_count;
-
-	for (svd_count = 0; svd_count < edid->cea.cea.svd_count; svd_count++) {
-		if (edid->cea.cea.svd[svd_count].native == 1) {
-			pr_info("Sink supports VID Code:%d as native format\n",
-					edid->cea.cea.svd[svd_count].vid_id);
-			return edid->cea.cea.svd[svd_count].vid_id;
-			/*
-			 * return the VID index of first CEA format
-			 * supported by sink
-			 */
-		} else
-			continue;
-	}
-	pr_info("NOTE: SINK DOES NOT SUPPORT ANY STANDARD CEA FORMATS\n");
-	return -1;
-}
-
 /*
  * Check if EDID is ready to be read.
  * Configure CLCD as per EDID params.
  */
-static u8 ad9889b_check_edid_status(struct ad9889b_state *state)
+static int ad9889b_check_edid_status(struct ad9889b_state *state)
 {
 	struct fb_var_screeninfo screen;
-	int vid_id;
 	uint8_t edidRdy;
-	int next_segment = -1;
-	struct ad9889b_edid_detect ed;
 	struct i2c_client *client = state->client;
 	struct ad9889b_pdata *pdata = dev_get_platdata(&client->dev);
+	int ret = 0, i;
 
-	mdelay(500);
-	edidRdy = ad9889b_rd(client, 0xc5);
+	msleep(500);
 
-	dev_info(&client->dev, "EDID READY = %x\n", (edidRdy & 0x10));
-	dev_info(&client->dev, "EDID READY (retries: %d)\n",
+	dev_dbg(&client->dev, "EDID READY = %x\n", (edidRdy & 0x10));
+	dev_dbg(&client->dev, "EDID READY (retries: %d)\n",
 			EDID_MAX_RETRIES - state->edid.read_retries);
 
-	if ((edidRdy & MASK_AD9889B_EDID_RDY)) {
+	if (!registered_fb[pdata->fb]) {
+		dev_err(&client->dev, "framebuffer device not found\n");
+		return -ENODEV;
+	}
+
+	edidRdy = ad9889b_rd(client, 0xc5);
+
+	if (edidRdy & MASK_AD9889B_EDID_RDY) {
+
 		/* TODO: Check if EDID ready bit is reliable */
-		ed.present = true;
-		ed.segment = ad9889b_rd(client, 0xc4);
-		if (ed.segment == 0) {
-			dev_info(&client->dev, "Reading EDID block zero\n");
-			state->edid.have_segment0 = true;
-			ad9889b_edid_rd(state->edid_client,
-					sizeof(state->edid.segment0),
-					state->edid.segment0);
-			ad9889b_dbg_dump_edid(ed.segment, state->edid.segment0);
-			init_edid_info(&state->edid_info);
-			next_segment = parse_edid(&state->edid_info,
-					state->edid.segment0);
-		} else {
-			dev_info(&client->dev,
-					"Reading EDID additional block\n");
-			state->edid.ex_segment = ed.segment;
-			ad9889b_edid_rd(state->edid_client,
-					sizeof(state->edid.ex_seg),
-					state->edid.ex_seg);
-			ad9889b_dbg_dump_edid(ed.segment, state->edid.ex_seg);
-			init_edid_info(&state->edid_info);
-			next_segment = parse_edid(&state->edid_info,
-					state->edid.segment0);
-		}
-		if (next_segment == 0) {
-			state->edid.edid_read_incomplete = 0;
-			display_sink_edid(&state->edid_info);
-			vid_id = select_sink_native_format(&state->edid_info);
-			if (cea_std_formats[vid_id - 1]) {
-				fb_videomode_to_var(&screen,
-						cea_std_formats[vid_id - 1]);
-				screen.bits_per_pixel = 32; /* TODO */
+		state->edid.segment = ad9889b_rd(client, 0xc4);
+
+		/* Read EDID information */
+		ad9889b_edid_rd(state->edid_client,
+				sizeof(state->edid.edid_data),
+				state->edid.edid_data);
+
+		/* Parse edid first 128 byte */
+		for (i = 0 ; i < 2 ; i++) {
+			ret = fb_parse_edid(&state->edid.edid_data[i * 128],
+					&screen);
+			if (!ret) {
 				screen.activate = FB_ACTIVATE_NOW;
-				if (registered_fb[pdata->fb])
-					fb_set_var(registered_fb[pdata->fb],
-							&screen);
+				/*
+				 * TODO: Find a way to fill following
+				 * information automatically
+				 */
+				screen.bits_per_pixel = 32;
+				ret = fb_set_var(registered_fb[pdata->fb],
+						&screen);
+				if (!ret)
+					return ret;
+				else
+					continue;
 			}
 		}
-		state->edid_detect_counter++;
-		return true;
+
+		ad9889b_wr(client, 0xc4, state->edid.segment + 1);
+	} else {
+		if (state->edid.read_retries <= 0)
+			dev_err(&client->dev, "unable to read edid\n");
+		return -EINPROGRESS;
 	}
-	return false;
+
+	return ret;
 }
 
 /* Work queue handler for reading edid */
@@ -407,25 +224,25 @@ static void ad9889b_edid_handler(struct work_struct *work)
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct ad9889b_state *state = container_of(dwork,
 			struct ad9889b_state, edid_handler);
+	int ret;
 
-	if (ad9889b_check_edid_status(state))
-		/* Return if we received the EDID. */
+	/* Return if we received the EDID. */
+	ret = ad9889b_check_edid_status(state);
+	if (!ret || ret == -ENODEV)
 		return;
 
-	if (ad9889b_have_hotplug(state->client)) {
-		/*
-		 * We must retry reading the EDID several times, it is possible
-		 * that initially the EDID couldn't be read due to i2c errors
-		 * (DVI connectors are particularly prone to this problem)
-		 */
-		if (state->edid.read_retries) {
-			state->edid.read_retries--;
-			/* EDID read failed, trigger a retry */
-			ad9889b_wr(state->client, 0xc9, 0xf);
-			queue_delayed_work(state->work_queue,
-					&state->edid_handler, EDID_DELAY);
-			return;
-		}
+	/*
+	 * We must retry reading the EDID several times, it is possible
+	 * that initially the EDID couldn't be read due to i2c errors
+	 * (DVI connectors are particularly prone to this problem)
+	 */
+	if (state->edid.read_retries) {
+		state->edid.read_retries--;
+		/* EDID read failed, trigger a retry */
+		ad9889b_wr(state->client, 0xc9, 0xf);
+		queue_delayed_work(state->work_queue,
+				&state->edid_handler, EDID_DELAY);
+		return;
 	}
 }
 
@@ -434,29 +251,18 @@ static void ad9889b_edid_handler(struct work_struct *work)
  */
 static void ad9889b_edid_reader(struct ad9889b_state *state)
 {
+	int ret;
 
-	if (ad9889b_check_edid_status(state))
-		/* Return if we received the EDID. */
-		return;
+	state->edid.read_retries = EDID_MAX_RETRIES;
 
-	if (ad9889b_have_hotplug(state->client)
-			&& state->edid.edid_read_incomplete) {
-		/*
-		 * We must retry reading the EDID several times, it is possible
-		 * that initially the EDID couldn't be read due to i2c errors
-		 * (DVI connectors are particularly prone to this problem).
-		 */
-		dev_info(&state->client->dev, "Could not read EDID, \
-				so scheduling it for some other time\n");
-		if (state->edid.read_retries) {
-			state->edid.read_retries--;
-			/* EDID read failed, trigger a retry */
-			ad9889b_wr(state->client, 0xc9, 0xf);
-			queue_delayed_work(state->work_queue,
-					&state->edid_handler, EDID_DELAY);
-			return;
-		}
-	}
+	/* Return if we received the EDID. */
+	ret = ad9889b_check_edid_status(state);
+
+	if (ret == -EINPROGRESS)
+		queue_delayed_work(state->work_queue,
+				&state->edid_handler, EDID_DELAY);
+
+	return;
 }
 
 /*
@@ -603,7 +409,7 @@ static void ad9889b_setup(struct i2c_client *client)
 
 	ad9889b_audio_setup(client);
 
-	dev_info(&client->dev, "HDMI initital setup complete\n");
+	dev_dbg(&client->dev, "HDMI initital setup complete\n");
 }
 
 /* Power up/down ad9889b */
@@ -614,7 +420,7 @@ static int ad9889b_s_power(struct i2c_client *client, u8 on)
 	const int retries = 20;
 	int i;
 
-	dev_info(&client->dev, "power %s\n", on ? "on" : "off");
+	dev_dbg(&client->dev, "power %s\n", on ? "on" : "off");
 
 	state->power_on = on;
 
@@ -636,12 +442,12 @@ static int ad9889b_s_power(struct i2c_client *client, u8 on)
 		msleep(10); /*TODO Or msleep_interruptible(10) */
 	}
 	if (i == retries) {
-		dev_info(&client->dev, "Failed to powerup the ad9889b!\n");
+		dev_dbg(&client->dev, "Failed to powerup the ad9889b!\n");
 		ad9889b_s_power(client, 0);
 		return false;
 	}
 	if (i > 1)
-		dev_info(&client->dev,
+		dev_dbg(&client->dev,
 			"needed %d retries to powerup the ad9889b\n", i);
 
 	/* Select chip: AD9389B */
@@ -690,25 +496,24 @@ static void ad9889b_check_monitor_present_status(struct i2c_client *client)
 	/* read hotplug and rx-sense state */
 	status = ad9889b_rd(client, 0x42);
 
-	dev_info(&client->dev, "status: 0x%x%s%s\n",
+	dev_dbg(&client->dev, "status: 0x%x%s%s\n",
 			 status,
 			 status & MASK_AD9889B_HPD_DETECT ? ", hotplug" : "",
 			 status & MASK_AD9889B_MSEN_DETECT ? ", rx-sense" : "");
 
 	if (status & MASK_AD9889B_HPD_DETECT) {
-		dev_info(&client->dev, "HPD detected ; wait for Rx sense\n");
+		dev_dbg(&client->dev, "HPD detected ; wait for Rx sense\n");
 		mdelay(500);
 	}
 
 	if ((status & MASK_AD9889B_HPD_DETECT)
-			&& ((status & MASK_AD9889B_MSEN_DETECT)
-				|| state->edid.have_segment0)) {
-		dev_info(&client->dev, "hotplug and rx-sense\n");
+			&& ((status & MASK_AD9889B_MSEN_DETECT))) {
+		dev_dbg(&client->dev, "hotplug and rx-sense\n");
 		if (!state->have_monitor) {
-			dev_info(&client->dev, "monitor detected\n");
+			dev_dbg(&client->dev, "monitor detected\n");
 			state->have_monitor = true;
 			if (!ad9889b_s_power(client, true)) {
-				dev_info(&client->dev, "monitor detected, \
+				dev_dbg(&client->dev, "monitor detected, \
 						powerup failed\n");
 				return;
 			}
@@ -716,11 +521,11 @@ static void ad9889b_check_monitor_present_status(struct i2c_client *client)
 			ad9889b_av_mute_off(client);
 		}
 	} else if (status & MASK_AD9889B_HPD_DETECT) {
-		dev_info(&client->dev, "ONLY hotplug detected\n");
+		dev_dbg(&client->dev, "ONLY hotplug detected\n");
 	} else if (!(status & MASK_AD9889B_HPD_DETECT)) {
-		dev_info(&client->dev, "hotplug not detected\n");
+		dev_dbg(&client->dev, "hotplug not detected\n");
 		if (state->have_monitor) {
-			dev_info(&client->dev, "monitor not detected\n");
+			dev_dbg(&client->dev, "monitor not detected\n");
 			state->have_monitor = false;
 			state->edid.edid_read_incomplete = 1;
 		}
@@ -753,7 +558,7 @@ static void ad9889b_set_isr(struct i2c_client *client, u8 enable)
 	u8 hpd = ad9889b_have_hotplug(client);
 	struct ad9889b_state *state = i2c_get_clientdata(client);
 
-	dev_info(&client->dev, "hot_plug_state = %x edid_read_incomplete = %x \
+	dev_dbg(&client->dev, "hot_plug_state = %x edid_read_incomplete = %x \
 			enable = %d \n", hpd, state->edid.edid_read_incomplete,
 			enable);
 	/*
@@ -762,10 +567,10 @@ static void ad9889b_set_isr(struct i2c_client *client, u8 enable)
 	 */
 	if (!enable) {
 		irqs = 0;
-		dev_info(&client->dev, "GOING TO DISABLE ALL INTERRUPTS\n");
+		dev_dbg(&client->dev, "GOING TO DISABLE ALL INTERRUPTS\n");
 	} else if (ad9889b_have_hotplug(client)
 			&& state->edid.edid_read_incomplete) {
-		dev_info(&client->dev, "Enabling EDID READY INTERRUPT \
+		dev_dbg(&client->dev, "Enabling EDID READY INTERRUPT \
 				with HPD STATE = %d \n",
 				ad9889b_have_hotplug(client));
 		irqs |= MASK_AD9889B_EDID_RDY_INT;
@@ -785,7 +590,7 @@ set_isr:
 		goto set_isr;
 	if (irqs_rd == irqs)
 		return;
-	dev_info(&client->dev, "Could not set interrupts: hw failure?\n");
+	dev_dbg(&client->dev, "Could not set interrupts: hw failure?\n");
 }
 
 /* Quick Interrupt handler*/
@@ -812,8 +617,7 @@ static irqreturn_t ad9889b_thread_isr(int irq, void *dev_id)
 
 	if (irq_status & (MASK_AD9889B_HPD_INT))
 		ad9889b_check_monitor_present_status(client);
-	if (irq_status & MASK_AD9889B_EDID_RDY_INT)
-		ad9889b_edid_reader(state);
+	ad9889b_edid_reader(state);
 	/* enable interrupts */
 	ad9889b_set_isr(client, true);
 
@@ -823,7 +627,7 @@ static irqreturn_t ad9889b_thread_isr(int irq, void *dev_id)
 }
 
 /* Setup AD9889b */
-static void ad9889b_init_setup(struct i2c_client *client, u8 enable)
+void ad9889b_init_setup(struct i2c_client *client, u8 enable)
 {
 	struct ad9889b_state *state = i2c_get_clientdata(client);
 	struct ad9889b_state_edid *edid = &state->edid;
@@ -838,8 +642,7 @@ static void ad9889b_init_setup(struct i2c_client *client, u8 enable)
 	else
 		ad9889b_s_stream(client, 0);
 
-	if (ad9889b_rd(client, 0x42) & MASK_AD9889B_EDID_RDY)
-		ad9889b_edid_reader(state);
+	ad9889b_edid_reader(state);
 }
 
 static int ad9889b_i2c_probe(struct i2c_client *client,
@@ -907,7 +710,7 @@ static int ad9889b_i2c_probe(struct i2c_client *client,
 				ad9889b_quick_isr, ad9889b_thread_isr,
 				pdata->irq_type, "ad9889b_isr", client);
 	if (ret) {
-		dev_info(&client->dev, "could not request IRQ %d for detect \
+		dev_err(&client->dev, "could not request IRQ %d for detect \
 				pin\n", gpio_to_irq(pdata->irq_type));
 		gpio_free(pdata->irq_type);
 	}

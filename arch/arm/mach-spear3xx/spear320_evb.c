@@ -21,9 +21,7 @@
 #include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
-#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/emi.h>
@@ -75,10 +73,12 @@ static struct platform_device spear320_phy_device = {
 
 /* Ethernet Private data */
 static struct macb_base_data spear320_macb_data = {
+	.bus_id = 1,
 	.phy_mask = 0,
 	.gpio_num = PLGPIO_76,
 	.phy_addr = 0x2,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 /* padmux devices to enable */
@@ -90,16 +90,15 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear3xx_pmx_uart0,
 
 	/* spear320 specific devices */
-	&spear320_pmx_fsmc,
-	&spear320_pmx_sdhci,
+	&spear320_pmx_sdhci[0],
 	&spear320_pmx_i2s,
 	&spear320_pmx_uart1,
 	&spear320_pmx_uart2,
-	&spear320_pmx_can,
-	&spear320_pmx_pwm0,
-	&spear320_pmx_pwm1,
-	&spear320_pmx_pwm2,
-	&spear320_pmx_mii1,
+	&spear320_pmx_can0,
+	&spear320_pmx_can1,
+	&spear320s_pmx_mii2,
+	&spear320_pmx_pwm0_1[0],
+	&spear320_pmx_pwm2[0],
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -134,7 +133,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear320 specific devices */
 	&spear320_can0_device,
 	&spear320_can1_device,
-	&spear320_eth_macb1_mii_device,
+	&spear320_eth1_device,
 	&spear320_emi_nor_device,
 	&spear320_i2c1_device,
 	&spear320_nand_device,
@@ -186,33 +185,6 @@ static struct spi_board_info __initdata spi_board_info[] = {
 #endif
 };
 
-#define ENABLE_MEM_CLK		0x1
-static void macb_init_board_info(struct platform_device *pdev)
-{
-	u32 tmp;
-
-	macb_set_plat_data(pdev, &spear320_macb_data);
-	/*
-	 * Select the MDIO Muxed configuration for the MII interface.
-	 * The RAS control register should have the following cfg
-	 * For SMII-0 interface
-	 * Reset Bit-5 of RAS CONTROL REGISTER (0xB3000010)
-	 *
-	 * For SMII-1/MII interface
-	 * Set Bit-5 of RAS CONTROL REGISTER (0xB3000010).
-	 *
-	 * This needs to be done at run time. At present the SMII
-	 * interfaces are not functional, hence has been kept static for
-	 * the MII interface only.
-	 */
-	tmp = readl(IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG))) | (1 << MII_ENB);
-	writel(tmp, IOMEM(IO_ADDRESS(SPEAR320_CONTROL_REG)));
-
-	/* Enable memory Port-1 clock */
-	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, VA_AMEM_CLK_CFG);
-}
-
 static void __init spear320_evb_init(void)
 {
 	unsigned int i;
@@ -222,19 +194,14 @@ static void __init spear320_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, NULL);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 
 	/* initialize macb related data in macb plat data */
-	macb_init_board_info(&spear320_eth_macb1_mii_device);
+	spear3xx_macb_setup();
+	macb_set_plat_data(&spear320_eth1_device, &spear320_macb_data);
 
 	/* call spear320 machine init function */
-	spear320_init(&spear320_auto_net_mii_mode, pmx_devs,
+	spear320_common_init(&spear320_auto_net_mii_mode, pmx_devs,
 			ARRAY_SIZE(pmx_devs));
 
 	/* initialize serial nor related data in smi plat data */

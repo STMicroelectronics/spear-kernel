@@ -853,8 +853,10 @@ static int prep_phy_channel(struct pl08x_dma_chan *plchan,
 	int ret;
 
 	/* Check if we already have a channel */
-	if (plchan->phychan)
-		return 0;
+	if (plchan->phychan) {
+		ch = plchan->phychan;
+		goto got_channel;
+	}
 
 	ch = pl08x_get_phy_channel(pl08x, plchan);
 	if (!ch) {
@@ -879,21 +881,22 @@ static int prep_phy_channel(struct pl08x_dma_chan *plchan,
 			return -EBUSY;
 		}
 		ch->signal = ret;
-
-		/* Assign the flow control signal to this channel */
-		if (txd->direction == DMA_TO_DEVICE)
-			txd->ccfg |= ch->signal << PL080_CONFIG_DST_SEL_SHIFT;
-		else if (txd->direction == DMA_FROM_DEVICE)
-			txd->ccfg |= ch->signal << PL080_CONFIG_SRC_SEL_SHIFT;
 	}
 
+	plchan->phychan = ch;
 	dev_dbg(&pl08x->adev->dev, "allocated physical channel %d and signal %d for xfer on %s\n",
 		 ch->id,
 		 ch->signal,
 		 plchan->name);
 
+got_channel:
+	/* Assign the flow control signal to this channel */
+	if (txd->direction == DMA_TO_DEVICE)
+		txd->ccfg |= ch->signal << PL080_CONFIG_DST_SEL_SHIFT;
+	else if (txd->direction == DMA_FROM_DEVICE)
+		txd->ccfg |= ch->signal << PL080_CONFIG_SRC_SEL_SHIFT;
+
 	plchan->phychan_hold++;
-	plchan->phychan = ch;
 
 	return 0;
 }
@@ -1135,6 +1138,8 @@ static int dma_set_runtime_config(struct dma_chan *chan,
 	cctl |= burst << PL080_CONTROL_SB_SIZE_SHIFT;
 	cctl |= burst << PL080_CONTROL_DB_SIZE_SHIFT;
 
+	plchan->device_fc = config->device_fc;
+
 	if (plchan->runtime_direction == DMA_FROM_DEVICE) {
 		plchan->src_addr = config->src_addr;
 		plchan->src_cctl = pl08x_cctl(cctl) | PL080_CONTROL_DST_INCR |
@@ -1366,7 +1371,7 @@ static struct dma_async_tx_descriptor *pl08x_prep_slave_sg(
 		return NULL;
 	}
 
-	if (plchan->cd->device_fc)
+	if (plchan->device_fc)
 		tmp = (direction == DMA_TO_DEVICE) ? PL080_FLOW_MEM2PER_PER :
 			PL080_FLOW_PER2MEM_PER;
 	else

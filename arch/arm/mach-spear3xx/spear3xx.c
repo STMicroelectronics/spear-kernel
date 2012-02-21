@@ -24,9 +24,12 @@
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
+#include <plat/adc.h>
+#include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 #define SPEAR3XX_WKUP_SRCS	(1 << SPEAR3XX_IRQ_MAC_1 | 1 << \
 		SPEAR3XX_IRQ_USB_DEV | 1 << SPEAR3XX_IRQ_BASIC_RTC | 1 << \
@@ -148,6 +151,13 @@ struct amba_device spear3xx_wdt_device = {
 };
 
 /* adc device registeration */
+static struct adc_plat_data adc_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.dma_data = "adc",
+	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
+		NORMAL_RESOLUTION, 14000000, 0},
+};
+
 static struct resource adc_resources[] = {
 	{
 		.start = SPEAR3XX_ICM1_ADC_BASE,
@@ -164,6 +174,7 @@ struct platform_device spear3xx_adc_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &adc_pdata,
 	},
 	.num_resources = ARRAY_SIZE(adc_resources),
 	.resource = adc_resources,
@@ -334,6 +345,12 @@ struct platform_device spear3xx_ohci1_device = {
 };
 
 /* jpeg device registeration */
+static struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.mem2jpeg_slave = "to_jpeg",
+	.jpeg2mem_slave = "from_jpeg",
+};
+
 static struct resource jpeg_resources[] = {
 	{
 		.start = SPEAR3XX_ICM1_JPEG_BASE,
@@ -350,6 +367,7 @@ struct platform_device spear3xx_jpeg_device = {
 	.id = -1,
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.platform_data = &jpeg_pdata,
 	},
 	.num_resources = ARRAY_SIZE(jpeg_resources),
 	.resource = jpeg_resources,
@@ -1140,6 +1158,67 @@ struct pmx_dev spear3xx_pmx_plgpio_45_46_49_50 = {
 	.modes = pmx_plgpio_45_46_49_50_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpio_45_46_49_50_modes),
 };
+
+void spear3xx_macb_plat_mdio_control(struct platform_device *pdev)
+{
+	u32 tmp, mask, shift, maxintf;
+	void __iomem *reg;
+
+	if (cpu_is_spear320()) {
+		reg = VA_SPEAR320_CONTROL_REG;
+		mask = 0x1;
+		shift = MDIO_SEL_SHIFT;
+		maxintf = 2;
+	} else if (cpu_is_spear310()) {
+		reg = IOMEM(VA_SPEAR310_SOC_CONFIG_BASE) +
+			SPEAR310_SMII_MAC_CONF_OFF;
+		mask = PHY_CONTROL_MASK;
+		shift = PHY_CONTROL_SHIFT;
+		maxintf = 4;
+	} else {
+		pr_err("%s: cpu not correct", __func__);
+		return;
+	}
+
+	/* pdev->id can only be from 0 to (maxintf - 1) */
+	if (pdev->id > (maxintf - 1)) {
+		pr_err("macb mdio control: invalid pdev->id:%d\n", pdev->id);
+		return;
+	}
+
+	tmp = readl(reg);
+	tmp &= ~(mask << shift);
+	tmp |= pdev->id << shift;
+	writel(tmp, reg);
+}
+
+void spear3xx_macb_setup(void)
+{
+	struct clk *amem_clk;
+
+	/* Enable memory Port-1 clock */
+	amem_clk = clk_get(NULL, "amem_clk");
+	if (IS_ERR(amem_clk)) {
+		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
+		return;
+	}
+
+	if (clk_enable(amem_clk)) {
+		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
+		clk_put(amem_clk);
+		return;
+	}
+
+	if (cpu_is_spear310()) {
+		/*
+		 * Program the pad strengths of PLGPIO to drive the IO's
+		 * The Magic number being used have direct correlations
+		 * with the driving capabilities of the IO pads.
+		 */
+		writel(0x2f7bc210, VA_PLGPIO3_PAD_PRG);
+		writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
+	}
+}
 #endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
 
 static void __init spear3xx_timer_init(void)
@@ -1173,7 +1252,11 @@ struct sys_timer spear3xx_timer = {
 	.init = spear3xx_timer_init,
 };
 
-/* This fixes addresses of all pmx devices for different machines */
+/*
+ * This fixes addresses of all pmx devices for different machines, if address is
+ * passed as zero. If a valid address is passed, then it will not be
+ * overwritten.
+ */
 void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr)
 {
 	int i;
@@ -1185,8 +1268,10 @@ void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr)
 			int k;
 			struct pmx_dev_mode *mode = &pdev->modes[j];
 
-			for (k = 0; k < mode->mux_reg_cnt; k++)
-				mode->mux_regs[k].address = addr;
+			for (k = 0; k < mode->mux_reg_cnt; k++) {
+				if (!mode->mux_regs[k].address)
+					mode->mux_regs[k].address = addr;
+			}
 		}
 	}
 }

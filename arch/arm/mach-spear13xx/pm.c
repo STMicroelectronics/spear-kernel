@@ -35,7 +35,8 @@
 #define USB_WKUP	0x2
 #define PWR_DOM_ON	0x3c00
 /* Use all Sources except USB as wake up trigger */
-#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP)
+#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP \
+		| USB_WKUP)
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
@@ -71,8 +72,10 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Do the GIC specific latch ups for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
+#ifdef CPU_PWR_DOMAIN_OFF
 		gic_cpu_exit(0);
 		gic_dist_save(0);
+#endif
 #ifdef CONFIG_PCI
 		/* Suspend PCIE bus */
 		spear_pcie_suspend();
@@ -84,8 +87,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	/* Move the cpu into suspend */
 	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
 	/* Resume Operations begin */
-	if (state == PM_SUSPEND_MEM)
-		spear13xx_l2x0_init();
+	spear13xx_l2x0_init();
 	/* Call the CPU PM notifiers to notify exit from sleep */
 	cpu_pm_exit();
 	/* twd timer restart */
@@ -94,8 +96,10 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Do the GIC restoration for suspend mode */
 	if (state == PM_SUSPEND_MEM) {
+#ifdef CPU_PWR_DOMAIN_OFF
 		gic_cpu_init(0, __io_address(SPEAR13XX_GIC_CPU_BASE));
 		gic_dist_restore(0);
+#endif
 #ifdef CONFIG_PCI
 		/* Resume PCIE bus */
 		spear_pcie_resume();
@@ -120,11 +124,14 @@ void spear_sys_suspend(suspend_state_t state)
 
 	void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk)
 		= NULL;
+#ifdef CPU_PWR_DOMAIN_OFF
 	void (*spear_sram_wake)(void) = NULL;
+#endif
 	void *sram_dest = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 	void *sram_limit_va = (void *)IO_ADDRESS(SPEAR_LIMIT_SRAM);
 	u32 pm_cfg = readl(VA_PCM_CFG);
 
+#ifdef CPU_PWR_DOMAIN_OFF
 	if (state == PM_SUSPEND_MEM) {
 		spear_sram_wake = memcpy(sram_dest, (void *)spear_wakeup,
 				spear_wakeup_sz);
@@ -154,10 +161,13 @@ void spear_sys_suspend(suspend_state_t state)
 		writel(pm_cfg | PCM_SET_WAKEUP_CFG, VA_PCM_WKUP_CFG);
 		/* Set the  VA_SWITCH_CTR to Max Restart Current */
 		writel(SWITCH_CTR_CFG, VA_SWITCH_CTR);
-	} else {
+	} else
 		/* source gpio interrupt through GIC */
 		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
-	}
+#else
+		pm_cfg |= PWR_DOM_ON;
+		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
+#endif
 
 	/*
 	 * Copy in the MPMC registers at the end of SRAM
@@ -260,6 +270,30 @@ static struct platform_suspend_ops spear_pm_ops = {
 	.valid		= spear_pm_valid_state,
 };
 
+#ifdef CONFIG_HIBERNATION
+static int empty_enter(void)
+{
+	return 0;
+}
+
+static void empty_exit(void)
+{
+	return;
+}
+
+static const struct platform_hibernation_ops spear_hiber_ops = {
+	.begin = empty_enter,
+	.end = empty_exit,
+	.pre_snapshot = empty_enter,
+	.finish = empty_exit,
+	.prepare = empty_enter,
+	.enter = empty_enter,
+	.leave = empty_exit,
+	.pre_restore = empty_enter,
+	.restore_cleanup = empty_exit,
+};
+#endif
+
 static void spear_power_off(void)
 {
 	while (1);
@@ -279,6 +313,9 @@ static int __init spear_pm_init(void)
 		return	-ENOMEM;
 
 	suspend_set_ops(&spear_pm_ops);
+#ifdef CONFIG_HIBERNATION
+	hibernation_set_ops(&spear_hiber_ops);
+#endif
 	pm_power_off = spear_power_off;
 	return 0;
 }

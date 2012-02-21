@@ -249,12 +249,14 @@ wait_ack2:
 	bic	r0, r0, #0xc000
 	str	r0, [r6, #0x100]
 
+#ifdef CPU_PWR_DOMAIN_OFF
 	bic	r0, r0, #0x2400
 	str	r0, [r6, #0x100]
 wait_ack3:
 	ldr	r0, [r6, #0x100]
 	tst	r0, #0x4000
 	beq	wait_ack3
+#endif
 #endif
 
 standby_mode:
@@ -319,12 +321,6 @@ wait_till_normal_mode:
 	cmp	r0, #0xf0000
 	bne wait_till_normal_mode
 
-	/*
-	 * Invalidate all instruction caches to PoU
-	 * and flush branch target cache
-	 */
-	mov	r1, #0
-	mcr	p15, 0, r1, c7, c5, 0
 	ldr	r6, =SPEAR_SRAM_START_PA
 #ifdef MPMC_RESET
 	ldr	r7, =MISC_BASE_PA
@@ -364,11 +360,6 @@ ddf:
 	str	r1, [r7, #0x2c]
 	dsb
 	isb
-	mov	r0, #0
-	mcr	p15, 0, r0, c7, c5, 4	@ Flush prefetch buffer
-	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
-	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
-	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 #ifdef GPIO_DDR_ISOLATE
 	/* Disable MPMC reset */
@@ -469,6 +460,16 @@ wait_for_srefresh_exit_r0:
 	msr	cpsr_c, r1
 	ldmia	r8!, {r0, r13, r14}
 	msr	spsr_cxsf, r0
+
+	/*
+	 * Invalidate all instruction caches to PoU
+	 */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0
+	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
+	mcr	p15, 0, r0, c7, c5, 7
+	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
+	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
 
 	msr	cpsr, r4
 	ldmia	r8!, {r0}

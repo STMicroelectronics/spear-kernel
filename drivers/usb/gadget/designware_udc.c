@@ -2663,7 +2663,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	struct dw_udc_dev *udev = &the_controller;
 	struct resource *csr, *plug;
 	struct dw_udc_ep *ep;
-	int i, irq, retval = 0;
+	int i, retval = 0;
 
 	pdata = dev_get_platdata(&pdev->dev);
 	if (!pdata)
@@ -2776,16 +2776,16 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	}
 
 	/* other non-static parts of init */
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
+	udev->irq = platform_get_irq(pdev, 0);
+	if (udev->irq < 0) {
 		dev_err(&pdev->dev, "No irq, aborting.\n");
 		goto err_mem_pool_remove;
 	}
 
-	retval = request_irq(irq, dw_udc_irq, 0, driver_name, udev);
+	retval = request_irq(udev->irq, dw_udc_irq, 0, driver_name, udev);
 	if (retval != 0) {
 		dev_err(&pdev->dev, "%s: can't get irq %d, err %d\n",
-				driver_name, irq, retval);
+				driver_name, udev->irq, retval);
 		retval = -EBUSY;
 		goto err_mem_pool_remove;
 	}
@@ -2896,6 +2896,8 @@ static int dw_udc_resume(struct device *dev)
 static const struct dev_pm_ops dw_udc_pm_ops = {
 	.suspend = dw_udc_suspend,
 	.resume = dw_udc_resume,
+	.freeze = dw_udc_suspend,
+	.restore = dw_udc_resume,
 };
 
 #endif

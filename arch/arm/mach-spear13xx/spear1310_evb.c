@@ -15,20 +15,18 @@
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
+#include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/mtd/nand.h>
 #include <linux/pata_arasan_cf_data.h>
 #include <linux/spi/spi.h>
-#include <linux/stmpe610.h>
+#include <video/db9000fb.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/hdlc.h>
-#include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1310_misc_regs.h>
@@ -203,28 +201,6 @@ DECLARE_SPI_CS_CONTROL(0, dev, SPEAR1310_SSP0_CS_SEL_CS2);
 DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
-static struct stmpe610_pdata stmpe610_spi_pdata = {
-	.irq_gpio = GPIO1_6,
-	.irq_type = IRQ_TYPE_EDGE_FALLING,
-	.fifo_threshhold = 1,
-	.tracking_index = TI_0,
-	.operating_mode = XYZ_ACQUISITION,
-	.average_ctrl = SAMPLES_2,
-	.touch_det_delay = TD_500US,
-	.settling_time = ST_500US,
-	.x_min = 0x00,
-	.x_max = 0xFFF,
-	.y_min = 0x00,
-	.y_max = 0xFFF,
-	.sample_time = SAMP_TIME_80,
-	.mod_12b = MOD_12B,
-	.ref_sel = REF_SEL_INT,
-	.adc_freq = ADC_FREQ_3250K,
-	.fraction_z = 7,
-	.i_drive = IDRIVE_50_80MA,
-};
-
-/* spi0 stmpe610 Chip Select Control function */
 DECLARE_SPI_CS_CONTROL(0, ts, SPEAR1310_SSP0_CS_SEL_CS0);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
@@ -240,10 +216,35 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.cs_control = spi0_ts_cs_control,
 };
 
+static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
+	.sample_time = 4, /* 80 clocks */
+	.mod_12b = 1, /* 12 bit */
+	.ref_sel = 0, /* Internal */
+	.adc_freq = 1, /* 3.25 MHz */
+	.ave_ctrl = 1, /* 2 samples */
+	.touch_det_delay = 2, /* 100 us */
+	.settling = 2, /* 500 us */
+	.fraction_z = 7,
+	.i_drive = 1, /* 50 to 80 mA */
+};
+
+static struct stmpe_platform_data stmpe610_pdata = {
+	.id = 0,
+	.blocks = STMPE_BLOCK_TOUCHSCREEN,
+	.irq_base = SPEAR_STMPE610_INT_BASE,
+	.irq_trigger = IRQ_TYPE_EDGE_FALLING,
+	.irq_invert_polarity = false,
+	.autosleep = false,
+	.irq_over_gpio = true,
+	.irq_gpio = GPIO1_6,
+	.ts = &stmpe610_ts_pdata,
+};
+
 static struct spi_board_info __initdata spi_board_info[] = {
+	/* spi0 board info */
 	{
-		.modalias = "stmpe610-spi",
-		.platform_data = &stmpe610_spi_pdata,
+		.modalias = "stmpe610",
+		.platform_data = &stmpe610_pdata,
 		.controller_data = &spi0_ts_chip_info,
 		.max_speed_hz = 1000000,
 		.bus_num = 0,
@@ -333,9 +334,6 @@ static void __init spear1310_evb_init(void)
 {
 	unsigned int i;
 
-	/* set adc platform data */
-	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
-
 	/* set compact flash plat data */
 	set_arasan_cf_pdata(&spear13xx_cf_device, &cf_pdata);
 
@@ -343,9 +341,6 @@ static void __init spear1310_evb_init(void)
 	/* db9000_clcd plat data */
 	spear13xx_panel_init(&spear13xx_db9000_clcd_device);
 #endif
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear13xx_jpeg_device,
-			&spear13xx_dmac_device[0].dev);
 
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear13xx_kbd_device, &kbd_data);
@@ -363,7 +358,7 @@ static void __init spear1310_evb_init(void)
 #if 0
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 	nand_mach_init(FSMC_NAND_BW8);
 #endif
 

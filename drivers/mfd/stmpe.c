@@ -978,6 +978,7 @@ int stmpe_probe(struct stmpe_client_info *ci, int partnum)
 	stmpe->pdata = pdata;
 	stmpe->irq_base = pdata->irq_base;
 	stmpe->ci = ci;
+	stmpe->partnum = partnum;
 	stmpe->variant = stmpe_variant_info[partnum];
 	stmpe->regs = stmpe->variant->regs;
 	stmpe->num_gpios = stmpe->variant->num_gpios;

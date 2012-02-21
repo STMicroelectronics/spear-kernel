@@ -194,7 +194,7 @@ static int pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 }
 
 #ifdef CONFIG_PCI_MSI
-extern unsigned int *msi_data;
+extern unsigned int msi_data[];
 
 static void msi_init(struct pcie_port *pp)
 {
@@ -420,6 +420,16 @@ static void pcie_host_init(struct pcie_port *pp)
 
 	cap = pci_find_own_capability(pp, PCI_CAP_ID_EXP);
 
+	/*
+	 * this controller support only 128 bytes read size, however its
+	 * default value in capability register is 512 bytes. So force
+	 * it to 128 here.
+	 */
+
+	pcie_rd_own_conf(pp, cap + PCI_EXP_DEVCTL, 4, &val);
+	val &= ~PCI_EXP_DEVCTL_READRQ;
+	pcie_wr_own_conf(pp, cap + PCI_EXP_DEVCTL, 4, val);
+
 	/*program correct class for RC*/
 	pcie_rd_own_conf(pp, PCI_CLASS_REVISION, 4, &val);
 	val &= 0xFFFF;
@@ -548,12 +558,13 @@ static int pcie_clk_init(struct pcie_port *pp)
 {
 	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
 			VA_SPEAR1340_PCIE_MIPHY_CFG);
-
+	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
 	return 0;
 }
 
 static int pcie_clk_exit(struct pcie_port *pp)
 {
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
 	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
 	return 0;
 }

@@ -1,5 +1,5 @@
 /*
- * ALSA SoC I2S Audio Layer for ST SPEAr13xx processor
+ * ALSA SoC I2S Audio Layer for ST SPEAr processors
  *
  * sound/soc/spear/designware_i2s.c
  *
@@ -12,7 +12,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/delay.h>
 #include <linux/designware_i2s.h>
 #include <linux/device.h>
 #include <linux/init.h>
@@ -20,7 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <mach/misc_regs.h>
+#include <linux/spear_dma.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 
@@ -49,12 +48,6 @@
 #define RFF(x)		(0x40 * x + 0x050)
 #define TFF(x)		(0x40 * x + 0x054)
 
-/* I2SDMARegisters */
-#define RXDMA		0x01C0
-#define RRXDMA		0x01C4
-#define TXDMA		0x01C8
-#define RTXDMA		0x01CC
-
 /* I2SCOMPRegisters */
 #define I2S_COMP_PARAM_2	0x01F0
 #define I2S_COMP_PARAM_1	0x01F4
@@ -77,12 +70,11 @@ struct dw_i2s_dev {
 	unsigned int capability;
 	struct device *dev;
 	struct snd_soc_dai_driver *dai_driver;
-	struct dw_pcm_dma_params *dma_params[2];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
 	u8 swidth;
-	void *play_dma_data;
-	void *capture_dma_data;
+	struct dma_data play_dma_data;
+	struct dma_data capture_dma_data;
 };
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -273,7 +265,7 @@ static int
 dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
-	void *dma_data = NULL;
+	struct dma_data *dma_data = NULL;
 
 	if (!(dev->capability & RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -284,11 +276,11 @@ dw_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *cpu_dai)
 		return -EINVAL;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		dma_data = dev->play_dma_data;
+		dma_data = &dev->play_dma_data;
 	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		dma_data = dev->capture_dma_data;
+		dma_data = &dev->capture_dma_data;
 
-	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
+	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)dma_data);
 
 	return 0;
 }
@@ -413,8 +405,17 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->swidth = pdata->swidth;
 
 	/* Set DMA slaves info */
-	dev->play_dma_data = pdata->play_dma_data;
-	dev->capture_dma_data = pdata->capture_dma_data;
+
+	dev->play_dma_data.data = pdata->play_dma_data;
+	dev->capture_dma_data.data = pdata->capture_dma_data;
+	dev->play_dma_data.addr = res->start + I2S_TXDMA;
+	dev->capture_dma_data.addr = res->start + I2S_RXDMA;
+	dev->play_dma_data.max_burst = 16;
+	dev->capture_dma_data.max_burst = 16;
+	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+	dev->play_dma_data.filter = pdata->filter;
+	dev->capture_dma_data.filter = pdata->filter;
 
 	dev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dev->clk)) {
@@ -441,15 +442,11 @@ dw_i2s_probe(struct platform_device *pdev)
 	}
 
 	if (cap & PLAY) {
-		dev_dbg(&pdev->dev, " SPEAr13xx: play supported\n");
+		dev_dbg(&pdev->dev, " SPEAr: play supported\n");
 		dev->play_irq = platform_get_irq_byname(pdev, "play_irq");
-		if (!dev->play_irq)
+		if (dev->play_irq < 0)
 			dev_warn(&pdev->dev, "play irq not defined\n");
 		else {
-			dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
-			dw_i2s_dai->playback.channels_max = dev->max_channel;
-			dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
-			dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->play_irq, dw_i2s_play_irq, 0,
 					"dw-i2s-play", dev);
 			if (ret) {
@@ -458,18 +455,19 @@ dw_i2s_probe(struct platform_device *pdev)
 				goto err_play_irq;
 			}
 		}
+
+		dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
+		dw_i2s_dai->playback.channels_max = dev->max_channel;
+		dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
+		dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
 	}
 
 	if (cap & RECORD) {
-		dev_dbg(&pdev->dev, "SPEAr13xx: record supported\n");
+		dev_dbg(&pdev->dev, "SPEAr: record supported\n");
 		dev->capture_irq = platform_get_irq_byname(pdev, "record_irq");
-		if (!dev->capture_irq)
+		if (dev->capture_irq < 0)
 			dev_warn(&pdev->dev, "record irq not defined\n");
 		else {
-			dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
-			dw_i2s_dai->capture.channels_max = dev->max_channel;
-			dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
-			dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 			ret = request_irq(dev->capture_irq, dw_i2s_capture_irq,
 					0, "dw-i2s-rec", dev);
 			if (ret) {
@@ -478,6 +476,11 @@ dw_i2s_probe(struct platform_device *pdev)
 				goto err_capture_irq;
 			}
 		}
+
+		dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
+		dw_i2s_dai->capture.channels_max = dev->max_channel;
+		dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
+		dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
 	}
 
 	dw_i2s_dai->ops = &dw_i2s_dai_ops,

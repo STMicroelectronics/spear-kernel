@@ -22,6 +22,7 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/types.h>
 #include <mach/hardware.h>
 
 /* PWM registers and bits definitions */
@@ -70,6 +71,9 @@ struct pwm_device {
 	unsigned busy;
 	spinlock_t lock;
 	struct list_head node;
+	u32 csave_reg_PWMCR;
+	u32 csave_reg_PWMDCR;
+	u32 csave_reg_PWMPCR;
 };
 
 /**
@@ -471,11 +475,116 @@ err:
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int pwm_suspend(struct device *dev, bool csave)
+{
+	struct pwm *pwm = dev_get_drvdata(dev);
+	struct pwm_device *pwmd;
+
+	if (cpu_is_spear1340()) {
+		if (pwm->pwmd_enabled)
+			writel(0, pwm->mmio_base + SPEAR13XX_PWMMCR);
+	}
+
+	if (!csave)
+		goto sus_clk_dis;
+
+	list_for_each_entry(pwmd, &pwm->devices, node) {
+		if (pwmd->busy) {
+			pwmd->csave_reg_PWMCR =
+				readl(pwm->mmio_base + pwmd->offset + PWMCR);
+			pwmd->csave_reg_PWMDCR =
+				readl(pwm->mmio_base + pwmd->offset + PWMDCR);
+			pwmd->csave_reg_PWMPCR =
+				readl(pwm->mmio_base + pwmd->offset + PWMPCR);
+		}
+	}
+
+sus_clk_dis:
+	/* disable clock */
+	if (pwm->clk_enabled)
+		clk_disable(pwm->clk);
+
+	return 0;
+}
+
+static int spear_pwm_suspend(struct device *dev)
+{
+	return pwm_suspend(dev, true);
+}
+
+static int spear_pwm_poweroff(struct device *dev)
+{
+	return pwm_suspend(dev, false);
+}
+
+static int pwm_resume(struct device *dev, bool csave)
+{
+	struct pwm *pwm = dev_get_drvdata(dev);
+	struct pwm_device *pwmd;
+	int ret = 0;
+
+	if (pwm->clk_enabled) {
+		ret = clk_enable(pwm->clk);
+		if (ret) {
+			dev_err(dev, "clk enable failed%d\n", ret);
+			return ret;
+		}
+	}
+
+	if (!csave)
+		goto res_pwm_enable;
+
+	list_for_each_entry(pwmd, &pwm->devices, node) {
+		if (pwmd->busy) {
+			writel(pwmd->csave_reg_PWMDCR,
+					pwm->mmio_base + pwmd->offset + PWMDCR);
+			writel(pwmd->csave_reg_PWMPCR,
+					pwm->mmio_base + pwmd->offset + PWMPCR);
+			writel(pwmd->csave_reg_PWMCR,
+					pwm->mmio_base + pwmd->offset + PWMCR);
+		}
+	}
+
+res_pwm_enable:
+	if (cpu_is_spear1340()) {
+		if (pwm->pwmd_enabled)
+			writel(1, pwm->mmio_base + SPEAR13XX_PWMMCR);
+	}
+
+	return ret;
+}
+
+static int spear_pwm_resume(struct device *dev)
+{
+	return pwm_resume(dev, true);
+}
+
+static int spear_pwm_thaw(struct device *dev)
+{
+	return pwm_resume(dev, false);
+}
+
+static const struct dev_pm_ops spear_pwm_dev_pm_ops = {
+	.suspend = spear_pwm_suspend,
+	.resume = spear_pwm_resume,
+	.freeze = spear_pwm_suspend,
+	.thaw = spear_pwm_thaw,
+	.poweroff = spear_pwm_poweroff,
+	.restore = spear_pwm_resume,
+};
+
+#define SPEAR_PWM_DEV_PM_OPS (&spear_pwm_dev_pm_ops)
+#else
+#define SPEAR_PWM_DEV_PM_OPS NULL
+#endif /* CONFIG_PM */
+
 static struct platform_driver spear_pwm_driver = {
 	.driver = {
 		.name = "pwm",
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
+		.pm = SPEAR_PWM_DEV_PM_OPS,
 	},
 	.probe = spear_pwm_probe,
 	.remove = __devexit_p(spear_pwm_remove)

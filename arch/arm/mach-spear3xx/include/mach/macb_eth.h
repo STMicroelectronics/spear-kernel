@@ -18,11 +18,13 @@
 #define MAX_ADDR_LEN 32
 
 struct macb_base_data {
+	int bus_id;
 	u32 phy_mask;
 	int phy_addr;
 	u8 mac_addr[MAX_ADDR_LEN];
 	s8 gpio_num;
 	u8 is_rmii; /* using RMII interface? */
+	void (*plat_mdio_control)(struct platform_device *);
 };
 
 static inline void macb_set_plat_data(struct platform_device *pdev,

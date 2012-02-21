@@ -31,6 +31,12 @@ extern int spear_pcie_resume(void);
 
 #endif
 
+/*
+ * Define this only if you want cpu + bus matrix to be off during
+ * suspend to ram i.e. echo mem > /sys/power/state
+ */
+/* #define CPU_PWR_DOMAIN_OFF */
+
 /* SRAM related defines*/
 #define SRAM_STACK_STRT_OFF	0x800
 #define SRAM_STACK_SCR_OFFS	0x900

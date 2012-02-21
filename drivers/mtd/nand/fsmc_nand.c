@@ -273,40 +273,25 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * provided through platform data
  */
 #define PARTITION(n, off, sz)	{.name = n, .offset = off, .size = sz}
+#define DEFAULT_PARTITION_TABLE(name, ersz, xl, ub, kr)			\
+	static struct mtd_partition partition_info_##name##_blk[] = {	\
+		PARTITION("X-loader", 0, xl * ersz),			\
+		PARTITION("U-Boot", xl * ersz, ub * ersz),		\
+		PARTITION("Kernel", (xl + ub) * ersz, kr * ersz),	\
+		PARTITION("Root File System", (xl + ub + kr) * ersz, 0),\
+	}
 
 /*
- * Default partition layout for small page(= 512 bytes) devices
+ * Default partition layouts for nand devices
  * Size for "Root file system" is updated in driver based on actual device size
  */
-static struct mtd_partition partition_info_16KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x4000),
-	PARTITION("U-Boot", 0x10000, 20 * 0x4000),
-	PARTITION("Kernel", 0x60000, 256 * 0x4000),
-	PARTITION("Root File System", 0x460000, 0),
-};
-
-/*
- * Default partition layout for large page(> 512 bytes) devices
- * Size for "Root file system" is updated in driver based on actual device size
- */
-static struct mtd_partition partition_info_128KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x20000),
-	PARTITION("U-Boot", 0x80000, 12 * 0x20000),
-	PARTITION("Kernel", 0x200000, 48 * 0x20000),
-	PARTITION("Root File System", 0x800000, 0),
-};
-
-/*
- * Default partition layout for large page(> 512 bytes) devices with
- * erase block size equal to 1024KB.
- * Size for "Root file system" is updated in driver based on actual device size
- */
-static struct mtd_partition partition_info_1024KB_blk[] = {
-	PARTITION("X-loader", 0, 4 * 0x100000),
-	PARTITION("U-Boot", 0x400000, 2 * 0x100000),
-	PARTITION("Kernel", 0x600000, 4 * 0x100000),
-	PARTITION("Root File System", 0xA00000, 0),
-};
+DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 20, 256);
+DEFAULT_PARTITION_TABLE(64KB, 0x10000, 4, 20, 128);
+DEFAULT_PARTITION_TABLE(128KB, 0x20000, 4, 12, 48);
+DEFAULT_PARTITION_TABLE(256KB, 0x40000, 4, 6, 24);
+DEFAULT_PARTITION_TABLE(512KB, 0x80000, 4, 6, 24);
+DEFAULT_PARTITION_TABLE(1MB, 0x100000, 4, 4, 12);
+DEFAULT_PARTITION_TABLE(2MB, 0x200000, 4, 4, 6);
 
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 const char *part_probes[] = { "cmdlinepart", NULL };
@@ -343,6 +328,8 @@ struct fsmc_nand_data {
 	struct resource		*rescmd;
 	struct resource		*resaddr;
 	struct resource		*resdata;
+
+	struct fsmc_nand_timings *dev_timings;
 
 	void __iomem		*data_va;
 	void __iomem		*cmd_va;
@@ -423,22 +410,42 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  * This routine initializes timing parameters related to NAND memory access in
  * FSMC registers
  */
-static void __init fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
-				   uint32_t busw)
+static void fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
+			   uint32_t busw, struct fsmc_nand_timings *timings)
 {
 	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
+	uint32_t tclr, tar, thiz, thold, twait, tset;
+	struct fsmc_nand_timings *tims;
+	struct fsmc_nand_timings default_timings = {
+		.tclr	= FSMC_TCLR_1,
+		.tar	= FSMC_TAR_1,
+		.thiz	= FSMC_THIZ_1,
+		.thold	= FSMC_THOLD_4,
+		.twait	= FSMC_TWAIT_6,
+		.tset	= FSMC_TSET_0,
+	};
+
+	if (timings)
+		tims = timings;
+	else
+		tims = &default_timings;
+
+	tclr = (tims->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
+	tar = (tims->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
+	thiz = (tims->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
+	thold = (tims->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
+	twait = (tims->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
+	tset = (tims->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
 
 	if (busw)
 		writel(value | FSMC_DEVWID_16, &regs->bank_regs[bank].pc);
 	else
 		writel(value | FSMC_DEVWID_8, &regs->bank_regs[bank].pc);
 
-	writel(readl(&regs->bank_regs[bank].pc) | FSMC_TCLR_1 | FSMC_TAR_1,
+	writel(readl(&regs->bank_regs[bank].pc) | tclr | tar,
 	       &regs->bank_regs[bank].pc);
-	writel(FSMC_THIZ_1 | FSMC_THOLD_4 | FSMC_TWAIT_6 | FSMC_TSET_0,
-	       &regs->bank_regs[bank].comm);
-	writel(FSMC_THIZ_1 | FSMC_THOLD_4 | FSMC_TWAIT_6 | FSMC_TSET_0,
-	       &regs->bank_regs[bank].attrib);
+	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].comm);
+	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].attrib);
 }
 
 /*
@@ -527,6 +534,20 @@ static int fsmc_read_hwecc_ecc1(struct mtd_info *mtd, const uint8_t *data,
 	return 0;
 }
 
+/* Count the number of 0's in buff upto a max of max_bits */
+static int count_written_bits(uint8_t *buff, int size, int max_bits)
+{
+	int k, written_bits = 0;
+
+	for (k = 0; k < size; k++) {
+		written_bits += hweight8(~buff[k]);
+		if (written_bits > max_bits)
+			break;
+	}
+
+	return written_bits;
+}
+
 /*
  * fsmc_read_page_hwecc
  * @mtd:	mtd info structure
@@ -546,7 +567,7 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	struct fsmc_nand_data *host = container_of(mtd,
 					struct fsmc_nand_data, mtd);
 	struct fsmc_eccplace *ecc_place = host->ecc_place;
-	int i, j, k, s, stat, eccsize = chip->ecc.size;
+	int i, j, s, stat, eccsize = chip->ecc.size;
 	int eccbytes = chip->ecc.bytes;
 	int eccsteps = chip->ecc.steps;
 	uint8_t *p = buf;
@@ -562,7 +583,6 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	uint8_t *oob = (uint8_t *)&ecc_oob[0];
 
 	for (i = 0, s = 0; s < eccsteps; s++, i += eccbytes, p += eccsize) {
-
 		chip->cmdfunc(mtd, NAND_CMD_READ0, s * eccsize, page);
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
 		chip->read_buf(mtd, p, eccsize);
@@ -573,11 +593,13 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 			group++;
 
 			/*
-			* length is intentionally kept a higher multiple of 2
-			* to read at least 13 bytes even in case of 16 bit NAND
-			* devices
-			*/
-			len = roundup(len, 2);
+			 * length is intentionally kept a higher multiple of 2
+			 * to read at least 13 bytes even in case of 16 bit NAND
+			 * devices
+			 */
+			if (chip->options & NAND_BUSWIDTH_16)
+				len = roundup(len, 2);
+
 			chip->cmdfunc(mtd, NAND_CMD_READOOB, off, page);
 			chip->read_buf(mtd, oob + j, len);
 			j += len;
@@ -586,27 +608,12 @@ static int fsmc_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		memcpy(&ecc_code[i], oob, 13);
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 
-		/*
-		 * This is a temporary erase check. A newly erased page read
-		 * would result in an ecc error because the oob data is also
-		 * erased to FF and the calculated ecc for an FF data is not
-		 * FF..FF.
-		 * This is a workaround to skip performing correction in case
-		 * data is FF..FF
-		 */
-		for (k = 0; k < eccsize; k++) {
-			if (*(p + k) != 0xff)
-				break;
-		}
-
-		if (k < eccsize) {
-			stat = chip->ecc.correct(mtd, p, &ecc_code[i],
-					&ecc_calc[i]);
-			if (stat < 0)
-				mtd->ecc_stats.failed++;
-			else
-				mtd->ecc_stats.corrected += stat;
-		}
+		stat = chip->ecc.correct(mtd, p, &ecc_code[i],
+				&ecc_calc[i]);
+		if (stat < 0)
+			mtd->ecc_stats.failed++;
+		else
+			mtd->ecc_stats.corrected += stat;
 	}
 
 	return 0;
@@ -630,11 +637,42 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	struct fsmc_regs *regs = host->regs_va;
 	unsigned int bank = host->bank;
 	uint32_t err_idx[8];
-	uint64_t ecc_data[2];
 	uint32_t num_err, i;
+	uint32_t ecc1, ecc2, ecc3, ecc4;
 
-	/* The calculated ecc is actually the correction index in data */
-	memcpy(ecc_data, calc_ecc, 13);
+	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
+
+	/* no bit flipping */
+	if (likely(num_err == 0))
+		return 0;
+
+	/* too many errors */
+	if (unlikely(num_err > 8)) {
+		/*
+		 * This is a temporary erase check. A newly erased page read
+		 * would result in an ecc error because the oob data is also
+		 * erased to FF and the calculated ecc for an FF data is not
+		 * FF..FF.
+		 * This is a workaround to skip performing correction in case
+		 * data is FF..FF
+		 *
+		 * Logic:
+		 * For every page, each bit written as 0 is counted until these
+		 * number of bits are greater than 8 (the maximum correction
+		 * capability of FSMC for each 512 + 13 bytes)
+		 */
+
+		int bits_ecc = count_written_bits(read_ecc, 13, 8);
+		int bits_data = count_written_bits(dat, 512, 8);
+
+		if ((bits_ecc + bits_data) <= 8) {
+			if (bits_data)
+				memset(dat, 0xff, 512);
+			return bits_data;
+		}
+
+		return -EBADMSG;
+	}
 
 	/*
 	 * ------------------- calc_ecc[] bit wise -----------|--13 bits--|
@@ -645,27 +683,26 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	 * uint64_t array and error offset indexes are populated in err_idx
 	 * array
 	 */
-	for (i = 0; i < 8; i++) {
-		if (i == 4) {
-			err_idx[4] = ((ecc_data[1] & 0x1) << 12) | ecc_data[0];
-			ecc_data[1] >>= 1;
-			continue;
-		}
-		err_idx[i] = (ecc_data[i/4] & 0x1FFF);
-		ecc_data[i/4] >>= 13;
-	}
+	ecc1 = readl(&regs->bank_regs[bank].ecc1);
+	ecc2 = readl(&regs->bank_regs[bank].ecc2);
+	ecc3 = readl(&regs->bank_regs[bank].ecc3);
+	ecc4 = readl(&regs->bank_regs[bank].sts);
 
-	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
-
-	if (num_err > 8)
-		return -EBADMSG;
+	err_idx[0] = (ecc1 >> 0) & 0x1FFF;
+	err_idx[1] = (ecc1 >> 13) & 0x1FFF;
+	err_idx[2] = (((ecc2 >> 0) & 0x7F) << 6) | ((ecc1 >> 26) & 0x3F);
+	err_idx[3] = (ecc2 >> 7) & 0x1FFF;
+	err_idx[4] = (((ecc3 >> 0) & 0x1) << 12) | ((ecc2 >> 20) & 0xFFF);
+	err_idx[5] = (ecc3 >> 1) & 0x1FFF;
+	err_idx[6] = (ecc3 >> 14) & 0x1FFF;
+	err_idx[7] = (((ecc4 >> 16) & 0xFF) << 5) | ((ecc3 >> 27) & 0x1F);
 
 	i = 0;
 	while (num_err--) {
 		change_bit(0, (unsigned long *)&err_idx[i]);
 		change_bit(1, (unsigned long *)&err_idx[i]);
 
-		if (err_idx[i] <= 512 * 8) {
+		if (err_idx[i] < 512 * 8) {
 			change_bit(err_idx[i], (unsigned long *)dat);
 			i++;
 		}
@@ -778,6 +815,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
+	host->dev_timings = pdata->nand_timings;
 	regs = host->regs_va;
 
 	/* Link all private pointers */
@@ -797,11 +835,13 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	nand->ecc.size = 512;
 	nand->options = pdata->options;
 	nand->select_chip = fsmc_select_chip;
+	nand->badblockbits = 7;
 
 	if (pdata->width == FSMC_NAND_BW16)
 		nand->options |= NAND_BUSWIDTH_16;
 
-	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16);
+	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16,
+			host->dev_timings);
 
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -904,41 +944,59 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			int i;
 
 			/* Select the default partitions info */
-			switch (host->mtd.size) {
-			case 0x01000000:
-			case 0x02000000:
-			case 0x04000000:
+			switch (host->mtd.erasesize) {
+			case 0x4000:
 				host->partitions = partition_info_16KB_blk;
 				host->nr_partitions =
 					sizeof(partition_info_16KB_blk) /
 					sizeof(struct mtd_partition);
 				break;
-			case 0x08000000:
-			case 0x10000000:
-			case 0x20000000:
-			case 0x40000000:
-			case 0x80000000:
-				switch (host->mtd.erasesize) {
-				case 0x100000:
-					host->partitions = partition_info_1024KB_blk;
-					host->nr_partitions =
-						sizeof(partition_info_1024KB_blk) /
-						sizeof(struct mtd_partition);
-					break;
-				case 0x20000:
-					host->partitions = partition_info_128KB_blk;
-					host->nr_partitions =
-						sizeof(partition_info_128KB_blk) /
-						sizeof(struct mtd_partition);
-					break;
-				default:
-					break;
-				}
+			case 0x10000:
+				host->partitions = partition_info_64KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_64KB_blk) /
+					sizeof(struct mtd_partition);
+				break;
+			case 0x20000:
+				host->partitions =
+					partition_info_128KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_128KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x40000:
+				host->partitions =
+					partition_info_256KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_256KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x80000:
+				host->partitions =
+					partition_info_512KB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_512KB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x100000:
+				host->partitions =
+					partition_info_1MB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_1MB_blk)
+					/ sizeof(struct mtd_partition);
+				break;
+			case 0x200000:
+				host->partitions =
+					partition_info_2MB_blk;
+				host->nr_partitions =
+					sizeof(partition_info_2MB_blk) /
+					sizeof(struct mtd_partition);
 				break;
 			default:
 				ret = -ENXIO;
-				pr_err("Unsupported NAND size\n");
+				pr_err("Unsupported NAND erase size\n");
 				goto err_probe;
+				break;
 			}
 
 			partition = host->partitions;
@@ -1053,16 +1111,17 @@ static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
 
-	if (host)
+	if (host) {
 		clk_enable(host->clk);
+		fsmc_nand_setup(host->regs_va, host->bank,
+				host->nand.options & NAND_BUSWIDTH_16,
+				host->dev_timings);
+	}
 
 	return 0;
 }
 
-static const struct dev_pm_ops fsmc_nand_pm_ops = {
-	.suspend = fsmc_nand_suspend,
-	.resume = fsmc_nand_resume,
-};
+static SIMPLE_DEV_PM_OPS(fsmc_nand_pm_ops, fsmc_nand_suspend, fsmc_nand_resume);
 #endif
 
 static struct platform_driver fsmc_nand_driver = {

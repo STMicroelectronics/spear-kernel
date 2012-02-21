@@ -3111,7 +3111,8 @@ ident_done:
 		chip->chip_shift += 32 - 1;
 	}
 
-	chip->badblockbits = 8;
+	if (!chip->badblockbits)
+		chip->badblockbits = 8;
 
 	/* Set the bad block position */
 	if (mtd->writesize > 512 || (busw & NAND_BUSWIDTH_16))

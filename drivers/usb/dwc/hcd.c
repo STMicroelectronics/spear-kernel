@@ -244,6 +244,17 @@ static inline struct dwc_hcd *hcd_to_dwc_otg_hcd(struct usb_hcd *hcd)
 	return (struct dwc_hcd *)hcd->hcd_priv;
 }
 
+static int dwc_otg_hcd_resume(struct usb_hcd *hcd)
+{
+	 /*
+	 * The function is required in case of bus_resume. The bus
+	 * resume is called from hcd stack and in case it is not there
+	 * it will return error.
+	 */
+
+	return 0;
+}
+
 /**
  * Initializes the DWC_otg controller and its root hub and prepares it for host
  * mode operation. Activates the root port. Returns 0 on success and a negative
@@ -349,6 +360,18 @@ static void dwc_otg_hcd_stop(struct usb_hcd *hcd)
 	pr_info("PortPower off\n");
 	hprt0 = DWC_HPRT0_PRT_PWR_RW(hprt0, 0);
 	dwc_write32(dwc_hcd->core_if->host_if->hprt0, hprt0);
+}
+
+static int dwc_otg_hcd_suspend(struct usb_hcd *hcd)
+{
+
+	/*
+	 * The function is required in case of bus_suspend. The bus
+	 * suspend is called from hcd stack and in case it is not there
+	 * it will return error.
+	 */
+
+	return 0;
 }
 
 /**
@@ -1208,6 +1231,8 @@ static const struct hc_driver dwc_otg_hc_driver = {
 	.get_frame_number = dwc_otg_hcd_get_frame_number,
 	.hub_status_data = dwc_otg_hcd_hub_status_data,
 	.hub_control = dwc_otg_hcd_hub_control,
+	.bus_suspend = dwc_otg_hcd_suspend,
+	.bus_resume = dwc_otg_hcd_resume,
 };
 
 /**

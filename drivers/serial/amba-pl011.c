@@ -242,6 +242,7 @@ static void pl011_dma_probe_initcall(struct uart_amba_port *uap)
 		.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
 		.direction = DMA_TO_DEVICE,
 		.dst_maxburst = uap->fifosize >> 1,
+		.device_fc = false,
 	};
 	struct dma_chan *chan;
 	dma_cap_mask_t mask;
@@ -275,6 +276,7 @@ static void pl011_dma_probe_initcall(struct uart_amba_port *uap)
 			.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
 			.direction = DMA_FROM_DEVICE,
 			.src_maxburst = uap->fifosize >> 1,
+			.device_fc = false,
 		};
 
 		chan = dma_request_channel(mask, plat->dma_filter, plat->dma_rx_param);

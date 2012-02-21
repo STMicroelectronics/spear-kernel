@@ -43,3 +43,6 @@ obj-$(CONFIG_SPEAR1340_PLUG_BOARDS)	+= spear1340_plug_boards.o
 obj-$(CONFIG_CPU_SPEAR900)		+= clock.o spear900.o
 # spear900 boards files
 obj-$(CONFIG_MACH_SPEAR900_EVB)	+= spear900_evb.o
+
+# NComputing spear hurricane boards files
+obj-$(CONFIG_MACH_TYPE_SPEAR_HURRICANE)	+= spear_hurricane_board.o

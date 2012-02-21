@@ -979,6 +979,9 @@ static struct pclk_info i2s_src_pclk_info[] = {
 		.pclk = &vco1div2_clk,
 		.pclk_val = SPEAR1340_I2S_SRC_VCO1DIV2_VAL,
 	}, {
+		.pclk = &pll2_clk,
+		.pclk_val = SPEAR1340_I2S_SRC_PLL2_VAL,
+	}, {
 		.pclk = &pll3_clk,
 		.pclk_val = SPEAR1340_I2S_SRC_PLL3_VAL,
 	}, {
@@ -1400,6 +1403,11 @@ static struct frac_synth_rate_tbl gen_rtbl[] = {
 	{.div = 0x0A000}, /* 50 MHz */
 	{.div = 0x061A8}, /* 81.92 MHz */
 	{.div = 0x05000}, /* 100 MHz */
+	{.div = 0x02800}, /* 200 MHz */
+	{.div = 0x02620}, /* 210 MHz */
+	{.div = 0x02460}, /* 220 MHz */
+	{.div = 0x022C0}, /* 230 MHz */
+	{.div = 0x02160}, /* 240 MHz */
 	{.div = 0x02000}, /* 250 MHz */
 };
 
@@ -1511,8 +1519,8 @@ static struct pclk_info spdif_in_pclk_info[] = {
 		.pclk = &pll2_clk,
 		.pclk_val = SPEAR1340_SPDIF_IN_PLL2_VAL,
 	}, {
-		.pclk = &gen_synth0_clk,
-		.pclk_val = SPEAR1340_SPDIF_IN_GSYNT0_VAL,
+		.pclk = &gen_synth3_clk,
+		.pclk_val = SPEAR1340_SPDIF_IN_GSYNT3_VAL,
 	},
 };
 
@@ -1702,7 +1710,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "arasan_xd",			.clk = &cfxd_clk},
 	{.dev_id = "mali",			.clk = &mali_clk},
 	{.dev_id = "spdif-out",			.clk = &spdif_out_clk},
-	{.dev_id = "spdif_in",			.clk = &spdif_in_clk},
+	{.dev_id = "spdif-in",			.clk = &spdif_in_clk},
 	{.dev_id = "video_dec",			.clk = &video_dec_clk},
 	{.dev_id = "video_enc",			.clk = &video_enc_clk},
 
@@ -1732,7 +1740,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "spear_camif.3",		.clk = &cam3_clk},
 	{.dev_id = "plgpio",			.clk = &plgpio_clk},
 	{.dev_id = "pwm",			.clk = &pwm_clk},
-	{.dev_id = "video_input_port",		.clk = &video_input_port_clk},
+	{.dev_id = "spear_vip",			.clk = &video_input_port_clk},
 	{.con_id = "adc_synth_clk",		.clk = &adc_synth_clk},
 	{.dev_id = "adc",			.clk = &adc_clk},
 

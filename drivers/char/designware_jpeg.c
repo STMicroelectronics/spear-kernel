@@ -942,12 +942,6 @@ s32 jpeg_get_data(u32 *len)
 	return 0;
 }
 
-static bool filter(struct dma_chan *chan, void *slave)
-{
-	chan->private = slave;
-	return true;
-}
-
 /**
  * designware_jpeg_open - opens jpeg read or write node.
  * @inode: used by the kernel internally to represent files.
@@ -960,8 +954,28 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 {
 	s32 status = 0;
 	enum jpeg_dev_type dev_type;
-	void *dma_filter, *write_data, *read_data;
-	char *wstr = "to_jpeg", *rstr = "from_jpeg";
+	void *dma_filter = g_drv_data->slaves->dma_filter;
+	void *write_data = g_drv_data->slaves->mem2jpeg_slave;
+	void *read_data = g_drv_data->slaves->jpeg2mem_slave;
+	struct dma_slave_config jpeg_conf[] = {
+		{
+			/* jpeg2mem */
+			.src_addr = g_drv_data->rx_reg,
+			.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
+			.src_maxburst = 8,
+			.dst_maxburst = 8,
+			.direction = DMA_FROM_DEVICE,
+			.device_fc = true,
+		}, {
+			/* mem2jpeg */
+			.dst_addr = g_drv_data->tx_reg,
+			.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
+			.src_maxburst = 8,
+			.dst_maxburst = 8,
+			.direction = DMA_TO_DEVICE,
+			.device_fc = false,
+		},
+	};
 
 	/* getting the minor number of the caller */
 	dev_type = (enum jpeg_dev_type)iminor(inode);
@@ -978,16 +992,6 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 	if (g_drv_data->jpeg_busy[
 			dev_type == JPEG_READ ? JPEG_WRITE : JPEG_READ])
 		return status;
-
-	if (g_drv_data->slaves->dma_filter) {
-		dma_filter = g_drv_data->slaves->dma_filter;
-		write_data = wstr;
-		read_data = rstr;
-	} else {
-		dma_filter = filter;
-		write_data = &g_drv_data->slaves->mem2jpeg_slave;
-		read_data = &g_drv_data->slaves->jpeg2mem_slave;
-	}
 
 	/* request dma channels */
 	if (!g_drv_data->dma_chan[JPEG_READ] ||
@@ -1012,12 +1016,10 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 	}
 
 	/* Configure channel parameters if runtime_config is true */
-	if (g_drv_data->slaves->runtime_config) {
-		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_READ],
-				(void *) &g_drv_data->slaves->jpeg2mem_slave);
-		dmaengine_slave_config(g_drv_data->dma_chan[JPEG_WRITE],
-				(void *) &g_drv_data->slaves->mem2jpeg_slave);
-	}
+	dmaengine_slave_config(g_drv_data->dma_chan[JPEG_READ],
+			(void *) &jpeg_conf[0]);
+	dmaengine_slave_config(g_drv_data->dma_chan[JPEG_WRITE],
+			(void *) &jpeg_conf[1]);
 
 	/* set default operation to jpeg decoding with hdr enable */
 	g_drv_data->operation = JPEG_DECODE;
@@ -1270,27 +1272,12 @@ static irqreturn_t designware_jpeg_irq(s32 irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static s32
-designware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
+static int designware_jpeg_suspend(struct device *dev)
 {
-	unsigned long flags;
 	/* aborting all jpeg operations */
 	if (g_drv_data->jpeg_busy[JPEG_READ] ||
 			g_drv_data->jpeg_busy[JPEG_WRITE]) {
 		jpeg_abort(-EINTR);
-
-		jfree(JPEG_READ);
-		jfree(JPEG_WRITE);
-
-		if (g_drv_data->dma_chan[JPEG_READ])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_READ]);
-		if (g_drv_data->dma_chan[JPEG_WRITE])
-			dma_release_channel(g_drv_data->dma_chan[JPEG_WRITE]);
-
-		spin_lock_irqsave(&g_drv_data->lock, flags);
-		g_drv_data->jpeg_busy[JPEG_READ] = 0;
-		g_drv_data->jpeg_busy[JPEG_WRITE] = 0;
-		spin_unlock_irqrestore(&g_drv_data->lock, flags);
 
 		clk_disable(g_drv_data->clk);
 	}
@@ -1299,12 +1286,21 @@ designware_jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 }
 
 #ifdef CONFIG_PM
-static s32 designware_jpeg_resume(struct platform_device *pdev)
+static int designware_jpeg_resume(struct device *dev)
 {
+	if (g_drv_data->jpeg_busy[JPEG_READ] ||
+			g_drv_data->jpeg_busy[JPEG_WRITE]) {
+		int ret = clk_enable(g_drv_data->clk);
+
+		if (ret)
+			return ret;
+	}
+
 	return 0;
 }
-#else
-#define designware_jpeg_resume NULL
+
+static SIMPLE_DEV_PM_OPS(designware_jpeg_dev_pm_ops, designware_jpeg_suspend,
+		designware_jpeg_resume);
 #endif /* CONFIG_PM */
 
 static s32 designware_jpeg_probe(struct platform_device *pdev)
@@ -1313,7 +1309,6 @@ static s32 designware_jpeg_probe(struct platform_device *pdev)
 	struct resource	*res;
 	struct jpeg_plat_data *plat_data = pdev->dev.platform_data;
 	s32 irq, status = 0;
-	dma_addr_t tx_reg, rx_reg;
 
 	if (!plat_data) {
 		dev_err(&pdev->dev, "Invalid platforma data\n");
@@ -1402,10 +1397,10 @@ static s32 designware_jpeg_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_SLAVE, g_drv_data->mask);
 
 	/* we need to pass physical address here */
-	tx_reg = (dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_IN;
-	rx_reg = (dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_OUT;
-
-	set_jpeg_tx_rx_reg(g_drv_data->slaves, tx_reg, rx_reg);
+	g_drv_data->tx_reg =
+		(dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_IN;
+	g_drv_data->rx_reg =
+		(dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_OUT;
 
 	return status;
 
@@ -1438,7 +1433,6 @@ static s32 designware_jpeg_remove(struct platform_device *pdev)
 	enum jpeg_dev_type dev_type;
 	s32 irq;
 	struct resource	*res;
-	pm_message_t state;
 
 	if (!g_drv_data)
 		return 0;
@@ -1446,7 +1440,7 @@ static s32 designware_jpeg_remove(struct platform_device *pdev)
 	/* prevent double remove */
 	platform_set_drvdata(pdev, NULL);
 
-	designware_jpeg_suspend(pdev, state);
+	designware_jpeg_suspend(&pdev->dev);
 
 	/*unregister char driver */
 	for (dev_type = JPEG_READ; dev_type < MAX_DEV; dev_type += JPEG_WRITE)
@@ -1482,11 +1476,12 @@ static struct platform_driver designware_jpeg_driver = {
 		.name = DRIVER_NAME,
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm = &designware_jpeg_dev_pm_ops,
+#endif
 	},
 	.probe = designware_jpeg_probe,
 	.remove = __devexit_p(designware_jpeg_remove),
-	.suspend = designware_jpeg_suspend,
-	.resume = designware_jpeg_resume,
 };
 
 static s32 __init designware_jpeg_init(void)

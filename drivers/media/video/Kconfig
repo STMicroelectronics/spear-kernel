@@ -263,6 +263,17 @@ config VIDEO_SAA6588
 	  To compile this driver as a module, choose M here: the
 	  module will be called saa6588.
 
+comment "HDMI Receivers"
+
+config VIDEO_SIL9135A
+	tristate "Silicon Image 9135A HDMI Receiver"
+	depends on VIDEO_V4L2 && I2C
+	---help---
+	  Support for the Silicon Image SIL9125A HDMI Receiver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called sil9135a.
+
 comment "Video decoders"
 
 config VIDEO_ADV7180
@@ -410,6 +421,8 @@ config VIDEO_VPX3220
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpx3220.
 
+source "drivers/media/video/spear/Kconfig"
+
 comment "Video and audio decoders"
 
 source "drivers/media/video/cx25840/Kconfig"
@@ -534,6 +547,15 @@ config VIDEO_VIU
 	  video data, or overlays video on DIU frame buffer.
 
 	  Say Y here if you want to enable VIU device on MPC5121e Rev2+.
+	  In doubt, say N.
+
+config VIDEO_SPEAR_VIP
+	tristate "SPEAr Video Input Parallel Port"
+	depends on VIDEO_DEV && ARCH_SPEAR13XX
+	select VIDEOBUF_DMA_CONTIG
+	---help---
+	  This is a v4l2 driver for the ST SPEAr video input parallel port.
+	  Say Y here if you want to enable VIP device on SPEAr boards.
 	  In doubt, say N.
 
 config VIDEO_VIVI

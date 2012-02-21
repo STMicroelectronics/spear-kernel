@@ -49,7 +49,6 @@ static const u8 sta529_reg[STA529_CACHEREGNUM] = {
 };
 
 struct sta529 {
-	unsigned int sysclk;
 	enum snd_soc_control_type control_type;
 	void *control_data;
 };
@@ -57,6 +56,7 @@ static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_SINGLE("Master Playback Volume", STA529_MVOL, 0, 127, 1),
 	SOC_SINGLE("Left Playback Volume", STA529_LVOL, 0, 127, 1),
 	SOC_SINGLE("Right Playback Volume", STA529_RVOL, 0, 127, 1),
+	SOC_SINGLE("Adc Capture Gain", STA529_ADCCFG, 5, 7, 0),
 	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
 };
 
@@ -127,6 +127,12 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	/*this setting will be used with actual h/w */
 	sta529_write(codec, STA529_S2PCFG0, val);
 
+	/* set serial-to-parallel interface data length to 32 bit */
+	sta529_write(codec, STA529_P2SCFG1, 0xC1);
+
+	/* set parallel to-serial interface data length as 32 bit */
+	sta529_write(codec, STA529_P2SCFG1, 0xC1);
+
 	return 0;
 }
 
@@ -154,13 +160,6 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	return 0;
-}
-
-static int
-spear_sta_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
-		unsigned int freq, int dir)
-{
 	return 0;
 }
 
@@ -210,7 +209,6 @@ static struct snd_soc_dai_ops sta529_dai_ops = {
 	.hw_params	= spear_sta529_hw_params,
 	.set_fmt	= spear_sta529_set_dai_fmt,
 	.digital_mute	= spear_sta529_mute,
-	.set_sysclk	= spear_sta_set_dai_sysclk,
 };
 
 static struct snd_soc_dai_driver sta529_dai = {

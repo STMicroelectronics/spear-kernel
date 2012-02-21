@@ -74,6 +74,13 @@ static const struct soc_mbus_pixelfmt mbus_fmt[] = {
 		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
 		.order			= SOC_MBUS_ORDER_LE,
 	},
+	[MBUS_IDX(RGB444_2X8_PADHI_BE)] = {
+		.fourcc			= V4L2_PIX_FMT_RGB444,
+		.name			= "RGB444",
+		.bits_per_sample	= 8,
+		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
+		.order			= SOC_MBUS_ORDER_BE,
+	},
 	[MBUS_IDX(SBGGR8_1X8)] = {
 		.fourcc			= V4L2_PIX_FMT_SBGGR8,
 		.name			= "Bayer 8 BGGR",

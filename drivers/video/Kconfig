@@ -19,6 +19,8 @@ source "drivers/gpu/drm/Kconfig"
 
 source "drivers/gpu/stub/Kconfig"
 
+source "drivers/gpu/mali/Kconfig"
+
 config VGASTATE
        tristate
        default n
@@ -1884,6 +1886,13 @@ config FB_DB9000
 	  say M here and read <file:Documentation/kbuild/modules.txt>.
 
 	  If unsure, say N.
+
+config FB_DB9000_DRM
+	bool "DB9000 LCD DRM support"
+	depends on FB_DB9000 && DRM_MALI && GPU_MALI && GPU_MALI_UMP
+	default y
+	---help---
+	  Enable DB9000 support for DRM.
 
 config FB_DB9000_OVERLAY
 	bool "Support DB9000 Overlay(s) as framebuffer"

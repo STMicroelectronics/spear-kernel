@@ -21,9 +21,7 @@
 #include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
-#include <plat/jpeg.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
@@ -166,18 +164,12 @@ static void __init spear300_evb_init(void)
 {
 	unsigned int i;
 
-	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, NULL);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
-
 	/* set keyboard plat data */
 	kbd_set_plat_data(&spear300_kbd_device, &kbd_data);
 
 	/* set nand0 device's plat data */
 	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);

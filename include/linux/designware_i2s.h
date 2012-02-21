@@ -22,9 +22,8 @@
 #ifndef DESIGNWARE_I2S_H
 #define DESIGNWARE_I2S_H
 
-#include <linux/platform_device.h>
-#include <linux/dw_dmac.h>
-#include <sound/pcm.h>
+#include <linux/dmaengine.h>
+#include <linux/types.h>
 
 struct i2s_platform_data {
 	#define PLAY	(1 << 0)
@@ -35,6 +34,7 @@ struct i2s_platform_data {
 
 	void *play_dma_data;
 	void *capture_dma_data;
+	bool (*filter)(struct dma_chan *chan, void *slave);
 };
 
 /* I2S DMA registers */

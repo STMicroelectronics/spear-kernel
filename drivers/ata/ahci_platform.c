@@ -198,7 +198,7 @@ static int __devexit ahci_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ahci_suspend(struct device *dev)
+static int __ahci_suspend(struct device *dev, bool reset)
 {
 	int ret = 0;
 	struct ata_host *host = dev_get_drvdata(dev);
@@ -211,6 +211,9 @@ static int ahci_suspend(struct device *dev)
 		return ret;
 	}
 
+	if (!reset)
+		goto __suspend;
+
 	ret = ahci_reset_controller(host);
 	if (ret) {
 		dev_err(dev, "can't reset host controller\n");
@@ -220,6 +223,7 @@ static int ahci_suspend(struct device *dev)
 	if (pdata->exit)
 		pdata->exit(dev);
 
+__suspend:
 #ifdef CONFIG_HAVE_CLK
 	clk_disable(hpriv->clk);
 #endif
@@ -227,7 +231,7 @@ static int ahci_suspend(struct device *dev)
 	return ret;
 }
 
-static int ahci_resume(struct device *dev)
+static int __ahci_resume(struct device *dev, bool reset)
 {
 	int ret = 0;
 	struct ata_host *host = dev_get_drvdata(dev);
@@ -237,6 +241,10 @@ static int ahci_resume(struct device *dev)
 #ifdef CONFIG_HAVE_CLK
 	clk_enable(hpriv->clk);
 #endif
+
+	if (!reset)
+		goto __resume;
+
 	if (pdata->init) {
 		ret = pdata->init(dev, hpriv->mmio);
 		if (ret) {
@@ -252,6 +260,7 @@ static int ahci_resume(struct device *dev)
 	}
 
 	ahci_init_controller(host);
+__resume:
 	ata_host_resume(host);
 
 	return ret;
@@ -264,11 +273,31 @@ err_init:
 	return ret;
 }
 
+static int ahci_suspend(struct device *dev)
+{
+	return __ahci_suspend(dev, true);
+}
+
+static int ahci_resume(struct device *dev)
+{
+	return __ahci_resume(dev, true);
+}
+
+static int ahci_freeze(struct device *dev)
+{
+	return __ahci_suspend(dev, false);
+}
+
+static int ahci_thaw(struct device *dev)
+{
+	return __ahci_resume(dev, false);
+}
+
 static const struct dev_pm_ops ahci_pm_ops = {
 	.suspend_noirq = ahci_suspend,
 	.resume_noirq = ahci_resume,
-	.freeze_noirq = ahci_suspend,
-	.thaw_noirq = ahci_resume,
+	.freeze_noirq = ahci_freeze,
+	.thaw_noirq = ahci_thaw,
 	.poweroff = ahci_suspend,
 	.restore = ahci_resume,
 };

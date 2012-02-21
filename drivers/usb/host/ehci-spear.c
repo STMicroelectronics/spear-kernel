@@ -11,8 +11,9 @@
 * more details.
 */
 
-#include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/jiffies.h>
+#include <linux/platform_device.h>
 
 struct spear_ehci {
 	struct ehci_hcd ehci;
@@ -101,12 +102,12 @@ static int ehci_spear_drv_suspend(struct device *dev)
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(10);
 
-	/*
-	 * Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible. The PM and USB cores make sure that
+	/* Root hub was already suspended. Disable irq emission and
+	 * mark HW unaccessible.  The PM and USB cores make sure that
 	 * the root hub is either suspended or stopped.
 	 */
 	spin_lock_irqsave(&ehci->lock, flags);
+	ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(dev));
 	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
 	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
 	spin_unlock_irqrestore(&ehci->lock, flags);
@@ -122,10 +123,20 @@ static int ehci_spear_drv_resume(struct device *dev)
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(100);
 
+	if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
+		int	mask = INTR_MASK;
+
+		ehci_prepare_ports_for_controller_resume(ehci);
+		if (!hcd->self.root_hub->do_remote_wakeup)
+			mask &= ~STS_PCD;
+		ehci_writel(ehci, mask, &ehci->regs->intr_enable);
+		ehci_readl(ehci, &ehci->regs->intr_enable);
+		return 0;
+	}
+
 	usb_root_hub_lost_power(hcd->self.root_hub);
 
-	/*
-	 * Else reset, to cope with power loss or flush-to-storage
+	/* Else reset, to cope with power loss or flush-to-storage
 	 * style "resume" having let BIOS kick in during reboot.
 	 */
 	(void) ehci_halt(ehci);
@@ -149,10 +160,8 @@ static int ehci_spear_drv_resume(struct device *dev)
 	return 0;
 }
 
-static const struct dev_pm_ops ehci_spear_pm_ops = {
-	.suspend = ehci_spear_drv_suspend,
-	.resume = ehci_spear_drv_resume,
-};
+static SIMPLE_DEV_PM_OPS(ehci_spear_pm_ops, ehci_spear_drv_suspend,
+		ehci_spear_drv_resume);
 #endif /* CONFIG_PM */
 
 static int spear_ehci_hcd_drv_probe(struct platform_device *pdev)

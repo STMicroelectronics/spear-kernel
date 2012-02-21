@@ -566,6 +566,9 @@ static void l3g4200d_input_poll_func(struct input_polled_dev *dev)
 	struct l3g4200d_t data_out;
 	int err = -EIO;
 
+	if (!gyro->hw_initialized)
+		return;
+
 	mutex_lock(&gyro->lock);
 	err = l3g4200d_get_data(gyro, &data_out);
 	if (err < 0)
@@ -834,23 +837,11 @@ static int l3g4200d_suspend(struct device *dev)
 static int l3g4200d_resume(struct device *dev)
 {
 	struct l3g4200d_data *gyro = dev_get_drvdata(dev);
-	size_t err = 0;
-
-	l3g4200d_device_power_on(gyro);
-	err = l3g4200d_update_fs_range(gyro, gyro->params.poll_rate_ms);
-	if (err < 0) {
-		dev_err(dev, "update_fs_range failed\n");
-		return err;
-	}
-
-	err = l3g4200d_update_odr(gyro, gyro->pdata->poll_interval);
-	if (err < 0) {
-		dev_err(dev, "update_odr failed\n");
-		return err;
-	}
 
 	if (!atomic_read(&gyro->enabled))
-		l3g4200d_device_power_off(gyro);
+		return 0;
+
+	l3g4200d_device_power_on(gyro);
 
 	return 0;
 }
@@ -858,6 +849,10 @@ static int l3g4200d_resume(struct device *dev)
 static const struct dev_pm_ops l3g4200d_pm = {
 	.suspend = l3g4200d_suspend,
 	.resume = l3g4200d_resume,
+	.freeze = l3g4200d_suspend,
+	.thaw = l3g4200d_resume,
+	.poweroff = l3g4200d_suspend,
+	.restore = l3g4200d_resume,
 };
 #endif
 

@@ -17,34 +17,30 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>
+#include <linux/spear_dma.h>
 #include <sound/soc.h>
-#include <mach/spdif_out.h>
+#include <mach/spdif.h>
 #include "spdif_out_regs.h"
 
+static int spdif_out_mute;
+
+struct spdif_out_params {
+	u32 rate;
+	u32 core_freq;
+};
+
 struct spdif_out_dev {
-	struct device *dev;
 	struct clk *clk;
-	void *dma_params;
+	struct dma_data dma_params;
+	struct spdif_out_params saved_params;
+	u32 running;
 	void *io_base;
 };
 
-static int spdif_out_startup(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *cpu_dai)
+static void spdif_out_configure(struct spdif_out_dev *host)
 {
-	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
-	int ret;
-
-	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
-		return -EINVAL;
-
-	snd_soc_dai_set_dma_data(cpu_dai, substream, host->dma_params);
-
-	ret = clk_enable(host->clk);
-	if (ret)
-		return ret;
-
 	writel(SPDIF_OUT_RESET, host->io_base + SPDIF_OUT_SOFT_RST);
-	msleep(1);
+	mdelay(1);
 	writel(readl(host->io_base + SPDIF_OUT_SOFT_RST) & ~SPDIF_OUT_RESET,
 			host->io_base + SPDIF_OUT_SOFT_RST);
 
@@ -55,6 +51,25 @@ static int spdif_out_startup(struct snd_pcm_substream *substream,
 
 	writel(0x7F, host->io_base + SPDIF_OUT_INT_STA_CLR);
 	writel(0x7F, host->io_base + SPDIF_OUT_INT_EN_CLR);
+}
+
+static int spdif_out_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai)
+{
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret;
+
+	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
+		return -EINVAL;
+
+	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)&host->dma_params);
+
+	ret = clk_enable(host->clk);
+	if (ret)
+		return ret;
+
+	host->running = true;
+	spdif_out_configure(host);
 
 	return 0;
 }
@@ -68,7 +83,22 @@ static void spdif_out_shutdown(struct snd_pcm_substream *substream,
 		return;
 
 	clk_disable(host->clk);
+	host->running = false;
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
+}
+
+static void spdif_out_clock(struct spdif_out_dev *host, u32 core_freq,
+		u32 rate)
+{
+	u32 divider, ctrl;
+
+	clk_set_rate(host->clk, core_freq);
+	divider = DIV_ROUND_CLOSEST(clk_get_rate(host->clk), (rate * 128));
+
+	ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
+	ctrl &= ~SPDIF_DIVIDER_MASK;
+	ctrl |= (divider << SPDIF_DIVIDER_SHIFT) & SPDIF_DIVIDER_MASK;
+	writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
 }
 
 static int spdif_out_hw_params(struct snd_pcm_substream *substream,
@@ -76,7 +106,7 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
 	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
-	u32 rate, ctrl, divider, spdif_core_freq;
+	u32 rate, core_freq;
 
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return -EINVAL;
@@ -92,7 +122,7 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 		 * The clock is multiplied by 10 to bring it to feasible range
 		 * of frequencies for sscg
 		 */
-		spdif_core_freq = 64000 * 128 * 10;	/* 81.92 MHz */
+		core_freq = 64000 * 128 * 10;	/* 81.92 MHz */
 		break;
 	case 5512:
 	case 11025:
@@ -100,23 +130,19 @@ static int spdif_out_hw_params(struct snd_pcm_substream *substream,
 	case 44100:
 	case 88200:
 	case 176400:
-		spdif_core_freq = 176400 * 128;	/* 22.5792 MHz */
+		core_freq = 176400 * 128;	/* 22.5792 MHz */
 		break;
 	case 48000:
 	case 96000:
 	case 192000:
 	default:
-		spdif_core_freq = 192000 * 128;	/* 24.576 MHz */
+		core_freq = 192000 * 128;	/* 24.576 MHz */
 		break;
 	}
 
-	clk_set_rate(host->clk, spdif_core_freq);
-	divider = DIV_ROUND_CLOSEST(clk_get_rate(host->clk), (rate * 128));
-
-	ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
-	ctrl &= ~SPDIF_DIVIDER_MASK;
-	ctrl |= (divider << SPDIF_DIVIDER_SHIFT) & SPDIF_DIVIDER_MASK;
-	writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
+	spdif_out_clock(host, core_freq, rate);
+	host->saved_params.core_freq = core_freq;
+	host->saved_params.rate = rate;
 
 	return 0;
 }
@@ -135,10 +161,14 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
-		ctrl &= ~SPDIF_OPMODE_MASK;
-		ctrl |= SPDIF_OPMODE_AUD_DATA | SPDIF_STATE_NORMAL;
-		writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
+			ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
+			ctrl &= ~SPDIF_OPMODE_MASK;
+			if (!spdif_out_mute)
+				ctrl |= SPDIF_OPMODE_AUD_DATA |
+					SPDIF_STATE_NORMAL;
+			else
+				ctrl |= SPDIF_OPMODE_MUTE_PCM;
+			writel(ctrl, host->io_base + SPDIF_OUT_CTRL);
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -157,7 +187,67 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	return ret;
 }
 
-static const struct snd_soc_dai_ops spdif_out_dai_ops = {
+static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
+{
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
+	u32 val;
+
+	spdif_out_mute = mute;
+	val = readl(host->io_base + SPDIF_OUT_CTRL);
+	val &= ~SPDIF_OPMODE_MASK;
+
+	if (mute)
+		val |= SPDIF_OPMODE_MUTE_PCM;
+	else {
+		if (host->running)
+			val |= SPDIF_OPMODE_AUD_DATA | SPDIF_STATE_NORMAL;
+		else
+			val |= SPDIF_OPMODE_OFF;
+	}
+
+	writel(val, host->io_base + SPDIF_OUT_CTRL);
+	return 0;
+}
+
+static int spdif_mute_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = spdif_out_mute;
+	return 0;
+}
+
+static int spdif_mute_put(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_card *card = codec->card;
+	struct snd_soc_pcm_runtime *rtd = card->rtd;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+
+	if (spdif_out_mute == ucontrol->value.integer.value[0])
+		return 0;
+
+	spdif_digital_mute(cpu_dai, ucontrol->value.integer.value[0]);
+
+	return 1;
+}
+static const struct snd_kcontrol_new spdif_out_controls[] = {
+	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", (unsigned long)&spdif_out_mute,
+			spdif_mute_get, spdif_mute_put),
+};
+
+int spdif_soc_dai_probe(struct snd_soc_dai *dai)
+{
+	struct snd_soc_card *card = dai->card;
+	struct snd_soc_pcm_runtime *rtd = card->rtd;
+	struct snd_soc_codec *codec = rtd->codec;
+
+	return snd_soc_add_controls(codec, spdif_out_controls,
+				ARRAY_SIZE(spdif_out_controls));
+}
+
+static struct snd_soc_dai_ops spdif_out_dai_ops = {
+	.digital_mute	= spdif_digital_mute,
 	.startup	= spdif_out_startup,
 	.shutdown	= spdif_out_shutdown,
 	.trigger	= spdif_out_trigger,
@@ -173,13 +263,14 @@ struct snd_soc_dai_driver spdif_out_dai = {
 				 SNDRV_PCM_RATE_192000),
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
-	.ops = &spdif_out_dai_ops,
+	.probe = spdif_soc_dai_probe,
+	.ops = (struct snd_soc_dai_ops *)&spdif_out_dai_ops,
 };
 
 static int spdif_out_probe(struct platform_device *pdev)
 {
 	struct spdif_out_dev *host;
-	struct spdif_out_platform_data *pdata;
+	struct spdif_platform_data *pdata;
 	struct resource *res;
 	int ret;
 
@@ -212,8 +303,11 @@ static int spdif_out_probe(struct platform_device *pdev)
 
 	pdata = dev_get_platdata(&pdev->dev);
 
-	host->dev = &pdev->dev;
-	host->dma_params = pdata->dma_params;
+	host->dma_params.data = pdata->dma_params;
+	host->dma_params.addr = res->start + SPDIF_OUT_FIFO_DATA;
+	host->dma_params.max_burst = 16;
+	host->dma_params.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	host->dma_params.filter = pdata->filter;
 
 	dev_set_drvdata(&pdev->dev, host);
 
@@ -238,12 +332,49 @@ static int spdif_out_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int spdif_out_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
+
+	if (host->running)
+		clk_disable(host->clk);
+
+	return 0;
+}
+
+static int spdif_out_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
+
+	if (host->running) {
+		clk_enable(host->clk);
+		spdif_out_configure(host);
+		spdif_out_clock(host, host->saved_params.core_freq,
+				host->saved_params.rate);
+	}
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(spdif_out_dev_pm_ops, spdif_out_suspend, \
+		spdif_out_resume);
+
+#define SPDIF_OUT_DEV_PM_OPS (&spdif_out_dev_pm_ops)
+
+#else
+#define SPDIF_OUT_DEV_PM_OPS NULL
+
+#endif
+
 static struct platform_driver spdif_out_driver = {
 	.probe		= spdif_out_probe,
 	.remove		= spdif_out_remove,
 	.driver		= {
 		.name	= "spdif-out",
 		.owner	= THIS_MODULE,
+		.pm	= SPDIF_OUT_DEV_PM_OPS,
 	},
 };
 

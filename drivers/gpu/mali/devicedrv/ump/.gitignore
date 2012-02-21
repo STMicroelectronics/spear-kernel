@@ -1,0 +1,10 @@
+#
+# Adding rule to not ignore version files
+#
+!.version
+
+# Ignoring symbolic link to architecture
+# (depends on compilation option "CONFIG=")
+arch
+# from module compilation:
+Module.symvers

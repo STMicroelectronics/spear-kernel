@@ -1,0 +1,1 @@
+obj-$(CONFIG_VIDEO_SPEAR_VIDEODEC_MEMALLOC)	+= memalloc.o

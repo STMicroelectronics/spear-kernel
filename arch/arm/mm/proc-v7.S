@@ -232,13 +232,16 @@ ENTRY(cpu_v7_do_resume)
 	mcr	p15, 0, r7, c2, c0, 0	@ TTB 0
 	mcr	p15, 0, r8, c2, c0, 1	@ TTB 1
 	mcr	p15, 0, ip, c2, c0, 2	@ TTB control register
-	mcr	p15, 0, r10, c1, c0, 1	@ Auxillary control register
+	mrc	p15, 0, r4, c1, c0, 1	@ Read Auxiliary control register
+	teq	r4, r10			@ Is it already set?
+	mcrne	p15, 0, r10, c1, c0, 1	@ No, so write it
 	mcr	p15, 0, r11, c1, c0, 2	@ Co-processor access control
 	ldr	r4, =PRRR		@ PRRR
 	ldr	r5, =NMRR		@ NMRR
 	mcr	p15, 0, r4, c10, c2, 0	@ write PRRR
 	mcr	p15, 0, r5, c10, c2, 1	@ write NMRR
 	isb
+	dsb
 	mov	r0, r9			@ control register
 	mov	r2, r7, lsr #14		@ get TTB0 base
 	mov	r2, r2, lsl #14
@@ -401,9 +404,9 @@ ENTRY(v7_processor_functions)
 	.word	cpu_v7_dcache_clean_area
 	.word	cpu_v7_switch_mm
 	.word	cpu_v7_set_pte_ext
-	.word	0
-	.word	0
-	.word	0
+	.word	cpu_v7_suspend_size
+	.word	cpu_v7_do_suspend
+	.word	cpu_v7_do_resume
 	.size	v7_processor_functions, . - v7_processor_functions
 
 	.section ".rodata"

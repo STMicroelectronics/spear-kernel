@@ -26,6 +26,7 @@
  * - etm: etm trace module
  * - hdmi_rx: hdmi receiver
  * - hdmi_tx: hdmi transmitter
+ * - cam0: camera sensor connected to camera device 0 of SoC
  * - vga:
  * - sata: It is not a separate physical plug board but a board
  *   configuration
@@ -51,7 +52,7 @@
  * can contain string values mentioned above in board descriptions"
  *
  * More than one board can be requested by passing ',' separated board list, eg:
- * bootargs: console=ttyAMA0,115200 pb=rgmii,hdmi_tx
+ * bootargs: console=ttyAMA0,115200 pb=rgmii,hdmi_tx,cam0
  */
 
 #include <linux/ad9889b.h>
@@ -64,7 +65,10 @@
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
-#include <mach/db9000fb_info.h>
+#include <video/db9000fb.h>
+#include <media/soc_camera.h>
+#include <media/vip.h>
+#include <plat/i2c.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
@@ -95,15 +99,15 @@
 		}							\
 									\
 		strcpy(pb->name, #pb_name);				\
-		pb->pmx_devs = pb_name##_pb_pmx_devs;			\
-		pb->rm_adevs = pb_name##_pb_rm_adevs;			\
-		pb->add_adevs = pb_name##_pb_add_adevs;			\
-		pb->rm_pdevs = pb_name##_pb_rm_pdevs;			\
-		pb->rm_spi_devs = pb_name##_pb_rm_spi_devs;		\
-		pb->add_spi_devs = pb_name##_pb_add_spi_devs;		\
-		pb->rm_i2c_devs = pb_name##_pb_rm_i2c_devs;		\
-		pb->add_i2c_devs = pb_name##_pb_add_i2c_devs;		\
-		pb->add_pdevs = pb_name##_pb_add_pdevs;			\
+		pb->pmx_devs = (struct pmx_dev **) pb_name##_pb_pmx_devs;		\
+		pb->rm_adevs = (struct amba_device **) pb_name##_pb_rm_adevs;		\
+		pb->add_adevs = (struct amba_device **) pb_name##_pb_add_adevs;		\
+		pb->rm_pdevs = (struct platform_device **) pb_name##_pb_rm_pdevs;	\
+		pb->add_pdevs = (struct platform_device **) pb_name##_pb_add_pdevs;	\
+		pb->rm_spi_devs = (struct spi_board_info **) pb_name##_pb_rm_spi_devs;	\
+		pb->add_spi_devs = (struct spi_board_info **) pb_name##_pb_add_spi_devs;\
+		pb->rm_i2c_devs = (struct i2c_dev_info **) pb_name##_pb_rm_i2c_devs;	\
+		pb->add_i2c_devs = (struct i2c_dev_info **) pb_name##_pb_add_i2c_devs;	\
 		pb->pmx_cnt = ARRAY_SIZE(pb_name##_pb_pmx_devs);	\
 		pb->rm_acnt = ARRAY_SIZE(pb_name##_pb_rm_adevs);	\
 		pb->add_acnt = ARRAY_SIZE(pb_name##_pb_add_adevs);	\
@@ -117,6 +121,30 @@
 									\
 		pr_info("Adding plug board: %s\n", #pb_name);		\
 	} while (0)
+
+/*
+ * FIXME: Update this later when the HDMI receiver chip driver is available:
+ *
+ * 1. Here, we assume that the SIL9135A HDMI receiver chip supports
+ *    two inputs and a single output. The names of these macros can be
+ *    updated later.
+ * 2. Assume that SIL HDMI Rx chip supports all DV standards.
+ *    Also note that analog standards like PAL and NTSC is also supported by
+ *    VIP IP. So the STD supported by VIP driver will be a super-set
+ *    of these DV and analog standards.
+ */
+#define SIL9135A_INPUT		1
+#define SIL9135A_OUTPUT		2
+#define SIL9135A_I2C_ADDR	0x18
+#define SIL9135A_STD_ALL	(V4L2_DV_480P59_94 | V4L2_DV_576P50 |	\
+				V4L2_DV_720P24 | V4L2_DV_720P25 |	\
+				V4L2_DV_720P30 | V4L2_DV_720P50 |	\
+				V4L2_DV_720P59_94 | V4L2_DV_720P60 |	\
+				V4L2_DV_1080I29_97 | V4L2_DV_1080I30 |	\
+				V4L2_DV_1080I25 | V4L2_DV_1080I50 |	\
+				V4L2_DV_1080I60 | V4L2_DV_1080P24 |	\
+				V4L2_DV_1080P25 | V4L2_DV_1080P30 |	\
+				V4L2_DV_1080P50 | V4L2_DV_1080P60)
 
 struct plug_board {
 	struct pmx_dev **pmx_devs;
@@ -152,40 +180,22 @@ enum skip_device_type {
 
 /* string specifying which plug boards are requested */
 char spear1340_plug_board[MAX_REQ_PB] = {'\0', };
+static char pb_empty_array[] __initdata = {};
 
 
 /* Definitions specific to GMII plug board */
+#define gmii_pb_rm_adevs		pb_empty_array
+#define gmii_pb_rm_pdevs		pb_empty_array
+#define gmii_pb_add_adevs		pb_empty_array
+#define gmii_pb_add_pdevs		pb_empty_array
+#define gmii_pb_rm_spi_devs		pb_empty_array
+#define gmii_pb_add_spi_devs		pb_empty_array
+#define gmii_pb_rm_i2c_devs		pb_empty_array
+#define gmii_pb_add_i2c_devs		pb_empty_array
+
 /* padmux devices to enable */
 static struct pmx_dev *gmii_pb_pmx_devs[] = {
 	&spear1340_pmx_gmii,
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *gmii_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *gmii_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *gmii_pb_add_adevs[] __initdata = {
-};
-
-static struct platform_device *gmii_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *gmii_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *gmii_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *gmii_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *gmii_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init gmii_pb_init(void)
@@ -199,37 +209,18 @@ static void __init gmii_pb_init(void)
 
 
 /* Definitions specific to RGMII plug board */
+#define rgmii_pb_rm_adevs		pb_empty_array
+#define rgmii_pb_rm_pdevs		pb_empty_array
+#define rgmii_pb_add_adevs		pb_empty_array
+#define rgmii_pb_add_pdevs		pb_empty_array
+#define rgmii_pb_rm_spi_devs		pb_empty_array
+#define rgmii_pb_add_spi_devs		pb_empty_array
+#define rgmii_pb_rm_i2c_devs		pb_empty_array
+#define rgmii_pb_add_i2c_devs		pb_empty_array
+
 /* padmux devices to enable */
 static struct pmx_dev *rgmii_pb_pmx_devs[] = {
 	&spear1340_pmx_rgmii,
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *rgmii_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *rgmii_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *rgmii_pb_add_adevs[] __initdata = {
-};
-
-static struct platform_device *rgmii_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *rgmii_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *rgmii_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *rgmii_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *rgmii_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init rgmii_pb_init(void)
@@ -243,106 +234,132 @@ static void __init rgmii_pb_init(void)
 
 
 /* Definitions specific to ETM plug board */
-/* padmux devices to enable */
-static struct pmx_dev *etm_pb_pmx_devs[] = {
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *etm_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *etm_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *etm_pb_add_adevs[] __initdata = {
-};
-
-static struct platform_device *etm_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *etm_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *etm_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *etm_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *etm_pb_add_i2c_devs[] __initdata = {
-};
-
-static void __init etm_pb_init(void)
-{
-}
+#define etm_pb_pmx_devs			pb_empty_array
+#define etm_pb_rm_adevs			pb_empty_array
+#define etm_pb_rm_pdevs			pb_empty_array
+#define etm_pb_add_adevs		pb_empty_array
+#define etm_pb_add_pdevs		pb_empty_array
+#define etm_pb_rm_spi_devs		pb_empty_array
+#define etm_pb_add_spi_devs		pb_empty_array
+#define etm_pb_rm_i2c_devs		pb_empty_array
+#define etm_pb_add_i2c_devs		pb_empty_array
+#define etm_pb_init			NULL
 
 
 /* Definitions specific to HDMI RX plug board */
+#define hdmi_rx_pb_rm_adevs		pb_empty_array
+#define hdmi_rx_pb_rm_pdevs		pb_empty_array
+#define hdmi_rx_pb_add_adevs		pb_empty_array
+#define hdmi_rx_pb_rm_spi_devs		pb_empty_array
+#define hdmi_rx_pb_add_spi_devs		pb_empty_array
+#define hdmi_rx_pb_rm_i2c_devs		pb_empty_array
+#define hdmi_rx_pb_add_i2c_devs		pb_empty_array
+
+/* sil9135a hdmi rx chip related */
+
+/*
+ * As HDMI RX is a dummy subdev for completing the flow to test VideoIN IP
+ * So, only single path is sufficient for the testing
+ */
+static struct v4l2_input sil9135a_inputs[] = {
+	{
+		.index = 0,
+		.name = "VideoIN",
+		.type = V4L2_INPUT_TYPE_CAMERA,
+		.std = SIL9135A_STD_ALL,
+	}
+};
+
+/*
+ * this is the route info for connecting each input of the SIL9135A
+ * hdmi receiver to its output which eventually goes to vip.
+ * There is a one to one correspondence with sil9135a_inputs.
+ */
+static struct vip_subdev_route sil9135a_routes[] = {
+	{
+		.input = SIL9135A_INPUT,
+		.output = SIL9135A_OUTPUT,
+	}
+};
+
+/* info regarding the various subdevs connected to VIP */
+static struct vip_subdev_info vip_sdev_info[] = {
+	/* SIL9135A hdmi receiver */
+	{
+		.name = "sil9135a",
+		.grp_id = 0,
+		.num_inputs = ARRAY_SIZE(sil9135a_inputs),
+		.inputs = sil9135a_inputs,
+		.routes = sil9135a_routes,
+		.can_route = 1,
+		.board_info = {
+			I2C_BOARD_INFO("sil9135a", SIL9135A_I2C_ADDR),
+			/*
+			 * TODO: we can add some platform specific
+			 * data for HDMI receiver chip here, if needed.
+			 */
+		},
+	},
+};
+
+/*
+ * some of the VIP features cannot be programmed via standard V4L2
+ * ioctls, so we configure them here.
+ */
+static struct vip_config vip_config_info = {
+	.vsync_pol = POL_ACTIVE_LOW,
+	.hsync_pol = POL_ACTIVE_LOW,
+	.rgb_width = THIRTYTWO_BIT,
+	.vdo_mode = SINGLE_PORT,
+	.pix_clk_pol = POL_ACTIVE_LOW,
+};
+
+/*
+ * a lot of VIP subdev specific params can change with a change in the
+ * EVB being used, so we need to be careful while populating these
+ * details.
+ */
+static struct vip_plat_data vip_board_specific_data = {
+	.card_name = "spear_vip",
+	.config = &vip_config_info,
+	.subdev_info = vip_sdev_info,
+	.subdev_count = ARRAY_SIZE(vip_sdev_info),
+	.i2c_adapter_id = 0,
+	.is_field_end_gpio_based = 1,
+	.gpio_for_frame_end_intr = PLGPIO_100, /* I2S_OUT_DATA_3 */
+};
+
 /* padmux devices to enable */
 static struct pmx_dev *hdmi_rx_pb_pmx_devs[] = {
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *hdmi_rx_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *hdmi_rx_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *hdmi_rx_pb_add_adevs[] __initdata = {
+	&spear1340_pmx_vip_mux_cam0,
+	&spear1340_pmx_vip_mux_cam1,
+	&spear1340_pmx_vip_mux_cam2,
+	&spear1340_pmx_vip_mux_cam3,
 };
 
 static struct platform_device *hdmi_rx_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *hdmi_rx_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *hdmi_rx_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *hdmi_rx_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *hdmi_rx_pb_add_i2c_devs[] __initdata = {
+	&spear1340_vip_device,
 };
 
 static void __init hdmi_rx_pb_init(void)
 {
+	vip_set_vb_base(&vip_board_specific_data);
+
+	/* set vip plat data */
+	vip_set_plat_data(&spear1340_vip_device,
+				&vip_board_specific_data);
 }
 
 
 /* Definitions specific to HDMI TX plug board */
-/* padmux devices to enable */
-static struct pmx_dev *hdmi_tx_pb_pmx_devs[] = {
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *hdmi_tx_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *hdmi_tx_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *hdmi_tx_pb_add_adevs[] __initdata = {
-};
-
-static struct platform_device *hdmi_tx_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *hdmi_tx_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *hdmi_tx_pb_add_spi_devs[] __initdata = {
-};
+#define hdmi_tx_pb_pmx_devs		pb_empty_array
+#define hdmi_tx_pb_rm_adevs		pb_empty_array
+#define hdmi_tx_pb_rm_pdevs		pb_empty_array
+#define hdmi_tx_pb_add_adevs		pb_empty_array
+#define hdmi_tx_pb_add_pdevs		pb_empty_array
+#define hdmi_tx_pb_rm_spi_devs		pb_empty_array
+#define hdmi_tx_pb_add_spi_devs		pb_empty_array
+#define hdmi_tx_pb_rm_i2c_devs		pb_empty_array
 
 static struct ad9889b_pdata ad9889b_platdata = {
 	.irq_gpio = STMPE801_GPIO_7,
@@ -362,9 +379,6 @@ static struct i2c_dev_info spear1340_pb_i2c_hdmi_tx = {
 	.busnum = 0,
 };
 
-/* I2C devices to be removed */
-static struct i2c_dev_info *hdmi_tx_pb_rm_i2c_devs[] __initdata = {
-};
 /* I2C devices to be added */
 static struct i2c_dev_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
 	&spear1340_pb_i2c_hdmi_tx,
@@ -372,103 +386,81 @@ static struct i2c_dev_info *hdmi_tx_pb_add_i2c_devs[] __initdata = {
 
 static void __init hdmi_tx_pb_init(void)
 {
-	struct clk *i2s_sclk_clk;
-	struct i2s_platform_data *pdata
-		= dev_get_platdata(&spear1340_i2s_play_device.dev);
+	struct ad9889b_pdata *ad9889b_pdata
+		= spear1340_pb_i2c_board_hdmi_tx.platform_data;
 
-	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-	if (IS_ERR(i2s_sclk_clk))
-		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+	if (ad9889b_pdata->ain == HDMI_AUDIO_IN_I2S) {
+		struct clk *i2s_sclk_clk;
+		struct i2s_platform_data *i2s_pdata
+			= dev_get_platdata(&spear1340_i2s_play_device.dev);
 
-	if (clk_set_rate(i2s_sclk_clk, 3070000)) {
-		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
-		clk_put(i2s_sclk_clk);
+		i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+		if (IS_ERR(i2s_sclk_clk))
+			pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+
+		if (clk_set_rate(i2s_sclk_clk, 3070000)) {
+			pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+			clk_put(i2s_sclk_clk);
+		}
+
+		if (clk_enable(i2s_sclk_clk)) {
+			pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+			clk_put(i2s_sclk_clk);
+		}
+
+		i2s_pdata->swidth = 32;
 	}
-
-	if (clk_enable(i2s_sclk_clk)) {
-		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-		clk_put(i2s_sclk_clk);
-	}
-
-	pdata->swidth = 32;
 }
+
+
+/* Definitions specific to CAM plug board with single sensor mounted */
+#define cam0_pb_pmx_devs		pb_empty_array
+#define cam0_pb_rm_adevs		pb_empty_array
+#define cam0_pb_rm_pdevs		pb_empty_array
+#define cam0_pb_add_adevs		pb_empty_array
+#define cam0_pb_add_pdevs		pb_empty_array
+#define cam0_pb_rm_spi_devs		pb_empty_array
+#define cam0_pb_add_spi_devs		pb_empty_array
+#define cam0_pb_rm_i2c_devs		pb_empty_array
+#define cam0_pb_add_i2c_devs		pb_empty_array
+#define cam0_pb_init			NULL
 
 
 /* Definitions specific to VGA plug board */
-/* padmux devices to enable */
-static struct pmx_dev *vga_pb_pmx_devs[] = {
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *vga_pb_rm_adevs[] __initdata = {
-};
-
-static struct platform_device *vga_pb_rm_pdevs[] __initdata = {
-};
-
-/* Amba and platform devices to be added */
-static struct amba_device *vga_pb_add_adevs[] __initdata = {
-};
-
-static struct platform_device *vga_pb_add_pdevs[] __initdata = {
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *vga_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *vga_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *vga_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *vga_pb_add_i2c_devs[] __initdata = {
-};
-
-static void __init vga_pb_init(void)
-{
-}
+#define vga_pb_pmx_devs			pb_empty_array
+#define vga_pb_rm_adevs			pb_empty_array
+#define vga_pb_rm_pdevs			pb_empty_array
+#define vga_pb_add_adevs		pb_empty_array
+#define vga_pb_add_pdevs		pb_empty_array
+#define vga_pb_rm_spi_devs		pb_empty_array
+#define vga_pb_add_spi_devs		pb_empty_array
+#define vga_pb_rm_i2c_devs		pb_empty_array
+#define vga_pb_add_i2c_devs		pb_empty_array
+#define vga_pb_init			NULL
 
 /*
  * Definitions specific to SATA configuration
  * This is an exception as SATA is not a separate plug board but is a
  * change in normal evaulation board for supporting SATA.
  */
+#define sata_pb_rm_adevs		pb_empty_array
+#define sata_pb_add_adevs		pb_empty_array
+#define sata_pb_rm_spi_devs		pb_empty_array
+#define sata_pb_add_spi_devs		pb_empty_array
+#define sata_pb_rm_i2c_devs		pb_empty_array
+#define sata_pb_add_i2c_devs		pb_empty_array
+
 /* padmux devices to enable */
 static struct pmx_dev *sata_pb_pmx_devs[] = {
 	&spear1340_pmx_sata,
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *sata_pb_rm_adevs[] __initdata = {
 };
 
 static struct platform_device *sata_pb_rm_pdevs[] __initdata = {
 	&spear13xx_pcie_host0_device,
 };
 
-/* Amba and platform devices to be added */
-static struct amba_device *sata_pb_add_adevs[] __initdata = {
-};
-
 static struct platform_device *sata_pb_add_pdevs[] __initdata = {
 	&spear1340_sata0_device,
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *sata_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *sata_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *sata_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *sata_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init sata_pb_init(void)
@@ -483,39 +475,24 @@ static void __init sata_pb_init(void)
  * This is an exception as PCIe is not a separate plug board but is a
  * change in normal evaulation board for supporting PCIe.
  */
+#define pcie_pb_rm_adevs		pb_empty_array
+#define pcie_pb_add_adevs		pb_empty_array
+#define pcie_pb_rm_spi_devs		pb_empty_array
+#define pcie_pb_add_spi_devs		pb_empty_array
+#define pcie_pb_rm_i2c_devs		pb_empty_array
+#define pcie_pb_add_i2c_devs		pb_empty_array
+
 /* padmux devices to enable */
 static struct pmx_dev *pcie_pb_pmx_devs[] = {
 	&spear1340_pmx_pcie,
-};
-
-/* Amba and platform devices to be removed, added previously by evb board */
-static struct amba_device *pcie_pb_rm_adevs[] __initdata = {
 };
 
 static struct platform_device *pcie_pb_rm_pdevs[] __initdata = {
 	&spear1340_sata0_device,
 };
 
-/* Amba and platform devices to be added */
-static struct amba_device *pcie_pb_add_adevs[] __initdata = {
-};
-
 static struct platform_device *pcie_pb_add_pdevs[] __initdata = {
 	&spear13xx_pcie_host0_device,
-};
-
-/* SPI devices to be removed */
-static struct spi_board_info *pcie_pb_rm_spi_devs[] __initdata = {
-};
-/* SPI devices to be added */
-static struct spi_board_info *pcie_pb_add_spi_devs[] __initdata = {
-};
-
-/* I2C devices to be removed */
-static struct i2c_dev_info *pcie_pb_rm_i2c_devs[] __initdata = {
-};
-/* I2C devices to be added */
-static struct i2c_dev_info *pcie_pb_add_i2c_devs[] __initdata = {
 };
 
 static void __init pcie_pb_init(void)
@@ -552,6 +529,8 @@ static int make_pb_list(struct list_head *pb_list)
 			INIT_PB(hdmi_rx, pb);
 		} else if (!strcmp(pb_name, "hdmi_tx")) {
 			INIT_PB(hdmi_tx, pb);
+		} else if (!strcmp(pb_name, "cam0")) {
+			INIT_PB(cam0, pb);
 		} else if (!strcmp(pb_name, "vga")) {
 			INIT_PB(vga, pb);
 		} else if (!strcmp(pb_name, "sata")) {
@@ -671,7 +650,8 @@ int __init spear1340_pb_init(struct plug_board_info *pb_info)
 	list_for_each_entry(pb, &pb_list, node) {
 		pr_debug("%s: Initializing plug board\n", pb->name);
 
-		pb->pb_init();
+		if (pb->pb_init)
+			pb->pb_init();
 	}
 
 	list_for_each_entry(pb, &pb_list, node) {

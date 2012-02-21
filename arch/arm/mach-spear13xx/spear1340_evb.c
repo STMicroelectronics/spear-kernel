@@ -16,6 +16,7 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/i2c/l3g4200d.h>
+#include <linux/i2c/lsm303dlh.h>
 #include <linux/irq.h>
 #include <linux/mfd/stmpe.h>
 #include <linux/mtd/fsmc.h>
@@ -25,19 +26,19 @@
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
-#include <linux/stmpe610.h>
-#include <plat/adc.h>
+#include <video/db9000fb.h>
 #include <plat/fsmc.h>
+#include <plat/i2c.h>
 #include <plat/keyboard.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
-#include <mach/db9000fb_info.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 #include <media/soc_camera.h>
+#include <media/vip.h>
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 /* Variable specifying which plug boards are requested */
@@ -63,7 +64,7 @@ static struct i2c_board_info vs6725_camera_sensor_info = {
 /* Camera power: default is ON */
 static int vs6725_cam_power(struct device *dev, int val)
 {
-	int ret;
+	int ret = 0;
 	static bool gpio_avail;
 
 	if (!gpio_avail) {
@@ -73,7 +74,7 @@ static int vs6725_cam_power(struct device *dev, int val)
 			gpio_direction_output(STMPE801_GPIO_6, 0);
 		} else {
 			pr_err("gpio request fail for STMPE801_GPIO_6\n");
-			return ret;
+			goto out;
 		}
 
 		gpio_avail = true;
@@ -82,7 +83,18 @@ static int vs6725_cam_power(struct device *dev, int val)
 	/* turn on/off the CE pin for camera sensor */
 	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
 
-	return 0;
+	/*
+	 * Now check if we really were able to set the desired value on CE
+	 * pin of the sensor
+	 */
+	ret = gpio_get_value_cansleep(STMPE801_GPIO_6);
+	if (ret != val) {
+		pr_err("gpio get_val returned %d but expected %d\n", ret, val);
+		ret = -ERESTARTSYS;
+	}
+
+out:
+	return ret;
 }
 
 static struct soc_camera_link vs6725_cam3_sensor_iclink = {
@@ -152,12 +164,8 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.mask = 0x0,
 		.value = 0x0,
 	}, {
-		.address = SPEAR1340_PAD_FUNCTION_EN_3,
-		.mask = 0x0,
-		.value = 0x0,
-	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_4,
-		.mask = 0x0,
+		.mask = 0x00000020, /* enabling I2S_OUT_DATA_3 as PL-GPIO */
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_5,
@@ -189,6 +197,28 @@ static struct pmx_dev spear1340_pmx_plgpios = {
 	.name = "plgpios",
 	.modes = pmx_plgpios_modes,
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
+};
+
+/* Pad Multiplexing for LSM303DLH Accelerometer and Magnetometer device */
+static struct pmx_mux_reg lsm303_plgpios_mux[] = {
+	{
+		.address = SPEAR1340_PAD_FUNCTION_EN_3,
+		.mask = 0x1180, /* PLGPIO: 70, 71, 75 */
+		.value = 0x0,
+	},
+};
+
+static struct pmx_dev_mode lsm303_plgpios_modes[] = {
+	{
+		.mux_regs = lsm303_plgpios_mux,
+		.mux_reg_cnt = ARRAY_SIZE(lsm303_plgpios_mux),
+	},
+};
+
+struct pmx_dev spear1340_pmx_lsm303 = {
+	.name = "lsm303_acc_mag",
+	.modes = lsm303_plgpios_modes,
+	.mode_count = ARRAY_SIZE(lsm303_plgpios_modes),
 };
 
 /* padmux devices to enable */
@@ -231,6 +261,7 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1340_pmx_devs_grp,
 	&spear1340_pmx_rgmii,
 	&spear1340_pmx_sata,
+	&spear1340_pmx_lsm303,
 
 	/* Keep this entry at the bottom of table to override earlier setting */
 	&spear1340_pmx_plgpios,
@@ -266,6 +297,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
+	&spear1340_spdif_in_device,
 	&spear1340_spdif_out_device,
 	&spear13xx_wdt_device,
 
@@ -275,7 +307,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-	&spear1340_device_gpiokeys,
+	&spear1340_gpiokeys_device,
 #endif
 	&spear1340_i2c1_device,
 	&spear1340_pwm_device,
@@ -284,6 +316,10 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_otg_device,
 	&spear1340_sata0_device,
 	&spear1340_thermal_device,
+#ifdef CONFIG_DRM_MALI
+	&spear1340_device_mali_drm,
+#endif
+	&spear1340_video_dec_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {
@@ -356,6 +392,28 @@ static struct l3g4200d_gyr_platform_data l3g4200d_pdata = {
 	.axis_map_z = 2,
 };
 
+/* LSM303DLH Accelerometer and Magnetometer platform data */
+static struct lsm303dlh_platform_data lsm303dlh_a_pdata = {
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+	.name_a = "lsm303dlh_a",
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	.irq_a1 = PLGPIO_71,
+	.irq_a2 = PLGPIO_75,
+#endif
+};
+
+static struct lsm303dlh_platform_data lsm303dlh_m_pdata = {
+	.axis_map_x = 0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+	.name_m = "lsm303dlh_m",
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	.irq_m = PLGPIO_70,
+#endif
+};
+
 static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 	/* gyroscope board info */
 	.type = "l3g4200d_gyr",
@@ -365,6 +423,30 @@ static struct i2c_board_info spear1340_evb_i2c_board_l3g4200d_gyr = {
 
 struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr = {
 	.board = &spear1340_evb_i2c_board_l3g4200d_gyr,
+	.busnum = 0,
+};
+
+/* lsm303dlh accelerometer board info */
+static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_acc = {
+	.type = "lsm303dlh_a",
+	.addr = 0x19,
+	.platform_data = &lsm303dlh_a_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_a = {
+	.board = &spear1340_evb_i2c_lsm303dlh_acc,
+	.busnum = 0,
+};
+
+/* lsm303dlh magnetometer board info */
+static struct i2c_board_info spear1340_evb_i2c_lsm303dlh_mag = {
+	.type = "lsm303dlh_m",
+	.addr = 0x1E,
+	.platform_data = &lsm303dlh_m_pdata,
+};
+
+struct i2c_dev_info spear1340_evb_i2c_lsm303dlh_m = {
+	.board = &spear1340_evb_i2c_lsm303dlh_mag,
 	.busnum = 0,
 };
 
@@ -403,6 +485,8 @@ static struct i2c_dev_info *i2c_devs[] __initdata = {
 	&spear1340_evb_i2c_l3g4200d_gyr,
 	&spear1340_evb_i2c_eeprom0,
 	&spear1340_evb_i2c_eeprom1,
+	&spear1340_evb_i2c_lsm303dlh_a,
+	&spear1340_evb_i2c_lsm303dlh_m,
 	&spear1340_evb_i2c_sta529,
 };
 
@@ -425,28 +509,6 @@ DECLARE_SPI_CS_CONTROL(0, dev, SPEAR1340_SSP_CS_SEL_CS2);
 DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
-static struct stmpe610_pdata stmpe610_spi_pdata = {
-	.irq_gpio = GPIO1_6,
-	.irq_type = IRQ_TYPE_EDGE_FALLING,
-	.fifo_threshhold = 1,
-	.tracking_index = TI_0,
-	.operating_mode = XYZ_ACQUISITION,
-	.average_ctrl = SAMPLES_2,
-	.touch_det_delay = TD_500US,
-	.settling_time = ST_500US,
-	.x_min = 0x00,
-	.x_max = 0xFFF,
-	.y_min = 0x00,
-	.y_max = 0xFFF,
-	.sample_time = SAMP_TIME_80,
-	.mod_12b = MOD_12B,
-	.ref_sel = REF_SEL_INT,
-	.adc_freq = ADC_FREQ_3250K,
-	.fraction_z = 7,
-	.i_drive = IDRIVE_50_80MA,
-};
-
-/* spi0 stmpe610 Chip Select Control function */
 DECLARE_SPI_CS_CONTROL(0, ts, SPEAR1340_SSP_CS_SEL_CS1);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
@@ -462,6 +524,30 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.cs_control = spi0_ts_cs_control,
 };
 
+static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
+	.sample_time = 4, /* 80 clocks */
+	.mod_12b = 1, /* 12 bit */
+	.ref_sel = 0, /* Internal */
+	.adc_freq = 1, /* 3.25 MHz */
+	.ave_ctrl = 1, /* 2 samples */
+	.touch_det_delay = 2, /* 100 us */
+	.settling = 2, /* 500 us */
+	.fraction_z = 7,
+	.i_drive = 1, /* 50 to 80 mA */
+};
+
+static struct stmpe_platform_data stmpe610_pdata = {
+	.id = 0,
+	.blocks = STMPE_BLOCK_TOUCHSCREEN,
+	.irq_base = SPEAR_STMPE610_INT_BASE,
+	.irq_trigger = IRQ_TYPE_EDGE_FALLING,
+	.irq_invert_polarity = false,
+	.autosleep = false,
+	.irq_over_gpio = true,
+	.irq_gpio = PLGPIO_100,
+	.ts = &stmpe610_ts_pdata,
+};
+
 struct spi_board_info spear1340_evb_spi_m25p80 = {
 	.modalias = "m25p80",
 	.controller_data = &spi0_flash_chip_info,
@@ -471,8 +557,8 @@ struct spi_board_info spear1340_evb_spi_m25p80 = {
 	.mode = SPI_MODE_3,
 };
 struct spi_board_info spear1340_evb_spi_stmpe610 = {
-	.modalias = "stmpe610-spi",
-	.platform_data = &stmpe610_spi_pdata,
+	.modalias = "stmpe610",
+	.platform_data = &stmpe610_pdata,
 	.controller_data = &spi0_ts_chip_info,
 	.max_speed_hz = 1000000,
 	.bus_num = 0,
@@ -500,14 +586,15 @@ static void spear1340_evb_fixup(struct machine_desc *desc, struct tag *tags,
 #if defined(CONFIG_FB_DB9000) || defined(CONFIG_FB_DB9000_MODULE)
 	spear13xx_panel_fixup(mi);
 #endif
+
+#ifdef CONFIG_VIDEO_SPEAR_VIP
+	vip_buffer_fixup(mi);
+#endif
 }
 
 static void __init spear1340_evb_init(void)
 {
 	unsigned int i;
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear13xx_adc_device, &spear13xx_dmac_device[0].dev);
 
 	/* set compact flash plat data */
 	set_arasan_cf_pdata(&spear13xx_cf_device, &cf_pdata);
@@ -537,7 +624,7 @@ static void __init spear1340_evb_init(void)
 	/* set nand device's plat data */
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 	nand_mach_init(FSMC_NAND_BW8);
 
 #if 0

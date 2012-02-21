@@ -304,13 +304,13 @@ extern struct pmx_dev spear1310_pmx_sata2;
 #define SPEAR1340_PMX_PWM2_AND_GPT0_TMR0_CPT_REG1_MASK		0x00400000
 #define SPEAR1340_PMX_PWM3_AND_GPT0_TMR1_CLK_REG1_MASK		0x00800000
 #define SPEAR1340_PMX_PWM0_AND_SSP0_CS1_REG1_MASK		0x02000000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG1_MASK		0xFC200000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM3_REG2_MASK		0x0000000F
-#define SPEAR1340_PMX_VIDEO_IN_REG2_MASK			0x00001EF0
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM2_REG2_MASK		0x007FE100
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG2_MASK		0xFF800000
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM1_REG3_MASK		0x00000003
-#define SPEAR1340_PMX_VIDEO_IN_AND_CAM0_REG3_MASK		0x00001FFC
+#define SPEAR1340_PMX_VIP_AND_CAM3_REG1_MASK			0xFC200000
+#define SPEAR1340_PMX_VIP_AND_CAM3_REG2_MASK			0x0000000F
+#define SPEAR1340_PMX_VIP_REG2_MASK				0x00001EF0
+#define SPEAR1340_PMX_VIP_AND_CAM2_REG2_MASK			0x007FE100
+#define SPEAR1340_PMX_VIP_AND_CAM1_REG2_MASK			0xFF800000
+#define SPEAR1340_PMX_VIP_AND_CAM1_REG3_MASK			0x00000003
+#define SPEAR1340_PMX_VIP_AND_CAM0_REG3_MASK			0x00001FFC
 #define SPEAR1340_PMX_SMI_REG3_MASK				0x0021E000
 #define SPEAR1340_PMX_SSP0_REG3_MASK				0x001E0000
 #define SPEAR1340_PMX_TS_AND_SSP0_CS2_REG3_MASK			0x00400000
@@ -361,16 +361,16 @@ extern struct pmx_dev spear1310_pmx_sata2;
 /* Write 0 to enable PWM0 */
 #define SPEAR1340_PMX_SSP0_CS1_MASK		(1 << 5)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM3_MASK			(1 << 6)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM2_MASK			(1 << 7)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM1_MASK			(1 << 8)
 
-/* Write 0 to enable VIDEO_IN */
+/* Write 0 to enable VIP */
 #define SPEAR1340_PMX_CAM0_MASK			(1 << 9)
 
 /* Write 0 to enable TS */
@@ -400,10 +400,10 @@ extern struct pmx_dev spear1340_pmx_pwm1;
 extern struct pmx_dev spear1340_pmx_pwm2;
 extern struct pmx_dev spear1340_pmx_pwm3;
 extern struct pmx_dev spear1340_pmx_ssp0_cs1;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam0;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam1;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam2;
-extern struct pmx_dev spear1340_pmx_video_in_mux_cam3;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam0;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam1;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam2;
+extern struct pmx_dev spear1340_pmx_vip_mux_cam3;
 extern struct pmx_dev spear1340_pmx_cam0;
 extern struct pmx_dev spear1340_pmx_cam1;
 extern struct pmx_dev spear1340_pmx_cam2;
@@ -511,6 +511,8 @@ void nand_select_bank(u32 bank, u32 busw);
 void spear13xx_l2x0_init(void);
 int spear13xx_eth_phy_clk_cfg(void *);
 void spear13xx_secondary_startup(void);
+void spear13xx_panel_fixup(struct meminfo *mi);
+void spear13xx_panel_init(struct platform_device *pdev);
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size);
 
 /* spear1300 declarations */
@@ -598,7 +600,7 @@ extern struct platform_device spear1340_camif3_device;
 extern struct platform_device spear1340_cec0_device;
 extern struct platform_device spear1340_cec1_device;
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-extern struct platform_device spear1340_device_gpiokeys;
+extern struct platform_device spear1340_gpiokeys_device;
 #endif
 extern struct platform_device spear1340_i2c1_device;
 extern struct platform_device spear1340_i2s_play_device;
@@ -609,8 +611,12 @@ extern struct platform_device spear1340_phy0_device;
 extern struct platform_device spear1340_plgpio_device;
 extern struct platform_device spear1340_pwm_device;
 extern struct platform_device spear1340_sata0_device;
+extern struct platform_device spear1340_spdif_in_device;
 extern struct platform_device spear1340_spdif_out_device;
 extern struct platform_device spear1340_thermal_device;
+extern struct platform_device spear1340_vip_device;
+extern struct platform_device spear1340_device_mali_drm;
+extern struct platform_device spear1340_video_dec_device;
 
 /* Add spear1340 spi devices structure declaration */
 extern struct spi_board_info spear1340_evb_spi_m25p80;

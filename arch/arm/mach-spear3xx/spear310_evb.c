@@ -20,10 +20,8 @@
 #include <linux/stmmac.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
-#include <plat/adc.h>
 #include <plat/fsmc.h>
 #include <plat/hdlc.h>
-#include <plat/jpeg.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/emi.h>
@@ -74,31 +72,39 @@ static struct platform_device spear310_phy_device = {
 };
 
 static struct macb_base_data spear310_macb1_data = {
+	.bus_id = 1,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x1,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x45, 0x67, 0x89},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb2_data = {
+	.bus_id = 2,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x3,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x22, 0x22, 0x22},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb3_data = {
+	.bus_id = 3,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x5,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x34, 0x56, 0x78},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 static struct macb_base_data spear310_macb4_data = {
+	.bus_id = 4,
 	.phy_mask = 0,
 	.gpio_num = -1,
 	.phy_addr = 0x7,
 	.mac_addr = {0xf2, 0xf2, 0xf2, 0x11, 0x11, 0x11},
+	.plat_mdio_control = spear3xx_macb_plat_mdio_control,
 };
 
 /* padmux devices to enable */
@@ -215,38 +221,13 @@ static struct spi_board_info __initdata spi_board_info[] = {
 	}
 };
 
-#define ENABLE_MEM_CLK	1
-static void macb_enable_mem_clk(void)
-{
-	u32 tmp;
-
-	/* Enable memory Port-1 clock */
-	tmp = readl(VA_AMEM_CLK_CFG) | ENABLE_MEM_CLK;
-	writel(tmp, VA_AMEM_CLK_CFG);
-
-	/*
-	 * Program the pad strengths of PLGPIO to drive the IO's
-	 * The Magic number being used have direct correlations
-	 * with the driving capabilities of the IO pads.
-	 */
-	writel(0x2f7bc210, VA_PLGPIO3_PAD_PRG);
-	writel(0x017bdef6, VA_PLGPIO4_PAD_PRG);
-
-}
-
 static void __init spear310_evb_init(void)
 {
 	unsigned int i;
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8);
-
-	/* set adc platform data */
-	set_adc_plat_data(&spear3xx_adc_device, NULL);
-
-	/* set jpeg configurations for DMA xfers */
-	set_jpeg_dma_configuration(&spear3xx_jpeg_device, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
 
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
@@ -255,7 +236,7 @@ static void __init spear310_evb_init(void)
 	i2c_register_default_devices();
 
 	/* initialize macb related data in macb plat data */
-	macb_enable_mem_clk();
+	spear3xx_macb_setup();
 	macb_set_plat_data(&spear310_eth_macb1_device, &spear310_macb1_data);
 	macb_set_plat_data(&spear310_eth_macb2_device, &spear310_macb2_data);
 	macb_set_plat_data(&spear310_eth_macb3_device, &spear310_macb3_data);
@@ -290,7 +271,7 @@ static void __init spear310_evb_init(void)
 
 MACHINE_START(SPEAR310_EVB, "ST-SPEAR310-EVB")
 	.boot_params	=	0x00000100,
-	.map_io		=	spear3xx_map_io,
+	.map_io		=	spear310_map_io,
 	.init_irq	=	spear3xx_init_irq,
 	.timer		=	&spear3xx_timer,
 	.init_machine	=	spear310_evb_init,

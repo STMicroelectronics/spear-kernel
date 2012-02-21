@@ -1897,69 +1897,56 @@ static int stmmac_dvr_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int stmmac_suspend(struct platform_device *pdev, pm_message_t state)
+static int stmmac_suspend(struct device *dev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct stmmac_priv *priv = netdev_priv(dev);
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct stmmac_priv *priv = netdev_priv(ndev);
 	int dis_ic = 0;
 
-	if (!dev || !netif_running(dev))
+	if (!ndev || !netif_running(ndev))
 		return 0;
+
+	if (priv->phydev)
+		phy_stop(priv->phydev);
 
 	spin_lock(&priv->lock);
 
-	if (state.event == PM_EVENT_SUSPEND) {
-		netif_device_detach(dev);
-		netif_stop_queue(dev);
-		if (priv->phydev)
-			phy_stop(priv->phydev);
+	netif_device_detach(ndev);
+	netif_stop_queue(ndev);
 
 #ifdef CONFIG_STMMAC_TIMER
-		priv->tm->timer_stop();
-		if (likely(priv->tm->enable))
-			dis_ic = 1;
+	priv->tm->timer_stop();
+	if (likely(priv->tm->enable))
+		dis_ic = 1;
 #endif
-		napi_disable(&priv->napi);
+	napi_disable(&priv->napi);
 
-		/* Stop TX/RX DMA */
-		priv->hw->dma->stop_tx(priv->ioaddr);
-		priv->hw->dma->stop_rx(priv->ioaddr);
-		/* Clear the Rx/Tx descriptors */
-		priv->hw->desc->init_rx_desc(priv->dma_rx, priv->dma_rx_size,
-					     dis_ic);
-		priv->hw->desc->init_tx_desc(priv->dma_tx, priv->dma_tx_size);
+	/* Stop TX/RX DMA */
+	priv->hw->dma->stop_tx(priv->ioaddr);
+	priv->hw->dma->stop_rx(priv->ioaddr);
+	/* Clear the Rx/Tx descriptors */
+	priv->hw->desc->init_rx_desc(priv->dma_rx, priv->dma_rx_size,
+			dis_ic);
+	priv->hw->desc->init_tx_desc(priv->dma_tx, priv->dma_tx_size);
 
-		/* Enable Power down mode by programming the PMT regs */
-		if (device_can_wakeup(priv->device))
-			priv->hw->mac->pmt(priv->ioaddr, priv->wolopts);
-		else
-			stmmac_disable_mac(priv->ioaddr);
-	} else {
-		priv->shutdown = 1;
-		/* Although this can appear slightly redundant it actually
-		 * makes fast the standby operation and guarantees the driver
-		 * working if hibernation is on media. */
-		stmmac_release(dev);
-	}
+	/* Enable Power down mode by programming the PMT regs */
+	if (device_can_wakeup(priv->device))
+		priv->hw->mac->pmt(priv->ioaddr, priv->wolopts);
+	else
+		stmmac_disable_mac(priv->ioaddr);
 
 	spin_unlock(&priv->lock);
+
 	return 0;
 }
 
-static int stmmac_resume(struct platform_device *pdev)
+int stmmac_resume(struct device *dev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct stmmac_priv *priv = netdev_priv(dev);
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct stmmac_priv *priv = netdev_priv(ndev);
 
-	if (!netif_running(dev))
+	if (!netif_running(ndev))
 		return 0;
-
-	if (priv->shutdown) {
-		/* Re-open the interface and re-init the MAC/DMA
-		   and the rings (i.e. on hibernation stage) */
-		stmmac_open(dev);
-		return 0;
-	}
 
 	spin_lock(&priv->lock);
 
@@ -1971,7 +1958,7 @@ static int stmmac_resume(struct platform_device *pdev)
 	if (device_can_wakeup(priv->device))
 		priv->hw->mac->pmt(priv->ioaddr, 0);
 
-	netif_device_attach(dev);
+	netif_device_attach(ndev);
 
 	/* Enable the MAC and DMA */
 	stmmac_enable_mac(priv->ioaddr);
@@ -1982,28 +1969,55 @@ static int stmmac_resume(struct platform_device *pdev)
 	priv->tm->timer_start(tmrate);
 #endif
 	napi_enable(&priv->napi);
+	netif_start_queue(ndev);
+	spin_unlock(&priv->lock);
 
 	if (priv->phydev)
 		phy_start(priv->phydev);
 
-	netif_start_queue(dev);
-
-	spin_unlock(&priv->lock);
 	return 0;
 }
+
+int stmmac_freeze(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+
+	if (!ndev || !netif_running(ndev))
+		return 0;
+
+	return stmmac_release(ndev);
+}
+
+int stmmac_restore(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+
+	if (!ndev || !netif_running(ndev))
+		return 0;
+
+	return stmmac_open(ndev);
+}
+
+static const struct dev_pm_ops stmmac_dev_pm_ops = {
+	.suspend = stmmac_suspend,
+	.resume = stmmac_resume,
+	.freeze = stmmac_freeze,
+	.thaw = stmmac_restore,
+	.poweroff = stmmac_freeze,
+	.restore = stmmac_restore,
+};
+
 #endif
 
 static struct platform_driver stmmac_driver = {
 	.driver = {
-		   .name = STMMAC_RESOURCE_NAME,
-		   },
+		.name = STMMAC_RESOURCE_NAME,
+#ifdef CONFIG_PM
+		.pm	= &stmmac_dev_pm_ops,
+#endif
+	},
 	.probe = stmmac_dvr_probe,
 	.remove = stmmac_dvr_remove,
-#ifdef CONFIG_PM
-	.suspend = stmmac_suspend,
-	.resume = stmmac_resume,
-#endif
-
 };
 
 /**

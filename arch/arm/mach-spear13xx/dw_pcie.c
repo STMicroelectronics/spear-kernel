@@ -797,6 +797,7 @@ static int __init pcie_init(void)
 	platform_driver_register(&pcie_driver);
 	if (pci.nr_controllers) {
 		pci_common_init(&pci);
+		pci_assign_unassigned_resources();
 		pr_info("pcie init successful\n");
 	}
 

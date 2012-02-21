@@ -24,7 +24,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-subdev.h>
 
-/* resolutons */
+/* supported resolutions */
 #define UXGA_WIDTH	1600
 #define UXGA_HEIGHT	1200
 #define SXGA_WIDTH	1280
@@ -44,10 +44,12 @@
 #define QQCIF_WIDTH	88
 #define QQCIF_HEIGHT	72
 
+/* max supported frame rate */
+#define MAX_FRAME_RATE	30
+
 /* vs6725 cropping windows params */
-/* FIXME: limit to a resolution of 512*512 for now */
-#define VS6725_MAX_WIDTH		512
-#define VS6725_MAX_HEIGHT		512
+#define VS6725_MAX_WIDTH		UXGA_WIDTH
+#define VS6725_MAX_HEIGHT		UXGA_HEIGHT
 #define VS6725_MIN_WIDTH		0
 #define VS6725_MIN_HEIGHT		0
 #define VS6725_COLUMN_SKIP		8
@@ -110,9 +112,6 @@
 #define USER_INTERFACE_REG_BASE		0x0
 #define HARDWARE_REG_BASE		0xD900
 #define LAST_REGISTER_ADDR		0xDA30
-
-/* FIXME: find a better way of doing this */
-#define SET_TO_ONE			1
 
 /* vs6725 i2c write address is 0x20 */
 
@@ -314,7 +313,7 @@
 #define FLASH_MODE			0x0240
 #define FLASH_RECOMMENDED		0x0248
 /* vs6725 anti-vignettte registers */
-#define DISABLE				0x0260
+#define AV_DISABLE			0x0260
 /* vs6725 special effect control registers */
 #define NEGATIVE			0x02C0
 #define SOLARISING			0x02C1
@@ -339,6 +338,7 @@
 
 struct vs6725 {
 	struct v4l2_subdev subdev;
+	struct soc_camera_link *icl;
 	int active_pipe;		/* whether pipe 0 or pipe 1 is active */
 	int saturation;
 	int contrast;
@@ -352,8 +352,8 @@ struct vs6725 {
 	bool hflip;
 	int model;			/* ident codes from v4l2-chip-ident.h */
 	struct v4l2_rect rect;		/* sensor cropping window */
-	enum v4l2_mbus_pixelcode code;
-	enum v4l2_colorspace colorspace;
+	struct v4l2_fract frame_rate;
+	struct v4l2_mbus_framefmt fmt;
 };
 
 enum vs6725_exposure_ctrl_mode {
@@ -442,17 +442,47 @@ enum vs6725_image_size {
 };
 
 /*
- * pixel codes supported by VS6725:
- * Note that by default the endianess is big-endian as defined by
- * OPF_DCTRL register
+ * formats supported by VS6725
  */
-static enum v4l2_mbus_pixelcode vs6725_codes[] = {
-	V4L2_MBUS_FMT_YUYV8_2X8,
-	V4L2_MBUS_FMT_UYVY8_2X8,
-	V4L2_MBUS_FMT_YVYU8_2X8,
-	V4L2_MBUS_FMT_VYUY8_2X8,
-	V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE,
-	V4L2_MBUS_FMT_RGB565_2X8_BE,
+struct vs6725_format {
+	enum v4l2_mbus_pixelcode mbus_code;
+	enum v4l2_colorspace colorspace;
+};
+
+static struct vs6725_format vs6725_formats[] = {
+	{
+		.mbus_code = V4L2_MBUS_FMT_YUYV8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_UYVY8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_YVYU8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_VYUY8_2X8,
+		.colorspace = V4L2_COLORSPACE_JPEG,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE,
+		.colorspace = V4L2_COLORSPACE_SRGB,
+	},
+	{
+		.mbus_code = V4L2_MBUS_FMT_RGB565_2X8_BE,
+		.colorspace = V4L2_COLORSPACE_SRGB,
+	},
+};
+
+/* default VS6725 format */
+static struct v4l2_mbus_framefmt vs6725_default_fmt = {
+	.width = VS6725_MAX_WIDTH - VS6725_MIN_WIDTH,
+	.height = VS6725_MAX_HEIGHT - VS6725_MIN_HEIGHT,
+	.code = V4L2_MBUS_FMT_YUYV8_2X8,
+	.field = V4L2_FIELD_NONE,
+	.colorspace = V4L2_COLORSPACE_JPEG,
 };
 
 /* useful in-case you need to write an array of registers */
@@ -977,19 +1007,16 @@ static struct regval_list vs6725_patch1[] = {
 	{0xe000, 0x01},
 	/* reset the MCU */
 	{0xffff, 0x00},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list vs6725_patch2[] = {
 	{0xc234, 0x01}, /* Core_Reg enable */
-	{0xd900, 0x06}, /* DCTRL */
-	{0xd904, 0x00}, /* YCBCR SETUP: no swap */
-	{0xda30, 0xFE}, /* PCLK_SETUP: CLK out the data at -ve edge */
-	{0xda10, 0x0d}, /* VSYNC Active HI, as per VESA specs */
-	{0xda0c, 0x0d}, /* HSYNC Active HI, as per VESA specs */
-	{0x0074, 0x01}, /* Set Divider to 1 */
-	{0x0030, 0x10}, /* Set Output Clock DeRating Factor to 16 */
+	{OPF_DCTRL, 0x06}, /* DCTRL */
+	{E_DIV, 0x01}, /* Set Divider to 1 */
+	{MAX_DERATING, 0x10}, /* Set Output Clock DeRating Factor to 16 */
 
 	/* ExposureAlgorithmControls: fpMinimumDesiredExposureTime_us */
 	{0x0124, 0x47},
@@ -1012,8 +1039,8 @@ static struct regval_list vs6725_patch2[] = {
 	{0xC345, 0xda}, /* line_length_req {LSB} */
 
 	/* ExposureAlgorithmControls */
-	{0x012E, 0x40},	/* fpDigitalGainCeiling (2.5-> 0x4080) MSB */
-	{0x012F, 0x80},	/* fpDigitalGainCeiling (2.5-> 0x4080} LSB */
+	{DIGITAL_GAIN_CEILING_HI, 0x40}, /* (2.5-> 0x4080) MSB */
+	{DIGITAL_GAIN_CEILING_LO, 0x80}, /* (2.5-> 0x4080} LSB */
 
 	/* ArcticControl */
 	{0x02d0, 0x00},	/* fInhibitAutomaticMode {VPIP_FALSE} */
@@ -1123,7 +1150,7 @@ static struct regval_list vs6725_patch2[] = {
 	 * Excursion: 271
 	 * MidPoint*2: 239
 	 */
-	{0x0046, 0x02},	/* CE0_OutputCoderControls TransformType_YCbCr_Custom */
+	{PIPE0_DATA_FORMAT, 0x02},	/* CE0_TransformType_YCbCr_Custom */
 	{0x0420, 0x01},	/* CE0_CoderOutputSignalRange uwLumaExcursion MSB */
 	{0x0421, 0x0f},	/* CE0_CoderOutputSignalRange uwLumaExcursion LSB */
 	{0x0422, 0x00},	/* CE0_CoderOutputSignalRange uwLumaMidpointTimes MSB */
@@ -1139,7 +1166,7 @@ static struct regval_list vs6725_patch2[] = {
 	 * Excursion: 271
 	 * MidPoint*2: 239
 	 */
-	{0x0056, 0x02},	/* CE1_OutputCoderControls TransformType_YCbCr_Custom */
+	{PIPE1_DATA_FORMAT, 0x02},	/* CE1_TransformType_YCbCr_Custom */
 	{0x0430, 0x01},	/* CE1_CoderOutputSignalRange uwLumaExcursion MSB */
 	{0x0431, 0x0f},	/* CE1_CoderOutputSignalRange uwLumaExcursion LSB */
 	{0x0432, 0x00},	/* CE1_CoderOutputSignalRange uwLumaMidpointTimes MSB */
@@ -1197,8 +1224,8 @@ static struct regval_list default_non_gui[] = {
 };
 
 static struct regval_list default_streaming[] = {
-	{0x00b5, 7},	/* bUserMinimumFrameRate_Hz */
-	{0x00b6, 30},	/* bUserMaximumFrameRate_Hz */
+	{USR_MIN_FRAME_RATE, 7},	/* bUserMinimumFrameRate_Hz */
+	{USR_MAX_FRAME_RATE, 30},	/* bUserMaximumFrameRate_Hz */
 
 	/* end of array */
 	{0x0000, 0x00},
@@ -1206,62 +1233,68 @@ static struct regval_list default_streaming[] = {
 
 static struct regval_list default_color[] = {
 	/* Pipe0 - VF - GammaR, G, B - 16 */
-	{0x0049, 16},
-	{0x004a, 16},
-	{0x004b, 16},
+	{PIPE0_GAMMA_R, 16},
+	{PIPE0_GAMMA_G, 16},
+	{PIPE0_GAMMA_B, 16},
 	/* Pipe1 - VF - GammaR, G, B - 16 */
-	{0x0059, 16},
-	{0x005a, 16},
-	{0x005b, 16},
+	{PIPE1_GAMMA_R, 16},
+	{PIPE1_GAMMA_G, 16},
+	{PIPE1_GAMMA_B, 16},
 	/* Set Contrast */
-	{0x0060, 115},
+	{CONTRAST, 115},
 	/* Set Colour Saturation */
-	{0x0061, 100},
+	{COLOR_SATURATION, 100},
 	/* Set Brightness */
-	{0x0062, 105},
+	{BRIGHTNESS, 105},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_exposure_ctrl[] = {
 	/* Set Anti-Flicker */
-	{0x017C, 0x4b},	/* FlickerDetect fpFlickerFrequency (100) {MSB} */
-	{0x017D, 0x20},	/* FlickerDetect fpFlickerFrequency (100) {LSB} */
+	{FLICKER_FREQ_HI, 0x4b},	/* fpFlickerFrequency (100) {MSB} */
+	{FLICKER_FREQ_LO, 0x20},	/* fpFlickerFrequency (100) {LSB} */
 	/* Set Exposure */
-	{0x00f1, 0x00},	/* ExposureControls bMetering {ExposureMetering_flat} */
-	{0x00f8, 0xFF},	/* ExposureControls iExposureCompensation */
+	{METERING, 0x00},		/* ExposureMetering_flat */
+	{EXP_COMPENSATION, 0xFF},	/* iExposureCompensation */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_sharpness[] = {
 	{0x0297, 40},	/* bUserPeakLoThresh */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_orientation[] = {
-	{0x0063, 0},	/* fHorizontalMirror */
-	{0x0064, 0},	/* fVerticalFlip */
+	{HORI_MIRROR, 0},	/* fHorizontalMirror */
+	{VERT_FLIP, 0},		/* fVerticalFlip */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_analog_binnining_off[] = {
 	/* Red gain */
-	{0x181, 0x80},
+	{MANU_RED_GAIN, 0x80},
 	/* Green gain */
-	{0x182, 0x80},
+	{MANU_GREEN_GAIN, 0x80},
 	/* Blue gain */
-	{0x183, 0x80},
+	{MANU_BLUE_GAIN, 0x80},
 	/* White balance mode */
-	{0x180, 0x1},
+	{WB_CTL_MODE, 0x1},
 	/* Applying sharpness default for stream 1 */
-	{0x4c, 0x5},
+	{PIPE0_PEAKING_GAIN, 0x5},
 	/* Applying sharpness default for stream 2 */
-	{0x5c, 0xf},
+	{PIPE1_PEAKING_GAIN, 0xf},
 	/* Magnification factor */
-	{0x21, 0x0}, {0x22, 0x1},
+	{ZOOM_SIZE_HI, 0x0},
+	{ZOOM_SIZE_LO, 0x1},
+
 	/* end of array */
 	{0x0000, 0x00},
 };
@@ -1271,46 +1304,37 @@ static struct regval_list default_analog_binnining_off[] = {
 	{0xc344, 0x07}, /* line length 2010 for normal mode */
 	{0xc345, 0xda},
 	{0x0201, 0x00}, /* DarkCalMode_LeakyOffset */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_before_auto_frame_rate_on[] = {
 	/* Set sensor mode (HiRes or LoRes) */
-	{0x40, 0x0},
-	{0x50, 0x0},
-	/* View/Live setup */
-	{0x13, 0x0},
-	/* Image size setup - pipe 0 */
-	{0x41, 0x9},	/* custom size, 512*512 */
-	{0x42, 0x2},	/* uwManualHSize_hi */
-	{0x43, 0x0},	/* uwManualHSize_lo */
-	{0x44, 0x2},	/* uwManualVSize_hi */
-	{0x45, 0x0},	/* uwManualVSize_lo */
-	/* Image size setup - pipe 1 */
-	{0x51, 0x0},
-	/* Data format (stream 0) */
-	{0x46, 0x2},	/* DataFormat_YCbCr_Custom */
-	/* Data format (stream 1) */
-	{0x56, 0x2},
+	{PIPE0_SENSOR_MODE, 0x0},
+	{PIPE1_SENSOR_MODE, 0x0},
+	/* View/Live setup - Disabled */
+	{VIEW_LIVE_EN, 0x0},
 	/* Active pipe setup */
-	{0x12, 0x0},	/* PIPE_0 is active pipe */
+	{ACTIVE_PIPE_BANK, 0x0},	/* PIPE_0 is active pipe */
 	/* Manual frame rate */
-	{0x0090, 0x0},	/* uwDesiredFrameRate_Num_hi */
-	{0x0091, 0xF},	/* uwDesiredFrameRate_Num_lo, 15 fps */
-	{0x0092, 0x1},	/* bDesiredFrameRate_Den */
-	{0x00B0, 0x0},	/* bMode {1=Frame Rate Mode Manual} */
+	{DES_FRAME_RATE_NUM_HI, 0x0},	/* uwDesiredFrameRate_Num_hi */
+	{DES_FRAME_RATE_NUM_LO, 0xF},	/* uwDesiredFrameRate_Num_lo, 15 fps */
+	{DES_FRAME_RATE_DEN, 0x1},	/* bDesiredFrameRate_Den */
+	{AUTO_FRAME_MODE, 0x0},	/* bMode {1=Frame Rate Mode Manual} */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
 
 static struct regval_list default_bayer_off[] = {
 	/* White Balance Disabled */
-	{0x180, 1},	/* Manual WB */
+	{WB_CTL_MODE, 1},	/* Manual WB */
 	/* AV Enable */
-	{0x0260, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
+	{AV_DISABLE, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
 	/* Enable Arctic */
-	{0x02d1, 0x00},	/* AntiVignetteControl fDisable {VPIP_FALSE} */
+	{0x02d1, 0x00},		/* AntiVignetteControl fDisable {VPIP_FALSE} */
+
 	/* end of array */
 	{0x0000, 0x00},
 };
@@ -1447,93 +1471,93 @@ static struct regval_list default_pre_run_setup[] = {
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters0
 	 */
-	{0x3b0, 0xb6},	/* iHorizontalOffsetR	-74 */
-	{0x3b1, 0xf2},	/* iVerticalOffsetR	-14 */
-	{0x3b2, 0x3c},	/* iR2RCoefficient	 60 */
-	{0x3b3, 0xc4},	/* iR4RCoefficient	-60 */
-	{0x3b4, 0x0},	/* iHorizontalOffsetGR	0 */
-	{0x3b5, 0xdc},	/* iVerticalOffsetGR	-36 */
-	{0x3b6, 0x29},	/* iR2GRCoefficient	41 */
-	{0x3b7, 0xb8},	/* iR4GRCoefficient	-72 */
-	{0x3b8, 0xc2},	/* iHorizontalOffsetGB	-62 */
-	{0x3b9, 0xe0},	/* iVerticalOffsetGB	-32 */
-	{0x3ba, 0x26},	/* iR2GBCoefficient	38 */
-	{0x3bb, 0xc4},	/* iR4GBCoefficient	-60 */
-	{0x3bc, 0xf8},	/* iHorizontalOffsetB	-8 */
-	{0x3bd, 0xd2},	/* iVerticalOffsetB	-46 */
-	{0x3be, 0x22},	/* iR2BCoefficient	34 */
-	{0x3bf, 0xc2},	/* iR4BCoefficient	-62 */
-	{0x348, 0x43},	/* bUnityOffset_GR	67 */
-	{0x349, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03b0, 0xb6},	/* iHorizontalOffsetR	-74 */
+	{0x03b1, 0xf2},	/* iVerticalOffsetR	-14 */
+	{0x03b2, 0x3c},	/* iR2RCoefficient	 60 */
+	{0x03b3, 0xc4},	/* iR4RCoefficient	-60 */
+	{0x03b4, 0x0},	/* iHorizontalOffsetGR	0 */
+	{0x03b5, 0xdc},	/* iVerticalOffsetGR	-36 */
+	{0x03b6, 0x29},	/* iR2GRCoefficient	41 */
+	{0x03b7, 0xb8},	/* iR4GRCoefficient	-72 */
+	{0x03b8, 0xc2},	/* iHorizontalOffsetGB	-62 */
+	{0x03b9, 0xe0},	/* iVerticalOffsetGB	-32 */
+	{0x03ba, 0x26},	/* iR2GBCoefficient	38 */
+	{0x03bb, 0xc4},	/* iR4GBCoefficient	-60 */
+	{0x03bc, 0xf8},	/* iHorizontalOffsetB	-8 */
+	{0x03bd, 0xd2},	/* iVerticalOffsetB	-46 */
+	{0x03be, 0x22},	/* iR2BCoefficient	34 */
+	{0x03bf, 0xc2},	/* iR4BCoefficient	-62 */
+	{0x0348, 0x43},	/* bUnityOffset_GR	67 */
+	{0x0349, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters1
 	 */
-	{0x3c0, 0xb0},	/* iHorizontalOffsetR	-80 */
-	{0x3c1, 0xf0},	/* iVerticalOffsetR	-16 */
-	{0x3c2, 0x2e},	/* iR2RCoefficient	 46 */
-	{0x3c3, 0xd0},	/* iR4RCoefficient	-48 */
-	{0x3c4, 0x6},	/* iHorizontalOffsetGR	 6 */
-	{0x3c5, 0xdc},	/* iVerticalOffsetGR	-36 */
-	{0x3c6, 0x24},	/* iR2GRCoefficient	 36 */
-	{0x3c7, 0xc3},	/* iR4GRCoefficient	-61 */
-	{0x3c8, 0xbc},	/* iHorizontalOffsetGB	-68 */
-	{0x3c9, 0xe2},	/* iVerticalOffsetGB	-30 */
-	{0x3ca, 0x21},	/* iR2GBCoefficient	 33 */
-	{0x3cb, 0xcd},	/* iR4GBCoefficient	-51 */
-	{0x3cc, 0x2},	/* iHorizontalOffsetB	 2 */
-	{0x3cd, 0xda},	/* iVerticalOffsetB	-38 */
-	{0x3ce, 0x1e},	/* iR2BCoefficient	 30 */
-	{0x3cf, 0xca},	/* iR4BCoefficient	-54 */
-	{0x34a, 0x43},	/* bUnityOffset_GR	 67 */
-	{0x34b, 0x40},	/* bUnityOffset_GB	 64 */
+	{0x03c0, 0xb0},	/* iHorizontalOffsetR	-80 */
+	{0x03c1, 0xf0},	/* iVerticalOffsetR	-16 */
+	{0x03c2, 0x2e},	/* iR2RCoefficient	 46 */
+	{0x03c3, 0xd0},	/* iR4RCoefficient	-48 */
+	{0x03c4, 0x6},	/* iHorizontalOffsetGR	 6 */
+	{0x03c5, 0xdc},	/* iVerticalOffsetGR	-36 */
+	{0x03c6, 0x24},	/* iR2GRCoefficient	 36 */
+	{0x03c7, 0xc3},	/* iR4GRCoefficient	-61 */
+	{0x03c8, 0xbc},	/* iHorizontalOffsetGB	-68 */
+	{0x03c9, 0xe2},	/* iVerticalOffsetGB	-30 */
+	{0x03ca, 0x21},	/* iR2GBCoefficient	 33 */
+	{0x03cb, 0xcd},	/* iR4GBCoefficient	-51 */
+	{0x03cc, 0x2},	/* iHorizontalOffsetB	 2 */
+	{0x03cd, 0xda},	/* iVerticalOffsetB	-38 */
+	{0x03ce, 0x1e},	/* iR2BCoefficient	 30 */
+	{0x03cf, 0xca},	/* iR4BCoefficient	-54 */
+	{0x034a, 0x43},	/* bUnityOffset_GR	 67 */
+	{0x034b, 0x40},	/* bUnityOffset_GB	 64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters2
 	 */
-	{0x3d0, 0xb0},	/* iHorizontalOffsetR	-80 */
-	{0x3d1, 0xea},	/* iVerticalOffsetR	-22 */
-	{0x3d2, 0x2d},	/* iR2RCoefficient	45 */
-	{0x3d3, 0xc7},	/* iR4RCoefficient	-57 */
-	{0x3d4, 0xa},	/* iHorizontalOffsetGR	10 */
-	{0x3d5, 0xd6},	/* iVerticalOffsetGR	-42 */
-	{0x3d6, 0x23},	/* iR2GRCoefficient	35 */
-	{0x3d7, 0xc4},	/* iR4GRCoefficient	-60 */
-	{0x3d8, 0xc0},	/* iHorizontalOffsetGB	-64 */
-	{0x3d9, 0xda},	/* iVerticalOffsetGB	-38 */
-	{0x3da, 0x20},	/* iR2GBCoefficient	32 */
-	{0x3db, 0xcc},	/* iR4GBCoefficient	-52 */
-	{0x3dc, 0x12},	/* iHorizontalOffsetB	18 */
-	{0x3dd, 0xd6},	/* iVerticalOffsetB	-42 */
-	{0x3de, 0x1d},	/* iR2BCoefficient	29 */
-	{0x3df, 0xcd},	/* iR4BCoefficient	-51 */
-	{0x34c, 0x43},	/* bUnityOffset_GR	67 */
-	{0x34d, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03d0, 0xb0},	/* iHorizontalOffsetR	-80 */
+	{0x03d1, 0xea},	/* iVerticalOffsetR	-22 */
+	{0x03d2, 0x2d},	/* iR2RCoefficient	45 */
+	{0x03d3, 0xc7},	/* iR4RCoefficient	-57 */
+	{0x03d4, 0xa},	/* iHorizontalOffsetGR	10 */
+	{0x03d5, 0xd6},	/* iVerticalOffsetGR	-42 */
+	{0x03d6, 0x23},	/* iR2GRCoefficient	35 */
+	{0x03d7, 0xc4},	/* iR4GRCoefficient	-60 */
+	{0x03d8, 0xc0},	/* iHorizontalOffsetGB	-64 */
+	{0x03d9, 0xda},	/* iVerticalOffsetGB	-38 */
+	{0x03da, 0x20},	/* iR2GBCoefficient	32 */
+	{0x03db, 0xcc},	/* iR4GBCoefficient	-52 */
+	{0x03dc, 0x12},	/* iHorizontalOffsetB	18 */
+	{0x03dd, 0xd6},	/* iVerticalOffsetB	-42 */
+	{0x03de, 0x1d},	/* iR2BCoefficient	29 */
+	{0x03df, 0xcd},	/* iR4BCoefficient	-51 */
+	{0x034c, 0x43},	/* bUnityOffset_GR	67 */
+	{0x034d, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Anti-Vignetting settings
 	 * Page: AdaptiveAntiVignetteParameters3
 	 */
-	{0x3e0, 0xb2},	/* iHorizontalOffsetR	-78 */
-	{0x3e1, 0xec},	/* iVerticalOffsetR	-20 */
-	{0x3e2, 0x31},	/* iR2RCoefficient	49 */
-	{0x3e3, 0xbd},	/* iR4RCoefficient	-67 */
-	{0x3e4, 0x12},	/* iHorizontalOffsetGR	18 */
-	{0x3e5, 0xd6},	/* iVerticalOffsetGR	-42 */
-	{0x3e6, 0x21},	/* iR2GRCoefficient	33 */
-	{0x3e7, 0xc6},	/* iR4GRCoefficient	-58 */
-	{0x3e8, 0xc0},	/* iHorizontalOffsetGB	-64 */
-	{0x3e9, 0xda},	/* iVerticalOffsetGB	-38 */
-	{0x3ea, 0x20},	/* iR2GBCoefficient	32 */
-	{0x3eb, 0xcc},	/* iR4GBCoefficient	-52 */
-	{0x3ec, 0x20},	/* iHorizontalOffsetB	32 */
-	{0x3ed, 0xdc},	/* iVerticalOffsetB	-36 */
-	{0x3ee, 0x1c},	/* iR2BCoefficient	28 */
-	{0x3ef, 0xd3},	/* iR4BCoefficient	-45 */
-	{0x34e, 0x43},	/* bUnityOffset_GR	67 */
-	{0x34f, 0x40},	/* bUnityOffset_GB	64 */
+	{0x03e0, 0xb2},	/* iHorizontalOffsetR	-78 */
+	{0x03e1, 0xec},	/* iVerticalOffsetR	-20 */
+	{0x03e2, 0x31},	/* iR2RCoefficient	49 */
+	{0x03e3, 0xbd},	/* iR4RCoefficient	-67 */
+	{0x03e4, 0x12},	/* iHorizontalOffsetGR	18 */
+	{0x03e5, 0xd6},	/* iVerticalOffsetGR	-42 */
+	{0x03e6, 0x21},	/* iR2GRCoefficient	33 */
+	{0x03e7, 0xc6},	/* iR4GRCoefficient	-58 */
+	{0x03e8, 0xc0},	/* iHorizontalOffsetGB	-64 */
+	{0x03e9, 0xda},	/* iVerticalOffsetGB	-38 */
+	{0x03ea, 0x20},	/* iR2GBCoefficient	32 */
+	{0x03eb, 0xcc},	/* iR4GBCoefficient	-52 */
+	{0x03ec, 0x20},	/* iHorizontalOffsetB	32 */
+	{0x03ed, 0xdc},	/* iVerticalOffsetB	-36 */
+	{0x03ee, 0x1c},	/* iR2BCoefficient	28 */
+	{0x03ef, 0xd3},	/* iR4BCoefficient	-45 */
+	{0x034e, 0x43},	/* bUnityOffset_GR	67 */
+	{0x034f, 0x40},	/* bUnityOffset_GB	64 */
 
 	/*
 	 * Set Contrained WhiteBalance
@@ -1723,10 +1747,6 @@ static const struct v4l2_queryctrl vs6725_controls[] = {
 };
 
 static int vs6725_prog_default(struct i2c_client *client);
-static bool is_unscaled_image_ok(int width, int height, struct v4l2_rect *rect)
-{
-	return width > rect->width || height > rect->height;
-}
 
 /* read a register */
 static int vs6725_reg_read(struct i2c_client *client, int reg, u8 *val)
@@ -1866,6 +1886,71 @@ static unsigned long vs6725_query_bus_param(struct soc_camera_device *icd)
 	return soc_camera_apply_sensor_flags(icl, flags);
 }
 
+/*
+ * After VS6725 is enabled by pulling CE pin HI,
+ * we need to write the patches and default registers to
+ * ensure that the sensor is in a correct default state.
+ */
+static int vs6725_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv;
+	int ret;
+
+	if (!client)
+		/*
+		 * VS6725 probe has not been invoked as of now,
+		 * so fake a correct reply
+		 */
+		return 0;
+
+	priv = to_vs6725(client);
+
+	if (!priv || !priv->icl)
+		/*
+		 * VS6725 probe has not been invoked as of now,
+		 * so fake a correct reply
+		 */
+		return 0;
+
+	if (!on) {
+		/* power-off the sensor */
+		if (priv->icl->power) {
+			ret = priv->icl->power(&client->dev, 0);
+			if (ret < 0) {
+				dev_err(&client->dev,
+					"failed to power-off the camera.\n");
+				goto out;
+			}
+		}
+	} else {
+		/* power-on the sensor */
+		if (priv->icl->power) {
+			ret = priv->icl->power(&client->dev, 1);
+			if (ret < 0) {
+				dev_err(&client->dev,
+					"failed to power-on the camera.\n");
+				goto out;
+			}
+		}
+
+		/* add delay as defined in specs */
+		mdelay(100);
+
+		/* program sensor specific patches/quirks */
+		ret = vs6725_prog_default(client);
+		if (ret) {
+			dev_err(&client->dev,
+				"VS6725 default register program failed\n");
+			goto out;
+		}
+	}
+
+	return 0;
+out:
+	return ret;
+}
+
 /* get the current settings of a control on Vs6725 */
 static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
@@ -1875,6 +1960,12 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct vs6725 *priv = to_vs6725(client);
 
 	switch (ctrl->id) {
+	case V4L2_CID_BRIGHTNESS:
+		ret = vs6725_reg_read(client,
+				BRIGHTNESS,
+				&val);
+		ctrl->value = val;
+		break;
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_read(client,
 				CONTRAST,
@@ -1939,6 +2030,13 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct vs6725 *priv = to_vs6725(client);
 
 	switch (ctrl->id) {
+	case V4L2_CID_BRIGHTNESS:
+		ret = vs6725_reg_write(client,
+				BRIGHTNESS,
+				ctrl->value);
+		if (!ret)
+			priv->brightness = ctrl->value;
+		break;
 	case V4L2_CID_CONTRAST:
 		ret = vs6725_reg_write(client,
 				CONTRAST,
@@ -2113,13 +2211,11 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 		case V4L2_COLORFX_NEGATIVE:
 			ret = vs6725_reg_write(client,
-				NEGATIVE,
-				SET_TO_ONE);
+				NEGATIVE, 1);
 			break;
 		case V4L2_COLORFX_SKETCH:
 			ret = vs6725_reg_write(client,
-				SKETCH,
-				SET_TO_ONE);
+				SKETCH, 1);
 			break;
 		default:
 			/*
@@ -2218,24 +2314,10 @@ static int vs6725_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	if (enable) {
-		ret = vs6725_prog_default(client);
-		if (ret) {
-			dev_err(&client->dev,
-				"VS6725 default register program failed\n");
-			return ret;
-		}
-
+	if (enable)
 		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
-
-		/*
-		 * Allow the sensor to really boot-up.
-		 * Don't change the delay value set here.
-		 */
-		mdelay(505);
-	} else {
+	else
 		ret = vs6725_reg_write(client, USER_CMD, CMD_STOP);
-	}
 
 	if (ret != 0)
 		return -EIO;
@@ -2280,16 +2362,6 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	/*
-	 * FIXME: I think height should be aligned by 2 because the
-	 * V4L2 specs state that "the driver must round the vertical
-	 * offset of the cropping rectangle to frame lines modulo two,
-	 * such that the field order cannot be confused" but not sure if
-	 * the width field should also be aligned here.
-	 */
-	rect->height = ALIGN(rect->height, 2);
-	rect->width = ALIGN(rect->width, 2);
-
 	/* FIXME: the datasheet doesn't specify minimum sizes */
 	soc_camera_limit_side(&rect->left, &rect->width,
 			VS6725_COLUMN_SKIP, VS6725_MIN_WIDTH, VS6725_MAX_WIDTH);
@@ -2330,98 +2402,168 @@ static int vs6725_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	return ret;
 }
 
-/* get the format we will capture in */
+static int vs6725_g_parm(struct v4l2_subdev *sd,
+			struct v4l2_streamparm *parms)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	struct v4l2_captureparm *cp = &parms->parm.capture;
+
+	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	memset(cp, 0, sizeof(*cp));
+	cp->capability = V4L2_CAP_TIMEPERFRAME;
+	cp->timeperframe.numerator = priv->frame_rate.denominator;
+	cp->timeperframe.denominator = priv->frame_rate.numerator;
+
+	return 0;
+}
+
+static int vs6725_s_parm(struct v4l2_subdev *sd,
+				struct v4l2_streamparm *parms)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	struct v4l2_captureparm *cp = &parms->parm.capture;
+	struct v4l2_fract *tpf = &cp->timeperframe;
+
+	if (parms->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+	if (cp->extendedmode != 0)
+		return -EINVAL;
+
+	if (tpf->numerator == 0 || tpf->denominator == 0
+		|| (tpf->denominator > tpf->numerator * MAX_FRAME_RATE)) {
+		/* reset to max frame rate */
+		tpf->numerator = 1;
+		tpf->denominator = MAX_FRAME_RATE;
+	}
+
+	/*
+	 * numerator and denominator conventions used by VS6725 and v4l2
+	 * are complimentary to each other.
+	 */
+	priv->frame_rate.numerator = tpf->denominator;
+	priv->frame_rate.denominator = tpf->numerator;
+
+	/* manual frame rate settings */
+	vs6725_reg_write(client, AUTO_FRAME_MODE, MANUAL_FRAME_RATE);
+	vs6725_reg_write(client, DES_FRAME_RATE_NUM_HI,
+			WRITE_HI_BYTE(priv->frame_rate.numerator));
+	vs6725_reg_write(client, DES_FRAME_RATE_NUM_LO,
+			WRITE_LO_BYTE(priv->frame_rate.numerator));
+	vs6725_reg_write(client, DES_FRAME_RATE_DEN,
+			WRITE_LO_BYTE(priv->frame_rate.denominator));
+
+	return 0;
+}
+
+/* get the format we are currently capturing in */
 static int vs6725_g_fmt(struct v4l2_subdev *sd,
 			 struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
 
-	mf->width = priv->rect.width;
-	mf->height = priv->rect.height;
-	mf->code = priv->code;
-	mf->colorspace = priv->colorspace;
-	mf->field = V4L2_FIELD_NONE;
+	*mf = priv->fmt;
 
 	return 0;
 }
 
-/* set the format we will capture in */
-static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+/*
+ * Try the format provided by application, without really making any
+ * hardware settings.
+ */
+static int vs6725_try_fmt(struct v4l2_subdev *sd,
+		struct v4l2_mbus_framefmt *mf)
 {
+	int index;
+
+	for (index = 0; index < ARRAY_SIZE(vs6725_formats); index++)
+		if (vs6725_formats[index].mbus_code == mf->code)
+			break;
+
+	if (index >= ARRAY_SIZE(vs6725_formats))
+		/* fallback to the default format */
+		index = 0;
+
+	mf->code = vs6725_formats[index].mbus_code;
+	mf->colorspace = vs6725_formats[index].colorspace;
+	mf->field = V4L2_FIELD_NONE;
+
+	/* check for upper resolution boundary */
+	if (mf->width > UXGA_WIDTH)
+		mf->width = UXGA_WIDTH;
+
+	if (mf->height > UXGA_HEIGHT)
+		mf->height = UXGA_HEIGHT;
+
+	return 0;
+}
+
+/* set sensor image format */
+static int vs6725_set_image_format(struct i2c_client *client,
+					struct v4l2_mbus_framefmt *mf)
+{
+	struct vs6725 *priv = to_vs6725(client);
 	int ret = 0;
 
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
-	enum v4l2_mbus_pixelcode code = mf->code;
-
-	switch (code) {
+	switch (mf->code) {
 	case V4L2_MBUS_FMT_YUYV8_2X8:
-		dev_dbg(&client->dev, "pixel format YUYV8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
-		dev_dbg(&client->dev, "pixel format UYVY8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_YVYU8_2X8:
-		dev_dbg(&client->dev, "pixel format YVYU8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
-		dev_dbg(&client->dev, "pixel format VYUY8_2X8\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
-		dev_dbg(&client->dev, "pixel format RBG444_2X8_PADHI_BE\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_RGB_444);
+				DATA_FORMAT_RGB_444);
 		ret |= vs6725_reg_write(client,
-			OPF_RGB_SETUP,
-			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
-			RGB444_ZERO_PADDING_ON);
-		priv->colorspace = V4L2_COLORSPACE_SRGB;
+				OPF_RGB_SETUP,
+				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
+				RGB444_ZERO_PADDING_ON);
 		break;
 	case V4L2_MBUS_FMT_RGB565_2X8_BE:
-		dev_dbg(&client->dev, "pixel format RGB565_2X8_BE\n");
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_RGB_565);
+				DATA_FORMAT_RGB_565);
 		ret |= vs6725_reg_write(client,
-			OPF_RGB_SETUP,
-			RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
-		priv->colorspace = V4L2_COLORSPACE_SRGB;
+				OPF_RGB_SETUP,
+				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
 		break;
 	default:
 		/*
@@ -2431,151 +2573,184 @@ static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		 * return.
 		 */
 		dev_err(&client->dev, "Pixel format not handled: 0x%x\n"
-			"Reverting to default YVYU8 format\n", code);
+			"Reverting to default YVYU8 format\n", mf->code);
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-			DATA_FORMAT_YCBCR_CUSTOM);
+				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
-			OPF_YCBCR_SETUP,
-			CBYCRY_DATA_SEQUENCE);
-		priv->colorspace = V4L2_COLORSPACE_JPEG;
+				OPF_YCBCR_SETUP,
+				CBYCRY_DATA_SEQUENCE);
 		break;
-	}
-
-	/* set image size */
-	if (!ret) {
-		priv->code = code;
-
-		if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-				IMAGE_SIZE_UXGA);
-		else if ((mf->width == SXGA_WIDTH) &&
-				(mf->height == SXGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_SXGA);
-		else if ((mf->width == SVGA_WIDTH) &&
-				(mf->height == SVGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_SVGA);
-		else if ((mf->width == VGA_WIDTH) &&
-				(mf->height == VGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_VGA);
-		else if ((mf->width == CIF_WIDTH) &&
-				(mf->height == CIF_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_CIF);
-		else if ((mf->width == QVGA_WIDTH) &&
-				(mf->height == QVGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QVGA);
-		else if ((mf->width == QCIF_WIDTH) &&
-				(mf->height == QCIF_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QCIF);
-		else if ((mf->width == QQVGA_WIDTH) &&
-				(mf->height == QQVGA_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QQVGA);
-		else if ((mf->width == QQCIF_WIDTH) &&
-				(mf->height == QQCIF_HEIGHT))
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-					IMAGE_SIZE_QQCIF);
-		else {
-			/* manual size */
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
-				IMAGE_SIZE_MANUAL);
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_HS_HI : PIPE1_MANUAL_HS_HI,
-					WRITE_HI_BYTE(mf->width));
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_HS_LO : PIPE1_MANUAL_HS_LO,
-					WRITE_LO_BYTE(mf->width));
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_VS_HI : PIPE1_MANUAL_VS_HI,
-					WRITE_HI_BYTE(mf->height));
-			vs6725_reg_write(client,
-				(priv->active_pipe == PIPE_0) ?
-					PIPE0_MANUAL_VS_LO : PIPE1_MANUAL_VS_LO,
-					WRITE_LO_BYTE(mf->height));
-		}
-	}
-
-	if (!ret) {
-		mf->colorspace = priv->colorspace;
-		mf->width = priv->rect.width;
-		mf->height = priv->rect.height;
 	}
 
 	return ret;
 }
 
-static int vs6725_try_fmt(struct v4l2_subdev *sd,
-		struct v4l2_mbus_framefmt *mf)
+/* set sensor image size */
+static int vs6725_set_image_size(struct i2c_client *client,
+					struct v4l2_mbus_framefmt *mf)
 {
+	struct vs6725 *priv = to_vs6725(client);
+	int ret = 0;
+
+	if ((mf->width == UXGA_WIDTH) && (mf->height == UXGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_UXGA);
+	else if ((mf->width == SXGA_WIDTH) &&
+			(mf->height == SXGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_SXGA);
+	else if ((mf->width == SVGA_WIDTH) &&
+			(mf->height == SVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_SVGA);
+	else if ((mf->width == VGA_WIDTH) &&
+			(mf->height == VGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_VGA);
+	else if ((mf->width == CIF_WIDTH) &&
+			(mf->height == CIF_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_CIF);
+	else if ((mf->width == QVGA_WIDTH) &&
+			(mf->height == QVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_QVGA);
+	else if ((mf->width == QCIF_WIDTH) &&
+			(mf->height == QCIF_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_QCIF);
+	else if ((mf->width == QQVGA_WIDTH) &&
+			(mf->height == QQVGA_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_QQVGA);
+	else if ((mf->width == QQCIF_WIDTH) &&
+			(mf->height == QQCIF_HEIGHT))
+		ret = vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_QQCIF);
+	else {
+		/* manual size */
+		ret |= vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_IMAGE_SIZE : PIPE1_IMAGE_SIZE,
+				IMAGE_SIZE_MANUAL);
+		ret |= vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_MANUAL_HS_HI : PIPE1_MANUAL_HS_HI,
+				WRITE_HI_BYTE(mf->width));
+		ret |= vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_MANUAL_HS_LO : PIPE1_MANUAL_HS_LO,
+				WRITE_LO_BYTE(mf->width));
+		ret |= vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_MANUAL_VS_HI : PIPE1_MANUAL_VS_HI,
+				WRITE_HI_BYTE(mf->height));
+		ret |= vs6725_reg_write(client,
+				(priv->active_pipe == PIPE_0) ?
+				PIPE0_MANUAL_VS_LO : PIPE1_MANUAL_VS_LO,
+				WRITE_LO_BYTE(mf->height));
+	}
+
+	return ret;
+}
+
+/* set the format we will capture in */
+static int vs6725_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+{
+	int ret = 0;
+
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct vs6725 *priv = to_vs6725(client);
 
-	if (is_unscaled_image_ok(mf->width, mf->height, &priv->rect))
-		v4l_bound_align_image(&mf->width, VS6725_MIN_WIDTH,
-			VS6725_MAX_WIDTH, 1,
-			&mf->height, VS6725_MIN_HEIGHT,
-			VS6725_MAX_HEIGHT, 1, 0);
+	ret = vs6725_try_fmt(sd, mf);
+	if (ret)
+		return ret;
 
-	mf->field = V4L2_FIELD_NONE;
+	/* set image format */
+	if (!ret)
+		ret = vs6725_set_image_format(client, mf);
 
-	switch (mf->code) {
-	case V4L2_MBUS_FMT_YUYV8_2X8:
-	case V4L2_MBUS_FMT_UYVY8_2X8:
-	case V4L2_MBUS_FMT_YVYU8_2X8:
-	case V4L2_MBUS_FMT_VYUY8_2X8:
-	default:
-		mf->colorspace = V4L2_COLORSPACE_JPEG;
-		break;
-	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
-	case V4L2_MBUS_FMT_RGB565_2X8_BE:
-		mf->colorspace = V4L2_COLORSPACE_SRGB;
-		break;
-	}
+	/* set image size */
+	if (!ret)
+		ret = vs6725_set_image_size(client, mf);
 
-	return 0;
+	if (!ret)
+		priv->fmt = *mf;
+
+	return ret;
 }
 
 static int vs6725_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 				enum v4l2_mbus_pixelcode *code)
 {
-	if (index >= ARRAY_SIZE(vs6725_codes))
+	if (index >= ARRAY_SIZE(vs6725_formats))
 		return -EINVAL;
 
-	*code = vs6725_codes[index];
+	*code = vs6725_formats[index].mbus_code;
 	return 0;
 }
 
+static int vs6725_suspend(struct soc_camera_device *icd, pm_message_t state)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	int ret;
+
+	/* turn off CE pin of camera sensor */
+	ret = vs6725_s_power(sd, 0);
+
+	return ret;
+}
+
+static int vs6725_resume(struct soc_camera_device *icd)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct vs6725 *priv = to_vs6725(client);
+	int ret;
+
+	/* turn on CE pin of camera sensor */
+	ret = vs6725_s_power(sd, 1);
+
+	/*
+	 * As per the last format set before we went for suspend,
+	 * reprogram sensor image size and image format
+	 */
+	if (!ret)
+		ret = vs6725_set_image_format(client, &priv->fmt);
+
+	if (!ret)
+		ret = vs6725_set_image_size(client, &priv->fmt);
+
+	/* set sensor in RUNning state */
+	if (!ret)
+		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
+
+	return ret;
+}
+
 static struct soc_camera_ops vs6725_ops = {
+	.suspend = vs6725_suspend,
+	.resume	= vs6725_resume,
 	.set_bus_param = vs6725_set_bus_param,
 	.query_bus_param = vs6725_query_bus_param,
 	.controls = vs6725_controls,
@@ -2583,6 +2758,7 @@ static struct soc_camera_ops vs6725_ops = {
 };
 
 static struct v4l2_subdev_core_ops vs6725_subdev_core_ops = {
+	.s_power = vs6725_s_power,
 	.g_ctrl = vs6725_g_ctrl,
 	.s_ctrl = vs6725_s_ctrl,
 	.g_chip_ident = vs6725_g_chip_ident,
@@ -2594,6 +2770,8 @@ static struct v4l2_subdev_core_ops vs6725_subdev_core_ops = {
 
 static struct v4l2_subdev_video_ops vs6725_video_ops = {
 	.s_stream = vs6725_s_stream,
+	.s_parm = vs6725_s_parm,
+	.g_parm = vs6725_g_parm,
 	.g_mbus_fmt = vs6725_g_fmt,
 	.s_mbus_fmt = vs6725_s_fmt,
 	.try_mbus_fmt = vs6725_try_fmt,
@@ -2618,7 +2796,6 @@ static int vs6725_prog_default(struct i2c_client *client)
 	int ret = 0;
 
 	ret |= vs6725_reg_write_multiple(client, vs6725_patch1);
-	mdelay(200);
 	ret |= vs6725_reg_write_multiple(client, vs6725_patch2);
 	ret |= vs6725_reg_write_multiple(client, default_non_gui);
 	ret |= vs6725_reg_write_multiple(client, default_streaming);
@@ -2633,7 +2810,6 @@ static int vs6725_prog_default(struct i2c_client *client)
 			default_before_auto_frame_rate_on);
 	ret |= vs6725_reg_write_multiple(client, default_bayer_off);
 	ret |= vs6725_reg_write_multiple(client, default_pre_run_setup);
-	mdelay(50);
 
 	return ret;
 }
@@ -2707,13 +2883,12 @@ static int vs6725_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&priv->subdev, client, &vs6725_subdev_ops);
 
 	icd->ops = &vs6725_ops;
+	priv->icl = icl;
 
+	/* set the default format */
+	priv->fmt = vs6725_default_fmt;
 	priv->rect.left = 0;
 	priv->rect.top = 0;
-	priv->rect.width = VS6725_MAX_WIDTH - VS6725_MIN_WIDTH;
-	priv->rect.height = VS6725_MAX_HEIGHT - VS6725_MIN_HEIGHT;
-	priv->code = V4L2_MBUS_FMT_YUYV8_2X8;
-	priv->colorspace = V4L2_COLORSPACE_JPEG;
 
 	ret = vs6725_camera_init(icd, client);
 	if (ret) {
