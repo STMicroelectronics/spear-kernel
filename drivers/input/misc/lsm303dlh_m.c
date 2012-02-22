@@ -33,7 +33,7 @@
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 #include <linux/input.h>
 #include <linux/interrupt.h>
-#include <mach/gpio.h>
+#include <linux/gpio.h>
 #endif
 
 #include <linux/i2c/lsm303dlh.h>
