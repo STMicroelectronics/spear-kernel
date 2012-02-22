@@ -29,6 +29,7 @@
 #include <linux/types.h>
 #ifdef __KERNEL__
 #include <linux/mod_devicetable.h>
+#include <linux/export.h>
 #include <linux/device.h>	/* for struct device */
 #include <linux/sched.h>	/* for completion */
 #include <linux/mutex.h>
