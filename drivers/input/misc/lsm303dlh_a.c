@@ -708,8 +708,10 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 		return count;
 
 	/* turn on the supplies if already off */
-	if (ddata->regulator && ddata->mode == LSM303DLH_A_MODE_OFF) {
-		regulator_enable(ddata->regulator);
+	if (ddata->mode == LSM303DLH_A_MODE_OFF) {
+		if (ddata->regulator)
+			regulator_enable(ddata->regulator);
+
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 		enable_irq(gpio_to_irq(ddata->pdata.irq_a1));
 		enable_irq(gpio_to_irq(ddata->pdata.irq_a2));
