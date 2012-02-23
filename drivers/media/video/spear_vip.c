@@ -434,7 +434,7 @@ static int vip_config_image_format(struct vip *vip)
 	int i, ret;
 	struct vip_subdev_info *sdinfo = vip->current_subdev;
 	struct v4l2_mbus_framefmt mbus_fmt;
-	enum v4l2_mbus_pixelcode code = V4L2_MBUS_FMT_BGR888_2X8_LE;
+	enum v4l2_mbus_pixelcode code = V4L2_MBUS_FMT_BGR24_2X8_LE;
 	struct v4l2_pix_format *pix = &vip->fmt.fmt.pix;
 
 	for (i = 0; i < ARRAY_SIZE(vip_standards); i++) {
@@ -475,11 +475,11 @@ static int vip_config_image_format(struct vip *vip)
 		break;
 	case TWENTYFOUR_BIT:
 		pix->pixelformat = V4L2_PIX_FMT_BGR24;
-		code = V4L2_MBUS_FMT_BGR888_2X8_LE;
+		code = V4L2_MBUS_FMT_BGR24_2X8_LE;
 		break;
 	case THIRTYTWO_BIT:
 		pix->pixelformat = V4L2_PIX_FMT_BGR32;
-		code = V4L2_MBUS_FMT_BGR8888_2X8_LE;
+		code = V4L2_MBUS_FMT_BGR32_2X8_LE;
 		break;
 	}
 
