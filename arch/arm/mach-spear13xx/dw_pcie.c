@@ -195,14 +195,14 @@ static int find_valid_pos0(int port, int nvec, int pos, int *pos0)
 	return 0;
 }
 
-static void msi_nop(unsigned int irq)
+static void msi_nop(struct irq_data *data)
 {
 	return;
 }
 
 static struct irq_chip msi_chip = {
 	.name = "PCI-MSI",
-	.ack = msi_nop,
+	.irq_ack = msi_nop,
 	.irq_enable = unmask_msi_irq,
 	.irq_disable = mask_msi_irq,
 	.irq_mask = mask_msi_irq,
@@ -249,8 +249,8 @@ static int get_irq(int nvec, struct msi_desc *desc, int *pos)
 	while (i < nvec) {
 		set_bit(pos0 + i, msi_irq_in_use[pp->port]);
 		dynamic_irq_init(irq + i);
-		set_irq_msi(irq + i, desc);
-		set_irq_chip_and_handler(irq + i, &msi_chip,
+		irq_set_msi_desc(irq + i, desc);
+		irq_set_chip_and_handler(irq + i, &msi_chip,
 				handle_simple_irq);
 		set_irq_flags(irq + i, IRQF_VALID);
 
@@ -277,7 +277,8 @@ static void clean_irq(unsigned int irq)
 {
 	int res, bit, val, pos;
 	struct irq_desc *desc = irq_to_desc(irq);
-	struct pcie_port *pp = bus_to_port(desc->msi_desc->dev->bus->number);
+	struct msi_desc *msi_desc = irq_desc_get_msi_desc(desc);
+	struct pcie_port *pp = bus_to_port(msi_desc->dev->bus->number);
 
 	if (!pp) {
 		BUG();
@@ -546,9 +547,8 @@ static int __init pcie_setup(int nr, struct pci_sys_data *sys)
 
 	pp->root_bus_nr = sys->busnr;
 
-	sys->resource[0] = &pp->res[0];
-	sys->resource[1] = &pp->res[1];
-	sys->resource[2] = NULL;
+	pci_add_resource(&sys->resources, &pp->res[0]);
+	pci_add_resource(&sys->resources, &pp->res[1]);
 
 	return 1;
 }
@@ -655,7 +655,7 @@ pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	return bus;
 }
 
-static int __init pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
+static int __init pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	struct pcie_port *pp = bus_to_port(dev->bus->number);
 	int irq;

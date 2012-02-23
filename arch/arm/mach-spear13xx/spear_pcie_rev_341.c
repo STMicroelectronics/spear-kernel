@@ -260,7 +260,7 @@ static void pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	app_reg = pp->va_app_base;
 	status = readl(&app_reg->int_sts);
 
-	desc->chip->ack(irq);
+	desc->irq_data.chip->irq_ack(&desc->irq_data);
 
 	if (status & MSI_CTRL_INT) {
 #ifdef CONFIG_PCI_MSI
@@ -282,7 +282,7 @@ static void pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	else
 		writel(status, &app_reg->int_clr);
 
-	desc->chip->unmask(irq);
+	desc->irq_data.chip->irq_unmask(&desc->irq_data);
 }
 
 static void pcie_int_init(struct pcie_port *pp)
@@ -290,7 +290,7 @@ static void pcie_int_init(struct pcie_port *pp)
 	int i, irq;
 	struct pcie_app_reg __iomem *app_reg = pp->va_app_base;
 
-	set_irq_chained_handler(IRQ_PCIE0 + pp->port,
+	irq_set_chained_handler(IRQ_PCIE0 + pp->port,
 			pcie_int_handler);
 
 #ifdef CONFIG_PCI_MSI
@@ -302,7 +302,7 @@ static void pcie_int_init(struct pcie_port *pp)
 	 */
 	irq = (INTX0_BASE + pp->port * NUM_INTX_IRQS);
 	for (i = 0; i < NUM_INTX_IRQS; i++) {
-		set_irq_chip_and_handler(irq + i, &intx_chip,
+		irq_set_chip_and_handler(irq + i, &intx_chip,
 				handle_simple_irq);
 		set_irq_flags(irq + i, IRQF_VALID);
 	}
