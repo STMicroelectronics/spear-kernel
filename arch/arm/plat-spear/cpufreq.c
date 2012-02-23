@@ -314,9 +314,10 @@ static int __init spear_cpufreq_probe(struct platform_device *pdev)
 	spear_cpufreq.freq_tbl[i].frequency = CPUFREQ_TABLE_END;
 
 	spear_cpufreq.cpu_clk = clk_get(NULL, "cpu_clk");
-	if (IS_ERR(spear_cpufreq.cpu_clk))
+	if (IS_ERR(spear_cpufreq.cpu_clk)) {
 		dev_err(&pdev->dev, "Unable to get CPU clock\n");
 		return PTR_ERR(spear_cpufreq.cpu_clk);
+	}
 
 	return cpufreq_register_driver(&spear_cpufreq_driver);
 }
