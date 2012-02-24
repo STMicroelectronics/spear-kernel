@@ -319,7 +319,6 @@ static void port_otg_wqfunc(struct work_struct *work)
 		BUG_ON(count > 10000);
 		core_if->xceiv->state = OTG_STATE_B_PERIPHERAL;
 		dwc_otg_core_init(core_if);
-		dwc_otg_enable_global_interrupts(core_if);
 		pcd_start(core_if);
 	} else {
 		/*
@@ -335,9 +334,10 @@ static void port_otg_wqfunc(struct work_struct *work)
 		BUG_ON(count > 10000);
 		core_if->xceiv->state = OTG_STATE_A_HOST;
 		dwc_otg_core_init(core_if);
-		dwc_otg_enable_global_interrupts(core_if);
 		hcd_start(core_if);
 	}
+
+	dwc_otg_enable_global_interrupts(core_if);
 }
 
 /**
