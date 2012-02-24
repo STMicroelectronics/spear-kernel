@@ -337,6 +337,14 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		}
 	}
 
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)
+			&& !dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
+		usbcfg = dwc_read32(gusbcfg_addr);
+		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
+		usbcfg &= ~DWC_USBCFG_FRC_DEV_MODE;
+		dwc_write32(gusbcfg_addr, usbcfg);
+	}
+
 	/*
 	 * Enable the global interrupt after all the interrupt
 	 * handlers are installed.
