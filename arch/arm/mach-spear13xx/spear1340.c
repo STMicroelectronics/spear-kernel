@@ -26,7 +26,7 @@
 #include <linux/i2c-designware.h>
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
-#include <linux/spear_thermal.h>
+#include <linux/platform_data/spear_thermal.h>
 #include <linux/usb/dwc_otg.h>
 #include <plat/camif.h>
 #include <plat/clock.h>

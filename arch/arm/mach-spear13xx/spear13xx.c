@@ -24,7 +24,7 @@
 #include <linux/phy.h>
 #include <linux/io.h>
 #include <linux/netdevice.h>
-#include <linux/spear_thermal.h>
+#include <linux/platform_data/spear_thermal.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
