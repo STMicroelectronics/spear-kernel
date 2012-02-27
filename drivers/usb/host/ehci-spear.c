@@ -14,6 +14,7 @@
 #include <linux/clk.h>
 #include <linux/jiffies.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 
 struct spear_ehci {
 	struct ehci_hcd ehci;
@@ -96,20 +97,21 @@ static int ehci_spear_drv_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	unsigned long		flags;
-	int			rc = 0;
+	unsigned long flags;
+	int rc = 0;
 
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(10);
 
-	/* Root hub was already suspended. Disable irq emission and
-	 * mark HW unaccessible.  The PM and USB cores make sure that
-	 * the root hub is either suspended or stopped.
+	/*
+	 * Root hub was already suspended. Disable irq emission and mark HW
+	 * unaccessible. The PM and USB cores make sure that the root hub is
+	 * either suspended or stopped.
 	 */
 	spin_lock_irqsave(&ehci->lock, flags);
 	ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(dev));
 	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
-	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
+	ehci_readl(ehci, &ehci->regs->intr_enable);
 	spin_unlock_irqrestore(&ehci->lock, flags);
 
 	return rc;
@@ -124,11 +126,13 @@ static int ehci_spear_drv_resume(struct device *dev)
 		msleep(100);
 
 	if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
-		int	mask = INTR_MASK;
+		int mask = INTR_MASK;
 
 		ehci_prepare_ports_for_controller_resume(ehci);
+
 		if (!hcd->self.root_hub->do_remote_wakeup)
 			mask &= ~STS_PCD;
+
 		ehci_writel(ehci, mask, &ehci->regs->intr_enable);
 		ehci_readl(ehci, &ehci->regs->intr_enable);
 		return 0;
@@ -136,16 +140,18 @@ static int ehci_spear_drv_resume(struct device *dev)
 
 	usb_root_hub_lost_power(hcd->self.root_hub);
 
-	/* Else reset, to cope with power loss or flush-to-storage
-	 * style "resume" having let BIOS kick in during reboot.
+	/*
+	 * Else reset, to cope with power loss or flush-to-storage style
+	 * "resume" having let BIOS kick in during reboot.
 	 */
-	(void) ehci_halt(ehci);
-	(void) ehci_reset(ehci);
+	ehci_halt(ehci);
+	ehci_reset(ehci);
 
 	/* emptying the schedule aborts any urbs */
 	spin_lock_irq(&ehci->lock);
 	if (ehci->reclaim)
 		end_unlink_async(ehci);
+
 	ehci_work(ehci);
 	spin_unlock_irq(&ehci->lock);
 
@@ -155,14 +161,12 @@ static int ehci_spear_drv_resume(struct device *dev)
 
 	/* here we "know" root ports should always stay powered */
 	ehci_port_power(ehci, 1);
-
-	hcd->state = HC_STATE_SUSPENDED;
 	return 0;
 }
+#endif /* CONFIG_PM */
 
 static SIMPLE_DEV_PM_OPS(ehci_spear_pm_ops, ehci_spear_drv_suspend,
 		ehci_spear_drv_resume);
-#endif /* CONFIG_PM */
 
 static int spear_ehci_hcd_drv_probe(struct platform_device *pdev)
 {
@@ -280,9 +284,7 @@ static struct platform_driver spear_ehci_hcd_driver = {
 	.driver		= {
 		.name = "spear-ehci",
 		.bus = &platform_bus_type,
-#ifdef CONFIG_PM
 		.pm = &ehci_spear_pm_ops,
-#endif
 	}
 };
 
