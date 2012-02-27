@@ -24,7 +24,6 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/keyboard.h>
-#include <plat/hardware.h>
 
 /* Keyboard Registers */
 #define MODE_REG	0x00	/* 16 bit reg */
@@ -145,7 +144,7 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 	struct input_dev *input_dev;
 	struct resource *res;
 	int irq;
-	int error = -EINVAL;
+	int error;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "Invalid platform data\n");
@@ -314,9 +313,9 @@ static int spear_kbd_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(spear_kbd_pm_ops, spear_kbd_suspend, spear_kbd_resume);
-#endif
 
 static struct platform_driver spear_kbd_driver = {
 	.probe		= spear_kbd_probe,
@@ -324,9 +323,7 @@ static struct platform_driver spear_kbd_driver = {
 	.driver		= {
 		.name	= "keyboard",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &spear_kbd_pm_ops,
-#endif
 	},
 };
 module_platform_driver(spear_kbd_driver);
