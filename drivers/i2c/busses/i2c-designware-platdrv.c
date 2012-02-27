@@ -29,6 +29,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/i2c/i2c-designware.h>
 #include <linux/clk.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
@@ -36,6 +37,7 @@
 #include <linux/interrupt.h>
 #include <linux/of_i2c.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include "i2c-designware-core.h"
@@ -98,6 +100,12 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	}
 	clk_enable(dev->clk);
 
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata && pdata->i2c_recover_bus) {
+		dev->i2c_recover_bus = pdata->i2c_recover_bus;
+		dev->recovery_data = &pdev;
+	}
+
 	dev->functionality =
 		I2C_FUNC_I2C |
 		I2C_FUNC_10BIT_ADDR |
@@ -114,11 +122,6 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		r = -EBUSY;
 		goto err_unuse_clocks;
 	}
-
-	pdata = dev_get_platdata(&pdev->dev);
-	if (pdata && pdata->i2c_recover_bus)
-		dev->i2c_recover_bus = pdata->i2c_recover_bus;
-
 	{
 		u32 param1 = i2c_dw_read_comp_param(dev);
 
@@ -225,20 +228,9 @@ static int dw_i2c_resume(struct device *dev)
 
 	return 0;
 }
-
-static const struct dev_pm_ops dw_i2c_dev_pm_ops = {
-	.suspend = dw_i2c_suspend,
-	.resume = dw_i2c_resume,
-	.freeze = dw_i2c_suspend,
-	.thaw = dw_i2c_resume,
-	.restore = dw_i2c_resume,
-	.poweroff = dw_i2c_suspend,
-};
-
-#define I2C_DW_DEV_PM_OPS (&dw_i2c_dev_pm_ops)
-#else
-#define I2C_DW_DEV_PM_OPS NULL
 #endif
+
+static SIMPLE_DEV_PM_OPS(dw_i2c_dev_pm_ops, dw_i2c_suspend, dw_i2c_resume);
 
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:i2c_designware");
@@ -249,7 +241,7 @@ static struct platform_driver dw_i2c_driver = {
 		.name	= "i2c_designware",
 		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(dw_i2c_of_match),
-		.pm	= I2C_DW_DEV_PM_OPS,
+		.pm	= &dw_i2c_dev_pm_ops,
 	},
 };
 

@@ -1,8 +1,8 @@
 /*
- * Synopsys DesignWare I2C adapter driver (master only).
+ * Synopsys DesignWare I2C adapter driver's platform data
  *
- * Copyright (C) 2011 ST Microelectronics.
- * Author:Vincenzo Frascino <vincenzo.frascino@st.com>
+ * Copyright (C) 2012 ST Microelectronics.
+ * Author: Vincenzo Frascino <vincenzo.frascino@st.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -27,7 +27,7 @@ struct i2c_dw_pdata {
 	 * "Bus clear".
 	 * Its implementation is platform dependant.
 	 */
-	void (*i2c_recover_bus)(struct platform_device *pdev);
+	void (*i2c_recover_bus)(void *);
 };
 
 #endif /* I2C_DESIGNWARE_H */

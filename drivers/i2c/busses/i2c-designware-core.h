@@ -34,7 +34,6 @@
 #define DW_IC_CON_RESTART_EN		0x20
 #define DW_IC_CON_SLAVE_DISABLE		0x40
 
-
 /**
  * struct dw_i2c_dev - private i2c-designware data
  * @dev: driver model device node
@@ -88,7 +87,8 @@ struct dw_i2c_dev {
 	u32			master_cfg;
 	unsigned int		tx_fifo_depth;
 	unsigned int		rx_fifo_depth;
-+	void 			(*i2c_recover_bus)(struct platform_device *);
+	void			(*i2c_recover_bus)(void *);
+	void			*recovery_data;
 };
 
 extern u32 dw_readl(struct dw_i2c_dev *dev, int offset);
