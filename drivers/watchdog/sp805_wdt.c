@@ -25,6 +25,7 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
@@ -377,13 +378,10 @@ static int sp805_wdt_resume(struct device *dev)
 
 	return ret;
 }
+#endif /* CONFIG_PM */
 
 static SIMPLE_DEV_PM_OPS(sp805_wdt_dev_pm_ops, sp805_wdt_suspend,
 		sp805_wdt_resume);
-#define SP805_WDT_DEV_PM_OPS (&sp805_wdt_dev_pm_ops)
-#else
-#define SP805_WDT_DEV_PM_OPS	NULL
-#endif /* CONFIG_PM */
 
 static struct amba_id sp805_wdt_ids[] = {
 	{
@@ -398,7 +396,7 @@ MODULE_DEVICE_TABLE(amba, sp805_wdt_ids);
 static struct amba_driver sp805_wdt_driver = {
 	.drv = {
 		.name	= MODULE_NAME,
-		.pm	= SP805_WDT_DEV_PM_OPS,
+		.pm	= &sp805_wdt_dev_pm_ops,
 	},
 	.id_table	= sp805_wdt_ids,
 	.probe		= sp805_wdt_probe,
