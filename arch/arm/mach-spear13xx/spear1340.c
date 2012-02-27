@@ -23,7 +23,7 @@
 #include <linux/input.h>
 #endif
 
-#include <linux/i2c-designware.h>
+#include <linux/i2c/i2c-designware.h>
 #include <linux/irq.h>
 #include <linux/mtd/fsmc.h>
 #include <linux/platform_data/spear_thermal.h>
@@ -1817,8 +1817,9 @@ struct platform_device spear1340_nand_device = {
  * This routine does i2c bus recovery as specified in the
  * i2c protocol Rev. 03 section 3.16 titled "Bus clear"
  */
-static void spear1340_i2c_dw_recover_bus(struct platform_device *pdev)
+static void spear1340_i2c_dw_recover_bus(void *data)
 {
+	struct platform_device *pdev = data;
 	int i2c_clk_gpio, i = 0, ret = 0;
 	int val = 0;
 	struct pmx_dev *pmxdev;
