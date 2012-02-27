@@ -1,7 +1,7 @@
 /*
  * SPEAr thermal driver.
  *
- * Copyright (C) 2011 ST Microelectronics
+ * Copyright (C) 2011-2012 ST Microelectronics
  * Author: Vincenzo Frascino <vincenzo.frascino@st.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -22,7 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/spear_thermal.h>
+#include <linux/platform_data/spear_thermal.h>
 #include <linux/thermal.h>
 
 #define MD_FACTOR	1000
@@ -67,7 +67,6 @@ static int spear_thermal_suspend(struct device *dev)
 	writel_relaxed(actual_mask & ~stdev->flags, stdev->thermal_base);
 
 	clk_disable(stdev->clk);
-
 	dev_info(dev, "Suspended.\n");
 
 	return 0;
@@ -95,10 +94,10 @@ static int spear_thermal_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(spear_thermal_pm_ops, spear_thermal_suspend,
 		spear_thermal_resume);
-#endif
 
 static int spear_thermal_probe(struct platform_device *pdev)
 {
@@ -125,6 +124,14 @@ static int spear_thermal_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	/* Enable thermal sensor */
+	stdev->thermal_base = devm_ioremap(&pdev->dev, stres->start,
+			resource_size(stres));
+	if (!stdev->thermal_base) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		return -ENOMEM;
+	}
+
 	stdev->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(stdev->clk)) {
 		dev_err(&pdev->dev, "Can't get clock\n");
@@ -135,15 +142,6 @@ static int spear_thermal_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "Can't enable clock\n");
 		goto put_clk;
-	}
-
-	/* Enable thermal sensor */
-	stdev->thermal_base = devm_ioremap(&pdev->dev, stres->start,
-			resource_size(stres));
-	if (!stdev->thermal_base) {
-		dev_err(&pdev->dev, "ioremap fail\n");
-		ret = -ENOMEM;
-		goto disable_clk;
 	}
 
 	stdev->flags = pdata->thermal_flags;
@@ -197,24 +195,12 @@ static struct platform_driver spear_thermal_driver = {
 	.driver = {
 		.name = "spear_thermal",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm = &spear_thermal_pm_ops,
-#endif
 	},
 };
 
-static int __init spear_thermal_init(void)
-{
-	return platform_driver_register(&spear_thermal_driver);
-}
-module_init(spear_thermal_init);
-
-static void __exit spear_thermal_cleanup(void)
-{
-	platform_driver_unregister(&spear_thermal_driver);
-}
-module_exit(spear_thermal_cleanup);
+module_platform_driver(spear_thermal_driver);
 
 MODULE_AUTHOR("Vincenzo Frascino <vincenzo.frascino@st.com>");
-MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("SPEAr thermal driver");
+MODULE_LICENSE("GPL");

@@ -1,8 +1,8 @@
 /*
- * SPEAr thermal driver.
+ * SPEAr thermal driver platform data.
  *
- * Copyright (C) 2011 ST Microelectronics
- * Author:Vincenzo Frascino <vincenzo.frascino@st.com>
+ * Copyright (C) 2011-2012 ST Microelectronics
+ * Author: Vincenzo Frascino <vincenzo.frascino@st.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
