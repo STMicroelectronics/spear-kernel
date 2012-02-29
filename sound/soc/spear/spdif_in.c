@@ -12,10 +12,12 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/spear_dma.h>
 #include <sound/pcm.h>
