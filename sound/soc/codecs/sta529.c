@@ -200,7 +200,7 @@ sta529_set_bias_level(struct snd_soc_codec *codec,
 
 	/*store the label for powers down audio subsystem for suspend.This is
 	 ** used by soc core layer*/
-	codec->bias_level = level;
+	codec->dapm.bias_level = level;
 	return 0;
 
 }
@@ -264,7 +264,7 @@ static int spear_sta529_remove(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int spear_sta529_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int spear_sta529_suspend(struct snd_soc_codec *codec)
 {
 	sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
@@ -284,7 +284,7 @@ static int spear_sta529_resume(struct snd_soc_codec *codec)
 	}
 
 	sta529_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
-	sta529_set_bias_level(codec, codec->suspend_bias_level);
+	sta529_set_bias_level(codec, codec->dapm.suspend_bias_level);
 
 	return 0;
 }
