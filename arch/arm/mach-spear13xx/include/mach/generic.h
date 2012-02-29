@@ -500,6 +500,8 @@ extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */
 extern struct dw_dma_slave cf_dma_priv;
+extern struct dw_dma_slave nand_read_dma_priv;
+extern struct dw_dma_slave nand_write_dma_priv;
 
 /* Add spear13xx family function declarations here */
 bool dw_dma_filter(struct dma_chan *chan, void *slave);

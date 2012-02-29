@@ -497,8 +497,23 @@ void nand_select_bank(u32 bank, u32 busw)
 	writel(fsmc_cfg, VA_FSMC_CFG);
 }
 
+struct dw_dma_slave nand_read_dma_priv = {
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.src_master = SPEAR13XX_DMA_MASTER_FSMC,
+	.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+};
+
+struct dw_dma_slave nand_write_dma_priv = {
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR13XX_DMA_MASTER_FSMC,
+};
+
 static struct fsmc_nand_platform_data nand_platform_data = {
 	.select_bank = nand_select_bank,
+	.mode = USE_DMA_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
 };
 
 static struct resource nand_resources[] = {

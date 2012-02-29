@@ -1794,6 +1794,9 @@ struct platform_device spear1340_gpiokeys_device = {
 
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
 	.select_bank = nand_select_bank,
+	.mode = USE_DMA_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
 };
 
 static struct resource nand_resources[] = {
