@@ -322,6 +322,7 @@ struct fsmc_nand_data {
 
 	struct fsmc_eccplace	*ecc_place;
 	unsigned int		bank;
+	struct device		*dev;
 	struct clk		*clk;
 
 	struct fsmc_nand_timings *dev_timings;
@@ -482,6 +483,11 @@ static int fsmc_read_hwecc_ecc4(struct mtd_info *mtd, const uint8_t *data,
 		else
 			cond_resched();
 	} while (!time_after_eq(jiffies, deadline));
+
+	if (time_after_eq(jiffies, deadline)) {
+		dev_err(host->dev, "calculate ecc timed out\n");
+		return -ETIMEDOUT;
+	}
 
 	ecc_tmp = readl(&regs->bank_regs[bank].ecc1);
 	ecc[0] = (uint8_t) (ecc_tmp >> 0);
@@ -849,6 +855,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
+	host->dev = &pdev->dev;
 	host->dev_timings = pdata->nand_timings;
 	regs = host->regs_va;
 
