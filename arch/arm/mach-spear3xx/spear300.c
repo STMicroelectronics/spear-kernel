@@ -771,7 +771,9 @@ struct platform_device spear300_kbd_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand0_platform_data;
+static struct fsmc_nand_platform_data nand0_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand0_resources[] = {
 	{
@@ -795,7 +797,9 @@ struct platform_device spear300_nand0_device = {
 	.dev.platform_data = &nand0_platform_data,
 };
 
-static struct fsmc_nand_platform_data nand1_platform_data;
+static struct fsmc_nand_platform_data nand1_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand1_resources[] = {
 	{
@@ -819,7 +823,9 @@ struct platform_device spear300_nand1_device = {
 	.dev.platform_data = &nand1_platform_data,
 };
 
-static struct fsmc_nand_platform_data nand2_platform_data;
+static struct fsmc_nand_platform_data nand2_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand2_resources[] = {
 	{
@@ -843,7 +849,9 @@ struct platform_device spear300_nand2_device = {
 	.dev.platform_data = &nand2_platform_data,
 };
 
-static struct fsmc_nand_platform_data nand3_platform_data;
+static struct fsmc_nand_platform_data nand3_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand3_resources[] = {
 	{

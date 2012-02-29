@@ -406,7 +406,9 @@ struct platform_device irda_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand_resources[] = {
 	{
