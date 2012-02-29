@@ -29,6 +29,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/i2c/i2c-designware.h>
 #include <linux/clk.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
@@ -45,6 +46,11 @@ static struct i2c_algorithm i2c_dw_algo = {
 	.master_xfer	= i2c_dw_xfer,
 	.functionality	= i2c_dw_func,
 };
+
+static struct i2c_bus_recovery_info dw_recovery_info = {
+	.is_gpio_recovery = true,
+};
+
 static u32 i2c_dw_get_clk_rate_khz(struct dw_i2c_dev *dev)
 {
 	return clk_get_rate(dev->clk)/1000;
@@ -55,6 +61,7 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct dw_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
+	struct i2c_dw_pdata *pdata;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -140,6 +147,23 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	adap->algo = &i2c_dw_algo;
 	adap->dev.parent = &pdev->dev;
 	adap->dev.of_node = pdev->dev.of_node;
+
+	/* Bus recovery support */
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata) {
+		dw_recovery_info.get_gpio = pdata->get_gpio;
+		dw_recovery_info.put_gpio = pdata->put_gpio;
+		dw_recovery_info.scl_gpio = pdata->scl_gpio;
+		dw_recovery_info.scl_gpio_flags = pdata->scl_gpio_flags;
+		dw_recovery_info.clock_rate_khz = clk_get_rate(dev->clk) / 1000;
+
+		if (!pdata->skip_sda_polling) {
+			dw_recovery_info.sda_gpio = pdata->sda_gpio;
+			dw_recovery_info.sda_gpio_flags = pdata->sda_gpio_flags;
+		}
+
+		adap->bus_recovery_info = &dw_recovery_info;
+	}
 
 	adap->nr = pdev->id;
 	r = i2c_add_numbered_adapter(adap);
