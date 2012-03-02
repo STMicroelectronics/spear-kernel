@@ -19,7 +19,6 @@
 #include <linux/dw_dmac.h>
 #include <linux/designware_i2s.h>
 #include <linux/mtd/fsmc.h>
-#include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/phy.h>
 #include <linux/io.h>
@@ -464,7 +463,6 @@ struct platform_device spear13xx_i2c_device = {
 };
 
 /* fsmc nor flash device registeration */
-static struct physmap_flash_data fsmc_norflash_data;
 static struct resource fsmc_nor_resources[] = {
 	{
 		.start	= SPEAR13XX_FSMC_MEM_BASE,
@@ -478,7 +476,6 @@ struct platform_device spear13xx_fsmc_nor_device = {
 	.id	= -1,
 	.resource = fsmc_nor_resources,
 	.num_resources = ARRAY_SIZE(fsmc_nor_resources),
-	.dev.platform_data = &fsmc_norflash_data,
 };
 
 /* nand device registeration */

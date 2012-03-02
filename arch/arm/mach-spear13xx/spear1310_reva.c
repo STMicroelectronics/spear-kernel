@@ -12,7 +12,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/mtd/physmap.h>
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/phy.h>
@@ -704,7 +703,6 @@ struct platform_device spear1310_reva_plgpio_device = {
 };
 
 /* fsmc nor flash device registeration */
-static struct physmap_flash_data ras_fsmc_norflash_data;
 static struct resource ras_fsmc_nor_resources[] = {
 	{
 		.start	= SPEAR1310_REVA_FSMC1_CS3_BASE,
@@ -718,7 +716,6 @@ struct platform_device spear1310_reva_ras_fsmc_nor_device = {
 	.id	= -1,
 	.resource = ras_fsmc_nor_resources,
 	.num_resources = ARRAY_SIZE(ras_fsmc_nor_resources),
-	.dev.platform_data = &ras_fsmc_norflash_data,
 };
 
 static struct rs485_hdlc_platform_data rs485_0_plat_data = {
