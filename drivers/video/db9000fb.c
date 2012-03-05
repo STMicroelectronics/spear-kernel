@@ -619,24 +619,34 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	return 0;
 }
 
+static int db9000fb_ioctl(struct fb_info *fb, unsigned int cmd,
+		unsigned long arg)
+{
+	int ret = 0;
 #ifdef CONFIG_FB_DB9000_DRM
-/* handle additional 'ioctl' for secure ID */
-int db9000_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg) {
 	u32 __user *psecureid = (u32 __user *) arg;
 	ump_secure_id secure_id;
-	if(cmd == GET_UMP_SECURE_ID) {
-		if(!got_ump_handle){
-			ump_wrapped_buffer = ump_dd_handle_create_from_phys_blocks(&ump_memory_description, 1);
-			got_ump_handle = 1;
-		}
-		secure_id = ump_dd_secure_id_get( ump_wrapped_buffer );
-		return put_user( (unsigned int)secure_id, psecureid );
-	}
- 
-	return -EINVAL;
-}
 #endif /* CONFIG_FB_DB9000_DRM */
 
+	switch (cmd) {
+#ifdef CONFIG_FB_DB9000_DRM
+	/* handle additional 'ioctl' for secure ID */
+	case GET_UMP_SECURE_ID:
+		if (!got_ump_handle) {
+			ump_wrapped_buffer =
+				ump_dd_handle_create_from_phys_blocks(
+					&ump_memory_description, 1);
+			got_ump_handle = 1;
+		}
+		secure_id = ump_dd_secure_id_get(ump_wrapped_buffer);
+		ret = put_user((unsigned int)secure_id, psecureid);
+		break;
+#endif /* CONFIG_FB_DB9000_DRM */
+	default:
+		break;
+	}
+	return ret;
+}
 
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
@@ -644,14 +654,12 @@ static struct fb_ops db9000fb_ops = {
 	.fb_set_par	= db9000fb_set_par,
 	.fb_setcolreg	= db9000fb_setcolreg,
 	.fb_pan_display = db9000fb_pan_display,
-#ifdef CONFIG_FB_DB9000_DRM
-	.fb_ioctl		= db9000_ioctl,
-#endif
 	.fb_setcmap	= db9000fb_setcmap,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
 	.fb_imageblit	= cfb_imageblit,
 	.fb_blank	= db9000fb_blank,
+	.fb_ioctl	= db9000fb_ioctl,
 };
 
 /*
