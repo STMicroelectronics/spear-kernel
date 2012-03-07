@@ -225,6 +225,21 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 		goto err_register;
 	}
 
+	/*
+	 * Check that the mpcore_margin value is within it's range; if not reset
+	 * to the default
+	 */
+	if (mpcore_margin < MIN_TIME || mpcore_margin > MAX_TIME) {
+		mpcore_margin = TIMER_MARGIN;
+		dev_info(wdt->dev, "mpcore_margin value must be 0 < mpcore_margin < 65536, using %d\n",
+			TIMER_MARGIN);
+	}
+
+	mpcore_wdt_set_heartbeat(NULL, mpcore_margin);
+	dev_info(wdt->dev, "MPcore Watchdog Timer: 0.1. mpcore_noboot=%d "
+			"mpcore_margin=%d sec (nowayout= %d)\n", mpcore_noboot,
+			mpcore_margin, nowayout);
+
 	return 0;
 
 err_register:
@@ -284,20 +299,6 @@ static struct platform_driver mpcore_wdt_driver = {
 
 static int __init mpcore_wdt_init(void)
 {
-	/*
-	 * Check that the mpcore_margin value is within it's range;
-	 * if not reset to the default
-	 */
-	if (mpcore_margin < MIN_TIME || mpcore_margin > MAX_TIME) {
-		mpcore_margin = TIMER_MARGIN;
-		pr_info("mpcore_margin value must be 0 < mpcore_margin < 65536, using %d\n",
-			TIMER_MARGIN);
-	}
-
-	mpcore_wdt_set_heartbeat(NULL, mpcore_margin);
-	pr_info("MPcore Watchdog Timer: 0.1. mpcore_noboot=%d mpcore_margin=%d sec (nowayout= %d)\n",
-		mpcore_noboot, mpcore_margin, nowayout);
-
 	return platform_driver_register(&mpcore_wdt_driver);
 }
 
