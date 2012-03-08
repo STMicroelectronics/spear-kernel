@@ -34,6 +34,7 @@ struct {
 	u32 freq_tbl_len;
 	unsigned int min_freq;
 	unsigned int max_freq;
+	unsigned int transition_latency;
 } spear_cpufreq;
 
 int spear_cpufreq_verify(struct cpufreq_policy *policy)
@@ -264,7 +265,7 @@ static int spear_cpufreq_init(struct cpufreq_policy *policy)
 		cpufreq_frequency_table_get_attr(spear_cpufreq.freq_tbl,
 				policy->cpu);
 
-	policy->cpuinfo.transition_latency = 300 * 1000; /*300 us*/
+	policy->cpuinfo.transition_latency = spear_cpufreq.transition_latency;
 
 	return 0;
 }
@@ -312,6 +313,11 @@ static int __init spear_cpufreq_probe(struct platform_device *pdev)
 	spear_cpufreq.max_freq = spear_cpufreq.freq_tbl[i-1].frequency;
 	spear_cpufreq.freq_tbl[i].index = i;
 	spear_cpufreq.freq_tbl[i].frequency = CPUFREQ_TABLE_END;
+	spear_cpufreq.transition_latency = pdata->transition_latency;
+	if (pdata->transition_latency)
+		spear_cpufreq.transition_latency = pdata->transition_latency;
+	else
+		spear_cpufreq.transition_latency = 300 * 1000; /*300 us*/
 
 	spear_cpufreq.cpu_clk = clk_get(NULL, "cpu_clk");
 	if (IS_ERR(spear_cpufreq.cpu_clk)) {
