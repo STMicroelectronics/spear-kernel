@@ -1752,6 +1752,8 @@ static u32 cpu_freq_tbl[] = {
 static struct spear_cpufreq_pdata cpufreq_pdata = {
 	.cpu_freq_table = cpu_freq_tbl,
 	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+	/* Program the actual transition time for worstcase */
+	.transition_latency = 250 * 1000, /*250 us*/
 };
 
 struct platform_device spear1340_cpufreq_device = {
