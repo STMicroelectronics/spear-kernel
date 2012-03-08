@@ -21,5 +21,6 @@
 struct spear_cpufreq_pdata {
 	unsigned int *cpu_freq_table;
 	unsigned int tbl_len;
+	unsigned int transition_latency;
 };
 #endif
