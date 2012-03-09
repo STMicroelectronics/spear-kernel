@@ -1142,12 +1142,15 @@ db9000fb_freq_transition(
 
 	switch (val) {
 	case CPUFREQ_PRECHANGE:
-		set_ctrlr_state(fbi, C_DISABLE_CLKCHANGE);
+		if (!fbi->ignore_cpufreq_notification)
+			set_ctrlr_state(fbi, C_DISABLE_CLKCHANGE);
 		break;
 
 	case CPUFREQ_POSTCHANGE:
-		setup_parallel_timing(fbi, var);
-		set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
+		if (!fbi->ignore_cpufreq_notification) {
+			setup_parallel_timing(fbi, var);
+			set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
+		}
 		break;
 	}
 	return 0;
@@ -1806,6 +1809,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	ump_memory_description.addr = fbi->fb.fix.smem_start;
 	ump_memory_description.size = ((fbi->fb.fix.smem_len / 4096) + 1)* 4096;
 #endif /* CONFIG_FB_DB9000_DRM */
+
+	fbi->ignore_cpufreq_notification = inf->ignore_cpufreq_notification;
 
 	return 0;
 
