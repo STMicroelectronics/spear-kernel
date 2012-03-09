@@ -391,6 +391,8 @@ struct db9000fb_mach_info {
 	void (*clcd_mux_selection) (bool);
 	struct clk *bus_clk;
 	struct clk *pixel_clk;
+	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
+	unsigned int ignore_cpufreq_notification;
 };
 
 struct db9000fb_info {
@@ -479,5 +481,7 @@ struct db9000fb_info {
 	u8 bl_power;
 #endif
 	u16 db9000_rev;
+	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
+	unsigned int ignore_cpufreq_notification;
 };
 #endif /* __DB9000FB_H__ */
