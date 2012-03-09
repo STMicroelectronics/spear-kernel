@@ -2374,6 +2374,27 @@ static int dw_udc_stop(struct usb_gadget_driver *driver)
 	return 0;
 }
 
+static int dw_udc_pullup(struct usb_gadget *_gadget, int is_on)
+{
+	struct dw_udc_dev *udev = &the_controller;
+	unsigned long		flags;
+
+	if (!_gadget)
+		return -ENODEV;
+	if (!udev)
+		return -ENODEV;
+
+	spin_lock_irqsave(&udev->lock, flags);
+
+	if (is_on)
+		udc_connect(udev);
+	else
+		udc_disconnect(udev);
+
+	spin_unlock_irqrestore(&udev->lock, flags);
+
+	return 0;
+}
 static const struct usb_gadget_ops dw_udc_ops = {
 	.get_frame = dw_udc_get_frame,
 	.wakeup = dw_udc_wakeup,
@@ -2381,6 +2402,7 @@ static const struct usb_gadget_ops dw_udc_ops = {
 	.ioctl = dw_udc_ioctl,
 	.start = dw_udc_start,
 	.stop = dw_udc_stop,
+	.pullup = dw_udc_pullup,
 };
 
 #ifdef CONFIG_USB_GADGET_DEBUG_FILES
