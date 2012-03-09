@@ -120,6 +120,11 @@ struct watchdog_device {
 #define WDOG_NO_WAY_OUT		3	/* Is 'nowayout' feature set ? */
 };
 
+static inline bool is_wdd_active(struct watchdog_device *wdd)
+{
+	return test_bit(WDOG_ACTIVE, &wdd->status);
+}
+
 #ifdef CONFIG_WATCHDOG_NOWAYOUT
 #define WATCHDOG_NOWAYOUT		1
 #define WATCHDOG_NOWAYOUT_INIT_STATUS	(1 << WDOG_NO_WAY_OUT)
