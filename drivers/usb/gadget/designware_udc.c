@@ -2273,13 +2273,6 @@ dw_udc_ioctl(struct usb_gadget *gadget, unsigned code, unsigned long param)
 	return 0;
 }
 
-static const struct usb_gadget_ops dw_udc_ops = {
-	.get_frame = dw_udc_get_frame,
-	.wakeup = dw_udc_wakeup,
-	.set_selfpowered = dw_udc_set_selfpowered,
-	.ioctl = dw_udc_ioctl,
-};
-
 static void dw_udc_release(struct device *dev)
 {
 	pr_debug("%s %s\n", __func__, dev_name(dev));
@@ -2287,7 +2280,6 @@ static void dw_udc_release(struct device *dev)
 
 static struct dw_udc_dev the_controller = {
 	.gadget = {
-		.ops = &dw_udc_ops,
 		.ep_list = LIST_HEAD_INIT(the_controller.gadget.ep_list),
 		.is_dualspeed = 1,
 		.name = driver_name,
@@ -2297,7 +2289,6 @@ static struct dw_udc_dev the_controller = {
 		},
 	},
 };
-
 /*
  * when a driver is successfully registered, it will receive
  * control requests including set_configuration(), which enables
@@ -2305,7 +2296,7 @@ static struct dw_udc_dev the_controller = {
  * disconnect is reported. then a host may connect again, or
  * the driver might get unbound.
  */
-int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
+static int dw_udc_start(struct usb_gadget_driver *driver,
 		int (*bind)(struct usb_gadget *))
 {
 	struct dw_udc_dev *udev = &the_controller;
@@ -2362,9 +2353,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 	return 0;
 }
-EXPORT_SYMBOL(usb_gadget_probe_driver);
 
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
+static int dw_udc_stop(struct usb_gadget_driver *driver)
 {
 	struct dw_udc_dev *udev = &the_controller;
 
@@ -2383,7 +2373,15 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	return 0;
 }
-EXPORT_SYMBOL(usb_gadget_unregister_driver);
+
+static const struct usb_gadget_ops dw_udc_ops = {
+	.get_frame = dw_udc_get_frame,
+	.wakeup = dw_udc_wakeup,
+	.set_selfpowered = dw_udc_set_selfpowered,
+	.ioctl = dw_udc_ioctl,
+	.start = dw_udc_start,
+	.stop = dw_udc_stop,
+};
 
 #ifdef CONFIG_USB_GADGET_DEBUG_FILES
 static const char proc_node_name[] = "driver/synudc";
@@ -2731,6 +2729,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 		goto err_iounmap_plug;
 	}
 
+	udev->gadget.ops = &dw_udc_ops,
 	udev->gadget.ep0 = &udev->ep[0].ep;
 	for (i = 0; i < pdata->num_ep; i++) {
 		ep = &udev->ep[i];
@@ -2793,6 +2792,9 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "Device Synopsys UDC probed csr %p: plug %p\n",
 			udev->csr_base, udev->plug_base);
 
+	retval = usb_add_gadget_udc(&pdev->dev, &udev->gadget);
+	if (retval)
+		goto err_mem_pool_remove;
 	return 0;
 
 err_mem_pool_remove:
@@ -2903,7 +2905,6 @@ static const struct dev_pm_ops dw_udc_pm_ops = {
 #endif
 
 static struct platform_driver dw_udc_driver = {
-	.probe = dw_udc_probe,
 	.remove = __devexit_p(dw_udc_remove),
 	.driver = {
 		.owner = THIS_MODULE,
@@ -2917,7 +2918,7 @@ static struct platform_driver dw_udc_driver = {
 
 static int __init dw_udc_init(void)
 {
-	return platform_driver_register(&dw_udc_driver);
+	return platform_driver_probe(&dw_udc_driver, dw_udc_probe);
 }
 module_init(dw_udc_init);
 
