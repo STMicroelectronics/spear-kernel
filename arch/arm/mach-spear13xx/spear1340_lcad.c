@@ -15,6 +15,12 @@
 #include <linux/clk.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+#endif
+
 #include <linux/i2c.h>
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/irq.h>
@@ -138,6 +144,76 @@ static struct pmx_dev pmx_plgpios = {
 	.mode_count = ARRAY_SIZE(pmx_plgpios_modes),
 };
 
+/* SPEAr GPIO Buttons Info */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+/* SPEAr GPIO Buttons definition */
+#define SPEAR_GPIO_BTN9	9
+
+static struct gpio_keys_button spear1340_lcad_gpio_keys_table[] = {
+	{
+		.code = BTN_0,
+		.gpio = SPEAR_GPIO_BTN9,
+		.active_low = 0,
+		.desc = "gpio-keys: BTN0",
+		.type = EV_KEY,
+		.wakeup = 1,
+		.debounce_interval = 20,
+	}, {
+		.code = KEY_BACK,
+		.gpio = PLGPIO_53,
+		.active_low = 1,
+		.desc = "gpio-keys: BTN1:BACK",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	}, {
+		.code = KEY_MENU,
+		.gpio = PLGPIO_52,
+		.active_low = 1,
+		.desc = "gpio-keys: BTN2:MENU",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	}, {
+		.code = KEY_HOME,
+		.gpio = PLGPIO_48,
+		.active_low = 1,
+		.desc = "gpio-keys: BTN3:HOME",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	}, {
+		.code = KEY_VOLUMEDOWN,
+		.gpio = PLGPIO_37,
+		.active_low = 1,
+		.desc = "gpio-keys: BTN4:VOLUMEDOWN",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	}, {
+		.code = KEY_VOLUMEUP,
+		.gpio = PLGPIO_42,
+		.active_low = 1,
+		.desc = "gpio-keys: BTN5:VOLUMEUP",
+		.type = EV_KEY,
+		.wakeup = 0,
+		.debounce_interval = 20,
+	},
+};
+
+static struct gpio_keys_platform_data spear1340_lcad_gpio_keys_data = {
+	.buttons = spear1340_lcad_gpio_keys_table,
+	.nbuttons = ARRAY_SIZE(spear1340_lcad_gpio_keys_table),
+};
+
+struct platform_device spear1340_lcad_gpiokeys_device = {
+	.name = "gpio-keys",
+	.dev = {
+		.platform_data = &spear1340_lcad_gpio_keys_data,
+	},
+};
+#endif
+
 /* Pad Multiplexing for LSM303DLH Accelerometer device */
 static struct pmx_mux_reg lsm303_plgpios_mux[] = {
 	{
@@ -218,13 +294,16 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1340 specific devices */
 	&spear1340_camif0_device,
 	&cam0_sensor_device,
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-	&spear1340_gpiokeys_device,
-#endif
 	&spear1340_i2c1_device,
 	&spear1340_plgpio_device,
 	&spear1340_otg_device,
 	&spear1340_thermal_device,
+
+	/* spear1340 lcad specific devices */
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear1340_lcad_gpiokeys_device,
+#endif
+
 };
 
 /* fsmc platform data */
