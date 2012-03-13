@@ -32,8 +32,9 @@
 #include "dwmac100.h"
 #include "dwmac_dma.h"
 
-static int dwmac100_dma_init(void __iomem *ioaddr, int pbl, u32 dma_tx,
-			     u32 dma_rx)
+static int dwmac100_dma_init(void __iomem *ioaddr,
+				struct stmmac_dma_cfg *dma_cfg , u32 dma_tx,
+				u32 dma_rx)
 {
 	u32 value = readl(ioaddr + DMA_BUS_MODE);
 	int limit;
@@ -51,8 +52,9 @@ static int dwmac100_dma_init(void __iomem *ioaddr, int pbl, u32 dma_tx,
 		return -EBUSY;
 
 	/* Enable Application Access by writing to DMA CSR0 */
-	writel(DMA_BUS_MODE_DEFAULT | (pbl << DMA_BUS_MODE_PBL_SHIFT),
-	       ioaddr + DMA_BUS_MODE);
+	writel(DMA_BUS_MODE_DEFAULT |
+			(dma_cfg->pbl << DMA_BUS_MODE_PBL_SHIFT),
+			ioaddr + DMA_BUS_MODE);
 
 	/* Mask interrupts by writing to CSR7 */
 	writel(DMA_INTR_DEFAULT_MASK, ioaddr + DMA_INTR_ENA);
