@@ -1380,7 +1380,8 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 			struct sk_buff *skb;
 			int frame_len;
 
-			frame_len = priv->hw->desc->get_rx_frame_len(p);
+			frame_len = priv->hw->desc->get_rx_frame_len(p,
+					priv->plat->rx_coe_type);
 			/* ACS is set; GMAC core strips PAD/FCS for IEEE 802.3
 			 * Type frames (LLC/LLC-SNAP) */
 			if (unlikely(status != llc_snap))
@@ -1877,7 +1878,8 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
 
 	priv->rx_coe = priv->hw->mac->rx_coe(priv->ioaddr);
 	if (priv->rx_coe)
-		pr_info(" RX Checksum Offload Engine supported\n");
+		pr_info(" RX Checksum Offload Engine supported (type %d)\n",
+				priv->plat->rx_coe_type);
 	if (priv->plat->tx_coe)
 		pr_info(" TX Checksum insertion supported\n");
 
