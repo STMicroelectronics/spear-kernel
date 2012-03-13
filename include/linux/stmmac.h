@@ -28,6 +28,18 @@
 
 #include <linux/platform_device.h>
 
+/* Checksum offload engine Types */
+/* STMMAC core supports two check sum offloading engine types
+ * Type-1 & Type-2
+ * These are configurable portion of the MAC core and hence could be
+ * also made off.
+ * The Type-0 Macro defined below covers the core which do not support
+ * the checksum offloading.
+ */
+#define STMMAC_RX_COE_T0	0
+#define STMMAC_RX_COE_T1	1
+#define STMMAC_RX_COE_T2	2
+
 /* Platfrom data for platform device structure's platform_data field */
 
 struct stmmac_mdio_bus_data {
@@ -57,5 +69,6 @@ struct plat_stmmacenet_data {
 	void (*exit)(struct platform_device *pdev);
 	void *custom_cfg;
 	void *bsp_priv;
+	int rx_coe_type;
 };
 #endif
