@@ -19,7 +19,6 @@
 #include <linux/netdevice.h>
 #include <linux/ptrace.h>
 #include <linux/io.h>
-#include <linux/stmmac.h>
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
@@ -202,17 +201,6 @@ struct platform_device spear3xx_cpufreq_device = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacenet_data ether_platform_data = {
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 1,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_2,
-	.bugged_jumbo = 1,
-	.features = NETIF_F_HW_CSUM,
-	.pmt = 1,
-};
-
 static struct resource eth_resources[] = {
 	[0] = {
 		.start = SPEAR3XX_ICM4_MII_BASE,
@@ -238,7 +226,6 @@ struct platform_device spear3xx_eth_device = {
 	.num_resources = ARRAY_SIZE(eth_resources),
 	.resource = eth_resources,
 	.dev = {
-		.platform_data = &ether_platform_data,
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},

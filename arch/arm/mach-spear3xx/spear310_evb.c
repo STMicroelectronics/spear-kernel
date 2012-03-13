@@ -63,28 +63,6 @@ static struct platform_device spear310_emi_nor_device = {
 };
 
 /* ethernet device */
-static struct plat_stmmacphy_data phy_private_data = {
-	.bus_id = 0,
-	.phy_addr = -1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_MII,
-};
-
-static struct resource phy_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-static struct platform_device spear310_phy_device = {
-	.name = "stmmacphy",
-	.id = -1,
-	.num_resources = 1,
-	.resource = &phy_resources,
-	.dev.platform_data = &phy_private_data,
-};
-
 static struct macb_base_data spear310_macb1_data = {
 	.bus_id = 1,
 	.phy_mask = 0,
@@ -182,8 +160,35 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear310_eth_macb3_device,
 	&spear310_eth_macb4_device,
 	&spear310_nand_device,
-	&spear310_phy_device,
 	&spear310_plgpio_device,
+};
+
+/* Ethernet PLatform data */
+/* MDIO Bus Data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len_supported = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = -1,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe_type = STMMAC_RX_COE_T2,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.clk_csr = STMMAC_CSR_150_250M,
 };
 
 /* fsmc platform data */
@@ -257,6 +262,12 @@ static void __init spear310_evb_init(void)
 				sizeof(nand_plat_data)))
 		printk(KERN_WARNING "%s: couldn't add plat_data",
 				spear310_nand_device.name);
+
+	/* Set stmmac plat data */
+	if (platform_device_add_data(&spear3xx_eth_device, &eth_data,
+			sizeof(eth_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear3xx_eth_device.name);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();
