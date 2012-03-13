@@ -1678,7 +1678,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.con_id = "cfxd_synth_clk",		.clk = &cfxd_synth_clk},
 	{.con_id = "gmac_phy_input_clk",	.clk = &gmac_phy_input_clk},
 	{.con_id = "gmac_phy_synth_clk",	.clk = &gmac_phy_synth_clk},
-	{.dev_id = "stmmacphy.0",		.clk = &gmac_phy0_clk},
+	{.con_id = "stmmacphy.0",		.clk = &gmac_phy0_clk},
 	{.dev_id = "gen_synth0_clk",		.clk = &gen_synth0_clk},
 	{.dev_id = "gen_synth1_clk",		.clk = &gen_synth1_clk},
 	{.dev_id = "gen_synth2_clk",		.clk = &gen_synth2_clk},

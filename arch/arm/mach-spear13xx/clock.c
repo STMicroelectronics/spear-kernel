@@ -1559,7 +1559,7 @@ static struct clk_lookup spear_clk_lookups[] = {
 	{.con_id = "cfxd_synth_clk",		.clk = &cfxd_synth_clk},
 	{.con_id = "gmac_phy_input_clk",	.clk = &gmac_phy_input_clk},
 	{.con_id = "gmac_phy_synth_clk",	.clk = &gmac_phy_synth_clk},
-	{.dev_id = "stmmacphy.0",		.clk = &gmac_phy0_clk},
+	{.con_id = "stmmacphy.0",		.clk = &gmac_phy0_clk},
 
 	/* RAS clocks */
 	{.con_id = "ras_synth0_clk",		.clk = &ras_synth0_clk},
@@ -1644,10 +1644,10 @@ static struct clk_lookup spear1310_reva_clk_lookups[] = {
 	{.dev_id = "stmmaceth.2",	.clk = &gmac_ras2_clk},
 	{.dev_id = "stmmaceth.3",	.clk = &gmac_ras3_clk},
 	{.dev_id = "stmmaceth.4",	.clk = &gmac_ras4_clk},
-	{.dev_id = "stmmacphy.1",	.clk = &gmac_phy1_clk},
-	{.dev_id = "stmmacphy.2",	.clk = &gmac_phy2_clk},
-	{.dev_id = "stmmacphy.3",	.clk = &gmac_phy3_clk},
-	{.dev_id = "stmmacphy.4",	.clk = &gmac_phy4_clk},
+	{.con_id = "stmmacphy.1",	.clk = &gmac_phy1_clk},
+	{.con_id = "stmmacphy.2",	.clk = &gmac_phy2_clk},
+	{.con_id = "stmmacphy.3",	.clk = &gmac_phy3_clk},
+	{.con_id = "stmmacphy.4",	.clk = &gmac_phy4_clk},
 	{.dev_id = "uart1",		.clk = &uart1_clk},
 	{.dev_id = "uart2",		.clk = &uart2_clk},
 	{.dev_id = "uart3",		.clk = &uart3_clk},
