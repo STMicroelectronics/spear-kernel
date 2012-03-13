@@ -26,29 +26,6 @@
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
-/* Ethernet phy device registeration */
-static struct plat_stmmacphy_data phy_private_data = {
-	.bus_id = 0,
-	.phy_addr = 1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_GMII,
-};
-
-static struct resource phy_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-static struct platform_device phy_device = {
-	.name = "stmmacphy",
-	.id = -1,
-	.num_resources = 1,
-	.resource = &phy_resources,
-	.dev.platform_data = &phy_private_data,
-};
-
 static struct amba_device *amba_devs[] __initdata = {
 	&clcd_device,
 	&dma_device,
@@ -69,7 +46,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&ehci0_device,
 	&ehci1_device,
 	&eth_device,
-	&phy_device,
 	&i2c_device,
 	&irda_device,
 	&jpeg_device,
@@ -80,6 +56,34 @@ static struct platform_device *plat_devs[] __initdata = {
 	&smi_device,
 	&touchscreen_device,
 	&udc_device,
+};
+
+/* Ethernet PLatform data */
+/* MDIO Bus Data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len_supported = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = 1,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 0,
+	.tx_coe = 0,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe_type = STMMAC_RX_COE_T1,
+	.bugged_jumbo = 0,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.clk_csr = STMMAC_CSR_150_250M,
 };
 
 /* fsmc platform data */
@@ -135,6 +139,12 @@ static void __init spear600_evb_init(void)
 
 	/* call spear600 machine init function */
 	spear600_init();
+
+	/* Set stmmac plat data */
+	if (platform_device_add_data(&eth_device, &eth_data,
+			sizeof(eth_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				eth_device.name);
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&smi_device);

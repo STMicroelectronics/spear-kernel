@@ -20,7 +20,6 @@
 #include <linux/ptrace.h>
 #include <linux/io.h>
 #include <linux/spear_adc_usr.h>
-#include <linux/stmmac.h>
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/irq.h>
@@ -320,18 +319,6 @@ struct platform_device cpufreq_device = {
 };
 
 /* stmmac device registeration */
-static struct plat_stmmacenet_data eth_platform_data = {
-	.bus_id = 0,
-	.has_gmac = 1,
-	.enh_desc = 0,
-	.tx_coe = 0,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_1,
-	.bugged_jumbo = 0,
-	.features = NETIF_F_HW_CSUM,
-	.pmt = 1,
-};
-
 static struct resource eth_resources[] = {
 	[0] = {
 		.start = SPEAR6XX_ICM4_GMAC_BASE,
@@ -357,7 +344,6 @@ struct platform_device eth_device = {
 	.num_resources = ARRAY_SIZE(eth_resources),
 	.resource = eth_resources,
 	.dev = {
-		.platform_data = &eth_platform_data,
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
