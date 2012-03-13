@@ -96,30 +96,6 @@ static struct platform_device spear1340_cam3_sensor_device = {
 	},
 };
 
-/* Ethernet phy-0 device registeration */
-static struct plat_stmmacphy_data phy0_private_data = {
-	.bus_id = 0,
-	.phy_addr = -1,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_RGMII,
-	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
-};
-
-static struct resource phy0_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-struct platform_device spear1340_phy0_device = {
-	.name		= "stmmacphy",
-	.id		= 0,
-	.num_resources	= 1,
-	.resource	= &phy0_resources,
-	.dev.platform_data = &phy0_private_data,
-};
-
 /*
  * Pad multiplexing for making few pads as plgpio's.
  * Please retain original values and addresses, and update only mask as
@@ -296,7 +272,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_i2s_record_device,
 	&spear1340_nand_device,
 	&spear1340_otg_device,
-	&spear1340_phy0_device,
 	&spear1340_plgpio_device,
 	&spear1340_pwm_device,
 	&spear1340_sata0_device,
@@ -333,16 +308,32 @@ static const struct kbd_platform_data kbd_data __initconst = {
 };
 
 /* Ethernet specific plat data */
+/* MDIO Bus Data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 16,
+	.fixed_burst = 1,
+	.burst_len_supported = DMA_AXI_BLEN_ALL,
+};
+
 static struct plat_stmmacenet_data eth_data = {
 	.bus_id = 0,
+	.phy_addr = -1,
+	.interface = PHY_INTERFACE_MODE_RGMII,
 	.has_gmac = 1,
 	.enh_desc = 1,
 	.tx_coe = 1,
-	.pbl = 16,
-	.csum_off_engine = STMAC_TYPE_2,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe_type = STMMAC_RX_COE_T2,
 	.bugged_jumbo = 1,
-	.features = NETIF_F_HW_CSUM,
 	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.init = spear13xx_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
 };
 
 /* Initializing platform data for spear1340 evb specific I2C devices */
@@ -598,11 +589,11 @@ static void __init spear1340_evb_init(void)
 	/* call spear1340 machine init function */
 	spear1340_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
 
-	/*
-	 * SPEAr1340 has gmac configured differently. Hence set its plat
-	 * data separately.
-	 */
-	spear13xx_eth_device.dev.platform_data = &eth_data;
+	/* Set stmmac plat data */
+	if (platform_device_add_data(&spear13xx_eth_device, &eth_data,
+			sizeof(eth_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_eth_device.name);
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);

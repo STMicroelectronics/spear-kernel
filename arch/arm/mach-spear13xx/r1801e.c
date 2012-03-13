@@ -104,54 +104,6 @@ static struct mtd_partition partition_info[] = {
 	PARTITION("Root File System", 0x3e0000, 8161 * 0x20000),
 };
 
-static struct plat_stmmacphy_data phy0_private_data;
-
-static int phy_reset(void *mii)
-{
-	u16 phyid1, phyid2;
-	struct mii_bus *bus;
-
-	bus = (struct mii_bus *)mii;
-	phyid1 = bus->read(bus, phy0_private_data.phy_addr, 0x2);
-	phyid2 = bus->read(bus, phy0_private_data.phy_addr, 0x3);
-
-	if (phyid1 == 0x0022 && (phyid2 & 0xfff0) == 0x1610) {
-		/*
-		 * Note: Adjust timing within Micrel
-		 * PHY, otherwise link doesn't work
-		 */
-		bus->write(bus, phy0_private_data.phy_addr, 0xb, 0x8104);
-		bus->write(bus, phy0_private_data.phy_addr, 0xc, 0x7700);
-	}
-
-	return 0;
-}
-
-/* Ethernet phy-0 device registeration */
-static struct plat_stmmacphy_data phy0_private_data = {
-	.bus_id = 0,
-	.phy_addr = 0,
-	.phy_mask = 0,
-	.interface = PHY_INTERFACE_MODE_GMII,
-	.phy_clk_cfg = spear13xx_eth_phy_clk_cfg,
-	.phy_reset = phy_reset,
-};
-
-static struct resource phy0_resources = {
-	.name = "phyirq",
-	.start = -1,
-	.end = -1,
-	.flags = IORESOURCE_IRQ,
-};
-
-static struct platform_device r1801e_phy0_device = {
-	.name		= "stmmacphy",
-	.id		= 0,
-	.num_resources	= 1,
-	.resource	= &phy0_resources,
-	.dev.platform_data = &phy0_private_data,
-};
-
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
@@ -213,7 +165,61 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1310 reva specific devices */
 	&spear1310_reva_i2c1_device,
 	&spear1310_reva_plgpio_device,
-	&r1801e_phy0_device,
+};
+
+/* Ethernet pLatform data */
+
+static int phy_reset(void *mii, void *priv)
+{
+	u16 phyid1, phyid2;
+	struct mii_bus *bus;
+	static struct plat_stmmacenet_data *plat_data;
+
+	bus = (struct mii_bus *)mii;
+	plat_data = (struct plat_stmmacenet_data *)priv;
+	phyid1 = bus->read(bus, plat_data->phy_addr, 0x2);
+	phyid2 = bus->read(bus, plat_data->phy_addr, 0x3);
+
+	if (phyid1 == 0x0022 && (phyid2 & 0xfff0) == 0x1610) {
+		/*
+		 * Note: Adjust timing within Micrel
+		 * PHY, otherwise link doesn't work
+		 */
+		bus->write(bus, plat_data->phy_addr, 0xb, 0x8104);
+		bus->write(bus, plat_data->phy_addr, 0xc, 0x7700);
+	}
+
+	return 0;
+}
+
+/* MDIO Bus Data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+	.phy_reset = phy_reset,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len_supported = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = 0,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe_type = STMMAC_RX_COE_T2,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.init = spear13xx_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+	.bsp_priv = &eth_data,
 };
 
 /* fsmc platform data */
@@ -276,6 +282,12 @@ static void __init r1801e_init(void)
 				sizeof(nand_plat_data)))
 		printk(KERN_WARNING "%s: couldn't add plat_data",
 				spear13xx_nand_device.name);
+
+	/* Set stmmac plat data */
+	if (platform_device_add_data(&spear13xx_eth_device, &eth_data,
+			sizeof(eth_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_eth_device.name);
 
 	/* call spear1310 reva machine init function */
 	spear1310_reva_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));

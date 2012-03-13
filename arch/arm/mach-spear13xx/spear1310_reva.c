@@ -474,18 +474,6 @@ struct platform_device spear1310_reva_can1_device = {
 	.resource = can1_resources,
 };
 
-/* Ethernet GETH-1 device registeration */
-static struct plat_stmmacenet_data ether1_platform_data = {
-	.bus_id = 1,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 0,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_0,
-	.bugged_jumbo = 0,
-	.features = NETIF_F_HW_CSUM,
-};
-
 static struct resource eth1_resources[] = {
 	[0] = {
 		.start = SPEAR1310_REVA_GETH1_BASE,
@@ -510,24 +498,12 @@ struct platform_device spear1310_reva_eth1_device = {
 	.num_resources = ARRAY_SIZE(eth1_resources),
 	.resource = eth1_resources,
 	.dev = {
-		.platform_data = &ether1_platform_data,
 		.dma_mask = &eth1_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
 };
 
 /* Ethernet GETH-2 device registeration */
-static struct plat_stmmacenet_data ether2_platform_data = {
-	.bus_id = 2,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 0,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_0,
-	.bugged_jumbo = 0,
-	.features = NETIF_F_HW_CSUM,
-};
-
 static struct resource eth2_resources[] = {
 	[0] = {
 		.start = SPEAR1310_REVA_GETH2_BASE,
@@ -552,24 +528,12 @@ struct platform_device spear1310_reva_eth2_device = {
 	.num_resources = ARRAY_SIZE(eth2_resources),
 	.resource = eth2_resources,
 	.dev = {
-		.platform_data = &ether2_platform_data,
 		.dma_mask = &eth2_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
 };
 
 /* Ethernet GETH-3 device registeration */
-static struct plat_stmmacenet_data ether3_platform_data = {
-	.bus_id = 3,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 0,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_0,
-	.bugged_jumbo = 0,
-	.features = NETIF_F_HW_CSUM,
-};
-
 static struct resource eth3_resources[] = {
 	[0] = {
 		.start = SPEAR1310_REVA_GETH3_BASE,
@@ -594,24 +558,12 @@ struct platform_device spear1310_reva_eth3_device = {
 	.num_resources = ARRAY_SIZE(eth3_resources),
 	.resource = eth3_resources,
 	.dev = {
-		.platform_data = &ether3_platform_data,
 		.dma_mask = &eth3_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
 };
 
 /* Ethernet GETH-4 device registeration */
-static struct plat_stmmacenet_data ether4_platform_data = {
-	.bus_id = 4,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 0,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_0,
-	.bugged_jumbo = 0,
-	.features = NETIF_F_HW_CSUM,
-};
-
 static struct resource eth4_resources[] = {
 	[0] = {
 		.start = SPEAR1310_REVA_GETH4_BASE,
@@ -636,7 +588,6 @@ struct platform_device spear1310_reva_eth4_device = {
 	.num_resources = ARRAY_SIZE(eth4_resources),
 	.resource = eth4_resources,
 	.dev = {
-		.platform_data = &ether4_platform_data,
 		.dma_mask = &eth4_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
@@ -881,12 +832,11 @@ free_vco_clk:
 	clk_put(vco_clk);
 }
 
-int spear1310_reva_eth_phy_clk_cfg(void *data)
+int spear1310_reva_eth_phy_clk_cfg(struct platform_device *pdev)
 {
-	struct platform_device *pdev = data;
-	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
+	struct plat_stmmacenet_data *pdata = dev_get_platdata(&pdev->dev);
 	void __iomem *addr = IOMEM(IO_ADDRESS(SPEAR1310_REVA_RAS_CTRL_REG1));
-	struct clk *clk = NULL;
+	struct clk *clk, *phy_clk = NULL;
 	u32 tmp;
 	int ret;
 	char *pclk_name[] = {
@@ -895,10 +845,17 @@ int spear1310_reva_eth_phy_clk_cfg(void *data)
 		"ras_tx50_clk",
 		"ras_synth0_clk",
 	};
+	const char *phy_clk_name[] = {
+		"stmmacphy.0",
+		"stmmacphy.1",
+		"stmmacphy.2",
+		"stmmacphy.3",
+		"stmmacphy.4",
+	};
 
-	pdata->clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(pdata->clk)) {
-		ret = PTR_ERR(pdata->clk);
+	phy_clk = clk_get(NULL, phy_clk_name[pdata->bus_id]);
+	if (IS_ERR(phy_clk)) {
+		ret = PTR_ERR(phy_clk);
 		goto fail_get_phy_clk;
 	}
 
@@ -950,15 +907,15 @@ int spear1310_reva_eth_phy_clk_cfg(void *data)
 	}
 
 	writel(tmp, addr);
-	clk_set_parent(pdata->clk, clk);
+	clk_set_parent(phy_clk, clk);
 	if (pdata->interface == PHY_INTERFACE_MODE_RMII)
 		ret = clk_set_rate(clk, 50000000);
 
-	ret = clk_enable(pdata->clk);
+	ret = clk_enable(phy_clk);
 
 	return ret;
 fail_get_pclk:
-	clk_put(pdata->clk);
+	clk_put(phy_clk);
 fail_get_phy_clk:
 	return ret;
 }

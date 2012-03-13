@@ -397,18 +397,6 @@ struct platform_device spear13xx_dmac_device[] = {
 };
 
 /* Ethernet device registeration */
-static struct plat_stmmacenet_data ether_platform_data = {
-	.bus_id = 0,
-	.has_gmac = 1,
-	.enh_desc = 1,
-	.tx_coe = 1,
-	.pbl = 8,
-	.csum_off_engine = STMAC_TYPE_2,
-	.bugged_jumbo = 1,
-	.features = NETIF_F_HW_CSUM,
-	.pmt = 1,
-};
-
 static struct resource eth_resources[] = {
 	[0] = {
 		.start = SPEAR13XX_GETH_BASE,
@@ -434,7 +422,6 @@ struct platform_device spear13xx_eth_device = {
 	.num_resources = ARRAY_SIZE(eth_resources),
 	.resource = eth_resources,
 	.dev = {
-		.platform_data = &ether_platform_data,
 		.dma_mask = &eth_dma_mask,
 		.coherent_dma_mask = ~0,
 	},
@@ -1145,27 +1132,29 @@ static void dmac_setup(void)
  * Generic function to configure ethernet phy clock as per the selected
  * interface
  */
-int spear13xx_eth_phy_clk_cfg(void *data)
+int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 {
 	int ret;
-	struct platform_device *pdev = data;
-	struct clk *input_clk, *input_pclk, *phy_pclk;
-	struct plat_stmmacphy_data *pdata = dev_get_platdata(&pdev->dev);
-	const char *phy_clk_src[] = {
+	struct clk *input_clk, *input_pclk, *phy_pclk, *phy_clk;
+	struct plat_stmmacenet_data *pdata = dev_get_platdata(&pdev->dev);
+	const char *phy_clk_src_name[] = {
 		"gmac_phy_input_clk",
 		"gmac_phy_synth_clk",
 	};
-	const char *input_clk_src[] = {
+	const char *input_clk_src_name[] = {
 		"pll2_clk",
 		"gmii_125m_pad_clk",
 		"osc3_25m_clk",
+	};
+	const char *phy_clk_name[] = {
+		"stmmacphy.0"
 	};
 
 	if (pdata == NULL)
 		return -EFAULT;
 
 	/* Get the Pll-2 Clock as parent for PHY Input Clock Source */
-	input_pclk = clk_get(NULL, input_clk_src[0]);
+	input_pclk = clk_get(NULL, input_clk_src_name[0]);
 	if (IS_ERR(input_pclk)) {
 		ret = PTR_ERR(input_pclk);
 		goto fail_get_input_pclk;
@@ -1176,16 +1165,16 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 	 * selection is gmac_phy_input_clk. This selection would be driving both
 	 * the synthesizer and phy clock.
 	 */
-	input_clk = clk_get(NULL, phy_clk_src[0]);
+	input_clk = clk_get(NULL, phy_clk_src_name[0]);
 	if (IS_ERR(input_clk)) {
 		ret = PTR_ERR(input_clk);
 		goto fail_get_input_clk;
 	}
 
 	/* Fetch the phy clock */
-	pdata->clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(pdata->clk)) {
-		ret = PTR_ERR(pdata->clk);
+	phy_clk = clk_get(NULL, phy_clk_name[pdata->bus_id]);
+	if (IS_ERR(phy_clk)) {
+		ret = PTR_ERR(phy_clk);
 		goto fail_get_phy_clk;
 	}
 
@@ -1200,7 +1189,7 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 		 * For the rmii interface select gmac_phy_synth_clk
 		 * as the parent and set the clock to 50 Mhz
 		 */
-		phy_pclk = clk_get(NULL, phy_clk_src[1]);
+		phy_pclk = clk_get(NULL, phy_clk_src_name[1]);
 		clk_set_rate(phy_pclk, 50000000);
 	} else {
 		/*
@@ -1212,8 +1201,8 @@ int spear13xx_eth_phy_clk_cfg(void *data)
 	}
 
 	/* Select the parent for phy clock */
-	clk_set_parent(pdata->clk, phy_pclk);
-	ret = clk_enable(pdata->clk);
+	clk_set_parent(phy_clk, phy_pclk);
+	ret = clk_enable(phy_clk);
 
 	return ret;
 fail_get_phy_clk:
