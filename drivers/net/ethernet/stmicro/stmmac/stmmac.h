@@ -22,6 +22,8 @@
 
 #define STMMAC_RESOURCE_NAME   "stmmaceth"
 #define DRV_MODULE_VERSION	"Feb_2012"
+
+#include <linux/clk.h>
 #include <linux/stmmac.h>
 #include <linux/phy.h>
 #include "common.h"
@@ -81,6 +83,10 @@ struct stmmac_priv {
 	struct stmmac_counters mmc;
 	struct dma_features dma_cap;
 	int hw_cap_support;
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block freq_transition;
+#endif
+	struct clk *stmmac_clk;
 };
 
 extern int phyaddr;

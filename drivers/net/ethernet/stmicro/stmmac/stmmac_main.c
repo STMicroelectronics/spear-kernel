@@ -35,6 +35,9 @@
 #include <linux/skbuff.h>
 #include <linux/ethtool.h>
 #include <linux/if_ether.h>
+#ifdef CONFIG_CPU_FREQ
+#include <linux/cpufreq.h>
+#endif
 #include <linux/crc32.h>
 #include <linux/mii.h>
 #include <linux/if.h>
@@ -179,6 +182,97 @@ static void print_pkt(unsigned char *buf, int len)
 
 /* minimum number of free TX descriptors required to wake up TX process */
 #define STMMAC_TX_THRESH(x)	(x->dma_tx_size/4)
+
+#ifdef CONFIG_CPU_FREQ
+static inline void stmmac_clk_csr_set(struct stmmac_priv *priv, int clk_rate)
+{
+
+	/* Platform provided default clk_csr would be assumed valid
+	 * for all other cases except for the below mentioned ones. */
+	if (clk_rate < CSR_F_35M)
+		priv->plat->clk_csr = STMMAC_CSR_20_35M;
+	else if ((clk_rate >= CSR_F_35M) && (clk_rate < CSR_F_60M))
+		priv->plat->clk_csr = STMMAC_CSR_35_60M;
+	else if ((clk_rate >= CSR_F_60M) && (clk_rate < CSR_F_100M))
+		priv->plat->clk_csr = STMMAC_CSR_60_100M;
+	else if ((clk_rate >= CSR_F_100M) && (clk_rate < CSR_F_150M))
+		priv->plat->clk_csr = STMMAC_CSR_100_150M;
+	else if ((clk_rate >= CSR_F_150M) && (clk_rate < CSR_F_250M))
+		priv->plat->clk_csr = STMMAC_CSR_150_250M;
+	else if ((clk_rate >= CSR_F_250M) && (clk_rate < CSR_F_300M))
+		priv->plat->clk_csr = STMMAC_CSR_250_300M;
+
+	/* FIXME: The MDC clock could be set higher than the IEEE 802.3
+	 * specified frequency limit 0f 2.5 MHz to 12.5 MHz for the
+	 * interfacing chips that support higher MDC clock.
+	 * This would require different divisors and corresponding
+	 * frquency ranges checks used for selecting the apt divisor. */
+}
+
+static int stmmac_cpufreq_transition(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct stmmac_priv *priv;
+	u32 clk_rate;
+
+	priv = container_of(nb, struct stmmac_priv, freq_transition);
+
+	if (val == CPUFREQ_PRECHANGE) {
+		/* Stop TX/RX DMA */
+		priv->hw->dma->stop_tx(priv->ioaddr);
+		priv->hw->dma->stop_rx(priv->ioaddr);
+
+	} else if (val == CPUFREQ_POSTCHANGE) {
+		/* Start DMA Tx/Rx */
+		priv->hw->dma->start_tx(priv->ioaddr);
+		priv->hw->dma->start_rx(priv->ioaddr);
+		priv->hw->dma->enable_dma_transmission(priv->ioaddr);
+
+		if (priv->stmmac_clk) {
+			/*
+			 * Decide on the MDC clock dynamically based on the
+			 * csr clock input.
+			 * This is helpfull in case the cpu frequency is changed
+			 * on the run using the cpu freq framework, and based
+			 * on that the bus frequency is also changed.
+			 * In case the clock framework is not established for an
+			 * architecture, use the default value that has to be
+			 * set through the platform.
+			 */
+			clk_rate = clk_get_rate(priv->stmmac_clk);
+			stmmac_clk_csr_set(priv, clk_rate);
+		}
+	}
+
+	return 0;
+}
+
+static inline void stmmac_cpufreq_register(struct stmmac_priv *priv)
+{
+	priv->freq_transition.notifier_call = stmmac_cpufreq_transition;
+	cpufreq_register_notifier(&priv->freq_transition,
+			CPUFREQ_TRANSITION_NOTIFIER);
+}
+
+static inline void stmmac_cpufreq_deregister(struct stmmac_priv *priv)
+{
+
+	cpufreq_unregister_notifier(&priv->freq_transition,
+			CPUFREQ_TRANSITION_NOTIFIER);
+}
+
+#else
+
+static inline void stmmac_cpufreq_register(struct stmmac_priv *priv)
+{
+	return 0;
+}
+
+static inline void stmmac_cpufreq_deregister(struct stmmac_priv *priv)
+{
+}
+
+#endif
 
 static inline u32 stmmac_tx_avail(struct stmmac_priv *priv)
 {
@@ -898,6 +992,9 @@ static int stmmac_open(struct net_device *dev)
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret;
 
+	if (priv->stmmac_clk)
+		clk_enable(priv->stmmac_clk);
+
 	stmmac_check_ether_addr(priv);
 
 	/* MDIO bus Registration */
@@ -905,14 +1002,15 @@ static int stmmac_open(struct net_device *dev)
 	if (ret < 0) {
 		pr_debug("%s: MDIO bus (id: %d) registration failed",
 			 __func__, priv->plat->bus_id);
-		return ret;
+		goto open_clk_dis;
 	}
 
 #ifdef CONFIG_STMMAC_TIMER
 	priv->tm = kzalloc(sizeof(struct stmmac_timer *), GFP_KERNEL);
 	if (unlikely(priv->tm == NULL)) {
 		pr_err("%s: ERROR: timer memory alloc failed\n", __func__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto open_clk_dis;
 	}
 	priv->tm->freq = tmrate;
 
@@ -1027,6 +1125,9 @@ open_error:
 	if (priv->phydev)
 		phy_disconnect(priv->phydev);
 
+open_clk_dis:
+	if (priv->stmmac_clk)
+		clk_disable(priv->stmmac_clk);
 	return ret;
 }
 
@@ -1079,6 +1180,8 @@ static int stmmac_release(struct net_device *dev)
 	stmmac_exit_fs();
 #endif
 	stmmac_mdio_unregister(dev);
+	if (priv->stmmac_clk)
+		clk_disable(priv->stmmac_clk);
 
 	return 0;
 }
@@ -1857,6 +1960,16 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 		goto error;
 	}
 
+#ifdef CONFIG_HAVE_CLK
+	priv->stmmac_clk = clk_get(device, NULL);
+	if (IS_ERR(priv->stmmac_clk)) {
+		ret = PTR_ERR(priv->stmmac_clk);
+		pr_err("%s: ERROR %i clock get\n", __func__, ret);
+		goto error;
+	}
+#endif
+	stmmac_cpufreq_register(priv);
+
 	return priv;
 
 error:
@@ -1884,6 +1997,9 @@ int stmmac_dvr_remove(struct net_device *ndev)
 	priv->hw->dma->stop_tx(priv->ioaddr);
 
 	stmmac_set_mac(priv->ioaddr, false);
+	stmmac_cpufreq_deregister(priv);
+	if (priv->stmmac_clk)
+		clk_put(priv->stmmac_clk);
 	netif_carrier_off(ndev);
 	unregister_netdev(ndev);
 	free_netdev(ndev);
