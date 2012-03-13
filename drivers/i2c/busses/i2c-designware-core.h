@@ -82,6 +82,7 @@ struct dw_i2c_dev {
 	u32			abort_source;
 	int			irq;
 	int			swab;
+	int			access_16bit;
 	struct i2c_adapter	adapter;
 	u32			functionality;
 	u32			master_cfg;

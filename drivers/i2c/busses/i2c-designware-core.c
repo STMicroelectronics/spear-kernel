@@ -164,7 +164,14 @@ static char *abort_sources[] = {
 
 u32 dw_readl(struct dw_i2c_dev *dev, int offset)
 {
-	u32 value = readl(dev->base + offset);
+	u32 value;
+
+	if (dev->access_16bit) {
+		value = readw(dev->base + offset) |
+			(readw(dev->base + offset + 2) << 16);
+	} else {
+		value = readl(dev->base + offset);
+	}
 
 	if (dev->swab)
 		return swab32(value);
@@ -177,7 +184,12 @@ void dw_writel(struct dw_i2c_dev *dev, u32 b, int offset)
 	if (dev->swab)
 		b = swab32(b);
 
-	writel(b, dev->base + offset);
+	if (dev->access_16bit) {
+		writew((u16)b, dev->base + offset);
+		writew((u16)(b >> 16), dev->base + offset + 2);
+	} else {
+		writel(b, dev->base + offset);
+	}
 }
 
 static u32
@@ -255,6 +267,12 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 	reg = dw_readl(dev, DW_IC_COMP_TYPE);
 	if (reg == ___constant_swab32(DW_IC_COMP_TYPE_VALUE)) {
 		dev->swab = 1;
+		reg = DW_IC_COMP_TYPE_VALUE;
+	}
+
+	/* Configure register access mode 16bit */
+	if (reg == (DW_IC_COMP_TYPE_VALUE & 0x0000ffff)) {
+		dev->access_16bit = 1;
 		reg = DW_IC_COMP_TYPE_VALUE;
 	}
 
