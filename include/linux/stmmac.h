@@ -84,7 +84,7 @@
 
 struct stmmac_mdio_bus_data {
 	int bus_id;
-	int (*phy_reset)(void *priv);
+	int (*phy_reset)(void *mii_bus, void *priv);
 	unsigned int phy_mask;
 	int *irqs;
 	int probed_phy_irq;
