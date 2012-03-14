@@ -176,6 +176,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.width = FSMC_NAND_BW8,
 	.ale_off = SPEAR320_PLAT_NAND_ALE,
 	.cle_off = SPEAR320_PLAT_NAND_CLE,
+	.mode = USE_WORD_ACCESS,
 };
 
 /* Currently no gpios are free on eval board so it is kept commented */

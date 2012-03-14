@@ -155,6 +155,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.width = FSMC_NAND_BW8,
 	.ale_off = SPEAR320_PLAT_NAND_ALE,
 	.cle_off = SPEAR320_PLAT_NAND_CLE,
+	.mode = USE_WORD_ACCESS,
 };
 
 static void __init spear320_hmi_init(void)

@@ -231,6 +231,9 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.cle_off = PLAT_NAND_CLE,
 	.partitions = partition_info,
 	.nr_partitions = ARRAY_SIZE(partition_info),
+	.mode = USE_DMA_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
 };
 
 #ifdef CONFIG_SPEAR_PCIE_REV341

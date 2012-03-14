@@ -92,6 +92,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.width = FSMC_NAND_BW8,
 	.ale_off = PLAT_NAND_ALE,
 	.cle_off = PLAT_NAND_CLE,
+	.mode = USE_WORD_ACCESS,
 };
 
 /* spi board information */
