@@ -22,7 +22,6 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 		u32 bank, u32 width)
 {
 	void __iomem *fsmc_nor_base;
-	struct fsmc_regs *regs;
 	struct clk *clk;
 	int ret;
 	u32 ctrl;
@@ -46,8 +45,6 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 		return ret;
 	}
 
-	regs = (struct fsmc_regs *)fsmc_nor_base;
-
 	ctrl = WAIT_ENB | WRT_ENABLE | WPROT | NOR_DEV | BANK_ENABLE;
 
 	switch (width) {
@@ -68,9 +65,9 @@ int __init fsmc_nor_init(struct platform_device *pdev, unsigned long base,
 		break;
 	}
 
-	writel(ctrl, &regs->nor_bank_regs[bank].ctrl);
-	writel(0x0FFFFFFF, &regs->nor_bank_regs[bank].ctrl_tim);
-	writel(ctrl | RSTPWRDWN, &regs->nor_bank_regs[bank].ctrl);
+	writel(ctrl, FSMC_NOR_REG(fsmc_nor_base, bank, CTRL));
+	writel(0x0FFFFFFF, FSMC_NOR_REG(fsmc_nor_base, bank, CTRL_TIM));
+	writel(ctrl | RSTPWRDWN, FSMC_NOR_REG(fsmc_nor_base, bank, CTRL));
 
 	iounmap(fsmc_nor_base);
 
