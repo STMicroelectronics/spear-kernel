@@ -1289,11 +1289,6 @@ static int dwc_otg_pcd_wakeup(struct usb_gadget *_gadget)
 	return 0;
 }
 
-static const struct usb_gadget_ops dwc_otg_pcd_ops = {
-	.get_frame = dwc_otg_pcd_get_frame,
-	.wakeup = dwc_otg_pcd_wakeup,
-	/* not selfpowered */
-};
 
 /**
  * This function updates the otg values in the gadget structure.
@@ -1688,9 +1683,121 @@ error:
 	return -ENOMEM;
 }
 
-/**
- * This function initializes the PCD portion of the driver.
- */
+/* This function starts the otg gadget driver. */
+
+static int dwc_otg_start(struct usb_gadget_driver *driver,
+		int (*bind) (struct usb_gadget *))
+{
+	struct device_if *dev_if = (GET_CORE_IF(s_pcd))->dev_if;
+	int retval;
+	u32 dctl;
+
+	if (!driver || driver->max_speed == USB_SPEED_UNKNOWN || !bind ||
+			!driver->unbind || !driver->disconnect ||
+			!driver->setup)
+		return -EINVAL;
+
+	if (s_pcd == NULL)
+		return -ENODEV;
+
+	if (s_pcd->driver != NULL)
+		return -EBUSY;
+
+	/* hook up the driver */
+	s_pcd->driver = driver;
+	s_pcd->gadget.dev.driver = &driver->driver;
+
+	retval = bind(&s_pcd->gadget);
+	if (retval) {
+		struct core_if *core_if;
+
+		pr_err("bind to driver %s --> error %d\n",
+				driver->driver.name, retval);
+		core_if = s_pcd->otg_dev->core_if;
+		otg_set_peripheral(core_if->xceiv, &s_pcd->gadget);
+		s_pcd->driver = NULL;
+		s_pcd->gadget.dev.driver = NULL;
+		return retval;
+	}
+
+	/* Remove Soft Disconnect */
+	dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+	dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
+	dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+
+	return 0;
+}
+
+/* This function stops the otg. */
+
+static int dwc_otg_stop(struct usb_gadget_driver *driver)
+{
+	struct core_if *core_if;
+
+	if (!s_pcd)
+		return -ENODEV;
+	if (!driver || driver != s_pcd->driver)
+		return -EINVAL;
+
+	core_if = s_pcd->otg_dev->core_if;
+	core_if->xceiv->state = OTG_STATE_UNDEFINED;
+	otg_set_peripheral(core_if->xceiv, NULL);
+
+	driver->unbind(&s_pcd->gadget);
+	s_pcd->driver = NULL;
+
+	return 0;
+}
+
+static int dwc_otg_pullup(struct usb_gadget *_gadget, int is_on)
+{
+	struct dwc_pcd *pcd = NULL;
+	struct core_if *core_if = NULL;
+	struct device_if *dev_if = NULL;
+	unsigned long flags;
+	u32 dctl;
+
+	if (!_gadget)
+		return -ENODEV;
+
+	pcd = container_of(_gadget, struct dwc_pcd, gadget);
+
+	if (!pcd)
+		return -ENODEV;
+
+	core_if = GET_CORE_IF(pcd);
+	dev_if = core_if->dev_if;
+
+	spin_lock_irqsave(&pcd->lock, flags);
+
+	if (is_on) {
+		/* Remove Soft Disconnect */
+		dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+		dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
+		dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+	} else {
+		/* Do Soft Disconnect */
+		dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
+		dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 1);
+		dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
+	}
+
+	spin_unlock_irqrestore(&pcd->lock, flags);
+
+	return 0;
+}
+
+static const struct usb_gadget_ops dwc_otg_pcd_ops = {
+	.get_frame = dwc_otg_pcd_get_frame,
+	.wakeup = dwc_otg_pcd_wakeup,
+	.start = dwc_otg_start,
+	.stop = dwc_otg_stop,
+	.pullup = dwc_otg_pullup,
+	/* not selfpowered */
+};
+
+/* This function initializes the PCD portion of the driver. */
+
 int __devinit dwc_otg_pcd_init(struct device *dev)
 {
 	static const char pcd_name[] = "dwc_otg_pcd";
@@ -1724,7 +1831,7 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	else
 		pr_info("Shared Tx FIFO mode\n");
 
-	pcd->gadget.is_dualspeed = check_is_dual_speed(core_if);
+	pcd->gadget.max_speed = check_is_dual_speed(core_if);
 	pcd->gadget.is_otg = check_is_otg(core_if);
 
 	/* Register the gadget device */
@@ -1757,6 +1864,10 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	/* Initialize tasklet */
 	start_xfer_tasklet.data = (unsigned long)pcd;
 	pcd->start_xfer_tasklet = &start_xfer_tasklet;
+
+	retval = usb_add_gadget_udc(dev, &pcd->gadget);
+	if (retval)
+		goto err_cleanup;
 
 	return 0;
 
@@ -1805,77 +1916,3 @@ void __devexit dwc_otg_pcd_remove(struct device *dev)
 	kfree(pcd);
 	otg_dev->pcd = NULL;
 }
-
-/**
- * This function registers a gadget driver with the PCD.
- *
- * When a driver is successfully registered, it will receive control
- * requests including set_configuration(), which enables non-control
- * requests.  then usb traffic follows until a disconnect is reported.
- * then a host may connect again, or the driver might get unbound.
- */
-int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
-			    int (*bind) (struct usb_gadget *))
-{
-	int retval;
-	u32 dctl;
-	struct device_if *dev_if = (GET_CORE_IF(s_pcd))->dev_if;
-
-	if (!driver || driver->speed == USB_SPEED_UNKNOWN || !bind ||
-	    !driver->unbind || !driver->disconnect || !driver->setup)
-		return -EINVAL;
-
-	if (s_pcd == NULL)
-		return -ENODEV;
-
-	if (s_pcd->driver != NULL)
-		return -EBUSY;
-
-	/* hook up the driver */
-	s_pcd->driver = driver;
-	s_pcd->gadget.dev.driver = &driver->driver;
-
-	retval = bind(&s_pcd->gadget);
-	if (retval) {
-		struct core_if *core_if;
-
-		pr_err("bind to driver %s --> error %d\n",
-		       driver->driver.name, retval);
-		core_if = s_pcd->otg_dev->core_if;
-		otg_set_peripheral(core_if->xceiv, &s_pcd->gadget);
-		s_pcd->driver = NULL;
-		s_pcd->gadget.dev.driver = NULL;
-		return retval;
-	}
-
-	/* Remove Soft Disconnect */
-	dctl = dwc_read32(dev_if->dev_global_regs + DWC_DCTL);
-	dctl = DWC_DCTL_SFT_DISCONNECT(dctl, 0);
-	dwc_write32(dev_if->dev_global_regs + DWC_DCTL, dctl);
-
-	return 0;
-}
-EXPORT_SYMBOL(usb_gadget_probe_driver);
-
-/**
- * This function unregisters a gadget driver
- */
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
-{
-	struct core_if *core_if;
-
-	if (!s_pcd)
-		return -ENODEV;
-	if (!driver || driver != s_pcd->driver)
-		return -EINVAL;
-
-	core_if = s_pcd->otg_dev->core_if;
-	core_if->xceiv->state = OTG_STATE_UNDEFINED;
-	otg_set_peripheral(core_if->xceiv, NULL);
-
-	driver->unbind(&s_pcd->gadget);
-	s_pcd->driver = NULL;
-
-	return 0;
-}
-EXPORT_SYMBOL(usb_gadget_unregister_driver);

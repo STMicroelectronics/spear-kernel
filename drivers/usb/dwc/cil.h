@@ -37,6 +37,7 @@
 #if !defined(__DWC_CIL_H__)
 #define __DWC_CIL_H__
 #include <linux/io.h>
+#include <linux/module.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 #include <linux/interrupt.h>
