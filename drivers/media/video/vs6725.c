@@ -15,14 +15,13 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
-#include <linux/log2.h>
-#include <linux/pm.h>
 #include <linux/slab.h>
-#include <linux/videodev2.h>
+#include <linux/v4l2-mediabus.h>
+#include <linux/module.h>
 
 #include <media/soc_camera.h>
 #include <media/v4l2-chip-ident.h>
-#include <media/v4l2-subdev.h>
+#include <media/v4l2-ctrls.h>
 
 /* supported resolutions */
 #define UXGA_WIDTH	1600
@@ -336,20 +335,34 @@
 #define OIF_VSYNC_SETUP			0xDA10
 #define OIF_PCLK_SETUP			0xDA30
 
+/* default register values */
+#define VS6725_DEF_GAIN			0x0f
+#define VS6725_DEF_SAT			0x76
+#define VS6725_DEF_BRIGHT		0x64
+#define VS6725_DEF_CONTRAST		0x73
+#define VS6725_DEF_AECH			0
+#define VS6725_DEF_GAMMA		0x14
+#define VS6725_DEF_BLUE			0
+#define VS6725_DEF_RED			0
+#define VS6725_DEF_ZOOM_CONT		0x1
+#define VS6725_DEF_ZOOM_REL		0x1
+
 struct vs6725 {
 	struct v4l2_subdev subdev;
+	struct v4l2_ctrl_handler hdl;
 	struct soc_camera_link *icl;
 	int active_pipe;		/* whether pipe 0 or pipe 1 is active */
-	int saturation;
-	int contrast;
-	int brightness;
-	int gain;
-	int awb;			/* automatic white balance */
-	int aec;			/* automatic exposure control */
-	int color_effect;		/* special color effect */
-	int gamma;
-	bool vflip;
-	bool hflip;
+	struct {
+		/* exposure/autoexposure cluster */
+		struct v4l2_ctrl *autoexposure;
+		struct v4l2_ctrl *exposure;
+	};
+	struct {
+		/* blue/red/autowhitebalance cluster */
+		struct v4l2_ctrl *autowb;
+		struct v4l2_ctrl *blue;
+		struct v4l2_ctrl *red;
+	};
 	int model;			/* ident codes from v4l2-chip-ident.h */
 	struct v4l2_rect rect;		/* sensor cropping window */
 	struct v4l2_fract frame_rate;
@@ -1627,125 +1640,6 @@ static struct regval_list default_pre_run_setup[] = {
 	{0x0000, 0x00},
 };
 
-/* controls supported by VS6725 */
-static const struct v4l2_queryctrl vs6725_controls[] = {
-	{
-		.id		= V4L2_CID_CONTRAST,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Contrast",
-		.minimum	= 0,
-		.maximum	= 0xc8,
-		.step		= 1,
-		.default_value	= 0x73,
-	},
-	{
-		.id		= V4L2_CID_SATURATION,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Saturation",
-		.minimum	= 0,
-		.maximum	= 0xc8,
-		.step		= 1,
-		.default_value	= 0x76,
-	},
-	{
-		.id		= V4L2_CID_BRIGHTNESS,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Brightness",
-		.minimum	= 0,
-		.maximum	= 0xc8,
-		.step		= 1,
-		.default_value	= 0x64,
-	},
-	{
-		.id		= V4L2_CID_GAIN,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Gain", /* Peaking Gain */
-		.minimum	= 0,
-		.maximum	= 0x1f,
-		.step		= 1,
-		.default_value	= 0x0f,
-	},
-	{
-		.id		= V4L2_CID_AUTO_WHITE_BALANCE,
-		.type		= V4L2_CTRL_TYPE_BOOLEAN,
-		.name		= "AWB",
-		.minimum	= 0, /* off */
-		.maximum	= 1, /* on */
-		.step		= 1,
-		.default_value	= 1,
-	},
-	{
-		.id		= V4L2_CID_EXPOSURE_AUTO,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "AEC",
-		.minimum	= 0, /* automatic mode */
-		.maximum	= 3, /* flashgun mode */
-		.step		= 1,
-		.default_value	= 0,
-	},
-	{
-		.id		= V4L2_CID_GAMMA,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Gamma",
-		.minimum	= 0,
-		.maximum	= 0x1f,
-		.step		= 1,
-		.default_value	= 0x14,
-	},
-	{
-		.id		= V4L2_CID_VFLIP,
-		.type		= V4L2_CTRL_TYPE_BOOLEAN,
-		.name		= "Flip Vertically",
-		.minimum	= 0,
-		.maximum	= 1,
-		.step		= 1,
-		.default_value	= 0,
-	},
-	{
-		.id		= V4L2_CID_HFLIP,
-		.type		= V4L2_CTRL_TYPE_BOOLEAN,
-		.name		= "Flip Horizontally",
-		.minimum	= 0,
-		.maximum	= 1,
-		.step		= 1,
-		.default_value	= 0,
-	},
-	{
-		/* write only control */
-		/*
-		 * VS6725 provides a zoom relative feature in which the
-		 * zoom step can be programmed. This allows a single
-		 * step of zoom.
-		 */
-		.id		= V4L2_CID_ZOOM_RELATIVE,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Zoom Relative",
-		.minimum	= 0,
-		.maximum	= 0xffff,
-		.step		= 1, /* 1 step = 5% */
-		.default_value	= 0x0001,
-	},
-	{	/*
-		 * VS6725 provides zoom continuous feature using which
-		 * it is possible to achieve a continuous zoom by simply
-		 * selecting the commands zoom_in, zoom_out and zoom_stop
-		 */
-		.id		= V4L2_CID_ZOOM_CONTINUOUS,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Zoom Continuous",
-		/* other fields cannot be defined */
-	},
-	{
-		.id		= V4L2_CID_COLORFX,
-		.type		= V4L2_CTRL_TYPE_INTEGER,
-		.name		= "Color Effect",
-		.minimum	= 0, /* none */
-		.maximum	= 9, /* vivid */
-		.step		= 1,
-		.default_value	= 0,
-	},
-};
-
 static int vs6725_prog_default(struct i2c_client *client);
 
 /* read a register */
@@ -1826,16 +1720,15 @@ static struct vs6725 *to_vs6725(const struct i2c_client *client)
 }
 
 /* Alter bus settings on camera side */
-static int vs6725_set_bus_param(struct soc_camera_device *icd,
-				unsigned long flags)
+static int vs6725_s_mbus_config(struct v4l2_subdev *sd,
+					const struct v4l2_mbus_config *cfg)
 {
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
-	struct i2c_client *client = to_i2c_client(to_soc_camera_control(icd));
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct soc_camera_link *icl = soc_camera_i2c_to_link(client);
+	unsigned long flags = soc_camera_apply_board_flags(icl, cfg);
 	int ret;
 
-	flags = soc_camera_apply_sensor_flags(icl, flags);
-
-	if (flags & SOCAM_PCLK_SAMPLE_RISING)
+	if (flags & V4L2_MBUS_PCLK_SAMPLE_RISING)
 		ret = vs6725_reg_write(client,
 				OIF_PCLK_SETUP,
 				0xFE | PCLK_PROG_POL_HI_INIT_LO);
@@ -1846,7 +1739,7 @@ static int vs6725_set_bus_param(struct soc_camera_device *icd,
 	if (ret)
 		return ret;
 
-	if (flags & SOCAM_HSYNC_ACTIVE_HIGH)
+	if (flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
 		ret = vs6725_reg_write(client,
 				OIF_HSYNC_SETUP,
 				0x0C | HSYNC_ENABLE | HSYNC_POLARITY_ACTIVE_LO);
@@ -1857,7 +1750,7 @@ static int vs6725_set_bus_param(struct soc_camera_device *icd,
 	if (ret)
 		return ret;
 
-	if (flags & SOCAM_VSYNC_ACTIVE_HIGH)
+	if (flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH)
 		ret = vs6725_reg_write(client,
 				OIF_VSYNC_SETUP,
 				0x0C | VSYNC_ENABLE | VSYNC_POLARITY_ACTIVE_LO);
@@ -1870,20 +1763,24 @@ static int vs6725_set_bus_param(struct soc_camera_device *icd,
 }
 
 /* Request bus settings on camera side */
-static unsigned long vs6725_query_bus_param(struct soc_camera_device *icd)
+static int vs6725_g_mbus_config(struct v4l2_subdev *sd,
+				struct v4l2_mbus_config *cfg)
 {
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct soc_camera_link *icl = soc_camera_i2c_to_link(client);
 
 	/*
-	 * FIXME: Revisit this later
-	 * these settings must be passed from platform data somehow
+	 * FIXME: Limit mbus configs as per what is working now.
+	 * Note that the sensor supports a wider set of configs.
+	 * Add support for the same later.
 	 */
-	unsigned long flags = SOCAM_MASTER |
-		SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_DATA_ACTIVE_HIGH | SOCAM_DATAWIDTH_8;
+	cfg->flags = V4L2_MBUS_MASTER | V4L2_MBUS_PCLK_SAMPLE_FALLING |
+		V4L2_MBUS_HSYNC_ACTIVE_HIGH | V4L2_MBUS_VSYNC_ACTIVE_HIGH |
+		V4L2_MBUS_DATA_ACTIVE_HIGH;
+	cfg->type = V4L2_MBUS_PARALLEL;
+	cfg->flags = soc_camera_apply_board_flags(icl, cfg);
 
-	return soc_camera_apply_sensor_flags(icl, flags);
+	return 0;
 }
 
 /*
@@ -1951,126 +1848,67 @@ out:
 	return ret;
 }
 
-/* get the current settings of a control on Vs6725 */
-static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+/* Get status of additional camera capabilities */
+static int vs6725_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
-	unsigned char val;
-	int ret = 0;
+	struct vs6725 *priv = container_of(ctrl->handler, struct vs6725, hdl);
+	struct v4l2_subdev *sd = &priv->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
+	unsigned char val;
+	int ret = -EINVAL;
 
 	switch (ctrl->id) {
-	case V4L2_CID_BRIGHTNESS:
-		ret = vs6725_reg_read(client,
-				BRIGHTNESS,
-				&val);
-		ctrl->value = val;
-		break;
-	case V4L2_CID_CONTRAST:
-		ret = vs6725_reg_read(client,
-				CONTRAST,
-				&val);
-		ctrl->value = val;
-		break;
-	case V4L2_CID_SATURATION:
-		ret = vs6725_reg_read(client,
-				COLOR_SATURATION,
-				&val);
-		ctrl->value = val;
-		break;
-	case V4L2_CID_GAIN:
-		ret = vs6725_reg_read(client,
-			priv->active_pipe == PIPE_0 ? PIPE0_PEAKING_GAIN :
-				PIPE1_PEAKING_GAIN, &val);
-		ctrl->value = val;
-		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		ctrl->value = priv->awb;
+		ret = vs6725_reg_read(client, MANU_RED_GAIN, &val);
+		if (!ret) {
+			priv->red->val = val;
+			ret = vs6725_reg_read(client, MANU_BLUE_GAIN, &val);
+		}
+		if (!ret)
+			priv->blue->val = val;
 		break;
-	/* FIXME: Exposure related stuff to be formalized */
 	case V4L2_CID_EXPOSURE_AUTO:
-		ctrl->value = priv->aec;
+		ret = vs6725_reg_read(client, EXP_CTRL_MODE, &val);
+		if (!ret)
+			priv->exposure->val = val;
 		break;
-	/*
-	 * FIXME: VS6725 supports dynamic frame rate control so
-	 * should we also implement
-	 * V4L2_CID_EXPOSURE_AUTO_PRIORITY support here?
-	 */
-	case V4L2_CID_GAMMA:
-		ctrl->value = priv->gamma;
-		break;
-	case V4L2_CID_VFLIP:
-		ret = vs6725_reg_read(client,
-				VERT_FLIP,
-				&val);
-		ctrl->value = val;
-		break;
-	case V4L2_CID_HFLIP:
-		ret = vs6725_reg_read(client,
-				HORI_MIRROR,
-				&val);
-		ctrl->value = val;
-		break;
-	case V4L2_CID_COLORFX:
-		ctrl->value = priv->color_effect;
-		break;
-	default:
-		/* we don't support this ctrl id */
-		return -EINVAL;
 	}
 
-	return 0;
+	return ret;
 }
 
 /* set some particular settings of a control on Vs6725 */
-static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+static int vs6725_s_ctrl(struct v4l2_ctrl *ctrl)
 {
-	int ret = 0;
+	struct vs6725 *priv = container_of(ctrl->handler, struct vs6725, hdl);
+	struct v4l2_subdev *sd = &priv->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
+	int ret = 0;
 
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
-		ret = vs6725_reg_write(client,
-				BRIGHTNESS,
-				ctrl->value);
-		if (!ret)
-			priv->brightness = ctrl->value;
+		ret = vs6725_reg_write(client, BRIGHTNESS, ctrl->val);
 		break;
 	case V4L2_CID_CONTRAST:
-		ret = vs6725_reg_write(client,
-				CONTRAST,
-				ctrl->value);
-		if (!ret)
-			priv->contrast = ctrl->value;
+		ret = vs6725_reg_write(client, CONTRAST, ctrl->val);
 		break;
 	case V4L2_CID_SATURATION:
-		ret = vs6725_reg_write(client,
-				COLOR_SATURATION,
-				ctrl->value);
-		if (!ret)
-			priv->saturation = ctrl->value;
+		ret = vs6725_reg_write(client, COLOR_SATURATION, ctrl->val);
 		break;
 	case V4L2_CID_GAIN:
 		ret = vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_PEAKING_GAIN :
-				PIPE1_PEAKING_GAIN,
-			ctrl->value);
-		if (!ret)
-			priv->gain = ctrl->value;
+			PIPE1_PEAKING_GAIN,
+			ctrl->val);
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		ret = vs6725_reg_write(client, WB_CTL_MODE,
-					ctrl->value);
-		if (!ret)
-			priv->awb = ctrl->value;
+		ret = vs6725_reg_write(client, WB_CTL_MODE, ctrl->val);
 		break;
 	/* FIXME: Exposure related stuff to be formalized */
 	case V4L2_CID_EXPOSURE_AUTO:
-		switch (ctrl->value) {
+		switch (ctrl->val) {
 		case V4L2_EXPOSURE_AUTO:
-			ret = vs6725_reg_write(client,
-					EXP_CTRL_MODE,
+			ret = vs6725_reg_write(client, EXP_CTRL_MODE,
 					AUTOMATIC_MODE);
 			break;
 		default:
@@ -2088,15 +1926,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					DIRECT_MANUAL_MODE);
 			break;
 		}
-		if (!ret)
-			priv->aec = ctrl->value;
 		break;
-		/*
-		 * FIXME: VS6725 supports dynamic frame rate control so
-		 * should we also implement
-		 * V4L2_CID_EXPOSURE_AUTO_PRIORITY support here?
-		 */
-
 	case V4L2_CID_GAMMA:
 		/*
 		 * FIXME: not clear if we need to set the same GAMMA gain of
@@ -2106,33 +1936,23 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_R :
 				PIPE1_GAMMA_R,
-			ctrl->value);
+			ctrl->val);
 		if (!ret)
 			ret = vs6725_reg_write(client,
 				priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_G :
 					PIPE1_GAMMA_G,
-				ctrl->value);
+				ctrl->val);
 		if (!ret)
 			ret = vs6725_reg_write(client,
 				priv->active_pipe == PIPE_0 ? PIPE0_GAMMA_B :
 					PIPE1_GAMMA_B,
-				ctrl->value);
-		if (!ret)
-			priv->gamma = ctrl->value;
+				ctrl->val);
 		break;
 	case V4L2_CID_VFLIP:
-		ret = vs6725_reg_write(client,
-				VERT_FLIP,
-				ctrl->value);
-		if (!ret)
-			priv->vflip = ctrl->value;
+		ret = vs6725_reg_write(client, VERT_FLIP, ctrl->val);
 		break;
 	case V4L2_CID_HFLIP:
-		ret = vs6725_reg_write(client,
-				HORI_MIRROR,
-				ctrl->value);
-		if (!ret)
-			priv->hflip = ctrl->value;
+		ret = vs6725_reg_write(client, HORI_MIRROR, ctrl->val);
 		break;
 	case V4L2_CID_ZOOM_RELATIVE:
 		/*
@@ -2152,7 +1972,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			 * wide-angle direction, whereas positive values move
 			 * the zoom lens group towards the telephoto direction
 			 */
-			if (ctrl->value < 0) {
+			if (ctrl->val < 0) {
 				ret = vs6725_reg_write(client,
 					ZOOM_CTRL,
 					ZOOM_STEP_IN);
@@ -2175,11 +1995,11 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 * 3. negative values move the zoom lens group towards the
 		 * wide-angle direction
 		 */
-		if (ctrl->value < 0)
+		if (ctrl->val < 0)
 			ret = vs6725_reg_write(client,
 				ZOOM_CTRL,
 				ZOOM_START_OUT);
-		else if (ctrl->value > 0)
+		else if (ctrl->val > 0)
 			ret = vs6725_reg_write(client,
 				ZOOM_CTRL,
 				ZOOM_START_IN);
@@ -2193,7 +2013,7 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				"zoom-continuous operation failed\n");
 		break;
 	case V4L2_CID_COLORFX:
-		switch (ctrl->value) {
+		switch (ctrl->val) {
 		case V4L2_COLORFX_NONE:
 			ret = vs6725_reg_write(client,
 				COLOUR_EFFECT,
@@ -2219,25 +2039,18 @@ static int vs6725_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 		default:
 			/*
-			 * FIXME: V4L2_COLORFX_EMBOSS, V4L2_COLORFX_SKY_BLUE,
-			 * V4L2_COLORFX_GRASS_GREEN, V4L2_COLORFX_SKIN_WHITEN
-			 * and V4L2_COLORFX_VIVID color effects are not
-			 * supported by VS6725, so setting coler effect
-			 * as NONE in such cases.
+			 * Note that VS6725 sensor does not
+			 * support other V4L2_COLORFX_* effects.
 			 */
-			dev_info(&client->dev, "color format not supported"
-					"setting color effect as none\n");
-			ret = vs6725_reg_write(client,
-				COLOUR_EFFECT,
-				COLOR_EFFECT_NORMAL);
+			dev_warn(&client->dev, "color format not supported\n");
+			ret = -EINVAL;
 			break;
 		}
-		if (!ret)
-			priv->color_effect = ctrl->value;
 		break;
 	default:
 		/* we don't support this ctrl id */
-		return -EINVAL;
+		ret = -EINVAL;
+		break;
 	}
 
 	return ret;
@@ -2710,57 +2523,13 @@ static int vs6725_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 	return 0;
 }
 
-static int vs6725_suspend(struct soc_camera_device *icd, pm_message_t state)
-{
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	int ret;
-
-	/* turn off CE pin of camera sensor */
-	ret = vs6725_s_power(sd, 0);
-
-	return ret;
-}
-
-static int vs6725_resume(struct soc_camera_device *icd)
-{
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct vs6725 *priv = to_vs6725(client);
-	int ret;
-
-	/* turn on CE pin of camera sensor */
-	ret = vs6725_s_power(sd, 1);
-
-	/*
-	 * As per the last format set before we went for suspend,
-	 * reprogram sensor image size and image format
-	 */
-	if (!ret)
-		ret = vs6725_set_image_format(client, &priv->fmt);
-
-	if (!ret)
-		ret = vs6725_set_image_size(client, &priv->fmt);
-
-	/* set sensor in RUNning state */
-	if (!ret)
-		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
-
-	return ret;
-}
-
-static struct soc_camera_ops vs6725_ops = {
-	.suspend = vs6725_suspend,
-	.resume	= vs6725_resume,
-	.set_bus_param = vs6725_set_bus_param,
-	.query_bus_param = vs6725_query_bus_param,
-	.controls = vs6725_controls,
-	.num_controls = ARRAY_SIZE(vs6725_controls),
+static const struct v4l2_ctrl_ops vs6725_ctrl_ops = {
+	.g_volatile_ctrl = vs6725_g_volatile_ctrl,
+	.s_ctrl = vs6725_s_ctrl,
 };
 
 static struct v4l2_subdev_core_ops vs6725_subdev_core_ops = {
 	.s_power = vs6725_s_power,
-	.g_ctrl = vs6725_g_ctrl,
-	.s_ctrl = vs6725_s_ctrl,
 	.g_chip_ident = vs6725_g_chip_ident,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = vs6725_get_register,
@@ -2779,6 +2548,8 @@ static struct v4l2_subdev_video_ops vs6725_video_ops = {
 	.cropcap = vs6725_cropcap,
 	.g_crop = vs6725_g_crop,
 	.s_crop	= vs6725_s_crop,
+	.g_mbus_config = vs6725_g_mbus_config,
+	.s_mbus_config = vs6725_s_mbus_config,
 };
 
 static struct v4l2_subdev_ops vs6725_subdev_ops = {
@@ -2814,8 +2585,7 @@ static int vs6725_prog_default(struct i2c_client *client)
 	return ret;
 }
 
-static int vs6725_camera_init(struct soc_camera_device *icd,
-				struct i2c_client *client)
+static int vs6725_camera_init(struct i2c_client *client)
 {
 	int ret = 0;
 	unsigned char dev_id_hi, dev_id_lo;
@@ -2858,16 +2628,9 @@ static int vs6725_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
 	struct vs6725 *priv;
-	struct soc_camera_device *icd = client->dev.platform_data;
-	struct soc_camera_link *icl;
+	struct soc_camera_link *icl = soc_camera_i2c_to_link(client);
 	int ret;
 
-	if (!icd) {
-		dev_err(&client->dev, "Missing soc-camera data!\n");
-		return -EINVAL;
-	}
-
-	icl = to_soc_camera_link(icd);
 	if (!icl) {
 		dev_err(&client->dev, "Missing platform_data for driver\n");
 		return -EINVAL;
@@ -2882,7 +2645,57 @@ static int vs6725_probe(struct i2c_client *client,
 
 	v4l2_i2c_subdev_init(&priv->subdev, client, &vs6725_subdev_ops);
 
-	icd->ops = &vs6725_ops;
+	v4l2_ctrl_handler_init(&priv->hdl, 13);
+
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_VFLIP, 0, 1, 1, 0);
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_HFLIP, 0, 1, 1, 0);
+
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_GAIN, 0, 0x1f, 1, VS6725_DEF_GAIN);
+	priv->autowb = v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
+	priv->blue = v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_BLUE_BALANCE, 0, 0xff, 1, VS6725_DEF_BLUE);
+	priv->red = v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_RED_BALANCE, 0, 0xff, 1, VS6725_DEF_RED);
+
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_SATURATION, 0, 0xc8, 1, VS6725_DEF_SAT);
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_BRIGHTNESS, 0, 0xc8, 1, VS6725_DEF_BRIGHT);
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_CONTRAST, 0, 0xc8, 1, VS6725_DEF_CONTRAST);
+
+	priv->autoexposure = v4l2_ctrl_new_std_menu(&priv->hdl,
+			&vs6725_ctrl_ops, V4L2_CID_EXPOSURE_AUTO,
+			V4L2_EXPOSURE_MANUAL, 0, V4L2_EXPOSURE_AUTO);
+	priv->exposure = v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_EXPOSURE, 0, 0x3, 1, VS6725_DEF_AECH);
+
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_GAMMA, 0, 0x1f, 1, VS6725_DEF_GAMMA);
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_ZOOM_RELATIVE, 0, 0xffff, 1,
+			VS6725_DEF_ZOOM_REL);
+	v4l2_ctrl_new_std(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_ZOOM_CONTINUOUS, 0, 0xffff, 1,
+			VS6725_DEF_ZOOM_CONT);
+	v4l2_ctrl_new_std_menu(&priv->hdl, &vs6725_ctrl_ops,
+			V4L2_CID_COLORFX, V4L2_COLORFX_SKETCH,
+			V4L2_COLORFX_EMBOSS, COLOR_EFFECT_NORMAL);
+
+	priv->subdev.ctrl_handler = &priv->hdl;
+	if (priv->hdl.error) {
+		kfree(priv);
+		return priv->hdl.error;
+	}
+
+	v4l2_ctrl_auto_cluster(3, &priv->autowb, 0, true);
+	v4l2_ctrl_auto_cluster(2, &priv->autoexposure,
+				V4L2_EXPOSURE_MANUAL, true);
+
 	priv->icl = icl;
 
 	/* set the default format */
@@ -2890,9 +2703,12 @@ static int vs6725_probe(struct i2c_client *client,
 	priv->rect.left = 0;
 	priv->rect.top = 0;
 
-	ret = vs6725_camera_init(icd, client);
+	ret = vs6725_camera_init(client);
+	if (!ret)
+		ret = v4l2_ctrl_handler_setup(&priv->hdl);
+
 	if (ret) {
-		icd->ops = NULL;
+		v4l2_ctrl_handler_free(&priv->hdl);
 		kfree(priv);
 	}
 
@@ -2902,10 +2718,9 @@ static int vs6725_probe(struct i2c_client *client,
 static int vs6725_remove(struct i2c_client *client)
 {
 	struct vs6725 *priv = to_vs6725(client);
-	struct soc_camera_device *icd = client->dev.platform_data;
 
-	if (icd)
-		icd->ops = NULL;
+	v4l2_device_unregister_subdev(&priv->subdev);
+	v4l2_ctrl_handler_free(&priv->hdl);
 	kfree(priv);
 	return 0;
 }
