@@ -195,6 +195,8 @@ static struct plat_stmmacenet_data eth_data = {
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.options = NAND_SKIP_BBTSCAN,
 	.width = FSMC_NAND_BW8,
+	.ale_off = SPEAR310_PLAT_NAND_ALE,
+	.cle_off = SPEAR310_PLAT_NAND_CLE,
 };
 
 /* spi board information */

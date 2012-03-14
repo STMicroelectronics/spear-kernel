@@ -153,6 +153,8 @@ static struct sdhci_plat_data sdhci_plat_data = {
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.options = NAND_SKIP_BBTSCAN,
 	.width = FSMC_NAND_BW8,
+	.ale_off = SPEAR320_PLAT_NAND_ALE,
+	.cle_off = SPEAR320_PLAT_NAND_CLE,
 };
 
 static void __init spear320_hmi_init(void)

@@ -227,6 +227,8 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.select_bank = nand_select_bank,
 	.options = NAND_SKIP_BBTSCAN,
 	.width = FSMC_NAND_BW16,
+	.ale_off = PLAT_NAND_ALE,
+	.cle_off = PLAT_NAND_CLE,
 	.partitions = partition_info,
 	.nr_partitions = ARRAY_SIZE(partition_info),
 };
