@@ -590,6 +590,7 @@ epower:
 
 static int soc_camera_close(struct file *file)
 {
+	int ret = 0;
 	struct soc_camera_device *icd = file->private_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
@@ -604,7 +605,7 @@ static int soc_camera_close(struct file *file)
 			vb2_queue_release(&icd->vb2_vidq);
 		ici->ops->remove(icd);
 
-		soc_camera_power_off(icd, icl);
+		ret = soc_camera_power_off(icd, icl);
 	}
 
 	if (icd->streamer == file)
