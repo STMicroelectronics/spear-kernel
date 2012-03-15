@@ -480,6 +480,7 @@ static void init_backlight(struct db9000fb_info *fbi)
 
 	fbi->bl_power = FB_BLANK_UNBLANK;
 	props.max_brightness = 0xff;
+	props.type = BACKLIGHT_RAW;
 	bl = backlight_device_register("backlight", &fbi->pdev->dev, fbi,
 			&db9000_lcd_bl_ops, &props);
 
