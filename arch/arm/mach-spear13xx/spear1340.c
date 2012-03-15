@@ -2062,6 +2062,24 @@ static int sata_miphy_init(struct device *dev, void __iomem *addr)
 	return 0;
 }
 
+int sata_suspend(struct device *dev)
+{
+	if (dev->power.power_state.event == PM_EVENT_FREEZE)
+		return 0;
+
+	sata_miphy_exit(dev);
+
+	return 0;
+}
+
+int sata_resume(struct device *dev)
+{
+	if (dev->power.power_state.event == PM_EVENT_THAW)
+		return 0;
+
+	return sata_miphy_init(dev, NULL);
+}
+
 static struct resource sata_resources[] = {
 	{
 		.start = SPEAR1340_SATA_BASE,
@@ -2076,6 +2094,8 @@ static struct resource sata_resources[] = {
 static struct ahci_platform_data sata_pdata = {
 	.init = sata_miphy_init,
 	.exit = sata_miphy_exit,
+	.suspend = sata_suspend,
+	.resume = sata_resume,
 };
 
 static u64 ahci_dmamask = DMA_BIT_MASK(32);
