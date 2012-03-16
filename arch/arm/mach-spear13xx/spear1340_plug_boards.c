@@ -32,6 +32,7 @@
 
 #include <linux/ad9889b.h>
 #include <linux/bug.h>
+#include <linux/device.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/designware_i2s.h>
@@ -93,10 +94,9 @@ static struct pmx_dev *gmii_pb_pmx_devs[] = {
 
 static void __init gmii_pb_init(void)
 {
-	/* Enable GMII */
-	struct plat_stmmacphy_data *phy_data;
+	struct plat_stmmacenet_data *phy_data =
+		dev_get_platdata(&spear13xx_eth_device.dev);
 
-	phy_data = spear1340_phy0_device.dev.platform_data;
 	phy_data->interface = PHY_INTERFACE_MODE_GMII;
 }
 
@@ -118,10 +118,9 @@ static struct pmx_dev *rgmii_pb_pmx_devs[] = {
 
 static void __init rgmii_pb_init(void)
 {
-	/* Enable RGMII */
-	struct plat_stmmacphy_data *phy_data;
+	struct plat_stmmacenet_data *phy_data =
+		dev_get_platdata(&spear13xx_eth_device.dev);
 
-	phy_data = spear1340_phy0_device.dev.platform_data;
 	phy_data->interface = PHY_INTERFACE_MODE_RGMII;
 }
 
