@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/gfp.h>
 #include <linux/module.h>
+#include <linux/pm.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/device.h>
@@ -286,12 +287,9 @@ static int ahci_resume(struct device *dev)
 
 	return 0;
 }
-
-static struct dev_pm_ops ahci_pm_ops = {
-	.suspend		= &ahci_suspend,
-	.resume			= &ahci_resume,
-};
 #endif
+
+SIMPLE_DEV_PM_OPS(ahci_pm_ops, ahci_suspend, ahci_resume);
 
 static const struct of_device_id ahci_of_match[] = {
 	{ .compatible = "calxeda,hb-ahci", },
@@ -305,9 +303,7 @@ static struct platform_driver ahci_driver = {
 		.name = "ahci",
 		.owner = THIS_MODULE,
 		.of_match_table = ahci_of_match,
-#ifdef CONFIG_PM
 		.pm = &ahci_pm_ops,
-#endif
 	},
 	.id_table	= ahci_devtype,
 };
