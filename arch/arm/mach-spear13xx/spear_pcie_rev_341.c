@@ -18,6 +18,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
+#include <asm/mach/irq.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie_rev_341.h>
 
@@ -250,6 +251,7 @@ static void pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 {
 	struct pcie_port *pp  = portno_to_port(irq - IRQ_PCIE0);
 	struct pcie_app_reg __iomem *app_reg;
+	struct irq_chip *irqchip = irq_desc_get_chip(desc);
 	unsigned int status;
 
 	if (!pp) {
@@ -260,7 +262,7 @@ static void pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	app_reg = pp->va_app_base;
 	status = readl(&app_reg->int_sts);
 
-	desc->irq_data.chip->irq_ack(&desc->irq_data);
+	chained_irq_enter(irqchip, desc);
 
 	if (status & MSI_CTRL_INT) {
 #ifdef CONFIG_PCI_MSI
@@ -282,7 +284,7 @@ static void pcie_int_handler(unsigned int irq, struct irq_desc *desc)
 	else
 		writel(status, &app_reg->int_clr);
 
-	desc->irq_data.chip->irq_unmask(&desc->irq_data);
+	chained_irq_exit(irqchip, desc);
 }
 
 static void pcie_int_init(struct pcie_port *pp)
