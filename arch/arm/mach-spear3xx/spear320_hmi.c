@@ -149,9 +149,31 @@ static struct sdhci_plat_data sdhci_plat_data = {
 	.card_int_gpio = -1,
 };
 
+static struct mtd_partition nand_partition_info[] __initdata = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4 * 0x20000,
+	}, {
+		.name = "U-Boot",
+		.offset = 4 * 0x20000,
+		.size = 12 * 0x20000,
+	}, {
+		.name = "Kernel",
+		.offset = (4 + 12) * 0x20000,
+		.size = 48 * 0x20000,
+	}, {
+		.name = "Root File System",
+		.offset = (4 + 12 + 48) * 0x20000,
+		.size = MTDPART_SIZ_FULL,
+	}
+};
+
 /* fsmc platform data */
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.options = NAND_SKIP_BBTSCAN,
+	.partitions = nand_partition_info,
+	.nr_partitions = ARRAY_SIZE(nand_partition_info),
 	.width = FSMC_NAND_BW8,
 	.ale_off = SPEAR320_PLAT_NAND_ALE,
 	.cle_off = SPEAR320_PLAT_NAND_CLE,

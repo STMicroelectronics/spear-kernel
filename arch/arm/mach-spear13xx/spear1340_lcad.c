@@ -306,9 +306,31 @@ static struct platform_device *plat_devs[] __initdata = {
 
 };
 
+static struct mtd_partition nand_partition_info[] __initdata = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4 * 0x80000,
+	}, {
+		.name = "U-Boot",
+		.offset = 4 * 0x80000,
+		.size = 6 * 0x80000,
+	}, {
+		.name = "Kernel",
+		.offset = (4 + 6) * 0x80000,
+		.size = 24 * 0x80000,
+	}, {
+		.name = "Root File System",
+		.offset = (4 + 12 + 24) * 0x80000,
+		.size = MTDPART_SIZ_FULL,
+	}
+};
+
 /* fsmc platform data */
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.select_bank = nand_select_bank,
+	.partitions = nand_partition_info,
+	.nr_partitions = ARRAY_SIZE(nand_partition_info),
 	.options = NAND_SKIP_BBTSCAN,
 	.width = FSMC_NAND_BW8,
 	.ale_off = PLAT_NAND_ALE,

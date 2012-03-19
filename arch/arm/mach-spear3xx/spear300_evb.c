@@ -115,9 +115,31 @@ static struct plat_stmmacenet_data eth_data = {
 	.clk_csr = STMMAC_CSR_150_250M,
 };
 
+static struct mtd_partition nand_partition_info[] __initdata = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4 * 0x4000,
+	}, {
+		.name = "U-Boot",
+		.offset = 4 * 0x4000,
+		.size = 20 * 0x4000,
+	}, {
+		.name = "Kernel",
+		.offset = (4 + 20) * 0x4000,
+		.size = 256 * 0x4000,
+	}, {
+		.name = "Root File System",
+		.offset = (4 + 12 + 256) * 0x4000,
+		.size = MTDPART_SIZ_FULL,
+	}
+};
+
 /* fsmc platform data */
 static const struct fsmc_nand_platform_data nand0_plat_data __initconst = {
 	.options = NAND_SKIP_BBTSCAN,
+	.partitions = nand_partition_info,
+	.nr_partitions = ARRAY_SIZE(nand_partition_info),
 	.width = FSMC_NAND_BW8,
 	.ale_off = SPEAR300_PLAT_NAND_ALE,
 	.cle_off = SPEAR300_PLAT_NAND_CLE,

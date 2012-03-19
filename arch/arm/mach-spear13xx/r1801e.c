@@ -97,11 +97,24 @@ static struct pmx_dev pmx_plgpio_6_7 = {
 #endif /* CONFIG_USE_PLGPIO */
 
 /* NAND partition table */
-static struct mtd_partition partition_info[] = {
-	PARTITION("X-loader", 0, 4 * 0x20000),
-	PARTITION("U-Boot", 0x80000, 3 * 0x20000),
-	PARTITION("Kernel", 0xe0000, 24 * 0x20000),
-	PARTITION("Root File System", 0x3e0000, 8161 * 0x20000),
+static struct mtd_partition nand_partition_info[] __initdata = {
+	{
+		.name = "X-loader",
+		.offset = 0,
+		.size = 4 * 0x20000,
+	}, {
+		.name = "U-Boot",
+		.offset = 4 * 0x20000,
+		.size = 12 * 0x20000,
+	}, {
+		.name = "Kernel",
+		.offset = (4 + 12) * 0x20000,
+		.size = 48 * 0x20000,
+	}, {
+		.name = "Root File System",
+		.offset = (4 + 12 + 48) * 0x20000,
+		.size = MTDPART_SIZ_FULL,
+	}
 };
 
 /* padmux devices to enable */
@@ -229,8 +242,8 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.width = FSMC_NAND_BW16,
 	.ale_off = PLAT_NAND_ALE,
 	.cle_off = PLAT_NAND_CLE,
-	.partitions = partition_info,
-	.nr_partitions = ARRAY_SIZE(partition_info),
+	.partitions = nand_partition_info,
+	.nr_partitions = ARRAY_SIZE(nand_partition_info),
 	.mode = USE_DMA_ACCESS,
 	.read_dma_priv = &nand_read_dma_priv,
 	.write_dma_priv = &nand_write_dma_priv,
