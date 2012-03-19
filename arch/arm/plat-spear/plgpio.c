@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <asm/mach-types.h>
+#include <asm/mach/irq.h>
 #include <mach/hardware.h>
 
 #define MAX_GPIO_PER_REG		32
@@ -352,12 +353,13 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 	struct plgpio *plgpio = irq_get_handler_data(irq);
 	unsigned long pending;
 	int regs_count, size, count, pin, offset, i = 0;
+	struct irq_chip *irqchip = irq_desc_get_chip(desc);
 
 	size = plgpio->grp_size ? plgpio->grp_size : 1;
 	count = DIV_ROUND_UP(plgpio->chip.ngpio, size);
 	regs_count = DIV_ROUND_UP(count, MAX_GPIO_PER_REG);
 
-	desc->irq_data.chip->irq_ack(&desc->irq_data);
+	chained_irq_enter(irqchip, desc);
 	/* check all plgpio MIS registers for a possible interrupt */
 	for (; i < regs_count; i++) {
 		pending = readl(plgpio->base + plgpio->regs.mis +
@@ -395,7 +397,7 @@ static void plgpio_irq_handler(unsigned irq, struct irq_desc *desc)
 			generic_handle_irq(plgpio_to_irq(&plgpio->chip, pin));
 		}
 	}
-	desc->irq_data.chip->irq_unmask(&desc->irq_data);
+	chained_irq_exit(irqchip, desc);
 }
 
 static int __devinit plgpio_probe(struct platform_device *pdev)
