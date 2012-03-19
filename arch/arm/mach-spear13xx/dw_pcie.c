@@ -646,7 +646,8 @@ pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	struct pcie_port *pp = controller_to_port(nr);
 
 	if (pp) {
-		bus = pci_scan_bus(sys->busnr, &pcie_ops, sys);
+		bus = pci_scan_root_bus(NULL, sys->busnr, &pcie_ops, sys,
+					&sys->resources);
 	} else {
 		bus = NULL;
 		BUG();
