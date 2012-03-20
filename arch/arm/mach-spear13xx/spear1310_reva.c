@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/can/platform/c_can.h>
 #include <linux/clk.h>
 #include <linux/mtd/physmap.h>
 #include <linux/netdevice.h>
@@ -439,6 +440,16 @@ struct amba_device spear1310_reva_uart5_device = {
 };
 
 /* CAN device registeration */
+static struct c_can_platform_data can0_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 25,
+		.rx_last = 31,
+		.tx_num = 1,
+	},
+};
+
 static struct resource can0_resources[] = {
 	{
 		.start = SPEAR1310_REVA_CAN0_BASE,
@@ -455,6 +466,17 @@ struct platform_device spear1310_reva_can0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
 	.resource = can0_resources,
+	.dev.platform_data = &can0_pdata,
+};
+
+static struct c_can_platform_data can1_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 25,
+		.rx_last = 31,
+		.tx_num = 1,
+	},
 };
 
 static struct resource can1_resources[] = {
@@ -473,6 +495,7 @@ struct platform_device spear1310_reva_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+	.dev.platform_data = &can1_pdata,
 };
 
 /* Ethernet GETH-1 device registeration */
