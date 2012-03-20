@@ -771,7 +771,7 @@ static struct pclk_info i2s_src_pclk_info[] = {
 		.pclk_val = SPEAR1310_I2S_SRC_PLL3_VAL,
 	}, {
 		.pclk = &i2s_src_pad_clk,
-		.pclk_val = SPEAR1310_I2S_SRC_PL_CLK1_VAL,
+		.pclk_val = SPEAR1310_I2S_SRC_PL_CLK0_VAL,
 	},
 };
 
@@ -908,17 +908,22 @@ static struct clk i2c_clk = {
 };
 
 /* dma clock */
-static struct clk dma0_clk = {
+static struct clk dma_pclk = {
 	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_DMA0_CLK_ENB,
+	.en_reg_bit = SPEAR1310_DMA_CLK_ENB,
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 
+static struct clk dma0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
+	.recalc = &follow_parent,
+};
+
 static struct clk dma1_clk = {
-	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_DMA1_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1391,28 +1396,28 @@ static struct clk can1_clk = {
 
 static struct clk smii_ras0_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII0_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII0_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk smii_ras1_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII1_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII1_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk smii_ras2_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII2_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII2_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk rgmii_ras_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_RGMII_CLK_ENB,
+	.en_reg_bit = SPEAR1310_GMII_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
@@ -1818,6 +1823,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.con_id = "usbh.1_clk",		.clk = &uhci1_clk},
 	{.dev_id = "uoc",			.clk = &uoc_clk},
 	{.dev_id = "i2c_designware.0",		.clk = &i2c_clk},
+	{.con_id = "dmac_pclk",			.clk = &dma_pclk},
 	{.dev_id = "dw_dmac.0",			.clk = &dma0_clk},
 	{.dev_id = "dw_dmac.1",			.clk = &dma1_clk},
 	{.dev_id = "jpeg-designware",		.clk = &jpeg_clk},
