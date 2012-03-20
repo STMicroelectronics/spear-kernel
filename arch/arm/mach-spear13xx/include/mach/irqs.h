@@ -61,11 +61,6 @@
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
 #define SPEAR13XX_IRQ_PLAY_I2S1		(IRQ_SHPI_START + 26)
-#endif
-
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-			defined(CONFIG_CPU_SPEAR900) || \
-			defined(CONFIG_CPU_SPEAR1310)
 #define SPEAR13XX_IRQ_JPEG		(IRQ_SHPI_START + 27)
 #endif
 
