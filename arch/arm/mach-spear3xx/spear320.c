@@ -3398,7 +3398,7 @@ static void c_can_enable_bugfix(struct platform_device *c_can)
 {
 	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
 
-	pdata->is_quirk_required = 1;
+	pdata->is_quirk_required = true;
 }
 
 static void i2s_clk_init(void)
