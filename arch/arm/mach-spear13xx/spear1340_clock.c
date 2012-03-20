@@ -1131,17 +1131,22 @@ static struct clk i2c1_clk = {
 };
 
 /* dma clock */
-static struct clk dma0_clk = {
+static struct clk dma_pclk = {
 	.en_reg = VA_SPEAR1340_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1340_DMA0_CLK_ENB,
+	.en_reg_bit = SPEAR1340_DMA_CLK_ENB,
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 
+static struct clk dma0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
+	.recalc = &follow_parent,
+};
+
 static struct clk dma1_clk = {
-	.en_reg = VA_SPEAR1340_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1340_DMA1_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1721,6 +1726,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "uoc",			.clk = &uoc_clk},
 	{.dev_id = "i2c_designware.0",		.clk = &i2c0_clk},
 	{.dev_id = "i2c_designware.1",		.clk = &i2c1_clk},
+	{.con_id = "dmac_pclk",			.clk = &dma_pclk},
 	{.dev_id = "dw_dmac.0",			.clk = &dma0_clk},
 	{.dev_id = "dw_dmac.1",			.clk = &dma1_clk},
 	{.dev_id = "stmmaceth.0",		.clk = &gmac_clk},

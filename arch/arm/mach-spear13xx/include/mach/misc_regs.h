@@ -186,8 +186,7 @@
 	#define C3_CLK_ENB		29
 	#define JPEG_CLK_ENB		28
 	#define CLCD_CLK_ENB		27
-	#define DMA1_CLK_ENB		26
-	#define DMA0_CLK_ENB		25
+	#define DMA_CLK_ENB		25
 	#define GPIO1_CLK_ENB		24
 	#define GPIO0_CLK_ENB		23
 	#define GPT1_CLK_ENB		22
