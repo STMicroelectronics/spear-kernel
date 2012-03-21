@@ -22,6 +22,8 @@
 #ifndef C_CAN_H
 #define C_CAN_H
 
+#include <linux/can/platform/c_can.h>
+
 /* c_can IF registers */
 struct c_can_if_regs {
 	u16 com_req;
@@ -72,13 +74,18 @@ struct c_can_priv {
 	u16 (*read_reg) (struct c_can_priv *priv, void *reg);
 	void (*write_reg) (struct c_can_priv *priv, void *reg, u16 val);
 	struct c_can_regs __iomem *regs;
+	bool is_quirk_required;
 	unsigned long irq_flags; /* for request_irq() */
 	unsigned int tx_next;
-	unsigned int tx_echo;
+	unsigned int rx_next;
+	unsigned int rx_flag;
 	void *priv;		/* for board-specific data */
+	void (*can_stop)(struct net_device *dev);
+	void (*can_start)(struct net_device *dev);
+	struct c_can_devtype_data devtype_data;
 };
 
-struct net_device *alloc_c_can_dev(void);
+struct net_device *alloc_c_can_dev(unsigned int echo_count);
 void free_c_can_dev(struct net_device *dev);
 int register_c_can_dev(struct net_device *dev);
 void unregister_c_can_dev(struct net_device *dev);

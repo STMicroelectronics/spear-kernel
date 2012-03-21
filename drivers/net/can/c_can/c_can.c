@@ -23,6 +23,15 @@
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
  * warranty of any kind, whether express or implied.
+ *
+ * Note about RX message object configuration:
+ * -------------------------------------------
+ * An important aspect for receive message object configuration is that
+ * the UMASK bit is set to 1, for all these objects, because we want to
+ * receive messages arriving from any node in the CAN network. Otherwise
+ * we would be limited to receiving message objects of only those
+ * messages which have been sent by CAN nodes for which we have provided
+ * the appropriate CAN identifier in the receive message object.
  */
 
 #include <linux/kernel.h>
@@ -130,25 +139,6 @@
 #define IFX_WRITE_LOW_16BIT(x)	((x) & 0xFFFF)
 #define IFX_WRITE_HIGH_16BIT(x)	(((x) & 0xFFFF0000) >> 16)
 
-/* message object split */
-#define C_CAN_NO_OF_OBJECTS	32
-#define C_CAN_MSG_OBJ_RX_NUM	16
-#define C_CAN_MSG_OBJ_TX_NUM	16
-
-#define C_CAN_MSG_OBJ_RX_FIRST	1
-#define C_CAN_MSG_OBJ_RX_LAST	(C_CAN_MSG_OBJ_RX_FIRST + \
-				C_CAN_MSG_OBJ_RX_NUM - 1)
-
-#define C_CAN_MSG_OBJ_TX_FIRST	(C_CAN_MSG_OBJ_RX_LAST + 1)
-#define C_CAN_MSG_OBJ_TX_LAST	(C_CAN_MSG_OBJ_TX_FIRST + \
-				C_CAN_MSG_OBJ_TX_NUM - 1)
-
-#define C_CAN_MSG_OBJ_RX_SPLIT	9
-#define C_CAN_MSG_RX_LOW_LAST	(C_CAN_MSG_OBJ_RX_SPLIT - 1)
-
-#define C_CAN_NEXT_MSG_OBJ_MASK	(C_CAN_MSG_OBJ_TX_NUM - 1)
-#define RECEIVE_OBJECT_BITS	0x0000ffff
-
 /* status interrupt */
 #define STATUS_INTERRUPT	0x8000
 
@@ -158,9 +148,6 @@
 
 /* minimum timeout for checking BUSY status */
 #define MIN_TIMEOUT_VALUE	6
-
-/* napi related */
-#define C_CAN_NAPI_WEIGHT	C_CAN_MSG_OBJ_RX_NUM
 
 /* c_can lec values */
 enum c_can_lec_type {
@@ -197,16 +184,56 @@ static struct can_bittiming_const c_can_bittiming_const = {
 	.brp_inc = 1,
 };
 
-static inline int get_tx_next_msg_obj(const struct c_can_priv *priv)
+static inline unsigned int get_msg_obj_rx_first(const struct c_can_priv *priv)
 {
-	return (priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) +
-			C_CAN_MSG_OBJ_TX_FIRST;
+	return priv->devtype_data.rx_first;
 }
 
-static inline int get_tx_echo_msg_obj(const struct c_can_priv *priv)
+static inline unsigned int get_msg_obj_rx_last(const struct c_can_priv *priv)
 {
-	return (priv->tx_echo & C_CAN_NEXT_MSG_OBJ_MASK) +
-			C_CAN_MSG_OBJ_TX_FIRST;
+	return priv->devtype_data.rx_last;
+}
+
+static inline unsigned int get_msg_obj_rx_split(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_split;
+}
+
+static inline unsigned int get_msg_obj_rx_num(const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_last(priv) - get_msg_obj_rx_first(priv) + 1;
+}
+
+static inline unsigned int get_msg_obj_rx_low_last(
+			const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_split(priv) - 1;
+}
+
+static inline unsigned int get_msg_obj_tx_num(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.tx_num;
+}
+
+static inline unsigned int get_msg_obj_tx_first(const struct c_can_priv *priv)
+{
+	return get_msg_obj_rx_last(priv) + 1;
+}
+
+static inline unsigned int get_msg_obj_tx_last(const struct c_can_priv *priv)
+{
+	return get_msg_obj_tx_first(priv) + get_msg_obj_tx_num(priv) - 1;
+}
+
+static inline int get_total_msg_objs(const struct c_can_priv *priv)
+{
+	return priv->devtype_data.rx_last + priv->devtype_data.tx_num;
+}
+
+static inline int get_txrqst_mask(const struct c_can_priv *priv)
+{
+	return ((1 << get_msg_obj_tx_num(priv)) - 1) <<
+					get_msg_obj_rx_num(priv);
 }
 
 static u32 c_can_read_reg32(struct c_can_priv *priv, void *reg)
@@ -316,10 +343,25 @@ static void c_can_write_msg_object(struct net_device *dev,
 				frame->data[i] | (frame->data[i + 1] << 8));
 	}
 
-	/* enable interrupt for this message object */
-	priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
-			IF_MCONT_TXIE | IF_MCONT_TXRQST | IF_MCONT_EOB |
-			frame->can_dlc);
+	if (priv->is_quirk_required) {
+		/*
+		 * SPEAr HW bug fix:
+		 * As all message objects must be programmed
+		 * with UMASK bit set to 1, even TX objects must
+		 * be programmed in the same fashion.
+		 */
+
+		/* enable interrupt for this message object */
+		priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
+				IF_MCONT_TXIE | IF_MCONT_TXRQST | IF_MCONT_EOB |
+				IF_MCONT_UMASK | frame->can_dlc);
+	} else {
+		/* enable interrupt for this message object */
+		priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
+				IF_MCONT_TXIE | IF_MCONT_TXRQST | IF_MCONT_EOB |
+				frame->can_dlc);
+	}
+
 	c_can_object_put(dev, iface, objno, IF_COMM_ALL);
 }
 
@@ -342,7 +384,8 @@ static inline void c_can_activate_all_lower_rx_msg_obj(struct net_device *dev,
 	int i;
 	struct c_can_priv *priv = netdev_priv(dev);
 
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i <= C_CAN_MSG_RX_LOW_LAST; i++) {
+	for (i = get_msg_obj_rx_first(priv);
+			i <= get_msg_obj_rx_low_last(priv); i++) {
 		priv->write_reg(priv, &priv->regs->ifregs[iface].msg_cntrl,
 				ctrl_mask & ~(IF_MCONT_MSGLST |
 					IF_MCONT_INTPND | IF_MCONT_NEWDAT));
@@ -392,7 +435,34 @@ static void c_can_handle_lost_msg_obj(struct net_device *dev,
 	netif_receive_skb(skb);
 }
 
-static int c_can_read_msg_object(struct net_device *dev, int iface, int ctrl)
+static void dummy_read_msgobj_one(struct net_device *dev)
+{
+	int msg_ctrl_save, arb_save, can_id;
+	int data_a1, data_a2, data_b1, data_b2;
+
+	struct c_can_priv *priv = netdev_priv(dev);
+
+	c_can_object_get(dev, 0, 1, IF_COMM_ALL &
+			~IF_COMM_TXRQST);
+	msg_ctrl_save = priv->read_reg(priv,
+			&priv->regs->ifregs[0].msg_cntrl);
+	arb_save = priv->read_reg(priv, &priv->regs->ifregs[0].arb1) |
+		(priv->read_reg(priv, &priv->regs->ifregs[0].arb2)
+		 << 16);
+	can_id = (arb_save >> 18) & CAN_SFF_MASK;
+
+	data_a1 = priv->read_reg(priv,
+			&priv->regs->ifregs[0].data[0]);
+	data_a2 = priv->read_reg(priv,
+			&priv->regs->ifregs[0].data[1]);
+	data_b1 = priv->read_reg(priv,
+			&priv->regs->ifregs[0].data[2]);
+	data_b2 = priv->read_reg(priv,
+			&priv->regs->ifregs[0].data[3]);
+}
+
+static int c_can_read_msg_object(struct net_device *dev, int iface,
+		int ctrl, int msg_no)
 {
 	u16 flags, data;
 	int i;
@@ -402,6 +472,12 @@ static int c_can_read_msg_object(struct net_device *dev, int iface, int ctrl)
 	struct sk_buff *skb;
 	struct can_frame *frame;
 
+	u8 data_first_read[8];
+	int can_id_first_read;
+
+	u8 data_second_read[8], data_third_read[8], data_fourth_read[8];
+	int can_id_second_read, can_id_third_read, can_id_fourth_read;
+
 	skb = alloc_can_skb(dev, &frame);
 	if (!skb) {
 		stats->rx_dropped++;
@@ -410,24 +486,183 @@ static int c_can_read_msg_object(struct net_device *dev, int iface, int ctrl)
 
 	frame->can_dlc = get_can_dlc(ctrl & 0x0F);
 
+	/* 1st try for ID */
 	flags =	priv->read_reg(priv, &priv->regs->ifregs[iface].arb2);
 	val = priv->read_reg(priv, &priv->regs->ifregs[iface].arb1) |
 		(flags << 16);
 
 	if (flags & IF_ARB_MSGXTD)
-		frame->can_id = (val & CAN_EFF_MASK) | CAN_EFF_FLAG;
+		/* extended identifier */
+		can_id_first_read = (val & CAN_EFF_MASK) | CAN_EFF_FLAG;
 	else
-		frame->can_id = (val >> 18) & CAN_SFF_MASK;
+		/* standard identifier */
+		can_id_first_read = (val >> 18) & CAN_SFF_MASK;
 
+	/* 1st try for data */
 	if (flags & IF_ARB_TRANSMIT)
 		frame->can_id |= CAN_RTR_FLAG;
 	else {
 		for (i = 0; i < frame->can_dlc; i += 2) {
 			data = priv->read_reg(priv,
-				&priv->regs->ifregs[iface].data[i / 2]);
-			frame->data[i] = data;
-			frame->data[i + 1] = data >> 8;
+					&priv->regs->ifregs[iface].data[i / 2]);
+			data_first_read[i] = data;
+			data_first_read[i + 1] = data >> 8;
 		}
+	}
+
+	if (priv->is_quirk_required) {
+		/*
+		 * SPEAr HW bugfix:
+		 * read message multiple times to ensure it is correct.
+		 */
+
+		/* 2nd try for ID */
+		flags = 0;
+		val = 0;
+		c_can_object_get(dev, 0, msg_no, IF_COMM_ALL &
+				~IF_COMM_TXRQST);
+		flags =	priv->read_reg(priv, &priv->regs->ifregs[iface].arb2);
+		val = priv->read_reg(priv, &priv->regs->ifregs[iface].arb1) |
+			(flags << 16);
+
+		if (flags & IF_ARB_MSGXTD)
+			/* extended identifier */
+			can_id_second_read = (val & CAN_EFF_MASK) |
+						CAN_EFF_FLAG;
+		else
+			/* standard identifier */
+			can_id_second_read = (val >> 18) & CAN_SFF_MASK;
+
+		/* 2nd try for data */
+		if (flags & IF_ARB_TRANSMIT)
+			frame->can_id |= CAN_RTR_FLAG;
+		else {
+			for (i = 0; i < frame->can_dlc; i += 2) {
+				data = priv->read_reg(priv,
+					&priv->regs->ifregs[iface].data[i / 2]);
+				data_second_read[i] = data;
+				data_second_read[i + 1] = data >> 8;
+			}
+		}
+
+		/* 3rd try for ID */
+		flags = 0;
+		val = 0;
+		c_can_object_get(dev, 0, msg_no, IF_COMM_ALL &
+				~IF_COMM_TXRQST);
+		flags =	priv->read_reg(priv, &priv->regs->ifregs[iface].arb2);
+		val = priv->read_reg(priv, &priv->regs->ifregs[iface].arb1) |
+			(flags << 16);
+
+		if (flags & IF_ARB_MSGXTD)
+			/* extended identifier */
+			can_id_third_read = (val & CAN_EFF_MASK) | CAN_EFF_FLAG;
+		else
+			/* standard identifier */
+			can_id_third_read = (val >> 18) & CAN_SFF_MASK;
+
+		/* 3rd try for data */
+		if (flags & IF_ARB_TRANSMIT)
+			frame->can_id |= CAN_RTR_FLAG;
+		else {
+			for (i = 0; i < frame->can_dlc; i += 2) {
+				data = priv->read_reg(priv,
+					&priv->regs->ifregs[iface].data[i / 2]);
+				data_third_read[i] = data;
+				data_third_read[i + 1] = data >> 8;
+			}
+		}
+
+		if ((can_id_first_read != can_id_second_read) ||
+				(can_id_second_read != can_id_third_read) ||
+				(can_id_first_read != can_id_third_read) ||
+				memcmp(data_first_read, data_second_read, 8) ||
+				memcmp(data_second_read, data_third_read, 8) ||
+				memcmp(data_first_read, data_third_read, 8)) {
+			/* first handle the case of CAN-id */
+
+			/*
+			 * CAN ids read already don't match. In such a case
+			 * try to read one more time (i.e. 4th time) and try to
+			 * compare with the ID read 3rd time. If it matches,
+			 * this is the best possible CAN id and if not, the
+			 * best CAN id is any value which is same any of the
+			 * 2 reads out of 4. If all such checks fail, fallback
+			 * to the last read CAN id.
+			 *
+			 * Note: Always give priority to ID read later
+			 */
+
+			/* 4th try for ID */
+			flags = 0;
+			val = 0;
+			c_can_object_get(dev, 0, msg_no, IF_COMM_ALL &
+					~IF_COMM_TXRQST);
+			flags =	priv->read_reg(priv,
+					&priv->regs->ifregs[iface].arb2);
+			val = priv->read_reg(priv,
+					&priv->regs->ifregs[iface].arb1) |
+				(flags << 16);
+
+			if (flags & IF_ARB_MSGXTD)
+				/* extended identifier */
+				can_id_fourth_read = (val & CAN_EFF_MASK) |
+					CAN_EFF_FLAG;
+			else
+				/* standard identifier */
+				can_id_fourth_read = (val >> 18) & CAN_SFF_MASK;
+
+			if (can_id_third_read == can_id_fourth_read)
+				frame->can_id = can_id_fourth_read;
+			else if (can_id_second_read == can_id_third_read)
+				frame->can_id = can_id_third_read;
+			else if (can_id_first_read == can_id_second_read)
+				frame->can_id = can_id_second_read;
+			else
+				frame->can_id = can_id_fourth_read;
+
+			/* now handle CAN data */
+
+			/*
+			 * CAN data read already don't match. In such a case
+			 * try to read one more time (i.e. 4th time) and try to
+			 * compare with the data read 3rd time. If it matches,
+			 * this is the best possible CAN data and if not,
+			 * the best CAN data is any value which is same any of
+			 * the 2 reads out of 4. If all such checks fail,
+			 * fallback to the last read CAN data.
+			 *
+			 * Note: Always give priority to data read later
+			 */
+
+			if (flags & IF_ARB_TRANSMIT)
+				frame->can_id |= CAN_RTR_FLAG;
+			else {
+				/* 4th try for data */
+				for (i = 0; i < frame->can_dlc; i += 2) {
+					data = priv->read_reg(priv,
+						&priv->regs->
+						ifregs[iface].data[i / 2]);
+					data_fourth_read[i] = data;
+					data_fourth_read[i + 1] = data >> 8;
+				}
+			}
+
+			if (!memcmp(data_third_read, data_fourth_read, 8))
+				memcpy(frame->data, data_fourth_read, 8);
+			else if (!memcmp(data_second_read, data_third_read, 8))
+				memcpy(frame->data, data_third_read, 8);
+			else if (!memcmp(data_first_read, data_second_read, 8))
+				memcpy(frame->data, data_second_read, 8);
+			else
+				memcpy(frame->data, data_fourth_read, 8);
+		} else {
+			frame->can_id = can_id_third_read;
+			memcpy(frame->data, data_third_read, 8);
+		}
+	} else {
+		frame->can_id = can_id_first_read;
+		memcpy(frame->data, data_first_read, 8);
 	}
 
 	netif_receive_skb(skb);
@@ -475,7 +710,7 @@ static void c_can_inval_msg_object(struct net_device *dev, int iface, int objno)
 			c_can_read_reg32(priv, &priv->regs->msgval1));
 }
 
-static inline int c_can_is_next_tx_obj_busy(struct c_can_priv *priv, int objno)
+static inline int c_can_is_tx_obj_busy(struct c_can_priv *priv, int objno)
 {
 	int val = c_can_read_reg32(priv, &priv->regs->txrqst1);
 
@@ -499,20 +734,28 @@ static netdev_tx_t c_can_start_xmit(struct sk_buff *skb,
 	if (can_dropped_invalid_skb(dev, skb))
 		return NETDEV_TX_OK;
 
-	msg_obj_no = get_tx_next_msg_obj(priv);
+	msg_obj_no = priv->tx_next;
+
+	/* check for wrap */
+	if (priv->tx_next == get_msg_obj_tx_last(priv)) {
+		if (c_can_read_reg32(priv, &priv->regs->txrqst1) &
+				get_txrqst_mask(priv)) {
+			if (priv->is_quirk_required) {
+				netif_stop_queue(dev);
+				priv->tx_next = get_msg_obj_tx_first(priv);
+				return NETDEV_TX_BUSY;
+			} else {
+				netif_stop_queue(dev);
+			}
+		}
+		priv->tx_next = get_msg_obj_tx_first(priv);
+	} else {
+		priv->tx_next++;
+	}
 
 	/* prepare message object for transmission */
+	can_put_echo_skb(skb, dev, msg_obj_no - get_msg_obj_tx_first(priv));
 	c_can_write_msg_object(dev, 0, frame, msg_obj_no);
-	can_put_echo_skb(skb, dev, msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
-
-	/*
-	 * we have to stop the queue in case of a wrap around or
-	 * if the next TX message object is still in use
-	 */
-	priv->tx_next++;
-	if (c_can_is_next_tx_obj_busy(priv, get_tx_next_msg_obj(priv)) ||
-			(priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) == 0)
-		netif_stop_queue(dev);
 
 	return NETDEV_TX_OK;
 }
@@ -562,18 +805,38 @@ static int c_can_set_bittiming(struct net_device *dev)
 static void c_can_configure_msg_objects(struct net_device *dev)
 {
 	int i;
+	struct c_can_priv *priv = netdev_priv(dev);
 
 	/* first invalidate all message objects */
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i <= C_CAN_NO_OF_OBJECTS; i++)
+	for (i = get_msg_obj_rx_first(priv); i <= get_total_msg_objs(priv); i++)
 		c_can_inval_msg_object(dev, 0, i);
 
 	/* setup receive message objects */
-	for (i = C_CAN_MSG_OBJ_RX_FIRST; i < C_CAN_MSG_OBJ_RX_LAST; i++)
+	for (i = get_msg_obj_rx_first(priv); i < get_msg_obj_rx_last(priv); i++)
 		c_can_setup_receive_object(dev, 0, i, 0, 0,
 			(IF_MCONT_RXIE | IF_MCONT_UMASK) & ~IF_MCONT_EOB);
 
-	c_can_setup_receive_object(dev, 0, C_CAN_MSG_OBJ_RX_LAST, 0, 0,
-			IF_MCONT_EOB | IF_MCONT_RXIE | IF_MCONT_UMASK);
+	if (priv->is_quirk_required) {
+		/*
+		 * SPEAr HW bugfix:
+		 * set the EoB bit for the 31st message object and mark it as
+		 * busy
+		 */
+		c_can_setup_receive_object(dev, 0, get_msg_obj_rx_last(priv),
+				0, 0, IF_MCONT_NEWDAT | IF_MCONT_EOB |
+				IF_MCONT_RXIE | IF_MCONT_UMASK);
+
+		/*
+		 * SPEAr HW bugfix:
+		 * perform dummy read operation on message object 1, as the last
+		 * data on the bus is that of message object 31.
+		 */
+		dummy_read_msgobj_one(dev);
+	} else {
+		c_can_setup_receive_object(dev, 0, get_msg_obj_rx_last(priv),
+				0, 0, IF_MCONT_EOB | IF_MCONT_RXIE |
+				IF_MCONT_UMASK);
+	}
 }
 
 /*
@@ -631,8 +894,15 @@ static void c_can_start(struct net_device *dev)
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 
+	/* reset status flags */
+	priv->last_status = priv->current_status = 0;
+
 	/* reset tx helper pointers */
-	priv->tx_next = priv->tx_echo = 0;
+	priv->tx_next = get_msg_obj_tx_first(priv);
+
+	/* reset rx helper pointers */
+	priv->rx_next = 0;
+	priv->rx_flag = 0;
 
 	/* enable status change, error and module interrupts */
 	c_can_enable_all_interrupts(priv, ENABLE_ALL_INTERRUPTS);
@@ -677,41 +947,27 @@ static int c_can_get_berr_counter(const struct net_device *dev,
 	return 0;
 }
 
-/*
- * theory of operation:
- *
- * priv->tx_echo holds the number of the oldest can_frame put for
- * transmission into the hardware, but not yet ACKed by the CAN tx
- * complete IRQ.
- *
- * We iterate from priv->tx_echo to priv->tx_next and check if the
- * packet has been transmitted, echo it back to the CAN framework.
- * If we discover a not yet transmitted package, stop looking for more.
- */
-static void c_can_do_tx(struct net_device *dev)
+static void c_can_do_tx(struct net_device *dev, u16 irqstatus)
 {
 	u32 val;
 	u32 msg_obj_no;
 	struct c_can_priv *priv = netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 
-	for (/* nix */; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
-		msg_obj_no = get_tx_echo_msg_obj(priv);
-		val = c_can_read_reg32(priv, &priv->regs->txrqst1);
-		if (!(val & (1 << msg_obj_no))) {
-			can_get_echo_skb(dev,
-					msg_obj_no - C_CAN_MSG_OBJ_TX_FIRST);
-			stats->tx_bytes += priv->read_reg(priv,
-					&priv->regs->ifregs[0].msg_cntrl)
-					& IF_MCONT_DLC_MASK;
-			stats->tx_packets++;
-			c_can_inval_msg_object(dev, 0, msg_obj_no);
-		}
+	msg_obj_no = irqstatus;
+	val = c_can_read_reg32(priv, &priv->regs->txrqst1);
+	if (!(val & (1 << (msg_obj_no - 1)))) {
+		can_get_echo_skb(dev,
+			msg_obj_no - get_msg_obj_tx_first(priv));
+		stats->tx_bytes += priv->read_reg(priv,
+				&priv->regs->ifregs[0].msg_cntrl)
+				& IF_MCONT_DLC_MASK;
+		stats->tx_packets++;
+		c_can_inval_msg_object(dev, 0, msg_obj_no);
 	}
 
-	/* restart queue if wrap-up or if queue stalled on last pkt */
-	if (((priv->tx_next & C_CAN_NEXT_MSG_OBJ_MASK) != 0) ||
-			((priv->tx_echo & C_CAN_NEXT_MSG_OBJ_MASK) == 0))
+	/* restart queue if wrap-up */
+	if (irqstatus == get_msg_obj_tx_last(priv))
 		netif_wake_queue(dev);
 }
 
@@ -722,73 +978,127 @@ static void c_can_do_tx(struct net_device *dev)
  * object it finds free (starting with the lowest). Bits NEWDAT and
  * INTPND are set for this message object indicating that a new message
  * has arrived. To work-around this issue, we keep two groups of message
- * objects whose partitioning is defined by C_CAN_MSG_OBJ_RX_SPLIT.
+ * objects whose partitioning is defined by get_msg_obj_rx_split(priv).
  *
  * To ensure in-order frame reception we use the following
  * approach while re-activating a message object to receive further
  * frames:
  * - if the current message object number is lower than
- *   C_CAN_MSG_RX_LOW_LAST, do not clear the NEWDAT bit while clearing
+ *   get_msg_obj_rx_low_last(priv), do not clear the NEWDAT bit while clearing
  *   the INTPND bit.
  * - if the current message object number is equal to
- *   C_CAN_MSG_RX_LOW_LAST then clear the NEWDAT bit of all lower
+ *   get_msg_obj_rx_low_last(priv) then clear the NEWDAT bit of all lower
  *   receive message objects.
  * - if the current message object number is greater than
- *   C_CAN_MSG_RX_LOW_LAST then clear the NEWDAT bit of
+ *   get_msg_obj_rx_low_last(priv) then clear the NEWDAT bit of
  *   only this message object.
  */
 static int c_can_do_rx_poll(struct net_device *dev, int quota)
 {
 	u32 num_rx_pkts = 0;
-	unsigned int msg_obj, msg_ctrl_save;
+	int obj;
+	unsigned int msg_ctrl_save;
 	struct c_can_priv *priv = netdev_priv(dev);
 	u32 val = c_can_read_reg32(priv, &priv->regs->intpnd1);
+	u32 newdat = c_can_read_reg32(priv, &priv->regs->newdat1);
+	const unsigned long *addr = (unsigned long *)&val;
+	priv->rx_flag = 0;
 
-	for (msg_obj = C_CAN_MSG_OBJ_RX_FIRST;
-			msg_obj <= C_CAN_MSG_OBJ_RX_LAST && quota > 0;
+again:
+	for (obj = find_next_bit(addr, get_msg_obj_rx_last(priv),
+				priv->rx_next);
+			obj < get_msg_obj_rx_last(priv) && quota > 0;
 			val = c_can_read_reg32(priv, &priv->regs->intpnd1),
-			msg_obj++) {
-		/*
-		 * as interrupt pending register's bit n-1 corresponds to
-		 * message object n, we need to handle the same properly.
-		 */
-		if (val & (1 << (msg_obj - 1))) {
-			c_can_object_get(dev, 0, msg_obj, IF_COMM_ALL &
-					~IF_COMM_TXRQST);
-			msg_ctrl_save = priv->read_reg(priv,
-					&priv->regs->ifregs[0].msg_cntrl);
+			newdat = c_can_read_reg32(priv, &priv->regs->newdat1),
+			obj = find_next_bit(addr, get_msg_obj_rx_last(priv),
+				++priv->rx_next)) {
+		priv->rx_flag = 1;
 
-			if (msg_ctrl_save & IF_MCONT_EOB)
-				return num_rx_pkts;
+		c_can_object_get(dev, 0, obj + 1, IF_COMM_ALL &
+				~IF_COMM_TXRQST);
 
-			if (msg_ctrl_save & IF_MCONT_MSGLST) {
-				c_can_handle_lost_msg_obj(dev, 0, msg_obj);
-				num_rx_pkts++;
-				quota--;
-				continue;
+		msg_ctrl_save = priv->read_reg(priv,
+				&priv->regs->ifregs[0].msg_cntrl);
+
+		if (msg_ctrl_save & IF_MCONT_EOB) {
+			netdev_err(dev, "EoB object reached, "
+					"msg obj=%d, intpnd=%x, newdat=%x\n",
+					obj + 1, val, newdat);
+			if (priv->is_quirk_required) {
+				/*
+				 * SPEAr HW bugfix:
+				 * perform dummy read operation on message
+				 * object 1, as the last data on the bus is
+				 * that of message object 31. If message
+				 * object 31 is not set for EoB though,
+				 * this operation should not be required (TBD??)
+				 */
+				dummy_read_msgobj_one(dev);
 			}
 
-			if (!(msg_ctrl_save & IF_MCONT_NEWDAT))
-				continue;
+			return num_rx_pkts;
+		}
 
-			/* read the data from the message object */
-			c_can_read_msg_object(dev, 0, msg_ctrl_save);
-
-			if (msg_obj < C_CAN_MSG_RX_LOW_LAST)
-				c_can_mark_rx_msg_obj(dev, 0,
-						msg_ctrl_save, msg_obj);
-			else if (msg_obj > C_CAN_MSG_RX_LOW_LAST)
-				/* activate this msg obj */
-				c_can_activate_rx_msg_obj(dev, 0,
-						msg_ctrl_save, msg_obj);
-			else if (msg_obj == C_CAN_MSG_RX_LOW_LAST)
-				/* activate all lower message objects */
-				c_can_activate_all_lower_rx_msg_obj(dev,
-						0, msg_ctrl_save);
-
+		if (msg_ctrl_save & IF_MCONT_MSGLST) {
+			c_can_handle_lost_msg_obj(dev, 0, obj + 1);
 			num_rx_pkts++;
 			quota--;
+			continue;
 		}
+
+		if ((!(msg_ctrl_save & IF_MCONT_NEWDAT)) ||
+				(!(msg_ctrl_save & IF_MCONT_INTPND))) {
+			continue;
+		}
+
+		/* read the data from the message object */
+		c_can_read_msg_object(dev, 0, msg_ctrl_save, obj + 1);
+
+		if ((obj + 1) == get_msg_obj_rx_low_last(priv))
+			/* activate all lower message objects */
+			c_can_activate_all_lower_rx_msg_obj(dev,
+					0, msg_ctrl_save);
+		else if ((obj + 1) < get_msg_obj_rx_low_last(priv))
+			c_can_mark_rx_msg_obj(dev, 0,
+					msg_ctrl_save, obj + 1);
+		else if ((obj + 1) > get_msg_obj_rx_low_last(priv))
+			/* activate this msg obj */
+			c_can_activate_rx_msg_obj(dev, 0,
+					msg_ctrl_save, obj + 1);
+
+		num_rx_pkts++;
+		quota--;
+
+	}
+
+	/* upper group completed, look again in lower */
+	if (priv->rx_next > get_msg_obj_rx_low_last(priv) &&
+		quota > 0 && obj >= get_msg_obj_rx_last(priv) &&
+		!(priv->rx_flag)) {
+		priv->rx_next = 0;
+		goto again;
+	}
+
+	/*
+	 * special case of wrapping:
+	 * no further packets are expected, as we have to wrap back to
+	 * message object 1
+	 */
+	if (priv->rx_next == get_msg_obj_rx_low_last(priv) &&
+		quota > 0 &&
+		obj >= get_msg_obj_rx_last(priv) &&
+		!(priv->rx_flag)) {
+		priv->rx_next = 0;
+		goto again;
+	}
+
+	/*
+	 * corner case checking:
+	 * insure we never go out of bounds
+	 */
+	if (priv->rx_next >= get_msg_obj_rx_last(priv) && quota > 0) {
+		priv->rx_next = 0;
+		goto again;
 	}
 
 	return num_rx_pkts;
@@ -1006,14 +1316,26 @@ static int c_can_poll(struct napi_struct *napi, int quota)
 		lec_type = c_can_has_and_handle_berr(priv);
 		if (lec_type)
 			work_done += c_can_handle_bus_err(dev, lec_type);
-	} else if ((irqstatus >= C_CAN_MSG_OBJ_RX_FIRST) &&
-			(irqstatus <= C_CAN_MSG_OBJ_RX_LAST)) {
+	} else if ((irqstatus >= get_msg_obj_rx_first(priv)) &&
+			(irqstatus <= get_msg_obj_rx_last(priv))) {
 		/* handle events corresponding to receive message objects */
 		work_done += c_can_do_rx_poll(dev, (quota - work_done));
-	} else if ((irqstatus >= C_CAN_MSG_OBJ_TX_FIRST) &&
-			(irqstatus <= C_CAN_MSG_OBJ_TX_LAST)) {
+	} else if ((irqstatus >= get_msg_obj_tx_first(priv)) &&
+			(irqstatus <= get_msg_obj_tx_last(priv))) {
 		/* handle events corresponding to transmit message objects */
-		c_can_do_tx(dev);
+		c_can_do_tx(dev, irqstatus);
+
+		if (priv->is_quirk_required) {
+			/*
+			 * SPEAr HW bug fix:
+			 * better to do a dummy read since we just finished a
+			 * TX. The TX object has EoB bit set to 1 and if we
+			 * immediately do a RX followed by a TX, the last data
+			 * on the message read bus will be with EoB set.
+			 * So, do a dummy read first.
+			 */
+			dummy_read_msgobj_one(dev);
+		}
 	}
 
 end:
@@ -1089,17 +1411,17 @@ static int c_can_close(struct net_device *dev)
 	return 0;
 }
 
-struct net_device *alloc_c_can_dev(void)
+struct net_device *alloc_c_can_dev(unsigned int echo_count)
 {
 	struct net_device *dev;
 	struct c_can_priv *priv;
 
-	dev = alloc_candev(sizeof(struct c_can_priv), C_CAN_MSG_OBJ_TX_NUM);
+	dev = alloc_candev(sizeof(struct c_can_priv), echo_count);
 	if (!dev)
 		return NULL;
 
 	priv = netdev_priv(dev);
-	netif_napi_add(dev, &priv->napi, c_can_poll, C_CAN_NAPI_WEIGHT);
+	netif_napi_add(dev, &priv->napi, c_can_poll, get_msg_obj_rx_num(priv));
 
 	priv->dev = dev;
 	priv->can.bittiming_const = &c_can_bittiming_const;
