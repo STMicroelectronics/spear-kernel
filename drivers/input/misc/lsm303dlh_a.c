@@ -149,6 +149,8 @@ struct lsm303dlh_a_t {
 	short	z;
 };
 
+struct lsm303dlh_a_data *lsm303dlh_a_ddata;
+
 /*
  * accelerometer local data
  */
@@ -161,8 +163,8 @@ struct lsm303dlh_a_data {
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	struct input_dev *input_dev;
 	struct input_dev *input_dev2;
+	struct delayed_work input_work;
 #endif
-
 	struct lsm303dlh_platform_data pdata;
 	struct regulator *regulator;
 
@@ -170,6 +172,9 @@ struct lsm303dlh_a_data {
 	unsigned char mode;
 	unsigned char rate;
 	int shift_adjust;
+
+	int input_poll_dev;
+	unsigned int poll_dev_delay;
 
 	unsigned char interrupt_control;
 	unsigned int interrupt_channel;
@@ -377,6 +382,20 @@ static irqreturn_t lsm303dlh_a_gpio_irq(int irq, void *device_data)
 
 	return IRQ_HANDLED;
 
+}
+
+static void lsm303dlh_a_work_function(struct work_struct *work)
+{
+	struct input_dev *input = lsm303dlh_a_ddata->input_dev;
+
+	lsm303dlh_a_readdata(lsm303dlh_a_ddata);
+
+	input_report_abs(input, ABS_X, lsm303dlh_a_ddata->data.x);
+	input_report_abs(input, ABS_Y, lsm303dlh_a_ddata->data.y);
+	input_report_abs(input, ABS_Z, lsm303dlh_a_ddata->data.z);
+	input_sync(input);
+	schedule_delayed_work(&lsm303dlh_a_ddata->input_work,
+		msecs_to_jiffies(lsm303dlh_a_ddata->poll_dev_delay));
 }
 #endif
 
@@ -713,8 +732,10 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 			regulator_enable(ddata->regulator);
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-		enable_irq(gpio_to_irq(ddata->pdata.irq_a1));
-		enable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+		if (!ddata->input_poll_dev) {
+			enable_irq(gpio_to_irq(ddata->pdata.irq_a1));
+			enable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+		}
 #endif
 	}
 
@@ -740,8 +761,13 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 
 	if (val == LSM303DLH_A_MODE_OFF) {
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-		disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
-		disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+		if (!ddata->input_poll_dev) {
+			disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
+			disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+		} else {
+			cancel_delayed_work_sync(&lsm303dlh_a_ddata->
+						 input_work);
+		}
 #endif
 		/*
 		 * No need to store context here
@@ -756,6 +782,13 @@ static ssize_t lsm303dlh_a_store_mode(struct device *dev,
 			regulator_disable(ddata->regulator);
 
 	}
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	if ((val != LSM303DLH_A_MODE_OFF) && ddata->input_poll_dev) {
+		schedule_delayed_work(&lsm303dlh_a_ddata->input_work,
+			       msecs_to_jiffies(lsm303dlh_a_ddata->
+						poll_dev_delay));
+	}
+#endif
 
 	return count;
 }
@@ -814,28 +847,62 @@ static ssize_t lsm303dlh_a_store_rate(struct device *dev,
 	return count;
 }
 
+static ssize_t lsm303dlh_a_show_poll_dev_delay(struct device *dev,
+					       struct device_attribute *attr,
+					       char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lsm303dlh_a_data *ddata = platform_get_drvdata(pdev);
+
+	return sprintf(buf, "%u\n", ddata->poll_dev_delay);
+}
+
+static ssize_t lsm303dlh_a_set_poll_dev_delay(struct device *dev,
+					      struct device_attribute
+					      *attr, const char *buf,
+					      size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lsm303dlh_a_data *ddata = platform_get_drvdata(pdev);
+	unsigned long val;
+	int error;
+
+	error = strict_strtoul(buf, 0, &val);
+	if (error)
+		return error;
+	if (val)
+		ddata->poll_dev_delay = val;
+	else
+		return -EINVAL;
+
+	return count;
+}
+
 static DEVICE_ATTR(data, S_IRUGO, lsm303dlh_a_show_data, NULL);
-static DEVICE_ATTR(range, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(range, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_range, lsm303dlh_a_store_range);
-static DEVICE_ATTR(mode, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(mode, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_mode, lsm303dlh_a_store_mode);
-static DEVICE_ATTR(rate, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(rate, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_rate, lsm303dlh_a_store_rate);
-static DEVICE_ATTR(interrupt_control, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(interrupt_control, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_interrupt_control,
 		lsm303dlh_a_store_interrupt_control);
-static DEVICE_ATTR(interrupt_channel, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(interrupt_channel, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_interrupt_channel,
 		lsm303dlh_a_store_interrupt_channel);
-static DEVICE_ATTR(interrupt_configure, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(interrupt_configure, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_interrupt_configure,
 		lsm303dlh_a_store_interrupt_configure);
-static DEVICE_ATTR(interrupt_duration, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(interrupt_duration, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_interrupt_duration,
 		lsm303dlh_a_store_interrupt_duration);
-static DEVICE_ATTR(interrupt_threshold, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(interrupt_threshold, S_IWUSR | S_IWGRP | S_IRUGO,
 		lsm303dlh_a_show_interrupt_threshold,
 		lsm303dlh_a_store_interrupt_threshold);
+static DEVICE_ATTR(delay, S_IWUSR | S_IWGRP | S_IRUGO,
+		   lsm303dlh_a_show_poll_dev_delay,
+		   lsm303dlh_a_set_poll_dev_delay);
 
 static struct attribute *lsm303dlh_a_attributes[] = {
 	&dev_attr_data.attr,
@@ -847,6 +914,7 @@ static struct attribute *lsm303dlh_a_attributes[] = {
 	&dev_attr_interrupt_configure.attr,
 	&dev_attr_interrupt_duration.attr,
 	&dev_attr_interrupt_threshold.attr,
+	&dev_attr_delay.attr,
 	NULL
 };
 
@@ -917,6 +985,8 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 	 * (thresholds, durations and sources)
 	 * and can support two input devices */
 
+	ddata->input_poll_dev = ddata->pdata.input_poll_dev;
+
 	ddata->input_dev = input_allocate_device();
 	if (!ddata->input_dev) {
 		ret = -ENOMEM;
@@ -962,42 +1032,50 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 			ddata->input_dev->name);
 		goto err_input_register_failed2;
 	}
+	if (ddata->input_poll_dev) {
+		lsm303dlh_a_ddata = ddata;
+		lsm303dlh_a_ddata->poll_dev_delay = 1;
+		INIT_DELAYED_WORK(&lsm303dlh_a_ddata->input_work,
+				  lsm303dlh_a_work_function);
+	} else {
+		/* Request GPIOs for interrupt lines */
+		ret = gpio_request_one(ddata->pdata.irq_a1, GPIOF_IN, 
+			"LSM303_INT_1");
+		if (ret) {
+			pr_err("GPIO request for LSM303 accel mag irq_a2 failed\n");
+			goto err_gpio1_req_failed;
+		}
 
-	/* Request GPIOs for interrupt lines */
-	ret = gpio_request_one(ddata->pdata.irq_a1, GPIOF_IN, "LSM303_INT_1");
-	if (ret) {
-		pr_err("GPIO request for LSM303 accel mag irq_a2 failed\n");
-		goto err_gpio1_req_failed;
+		ret = gpio_request_one(ddata->pdata.irq_a2, GPIOF_IN, 
+			"LSM303_INT_2");
+		if (ret) {
+			pr_err("GPIO request for LSM303 accel irq_a2 failed\n");
+			goto err_gpio2_req_failed;
+		}
+
+		/* Register interrupt */
+		ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_a1), 
+				NULL, lsm303dlh_a_gpio_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				"lsm303dlh_a", ddata);
+		if (ret) {
+			dev_err(&client->dev, "request irq1 failed\n");
+			goto err_input_failed;
+		}
+
+		ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_a2), 
+				NULL, lsm303dlh_a_gpio_irq,
+				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				"lsm303dlh_a", ddata);
+		if (ret) {
+			dev_err(&client->dev, "request irq2 failed\n");
+			goto err_input_failed;
+		}
+
+		/* only mode can enable it */
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
 	}
-
-	ret = gpio_request_one(ddata->pdata.irq_a2, GPIOF_IN, "LSM303_INT_2");
-	if (ret) {
-		pr_err("GPIO request for LSM303 accel irq_a2 failed\n");
-		goto err_gpio2_req_failed;
-	}
-
-	/* Register interrupt */
-	ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_a1), NULL,
-			lsm303dlh_a_gpio_irq,
-			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-			"lsm303dlh_a", ddata);
-	if (ret) {
-		dev_err(&client->dev, "request irq1 failed\n");
-		goto err_input_failed;
-	}
-
-	ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_a2), NULL,
-			lsm303dlh_a_gpio_irq,
-			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-			"lsm303dlh_a", ddata);
-	if (ret) {
-		dev_err(&client->dev, "request irq2 failed\n");
-		goto err_input_failed;
-	}
-
-	/* only mode can enable it */
-	disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
-	disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
 
 #endif
 
@@ -1005,7 +1083,8 @@ static int __devinit lsm303dlh_a_probe(struct i2c_client *client,
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 err_input_failed:
-	gpio_free(ddata->pdata.irq_a2);
+	if (!ddata->input_poll_dev)
+		gpio_free(ddata->pdata.irq_a2);
 err_gpio2_req_failed:
 	gpio_free(ddata->pdata.irq_a1);
 err_gpio1_req_failed:
@@ -1034,8 +1113,12 @@ static int __devexit lsm303dlh_a_remove(struct i2c_client *client)
 
 	ddata = i2c_get_clientdata(client);
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-	gpio_free(ddata->pdata.irq_a1);
-	gpio_free(ddata->pdata.irq_a2);
+	if (ddata->input_poll_dev) {
+		cancel_delayed_work_sync(&lsm303dlh_a_ddata->input_work);
+	} else {
+		gpio_free(ddata->pdata.irq_a1);
+		gpio_free(ddata->pdata.irq_a2);
+	}
 	input_unregister_device(ddata->input_dev);
 	input_unregister_device(ddata->input_dev2);
 	input_free_device(ddata->input_dev);
@@ -1070,8 +1153,12 @@ static int lsm303dlh_a_suspend(struct device *dev)
 		return 0;
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-	disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
-	disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+	if (!ddata->input_poll_dev) {
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+	} else {
+	    cancel_delayed_work_sync(&lsm303dlh_a_ddata->input_work);
+	}
 #endif
 
 	ret = lsm303dlh_a_write(ddata, CTRL_REG1,
@@ -1095,8 +1182,13 @@ static int __lsm303dlh_a_resume(struct device *dev, bool csave)
 		return 0;
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-	enable_irq(gpio_to_irq(ddata->pdata.irq_a1));
-	enable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+	if (!ddata->input_poll_dev) {
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a1));
+		disable_irq(gpio_to_irq(ddata->pdata.irq_a2));
+	} else {
+		cancel_delayed_work_sync(&lsm303dlh_a_ddata->
+					 input_work);
+	}
 #endif
 
 	if (ddata->regulator)
