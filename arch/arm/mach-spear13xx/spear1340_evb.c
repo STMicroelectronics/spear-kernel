@@ -406,6 +406,7 @@ static struct lsm303dlh_platform_data lsm303dlh_a_pdata = {
 	.axis_map_x = 0,
 	.axis_map_y = 1,
 	.axis_map_z = 2,
+	.input_poll_dev = 1,
 	.name_a = "lsm303dlh_a",
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	.irq_a1 = PLGPIO_71,
