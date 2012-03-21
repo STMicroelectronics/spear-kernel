@@ -24,6 +24,7 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
@@ -31,14 +32,13 @@
 #include <linux/err.h>
 
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+#include <linux/gpio.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
-#include <mach/gpio.h>
 #endif
 
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/regulator/consumer.h>
-#include <linux/kernel.h>
 
 /* lsm303dlh accelerometer registers */
 #define WHO_AM_I	0x0F
