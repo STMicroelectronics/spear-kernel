@@ -3377,12 +3377,28 @@ static struct map_desc spear320_io_desc[] __initdata = {
 	},
 };
 
-/* spear320 routines */
+/* spear320s routines */
+static void c_can_disable_bugfix(struct platform_device *c_can)
+{
+	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
+
+	pdata->is_quirk_required = false;
+	pdata->devtype_data.rx_first = 1;
+	pdata->devtype_data.rx_split = 20;
+	pdata->devtype_data.rx_last = 26;
+	pdata->devtype_data.tx_num = 6;
+}
+
+/* spear320s routines */
 static void c_can_enable_bugfix(struct platform_device *c_can)
 {
 	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
 
 	pdata->is_quirk_required = true;
+	pdata->devtype_data.rx_first = 1;
+	pdata->devtype_data.rx_split = 25;
+	pdata->devtype_data.rx_last = 31;
+	pdata->devtype_data.tx_num = 1;
 }
 
 static void i2s_clk_init(void)
@@ -3457,6 +3473,10 @@ void __init spear320_init(void)
 
 void __init spear320s_init(struct pmx_mode *pmx_mode)
 {
+	/* disable bug-fix for CAN controllers */
+	c_can_disable_bugfix(&spear320_can0_device);
+	c_can_disable_bugfix(&spear320_can1_device);
+
 	if (pmx_mode == &spear320s_extended_mode) {
 		/* Fix SPEAr320s specific pmx stuff */
 		pmx_driver.mode_reg.address = SPEAR320S_EXT_CTRL_REG;
