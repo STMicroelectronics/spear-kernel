@@ -1831,7 +1831,11 @@ int __devinit dwc_otg_pcd_init(struct device *dev)
 	else
 		pr_info("Shared Tx FIFO mode\n");
 
-	pcd->gadget.max_speed = check_is_dual_speed(core_if);
+	if (check_is_dual_speed(core_if))
+		pcd->gadget.max_speed = USB_SPEED_HIGH;
+	else
+		pcd->gadget.max_speed = USB_SPEED_FULL;
+
 	pcd->gadget.is_otg = check_is_otg(core_if);
 
 	/* Register the gadget device */
