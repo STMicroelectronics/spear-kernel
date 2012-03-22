@@ -2281,7 +2281,7 @@ static void dw_udc_release(struct device *dev)
 static struct dw_udc_dev the_controller = {
 	.gadget = {
 		.ep_list = LIST_HEAD_INIT(the_controller.gadget.ep_list),
-		.is_dualspeed = 1,
+		.max_speed = USB_SPEED_HIGH,
 		.name = driver_name,
 		.dev = {
 			.init_name = "gadget",
@@ -2304,7 +2304,7 @@ static int dw_udc_start(struct usb_gadget_driver *driver,
 	unsigned long flags;
 
 	/* Paranoid */
-	if (!driver || driver->speed < USB_SPEED_FULL || !bind ||
+	if (!driver || driver->max_speed < USB_SPEED_FULL || !bind ||
 			!driver->disconnect || !driver->setup)
 		return -EINVAL;
 	if (!udev || !udev->dev)
@@ -2776,7 +2776,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	dev_set_name(&udev->gadget.dev, "gadget");
 	udev->gadget.dev.parent = &pdev->dev;
 	udev->gadget.dev.dma_mask = pdev->dev.dma_mask;
-	udev->gadget.is_dualspeed = 1;
+	udev->gadget.max_speed = USB_SPEED_HIGH;
 	udev->int_cmd = 0;
 
 	platform_set_drvdata(pdev, udev);
