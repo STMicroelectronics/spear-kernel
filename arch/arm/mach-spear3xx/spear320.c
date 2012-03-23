@@ -30,6 +30,7 @@
 #include <mach/hardware.h>
 #include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
+#include <sound/pcm.h>
 
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)
@@ -3141,6 +3142,14 @@ put_i2s_sclk_clk:
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = "i2s_tx",
 	.capture_dma_data = "i2s_rx",
 	.filter = pl08x_filter_id,
