@@ -278,6 +278,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_spdif_in_device,
 	&spear1340_spdif_out_device,
 	&spear1340_thermal_device,
+	&spear1340_video_dec_device,
 };
 
 static struct mtd_partition nand_partition_info[] __initdata = {

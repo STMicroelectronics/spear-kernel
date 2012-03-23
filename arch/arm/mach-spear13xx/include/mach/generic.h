@@ -626,6 +626,7 @@ extern struct platform_device spear1340_spdif_out_device;
 extern struct platform_device spear1340_thermal_device;
 extern struct platform_device spear1340_vip_device;
 extern struct platform_device spear1340_device_mali_drm;
+extern struct platform_device spear1340_video_dec_device;
 
 /* Add spear1340 spi devices structure declaration */
 extern struct spi_board_info spear1340_evb_spi_m25p80;
