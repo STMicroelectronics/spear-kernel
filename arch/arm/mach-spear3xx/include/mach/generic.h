@@ -60,6 +60,7 @@ void __init spear3xx_init(void);
 void spear3xx_macb_plat_mdio_control(struct platform_device *pdev);
 void spear3xx_macb_setup(void);
 void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr);
+int audio_clk_config(struct i2s_clk_config_data *config);
 
 /* pad mux declarations */
 #define PMX_FIRDA_MASK		(1 << 14)
