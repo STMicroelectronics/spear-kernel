@@ -3065,6 +3065,68 @@ struct platform_device spear320s_i2c2_device = {
 	.resource = i2c2_resources,
 };
 
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_clk_config_data *config)
+{
+	struct clk *i2s_sclk_clk, *i2s_ref_clk;
+	int ret;
+	u32 bclk;
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		return PTR_ERR(i2s_sclk_clk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk_clk;
+	}
+
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	bclk = config->chan_nr * config->data_width * config->sample_rate;
+
+	ret = clk_set_rate(i2s_sclk_clk, bclk);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_enable(i2s_sclk_clk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	return 0;
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk_clk:
+	clk_put(i2s_sclk_clk);
+
+	return ret;
+
+}
+
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
@@ -3072,6 +3134,7 @@ static struct i2s_platform_data i2s_data = {
 	.play_dma_data = "i2s_tx",
 	.capture_dma_data = "i2s_rx",
 	.filter = pl08x_filter_id,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 /* i2s device registeration */
