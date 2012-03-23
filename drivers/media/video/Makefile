@@ -169,6 +169,7 @@ obj-$(CONFIG_VIDEO_SH_MOBILE_CEU)	+= sh_mobile_ceu_camera.o
 obj-$(CONFIG_VIDEO_OMAP1)		+= omap1_camera.o
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_FIMC) 	+= s5p-fimc/
 obj-$(CONFIG_VIDEO_SPEAR_CAMIF)		+= spear_camif.o
+obj-$(CONFIG_VIDEO_SPEAR_VIDEODEC)	+= spear/
 
 obj-$(CONFIG_ARCH_DAVINCI)		+= davinci/
 
