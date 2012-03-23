@@ -3141,7 +3141,6 @@ put_i2s_sclk_clk:
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
-	.swidth = 32,
 	.play_dma_data = "i2s_tx",
 	.capture_dma_data = "i2s_rx",
 	.filter = pl08x_filter_id,
