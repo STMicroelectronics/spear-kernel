@@ -2358,6 +2358,11 @@ struct platform_device spear1340_device_mali_drm = {
 };
 #endif
 
+struct platform_device spear1340_video_dec_device = {
+	.name = "video_dec",
+	.id   = -1,
+};
+
 static int spear1340_sys_clk_init(void)
 {
 	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;

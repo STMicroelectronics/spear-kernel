@@ -315,6 +315,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_spdif_in_device,
 	&spear1340_spdif_out_device,
 	&spear1340_thermal_device,
+	&spear1340_video_dec_device,
 };
 
 static struct arasan_cf_pdata cf_pdata = {
