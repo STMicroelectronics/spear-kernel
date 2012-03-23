@@ -186,6 +186,7 @@ obj-$(CONFIG_VIDEO_SAMSUNG_S5P_JPEG)	+= s5p-jpeg/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_MFC)	+= s5p-mfc/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_TV)	+= s5p-tv/
 obj-$(CONFIG_VIDEO_SPEAR_CAMIF)		+= spear_camif.o
+obj-$(CONFIG_VIDEO_SPEAR_VIDEODEC)	+= spear/
 
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_G2D)	+= s5p-g2d/
 
