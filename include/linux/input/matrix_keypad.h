@@ -108,21 +108,13 @@ matrix_keypad_build_keymap(const struct matrix_keymap_data *keymap_data,
 }
 
 #ifdef CONFIG_INPUT_OF_MATRIX_KEYMAP
-struct matrix_keymap_data *
-matrix_keyboard_of_fill_keymap(struct device_node *np, const char *propname);
-
-void matrix_keyboard_of_free_keymap(const struct matrix_keymap_data *kd);
+int matrix_keypad_of_build_keymap(struct input_dev *idev,
+		unsigned int row_shift, const char *propname);
 #else
-static inline struct matrix_keymap_data *
-matrix_keyboard_of_fill_keymap(struct device_node *np, const char *propname)
+static inline int matrix_keypad_of_build_keymap(struct input_dev *idev,
+		unsigned int row_shift, const char *propname)
 {
 	return NULL;
 }
-
-static inline void
-matrix_keyboard_of_free_keymap(const struct matrix_keymap_data *kd)
-{
-}
 #endif
-
 #endif /* _MATRIX_KEYPAD_H */

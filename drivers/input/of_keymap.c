@@ -17,6 +17,7 @@
  *
  */
 
+#include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/input.h>
@@ -26,62 +27,79 @@
 #include <linux/gfp.h>
 #include <linux/slab.h>
 
-struct matrix_keymap_data *
-matrix_keyboard_of_fill_keymap(struct device_node *np,
-			       const char *propname)
+/**
+ * matrix_keypad_of_build_keymap - convert platform DT keymap into matrix keymap
+ * @idev: pointer to struct input_dev; used for getting keycode, keybit and
+ * keycodemax.
+ * @row_shift: number of bits to shift row value by to advance to the next
+ * line in the keymap
+ * @propname: Device Tree property name to be used for reading keymap. If passed
+ * as NULL, "linux,keymap" is used.
+ *
+ * This function creates an array of keycodes, by reading propname property from
+ * device tree passed, that is suitable for using in a standard matrix keyboard
+ * driver that uses row and col as indices.
+ *
+ * Expectation from user driver: idev must be initialized with following fields:
+ * dev.parent, keycode, keybit and keycodemax.
+ */
+int matrix_keypad_of_build_keymap(struct input_dev *idev,
+		unsigned int row_shift, const char *propname)
 {
-	struct matrix_keymap_data *kd;
-	u32 *keymap;
-	int proplen, i;
+	struct device *dev = idev->dev.parent;
+	struct device_node *np = dev->of_node;
+	unsigned short *keycode;
 	const __be32 *prop;
+	unsigned int proplen, i, size, col_range = 1 << row_shift, index;
 
-	if (!np)
-		return NULL;
+	if (!np || !idev)
+		return -ENODEV;
 
 	if (!propname)
 		propname = "linux,keymap";
 
 	prop = of_get_property(np, propname, &proplen);
-	if (!prop)
-		return NULL;
+	if (!prop) {
+		dev_err(dev, "OF: %s property not defined in %s\n", propname,
+				np->full_name);
+		return -ENODEV;
+	}
 
 	if (proplen % sizeof(u32)) {
-		pr_warn("Malformed keymap property %s in %s\n",
-			propname, np->full_name);
-		return NULL;
+		dev_warn(dev, "Malformed keycode property %s in %s\n", propname,
+				np->full_name);
+		return -EINVAL;
 	}
 
-	kd = kzalloc(sizeof(*kd), GFP_KERNEL);
-	if (!kd)
-		return NULL;
-
-	kd->keymap = keymap = kzalloc(proplen, GFP_KERNEL);
-	if (!kd->keymap) {
-		kfree(kd);
-		return NULL;
+	size = proplen / sizeof(u32);
+	if (size > idev->keycodemax) {
+		dev_err(dev, "OF: %s size overflow\n", propname);
+		return -EINVAL;
 	}
 
-	kd->keymap_size = proplen / sizeof(u32);
+	keycode = idev->keycode;
+	for (i = 0; i < size; i++) {
+		unsigned int key = be32_to_cpup(prop + i);
+		unsigned int row = KEY_ROW(key);
+		unsigned int col = KEY_COL(key);
+		unsigned short code = KEY_VAL(key);
 
-	for (i = 0; i < kd->keymap_size; i++) {
-		u32 tmp = be32_to_cpup(prop + i);
-		int key_code, row, col;
+		if (col >= col_range) {
+			dev_err(dev, "OF: %s: column %x overflowed its range %d\n",
+					propname, col, col_range);
+			return -EINVAL;
+		}
 
-		row = (tmp >> 24) & 0xff;
-		col = (tmp >> 16) & 0xff;
-		key_code = tmp & 0xffff;
-		keymap[i] = KEY(row, col, key_code);
+		index = MATRIX_SCAN_CODE(row, col, row_shift);
+		if (index > idev->keycodemax) {
+			dev_err(dev, "OF: %s index overflow\n", propname);
+			return -EINVAL;
+		}
+		keycode[index] = code;
+		__set_bit(code, idev->keybit);
 	}
+	__clear_bit(KEY_RESERVED, idev->keybit);
 
-	return kd;
+	return 0;
 }
-EXPORT_SYMBOL_GPL(matrix_keyboard_of_fill_keymap);
-
-void matrix_keyboard_of_free_keymap(const struct matrix_keymap_data *kd)
-{
-	if (kd) {
-		kfree(kd->keymap);
-		kfree(kd);
-	}
-}
-EXPORT_SYMBOL_GPL(matrix_keyboard_of_free_keymap);
+EXPORT_SYMBOL_GPL(matrix_keypad_of_build_keymap);
