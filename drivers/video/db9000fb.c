@@ -584,6 +584,30 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 	return 0;
 }
 
+static int db9000fb_open(struct fb_info *info, int user)
+{
+	struct db9000fb_info *fbi = to_db9000fb(info);
+
+	/* allow only one user at a time */
+	if (atomic_inc_and_test(&fbi->usage))
+		return -EBUSY;
+
+	/* Enable Controller */
+	set_ctrlr_state(fbi, C_ENABLE);
+
+	return 0;
+}
+
+static int db9000fb_release(struct fb_info *info, int user)
+{
+	struct db9000fb_info *fbi = to_db9000fb(info);
+
+	set_ctrlr_state(fbi, C_DISABLE);
+	atomic_dec(&fbi->usage);
+
+	return 0;
+}
+
 /* Pan the display if device supports it. */
 static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	struct fb_info *info)
@@ -650,6 +674,8 @@ static int db9000fb_ioctl(struct fb_info *fb, unsigned int cmd,
 
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
+	.fb_open	= db9000fb_open,
+	.fb_release	= db9000fb_release,
 	.fb_check_var	= db9000fb_check_var,
 	.fb_set_par	= db9000fb_set_par,
 	.fb_setcolreg	= db9000fb_setcolreg,
@@ -885,6 +911,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
 		(lcd_readl(fbi, DB9000_HVTER) != fbi->reg_hvter) ||
 		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr) ||
+		(lcd_readl(fbi, DB9000_DBAR) != fbi->reg_dbar) ||
 		(lcd_readl(fbi, DB9000_DEAR) != fbi->reg_dear))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 
@@ -955,6 +982,8 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
+	fbi->reg_dear = fbi->reg_dbar + (fbi->video_mem_size /
+			NUM_OF_FRAMEBUFFERS);
 
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
@@ -1033,7 +1062,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 
 	/* Hack around fbcon initialisation. */
 	if (old_state == C_STARTUP && state == C_REENABLE)
-		state = C_ENABLE;
+		state = C_STARTUP;
 
 	switch (state) {
 	case C_DISABLE_CLKCHANGE:
@@ -1115,6 +1144,18 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			db9000fb_enable_controller(fbi);
 			db9000fb_backlight_power(fbi, 1);
 		}
+		break;
+
+	case C_STARTUP:
+		fbi->state = C_STARTUP;
+		db9000fb_setup_gpio(fbi, true);
+		db9000fb_lcd_power(fbi, 1);
+		db9000fb_enable_controller(fbi);
+		db9000fb_backlight_power(fbi, 1);
+		msleep(100);
+		db9000fb_lcd_power(fbi, 0);
+		db9000fb_setup_gpio(fbi, false);
+		db9000fb_disable_controller(fbi);
 		break;
 	}
 	mutex_unlock(&fbi->ctrlr_lock);
@@ -1310,6 +1351,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->video_mem_size	= inf->mem_size;
 	db9000fb_decode_mach_info(fbi, inf);
 
+	atomic_set(&fbi->usage, 0);
 	init_waitqueue_head(&fbi->ctrlr_wait);
 	INIT_WORK(&fbi->task, db9000fb_task);
 	mutex_init(&fbi->ctrlr_lock);
@@ -1763,11 +1805,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_framebuffer_addr;
 	}
 
-	/*
-	 * This makes sure that our colour bitfield descriptors are correctly
-	 * initialised.
-	 */
-
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	fbi->pdev = pdev;
 	init_backlight(fbi);
@@ -1782,8 +1819,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (fbi->palette_mode == PAL_IN_FB)
 		fbi->video_mem_size += (fbi->palette_size * 2);
 
-	 /* Ok, now enable the LCD controller */
-	set_ctrlr_state(fbi, C_ENABLE);
 	platform_set_drvdata(pdev, fbi);
 
 	ret = register_framebuffer(&fbi->fb);
