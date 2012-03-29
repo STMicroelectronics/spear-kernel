@@ -411,6 +411,7 @@ struct db9000fb_info {
 	unsigned long		frame_base;
 	bool			clk_enabled;
 
+	atomic_t		usage;
 	/*
 	 * These are the addresses we mapped
 	 * the framebuffer memory region to.
