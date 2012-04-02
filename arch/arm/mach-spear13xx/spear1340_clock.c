@@ -1026,7 +1026,20 @@ static struct aux_clk_config i2s_prs1_config = {
 /* i2s prs1 aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
 	/* For parent clk = 49.152 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
+	{.xscale = 1, .yscale = 12, .eq = 0}, /* 2.048 MHz, smp freq = 8Khz */
+	{.xscale = 11, .yscale = 96, .eq = 0}, /* 2.816 MHz, smp freq = 11Khz */
+	{.xscale = 1, .yscale = 6, .eq = 0}, /* 4.096 MHz, smp freq = 16Khz */
+	{.xscale = 11, .yscale = 48, .eq = 0}, /* 5.632 MHz, smp freq = 22Khz */
+
+	/*
+	 * with parent clk = 49.152, freq gen is 8.192 MHz, smp freq = 32Khz
+	 * with parent clk = 12.288, freq gen is 2.048 MHz, smp freq = 8Khz
+	 */
+	{.xscale = 1, .yscale = 3, .eq = 0},
+
+	/* For parent clk = 49.152 MHz */
+	{.xscale = 17, .yscale = 37, .eq = 0}, /* 11.289 MHz, smp freq = 44Khz*/
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz, smp freq = 48Khz*/
 };
 
 /* i2s prs1 clock */
@@ -1036,7 +1049,7 @@ static struct clk i2s_prs1_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 0},
+	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 6},
 	.private_data = &i2s_prs1_config,
 };
 
@@ -1077,9 +1090,9 @@ static struct clk i2s_ref_pad_clk = {
 
 /* i2s sclk aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
-	/* For i2s_ref_clk = 12.288MHz */
-	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 0}, /* 3.07 Mhz */
+	/* For sclk = ref_clk * x/2/y */
+	{.xscale = 1, .yscale = 4, .eq = 0},
+	{.xscale = 1, .yscale = 2, .eq = 0},
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
