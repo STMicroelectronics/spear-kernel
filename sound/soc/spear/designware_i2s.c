@@ -70,7 +70,6 @@ struct dw_i2s_dev {
 	struct snd_soc_dai_driver *dai_driver;
 
 	/* data related to DMA transfers b/w i2s and DMAC */
-	u8 swidth;
 	struct dma_data play_dma_data;
 	struct dma_data capture_dma_data;
 	struct i2s_clk_config_data config;
@@ -434,7 +433,6 @@ dw_i2s_probe(struct platform_device *pdev)
 
 	dev->res = res;
 	dev->capability = cap;
-	dev->swidth = pdata->swidth;
 	dev->i2s_clk_cfg = pdata->i2s_clk_cfg;
 
 	/* Set DMA slaves info */

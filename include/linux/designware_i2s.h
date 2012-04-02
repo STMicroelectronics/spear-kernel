@@ -42,7 +42,6 @@ struct i2s_platform_data {
 	#define RECORD	(1 << 1)
 	unsigned int cap;
 	int channel;
-	u8 swidth;
 	u32 snd_fmts;
 	u32 snd_rates;
 
