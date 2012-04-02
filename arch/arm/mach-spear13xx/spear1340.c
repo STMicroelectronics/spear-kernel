@@ -1917,6 +1917,7 @@ static struct i2s_platform_data i2s_play_data = {
 	.play_dma_data = &i2s_play_dma_data,
 	.swidth = 16,
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s_play_resources[] = {
@@ -1958,6 +1959,7 @@ static struct i2s_platform_data i2s_capture_data = {
 	.capture_dma_data = &i2s_capture_dma_data,
 	.swidth = 16,
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s_record_resources[] = {
