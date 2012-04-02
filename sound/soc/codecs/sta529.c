@@ -171,6 +171,7 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
+	u32 play_freq_val, record_freq_val, val;
 
 	if (cpu_is_spear1340()) {
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
@@ -188,6 +189,36 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 			sta529_write(codec, STA529_P2SCFG0, 0x93);
 		}
 	}
+
+	switch (params_rate(params)) {
+	case 8000:
+	case 11025:
+		play_freq_val = 0;
+		record_freq_val = 2;
+		break;
+	case 16000:
+	case 22050:
+		play_freq_val = 1;
+		record_freq_val = 0;
+		break;
+
+	case 32000:
+	case 44100:
+	case 48000:
+		play_freq_val = 2;
+		record_freq_val = 0;
+		break;
+	default:
+		dev_err(codec->dev, "bad rate", __func__);
+		return -EINVAL;
+	}
+
+	val = sta529_read_reg_cache(codec, STA529_MISC);
+
+	/* set FFX audio frequency range */
+	val = (((val & 0x83) | (play_freq_val << 4)) | (record_freq_val << 2));
+
+	sta529_write(codec, STA529_MISC, val);
 
 	sta529_set_bias_level(codec, SND_SOC_BIAS_PREPARE);
 	mdelay(1);
