@@ -25,6 +25,18 @@
 #include <linux/dmaengine.h>
 #include <linux/types.h>
 
+/*
+ * struct i2s_clk_config_data - represent i2s clk configuration data
+ * @chan_nr: number of channel
+ * @data_width: number of bits per sample (8/16/24/32 bit)
+ * @sample_rate: sampling frequency (8Khz, 16Khz, 32Khz, 44Khz, 48Khz)
+ */
+struct i2s_clk_config_data {
+	int chan_nr;
+	u32 data_width;
+	u32 sample_rate;
+};
+
 struct i2s_platform_data {
 	#define PLAY	(1 << 0)
 	#define RECORD	(1 << 1)
@@ -35,6 +47,7 @@ struct i2s_platform_data {
 	void *play_dma_data;
 	void *capture_dma_data;
 	bool (*filter)(struct dma_chan *chan, void *slave);
+	int (*i2s_clk_cfg)(struct i2s_clk_config_data *config);
 };
 
 /* I2S DMA registers */
