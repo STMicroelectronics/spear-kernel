@@ -43,6 +43,8 @@ struct i2s_platform_data {
 	unsigned int cap;
 	int channel;
 	u8 swidth;
+	u32 snd_fmts;
+	u32 snd_rates;
 
 	void *play_dma_data;
 	void *capture_dma_data;
