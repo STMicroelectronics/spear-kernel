@@ -283,25 +283,10 @@ static void __init hdmi_tx_pb_init(void)
 		= spear1340_pb_i2c_board_hdmi_tx.platform_data;
 
 	if (ad9889b_pdata->ain == HDMI_AUDIO_IN_I2S) {
-		struct clk *i2s_sclk_clk;
 		struct i2s_platform_data *i2s_pdata
 			= dev_get_platdata(&spear1340_i2s_play_device.dev);
 
-		i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-		if (IS_ERR(i2s_sclk_clk))
-			pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
-
-		if (clk_set_rate(i2s_sclk_clk, 3070000)) {
-			pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
-			clk_put(i2s_sclk_clk);
-		}
-
-		if (clk_enable(i2s_sclk_clk)) {
-			pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-			clk_put(i2s_sclk_clk);
-		}
-
-		i2s_pdata->swidth = 32;
+		i2s_pdata->snd_fmts = SNDRV_PCM_FMTBIT_S32_LE;
 	}
 }
 
