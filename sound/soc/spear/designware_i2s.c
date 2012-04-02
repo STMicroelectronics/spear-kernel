@@ -55,8 +55,6 @@
 #define I2S_COMP_VERSION	0x01F8
 #define I2S_COMP_TYPE		0x01FC
 
-#define DESIGNWARE_I2S_RATES	SNDRV_PCM_RATE_48000
-#define DESIGNWARE_I2S_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
 #define MAX_CHANNEL_NUM		8
 #define MIN_CHANNEL_NUM		2
 
@@ -493,8 +491,8 @@ dw_i2s_probe(struct platform_device *pdev)
 
 		dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
 		dw_i2s_dai->playback.channels_max = pdata->channel;
-		dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
-		dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
+		dw_i2s_dai->playback.formats = pdata->snd_fmts;
+		dw_i2s_dai->playback.rates = pdata->snd_rates;
 	}
 
 	if (cap & RECORD) {
@@ -514,8 +512,8 @@ dw_i2s_probe(struct platform_device *pdev)
 
 		dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
 		dw_i2s_dai->capture.channels_max = pdata->channel;
-		dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
-		dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
+		dw_i2s_dai->capture.formats = pdata->snd_fmts;
+		dw_i2s_dai->capture.rates = pdata->snd_rates;
 	}
 
 	dw_i2s_dai->ops = &dw_i2s_dai_ops,
