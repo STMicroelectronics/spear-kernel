@@ -848,6 +848,90 @@ struct platform_device spear13xx_cpufreq_device = {
 	},
 };
 
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_clk_config_data *config)
+{
+	struct clk *i2s_sclk_clk, *i2s_ref_clk;
+	int ret;
+	u32 bclk;
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		return PTR_ERR(i2s_sclk_clk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk_clk;
+	}
+
+	if (machine_is_spear1340_evb()) {
+		if (config->sample_rate != 48000) {
+			ret = clk_set_parent_sys(NULL, "i2s_ref_clk", NULL,
+					"i2s_prs1_clk");
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_sclk_clk;
+			}
+		} else {
+			ret = clk_set_parent_sys(NULL, "i2s_ref_clk", NULL,
+					"i2s_src_clk");
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_sclk_clk;
+			}
+			goto config_bclk;
+		}
+	}
+
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+config_bclk:
+	bclk = config->chan_nr * config->data_width * config->sample_rate;
+
+	ret = clk_set_rate(i2s_sclk_clk, bclk);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_enable(i2s_sclk_clk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	return 0;
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk_clk:
+	clk_put(i2s_sclk_clk);
+
+	return ret;
+
+}
+
 /* i2s0 device registeration */
 static struct dw_dma_slave i2s0_dma_data[] = {
 	{
@@ -874,6 +958,7 @@ static struct i2s_platform_data i2s0_data = {
 	.play_dma_data = &i2s0_dma_data[0],
 	.capture_dma_data = &i2s0_dma_data[1],
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s0_resources[] = {
@@ -930,6 +1015,7 @@ static struct i2s_platform_data i2s1_data = {
 	.play_dma_data = &i2s1_dma_data[0],
 	.capture_dma_data = &i2s1_dma_data[1],
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s1_resources[] = {
