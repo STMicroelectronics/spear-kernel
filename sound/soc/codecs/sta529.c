@@ -136,6 +136,35 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	return 0;
 }
 
+static int
+sta529_set_bias_level(struct snd_soc_codec *codec,
+		enum snd_soc_bias_level level)
+{
+	u16 sts;
+
+	sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
+
+	switch (level) {
+	case SND_SOC_BIAS_ON:
+	case SND_SOC_BIAS_PREPARE:
+		sta529_write(codec, STA529_FFXCFG0, sts & ~POWER_STBY);
+		break;
+	case SND_SOC_BIAS_STANDBY:
+	case SND_SOC_BIAS_OFF:
+		sta529_write(codec, STA529_FFXCFG0, sts | POWER_STBY);
+
+		break;
+	}
+
+	/*
+	 * store the label for powers down audio subsystem for suspend.
+	 * This is used by soc core layer
+	 */
+	codec->dapm.bias_level = level;
+	return 0;
+
+}
+
 static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
@@ -160,6 +189,9 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
+	sta529_set_bias_level(codec, SND_SOC_BIAS_PREPARE);
+	mdelay(1);
+
 	return 0;
 }
 
@@ -176,33 +208,6 @@ static int spear_sta529_mute(struct snd_soc_dai *dai, int mute)
 	sta529_write(codec, STA529_FFXCFG0, mute_reg);
 
 	return 0;
-}
-
-static int
-sta529_set_bias_level(struct snd_soc_codec *codec,
-		enum snd_soc_bias_level level)
-{
-	u16 sts;
-
-	sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
-
-	switch (level) {
-	case SND_SOC_BIAS_ON:
-	case SND_SOC_BIAS_PREPARE:
-		sta529_write(codec, STA529_FFXCFG0, sts & POWER_STBY);
-		break;
-	case SND_SOC_BIAS_STANDBY:
-	case SND_SOC_BIAS_OFF:
-		sta529_write(codec, STA529_FFXCFG0, sts | ~POWER_STBY);
-
-		break;
-	}
-
-	/*store the label for powers down audio subsystem for suspend.This is
-	 ** used by soc core layer*/
-	codec->dapm.bias_level = level;
-	return 0;
-
 }
 
 static struct snd_soc_dai_ops sta529_dai_ops = {
