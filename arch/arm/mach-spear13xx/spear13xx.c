@@ -44,6 +44,7 @@
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
+#include <sound/pcm.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -979,6 +980,14 @@ static struct i2s_platform_data i2s0_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
 	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = &i2s0_dma_data[0],
 	.capture_dma_data = &i2s0_dma_data[1],
 	.filter = dw_dma_filter,
@@ -1036,6 +1045,14 @@ static struct i2s_platform_data i2s1_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
 	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = &i2s1_dma_data[0],
 	.capture_dma_data = &i2s1_dma_data[1],
 	.filter = dw_dma_filter,
