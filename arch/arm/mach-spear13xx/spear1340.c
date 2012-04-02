@@ -38,6 +38,7 @@
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
 #include <media/vip.h>
+#include <sound/pcm.h>
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -1909,6 +1910,8 @@ static struct i2s_platform_data i2s_play_data = {
 	.channel = 8,
 	.play_dma_data = &i2s_play_dma_data,
 	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
 	.filter = dw_dma_filter,
 	.i2s_clk_cfg = audio_clk_config,
 };
@@ -1951,6 +1954,8 @@ static struct i2s_platform_data i2s_capture_data = {
 	.channel = 8,
 	.capture_dma_data = &i2s_capture_dma_data,
 	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
 	.filter = dw_dma_filter,
 	.i2s_clk_cfg = audio_clk_config,
 };
