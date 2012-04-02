@@ -56,6 +56,6 @@
 #define RIGHT_J_DATA_FORMAT	0x04
 #define CODEC_MUTE_VAL		0x80
 #define NUM_OF_MSG		2
-#define POWER_STBY		0xBF
+#define POWER_STBY		(0x1 << 6)
 
 #endif /* end of codec header file */
