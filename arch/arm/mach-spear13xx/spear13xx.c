@@ -979,7 +979,6 @@ static struct dw_dma_slave i2s0_dma_data[] = {
 static struct i2s_platform_data i2s0_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
-	.swidth = 16,
 	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
 	.snd_rates = (SNDRV_PCM_RATE_8000 | \
 		 SNDRV_PCM_RATE_11025 | \
@@ -1044,7 +1043,6 @@ static struct dw_dma_slave i2s1_dma_data[] = {
 static struct i2s_platform_data i2s1_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
-	.swidth = 16,
 	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
 	.snd_rates = (SNDRV_PCM_RATE_8000 | \
 		 SNDRV_PCM_RATE_11025 | \
