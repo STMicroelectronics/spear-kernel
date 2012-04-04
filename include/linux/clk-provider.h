@@ -166,7 +166,7 @@ struct clk *clk_register_fixed_rate(struct device *dev, const char *name,
  * Clock which can gate its output.  Implements .enable & .disable
  *
  * Flags:
- * CLK_GATE_SET_DISABLE - by default this clock sets the bit at bit_idx to
+ * CLK_GATE_SET_TO_DISABLE - by default this clock sets the bit at bit_idx to
  * 	enable the clock.  Setting this flag does the opposite: setting the bit
  * 	disable the clock and clearing it enables the clock
  */
