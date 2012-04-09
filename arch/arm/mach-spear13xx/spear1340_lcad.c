@@ -49,48 +49,61 @@ static struct mtd_partition partition_info[] = {
 #endif
 
 /* camera sensor registeration */
-static struct i2c_board_info vs6725_camera_sensor_info = {
-	I2C_BOARD_INFO("vs6725", 0x10),
+static struct i2c_board_info hi704_camera_sensor_info = {
+	I2C_BOARD_INFO("hi704", 0x30),
 };
 
 /* Camera power: default is ON */
-static int vs6725_cam_power(struct device *dev, int val)
+static int hi704_cam_power(struct device *dev, int val)
 {
 	int ret;
-	static bool gpio_avail;
+	static bool hi704_powered;
 
-	if (!gpio_avail) {
+	if (!hi704_powered) {
 
-		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
+		/*
+		 * hi704 is chip enable pin is connected to 2 gpio's on board
+		 * Keep one gpio always in input to keep the board safe.
+		 * Similarly, 2 spear gpio's connect to vsync. So, keep 1 in
+		 * input mode.
+		 */
+		ret = gpio_request(PLGPIO_40, "hi704-ce");
+		ret |= gpio_request(PLGPIO_51, "hi704-ce-psuedo");
+		ret |= gpio_request(PLGPIO_32, "hi704-vsync-psuedo");
+
 		if (!ret) {
-			gpio_direction_output(STMPE801_GPIO_6, 0);
+			gpio_direction_input(PLGPIO_51);
+			gpio_direction_input(PLGPIO_32);
+			gpio_direction_output(PLGPIO_40, 1);
 		} else {
-			pr_err("gpio request fail for STMPE801_GPIO_6\n");
+			pr_err("gpio request failed\n");
 			return ret;
 		}
-
-		gpio_avail = true;
+		hi704_powered = true;
 	}
 
 	/* turn on/off the CE pin for camera sensor */
-	gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+	if (val)
+		gpio_set_value_cansleep(PLGPIO_40, 0);
+	else
+		gpio_set_value_cansleep(PLGPIO_40, 1);
 
 	return 0;
 }
 
-static struct soc_camera_link vs6725_cam0_sensor_iclink = {
-	.bus_id = 0,	/* sensor is connected to camera device 3 */
-	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
-	.board_info = &vs6725_camera_sensor_info,
-	.power = vs6725_cam_power,
-	.module_name = "vs6725",
+static struct soc_camera_link hi704_cam0_sensor_iclink = {
+	.bus_id = 0,	/* sensor is connected to camera device */
+	.i2c_adapter_id = 1, /* sensor is connected to i2c controller 0 */
+	.board_info = &hi704_camera_sensor_info,
+	.power = hi704_cam_power,
+	.module_name = "hi704",
 };
 
 static struct platform_device cam0_sensor_device = {
 	.name = "soc-camera-pdrv",
 	.id = -1,
 	.dev = {
-		.platform_data = &vs6725_cam0_sensor_iclink,
+		.platform_data = &hi704_cam0_sensor_iclink,
 	},
 };
 
