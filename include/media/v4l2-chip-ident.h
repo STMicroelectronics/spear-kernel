@@ -85,6 +85,9 @@ enum {
 	V4L2_IDENT_CX23417 = 417,
 	V4L2_IDENT_CX23418 = 418,
 
+	/* module HI704: just ident 704 */
+	V4L2_IDENT_HI704 = 704,
+
 	/* module bt819: reserved range 810-819 */
 	V4L2_IDENT_BT815A = 815,
 	V4L2_IDENT_BT817A = 817,
