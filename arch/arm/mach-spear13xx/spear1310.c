@@ -13,6 +13,7 @@
 
 #include <linux/amba/pl022.h>
 #include <linux/clk.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
 #include <mach/generic.h>
@@ -1284,10 +1285,49 @@ struct platform_device spear1310_otg_device = {
 	.resource = otg_resources,
 };
 
+/* nand device registeration */
+static void spear1310_nand_select_bank(u32 bank, u32 busw)
+{
+	u32 fsmc_cfg = readl(VA_SPEAR1310_FSMC_CFG);
+
+	fsmc_cfg &= ~(SPEAR1310_FSMC_CS_MEMSEL_MASK << (bank & 3));
+
+	writel(fsmc_cfg, VA_SPEAR1310_FSMC_CFG);
+}
+/* nand device registeration */
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.select_bank = spear1310_nand_select_bank,
+	.mode = USE_WORD_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
+};
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR1310_NAND_MEM_BASE,
+		.end = SPEAR1310_NAND_MEM_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR13XX_FSMC_BASE,
+		.end = SPEAR13XX_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1310_nand_device = {
+	.name = "fsmc-nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
+};
+
 static void tdm_hdlc_setup(void)
 {
 	struct clk *synth_clk, *vco_clk, *tdm0_clk, *tdm1_clk;
-	char *synth_clk_name = "gen_synth1_clk";
+	char *synth_clk_name = "ras_synth1_clk";
 	char *vco_clk_name = "vco1div4_clk";
 	int ret;
 

@@ -577,6 +577,7 @@ extern struct platform_device spear1310_i2c4_device;
 extern struct platform_device spear1310_i2c5_device;
 extern struct platform_device spear1310_i2c6_device;
 extern struct platform_device spear1310_i2c7_device;
+extern struct platform_device spear1310_nand_device;
 extern struct platform_device spear1310_otg_device;
 extern struct platform_device spear1310_plgpio_device;
 extern struct platform_device spear1310_rs485_0_device;

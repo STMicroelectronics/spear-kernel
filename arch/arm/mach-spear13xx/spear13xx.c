@@ -475,10 +475,6 @@ void __init nand_mach_init(u32 busw)
 #ifdef CONFIG_CPU_SPEAR1340
 		reg = VA_SPEAR1340_FSMC_CFG;
 #endif
-	} else if (cpu_is_spear1310()) {
-#ifdef CONFIG_CPU_SPEAR1310
-		reg = VA_SPEAR1310_FSMC_CFG;
-#endif
 	} else
 		reg = VA_FSMC_CFG;
 
