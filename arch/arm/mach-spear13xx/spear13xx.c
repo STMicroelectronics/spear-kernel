@@ -492,7 +492,14 @@ void __init nand_mach_init(u32 busw)
 
 void nand_select_bank(u32 bank, u32 busw)
 {
-	u32 fsmc_cfg = readl(VA_FSMC_CFG);
+	u32 fsmc_cfg;
+
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		fsmc_cfg = readl(VA_SPEAR1340_FSMC_CFG);
+#endif
+	} else
+		fsmc_cfg = readl(VA_FSMC_CFG);
 
 	fsmc_cfg &= ~(NAND_BANK_MASK << NAND_BANK_SHIFT);
 	fsmc_cfg |= (bank << NAND_BANK_SHIFT);
