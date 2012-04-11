@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -40,6 +40,7 @@ typedef struct os_allocator
 static void os_free(void* ctx, ump_dd_mem * descriptor);
 static int os_allocate(void* ctx, ump_dd_mem * descriptor);
 static void os_memory_backend_destroy(ump_memory_backend * backend);
+static u32 os_stat(struct ump_memory_backend *backend);
 
 
 
@@ -73,6 +74,7 @@ ump_memory_backend * ump_os_memory_backend_create(const int max_allocation)
 	backend->allocate = os_allocate;
 	backend->release = os_free;
 	backend->shutdown = os_memory_backend_destroy;
+	backend->stat = os_stat;
 	backend->pre_allocate_physical_check = NULL;
 	backend->adjust_to_mali_phys = NULL;
 
@@ -138,8 +140,7 @@ static int os_allocate(void* ctx, ump_dd_mem * descriptor)
 
 		if (is_cached)
 		{
-			/* Only allocate lowmem pages when using cached memory. */
-			new_page = alloc_page(GFP_USER | __GFP_ZERO | __GFP_REPEAT | __GFP_NOWARN);
+			new_page = alloc_page(GFP_HIGHUSER | __GFP_ZERO | __GFP_REPEAT | __GFP_NOWARN);
 		} else
 		{
 			new_page = alloc_page(GFP_HIGHUSER | __GFP_ZERO | __GFP_REPEAT | __GFP_NOWARN | __GFP_COLD);
@@ -243,4 +244,12 @@ static void os_free(void* ctx, ump_dd_mem * descriptor)
 	}
 
 	vfree(descriptor->block_array);
+}
+
+
+static u32 os_stat(struct ump_memory_backend *backend)
+{
+	os_allocator *info;
+	info = (os_allocator*)backend->ctx;
+	return info->num_pages_allocated * _MALI_OSK_MALI_PAGE_SIZE;
 }
