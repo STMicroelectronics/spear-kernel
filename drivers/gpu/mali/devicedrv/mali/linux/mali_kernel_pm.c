@@ -24,6 +24,7 @@
 #include <linux/version.h>
 #include <asm/current.h>
 #include <linux/suspend.h>
+#include <linux/export.h>
 
 #include "mali_platform.h" 
 #include "mali_osk.h"

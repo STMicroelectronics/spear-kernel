@@ -19,6 +19,7 @@
 #include "mali_kernel_license.h"
 #include "mali_kernel_linux.h"
 #include "mali_ukk.h"
+#include <linux/export.h>
 
 #if MALI_LICENSE_IS_GPL
 
