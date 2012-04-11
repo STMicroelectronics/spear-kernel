@@ -361,3 +361,5 @@ kernelrelease:
 
 # end of outside kernel build system block
 endif
+$(DRIVER_DIR)/__malidrv_build_info.c:
+	@echo 'const char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(DRIVER_DIR)/__malidrv_build_info.c
