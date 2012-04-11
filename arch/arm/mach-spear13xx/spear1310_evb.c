@@ -20,7 +20,6 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/physmap.h>
 #include <linux/mtd/spear_smi.h>
-#include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
@@ -177,13 +176,6 @@ static const struct physmap_flash_data nor_plat_data __initconst = {
 	.parts = partition_info,
 	.nr_parts = ARRAY_SIZE(partition_info),
 	.width = FSMC_FLASH_WIDTH8,
-};
-
-/* arasan compact flash controller's platform data */
-static struct arasan_cf_pdata cf_pdata = {
-	.cf_if_clk = CF_IF_CLK_166M,
-	.quirk = CF_BROKEN_UDMA,
-	.dma_priv = &cf_dma_priv,
 };
 
 /* keyboard specific platform data */
