@@ -1320,7 +1320,7 @@ static void spear1310_nand_select_bank(u32 bank, u32 busw)
 /* nand device registeration */
 static struct fsmc_nand_platform_data nand_platform_data = {
 	.select_bank = spear1310_nand_select_bank,
-	.mode = USE_WORD_ACCESS,
+	.mode = USE_DMA_ACCESS,
 	.read_dma_priv = &nand_read_dma_priv,
 	.write_dma_priv = &nand_write_dma_priv,
 };
