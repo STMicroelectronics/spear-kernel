@@ -261,6 +261,42 @@ static const struct file_operations hx170dec_fops = {
 	.fasync		= hx170dec_fasync,
 };
 
+
+#ifdef CONFIG_PM
+static int spear_video_dec_suspend(struct device *dev)
+{
+	clk_disable(video_dec_clk);
+
+	dev_info(dev, "Suspended.\n");
+
+	return 0;
+}
+
+static int spear_video_dec_resume(struct device *dev)
+{
+	int result;
+
+	result = clk_enable(video_dec_clk);
+	if (result) {
+		dev_err(dev, "Can't enable clock\n");
+		return result;
+	}
+
+	dev_info(dev, "Resumed.\n");
+
+	return 0;
+}
+
+static const struct dev_pm_ops spear_video_dec_pm_ops = {
+	.suspend = spear_video_dec_suspend,
+	.resume = spear_video_dec_resume,
+	.freeze = spear_video_dec_suspend,
+	.restore = spear_video_dec_resume,
+};
+#endif /* CONFIG_PM */
+
+
+
 int hx170dec_sysfs_register(struct hx170dec_dev *device, dev_t dev,
 				const char *hx170dec_dev_name)
 {
@@ -432,6 +468,10 @@ static struct platform_driver spear1340_video_dec_driver = {
 	.driver = {
 		.name = "video_dec",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm = &spear_video_dec_pm_ops,
+#endif
+
 	},
 };
 
