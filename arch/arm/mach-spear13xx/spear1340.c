@@ -2423,9 +2423,22 @@ struct platform_device spear1340_device_mali_drm = {
 };
 #endif
 
+static struct resource spear1340_video_dec_resources[] = {
+	{
+		.start = SPEAR1340_VIDEO_DEC_BASE,
+		.end =  SPEAR1340_VIDEO_DEC_BASE + (4*100),
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_VIDEO_DEC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 struct platform_device spear1340_video_dec_device = {
 	.name = "video_dec",
 	.id   = -1,
+	.num_resources = ARRAY_SIZE(spear1340_video_dec_resources),
+	.resource = spear1340_video_dec_resources,
 };
 
 static int spear1340_sys_clk_init(void)
