@@ -1887,8 +1887,73 @@ static struct resource i2c1_resources[] = {
 	},
 };
 
-static struct i2c_dw_pdata spear1340_i2c_dw_pdata = {
-	.i2c_recover_bus = spear1340_i2c_dw_recover_bus,
+static inline struct pmx_dev *get_pmx_data(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	if ((gpio_nr == PLGPIO_134) || (gpio_nr == PLGPIO_133)) {
+		pmxdev = &spear1340_pmx_i2c0;
+	} else if ((gpio_nr == PLGPIO_23) || (gpio_nr == PLGPIO_18)) {
+		pmxdev = &spear1340_pmx_i2c1;
+	} else {
+		pr_err("Invalid i2c plgpio number\n");
+		return NULL;
+	}
+
+	return pmxdev;
+}
+
+int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = get_pmx_data(gpio_nr);
+	if (!pmxdev)
+		return -EINVAL;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = get_pmx_data(gpio_nr);
+
+	if (!pmxdev)
+		return -EINVAL;
+
+	/* restore I2C SLCK control to I2C controller*/
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear1340_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_134,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_133,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
+};
+
+static struct i2c_dw_pdata spear1340_i2c1_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_23,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_18,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
 };
 
 struct platform_device spear1340_i2c1_device = {
@@ -1896,7 +1961,7 @@ struct platform_device spear1340_i2c1_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &spear1340_i2c_dw_pdata,
+		.platform_data = &spear1340_i2c1_dw_pdata,
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
@@ -2636,7 +2701,7 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		pr_err("SPEAr1340: spdif out clock init failed, err no: %d\n",
 				ret);
 #endif
-	spear13xx_i2c_device.dev.platform_data = &spear1340_i2c_dw_pdata;
+	spear13xx_i2c_device.dev.platform_data = &spear1340_i2c0_dw_pdata;
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
