@@ -524,7 +524,6 @@ static int
 i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
-	struct platform_device *pdev = to_platform_device(dev->dev);
 	int ret;
 
 	dev_dbg(dev->dev, "%s: msgs: %d\n", __func__, num);
@@ -552,10 +551,15 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = wait_for_completion_interruptible_timeout(&dev->cmd_complete, HZ);
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
-		if (dev->i2c_recover_bus) {
-			dev_info(dev->dev, "try i2c bus recovery\n");
-			dev->i2c_recover_bus(pdev);
+		/* disable controller */
+		writew(0, dev->base + DW_IC_ENABLE);
+		clk_disable(dev->clk);
+		if (adap->bus_recovery_info &&
+				adap->bus_recovery_info->recover_bus) {
+			dev_dbg(dev->dev, "try i2c bus recovery\n");
+			adap->bus_recovery_info->recover_bus(adap);
 		}
+		clk_enable(dev->clk);
 		i2c_dw_init(dev);
 		ret = -ETIMEDOUT;
 		goto done;
@@ -707,6 +711,7 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
 	struct i2c_dw_pdata *pdata;
+	struct i2c_bus_recovery_info *dw_recovery_info;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -756,8 +761,6 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	}
 
 	pdata = dev_get_platdata(&pdev->dev);
-	if (pdata && pdata->i2c_recover_bus)
-		dev->i2c_recover_bus = pdata->i2c_recover_bus;
 
 	{
 		u32 param1 = readl(dev->base + DW_IC_COMP_PARAM_1);
@@ -784,6 +787,30 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 
 	adap->nr = pdev->id;
+	if (pdata) {
+		dw_recovery_info =
+			kzalloc(sizeof(*dw_recovery_info), GFP_KERNEL);
+		if (!dw_recovery_info) {
+			r = -ENOMEM;
+			goto err_iounmap;
+		}
+		dw_recovery_info->get_gpio = pdata->get_gpio;
+		dw_recovery_info->put_gpio = pdata->put_gpio;
+		dw_recovery_info->scl_gpio = pdata->scl_gpio;
+		dw_recovery_info->scl_gpio_flags = pdata->scl_gpio_flags;
+		dw_recovery_info->recover_bus = pdata->recover_bus;
+		dw_recovery_info->is_gpio_recovery = pdata->is_gpio_recovery;
+		dw_recovery_info->clock_rate_khz =
+			clk_get_rate(dev->clk) / 1000;
+
+		if (!pdata->skip_sda_polling) {
+			dw_recovery_info->sda_gpio = pdata->sda_gpio;
+			dw_recovery_info->sda_gpio_flags =
+				pdata->sda_gpio_flags;
+		}
+		adap->bus_recovery_info = dw_recovery_info;
+	}
+
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(&pdev->dev, "failure adding adapter\n");
@@ -794,6 +821,8 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 
 err_free_irq:
 	free_irq(dev->irq, dev);
+	if (pdata)
+		kfree(dw_recovery_info);
 err_iounmap:
 	iounmap(dev->base);
 err_unuse_clocks:
@@ -813,8 +842,12 @@ err_release_region:
 static int __devexit dw_i2c_remove(struct platform_device *pdev)
 {
 	struct dw_i2c_dev *dev = platform_get_drvdata(pdev);
+	struct i2c_dw_pdata *pdata;
 	struct resource *mem;
 
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata)
+		kfree(dev->adapter.bus_recovery_info);
 	platform_set_drvdata(pdev, NULL);
 	i2c_del_adapter(&dev->adapter);
 	put_device(&pdev->dev);
