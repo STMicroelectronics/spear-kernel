@@ -81,12 +81,10 @@ struct clk *video_dec_clk;
 
 static struct hx170dec_dev device;
 
-unsigned long base_port = HXDEC_LOGIC_MODULE0_BASE;
-int irq = DEC_IRQ;
+char *irq = "plat";
 
 /* module_param(name, type, perm) */
-module_param(base_port, ulong, 0);
-module_param(irq, int, 0);
+module_param(irq, charp, 0);
 
 static int hx170dec_major;
 
@@ -330,10 +328,40 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 {
 	int result;
 	dev_t dev = 0;
+	long unsigned int parse_irq = 0;
+	struct resource *vdec_mem;
+	struct resource *vdec_irq;
 
 	hx170dec_major = 0; /*use 0 for dynamic allocation (recommended)*/
 	hx_pp_instance = 0;
 	hx_dec_instance = 0;
+
+	/* get platform resources */
+	vdec_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!vdec_mem) {
+		dev_err(&pdev->dev, "Can't get memory resource\n");
+		goto no_res;
+	}
+
+	if ( irq == NULL || !strncmp(irq, "plat", 4)) {
+		vdec_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+		if (!vdec_irq) {
+			dev_err(&pdev->dev, "Can't get interrupt resource\n");
+			goto no_res;
+		}
+		hx170dec_data.irq = vdec_irq->start;
+		dev_info(&pdev->dev, "Platform IRQ mode selected\n");
+	} else if (!strncmp(irq, "no", 2)) {
+		hx170dec_data.irq = 0;
+		dev_info(&pdev->dev, "Disable IRQ mode selected\n");
+	} else {
+		if (strict_strtoul(irq, 10, &(parse_irq))) {
+			dev_err(&pdev->dev, "Wrong IRQ parameter: %s\n", irq);
+			goto no_res;
+		}
+		hx170dec_data.irq = parse_irq;
+		dev_info(&pdev->dev, "IRQ param: %d\n", hx170dec_data.irq);
+	}
 
 	/* clock init */
 	video_dec_clk = clk_get(&pdev->dev, NULL);
@@ -350,9 +378,8 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 		goto put_clk;
 	}
 
-	hx170dec_data.iobaseaddr = base_port;
-	hx170dec_data.iosize = DEC_IO_SIZE;
-	hx170dec_data.irq = irq;
+	hx170dec_data.iobaseaddr = vdec_mem->start;
+	hx170dec_data.iosize = vdec_mem->end - vdec_mem->start + 4;
 
 	hx170dec_data.async_queue_dec = NULL;
 	hx170dec_data.async_queue_pp = NULL;
@@ -395,8 +422,8 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 
 	ResetAsic(&hx170dec_data);  /* reset hardware */
 	/* get the IRQ line */
-	if (irq > 0) {
-		result = request_irq(irq, hx170dec_isr,
+	if (hx170dec_data.irq > 0) {
+		result = request_irq(hx170dec_data.irq, hx170dec_isr,
 				IRQF_DISABLED | IRQF_SHARED,
 				"hx170dec", (void *) &hx170dec_data);
 		if (result != 0) {
@@ -429,6 +456,8 @@ init_cdev_err:
 	unregister_chrdev_region(dev, 1/*count*/);
 init_chrdev_err:
 	return -EFAULT;
+no_res:
+	return -ENODEV;
 err:
 	dev_err(&pdev->dev, "probe failed\n");
 	return result;
@@ -519,12 +548,6 @@ static int CheckHwId(struct hx170dec_t *dev)
 ------------------------------------------------------------------------------*/
 static int ReserveIO(void)
 {
-	if (!request_mem_region(hx170dec_data.iobaseaddr,
-		hx170dec_data.iosize, "hx170dec")) {
-		printk(KERN_INFO "hx170dec: failed to reserve HW regs\n");
-		return -EBUSY;
-	}
-
 	hx170dec_data.hwregs =
 		(volatile u8 *) ioremap_nocache(hx170dec_data.iobaseaddr,
 						hx170dec_data.iosize);
@@ -555,7 +578,6 @@ static void ReleaseIO(void)
 {
 	if (hx170dec_data.hwregs)
 		iounmap((void *) hx170dec_data.hwregs);
-	release_mem_region(hx170dec_data.iobaseaddr, hx170dec_data.iosize);
 }
 
 /*------------------------------------------------------------------------------
