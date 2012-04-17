@@ -109,6 +109,14 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 			goto out_unmap;
 		}
 
+		plat_dat->dma_cfg = devm_kzalloc(&pdev->dev,
+				sizeof(*plat_dat->dma_cfg), GFP_KERNEL);
+		if (!plat_dat->dma_cfg) {
+			pr_err("%s: ERROR: no memory for dma_cfg", __func__);
+			ret = -ENOMEM;
+			goto out_unmap;
+		}
+
 		ret = stmmac_probe_config_dt(pdev, plat_dat, &mac);
 		if (ret) {
 			pr_err("%s: main dt probe failed", __func__);
