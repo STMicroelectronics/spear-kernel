@@ -62,6 +62,7 @@
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
+#define DEF_BRIGHTNESS 0x80
 
 static char *mode_option __devinitdata;
 
@@ -927,10 +928,17 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
  */
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on)
 {
-#ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	fbi->reg_pwmdcr		= 0x80;
-	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
-#endif
+	fbi->reg_pwmfr &= ~DB9000_PWMFR_PWM_FCE;
+
+	if (on) {
+		fbi->reg_pwmfr |= DB9000_PWMFR_PWM_FCE;
+		lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
+	} else {
+		fbi->reg_pwmdcr = lcd_readl(fbi, DB9000_PWMDCR);
+		lcd_writel(fbi, DB9000_PWMDCR, 0x0);
+	}
+
+	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
 }
 
 static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
@@ -1002,11 +1010,6 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 
 	lcd_writel(fbi, DB9000_CR1,
 		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_DEE);
-
-#ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
-	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
-#endif
 }
 
 static void db9000fb_disable_controller(struct db9000fb_info *fbi)
@@ -1072,6 +1075,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * already disabled, then do nothing.
 		 */
 		if (old_state != C_DISABLE && old_state != C_DISABLE_PM) {
+			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
 			db9000fb_setup_gpio(fbi, false);
 			fbi->state = state;
@@ -1112,6 +1116,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * This is so we reprogram the control registers.
 		 */
 		if (old_state == C_ENABLE) {
+			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
 			db9000fb_setup_gpio(fbi, false);
 			db9000fb_disable_controller(fbi);
@@ -1119,6 +1124,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
+			db9000fb_backlight_power(fbi, 1);
 		}
 		break;
 
@@ -1154,6 +1160,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		db9000fb_enable_controller(fbi);
 		db9000fb_backlight_power(fbi, 1);
 		msleep(100);
+		db9000fb_backlight_power(fbi, 0);
 		db9000fb_lcd_power(fbi, 0);
 		db9000fb_setup_gpio(fbi, false);
 		db9000fb_disable_controller(fbi);
@@ -1807,6 +1814,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	fbi->reg_pwmdcr = DEF_BRIGHTNESS;
 	fbi->pdev = pdev;
 	init_backlight(fbi);
 #endif

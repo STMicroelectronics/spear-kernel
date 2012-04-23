@@ -51,7 +51,7 @@ static struct db9000fb_ctrl_info ctrl_info = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
-	.pwmfr = DB9000_PWMFR_PWM_FCE | DB9000_PWMFR_PWM_FCD(24),
+	.pwmfr = DB9000_PWMFR_PWM_FCD(24),
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
