@@ -26,6 +26,8 @@
 #include <linux/clk.h>
 #include <linux/stmmac.h>
 #include <linux/phy.h>
+#include <plat/hardware.h>
+
 #include "common.h"
 #ifdef CONFIG_STMMAC_TIMER
 #include "stmmac_timer.h"

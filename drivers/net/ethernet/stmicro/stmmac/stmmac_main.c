@@ -1860,6 +1860,11 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
  * Description: this is the main probe function used to
  * call the alloc_etherdev, allocate the priv structure.
  */
+
+#ifdef CONFIG_ARCH_SPEAR13XX
+struct	clk *spear1310_reva_sys_clk;
+#endif
+
 struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 				     struct plat_stmmacenet_data *plat_dat,
 				     void __iomem *addr)
@@ -1927,6 +1932,20 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 
 	if (stmmac_clk_get(priv))
 		pr_warning("%s: warning: cannot get CSR clock\n", __func__);
+
+#ifdef CONFIG_ARCH_SPEAR13XX
+	/*
+	 * Following hack has been provided as a special case for
+	 * spear1310_reva ethernet interfaces where mdio lines of eth0 is
+	 * shared by the rest of ethernet interfaces, hence we have to
+	 * do following in order to ensure that clock is enabled for the
+	 * shared mdio lines
+	 */
+	if (cpu_is_spear1310_reva() && (spear1310_reva_sys_clk == NULL)) {
+		spear1310_reva_sys_clk = priv->stmmac_clk;
+		stmmac_clk_enable(priv);
+	}
+#endif
 
 	/* If a specific clk_csr value is passed from the platform
 	 * this means that the CSR Clock Range selection cannot be
