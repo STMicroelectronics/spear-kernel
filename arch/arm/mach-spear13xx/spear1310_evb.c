@@ -21,7 +21,9 @@
 #include <linux/mtd/physmap.h>
 #include <linux/mtd/spear_smi.h>
 #include <linux/pata_arasan_cf_data.h>
+#include <linux/phy.h>
 #include <linux/spi/spi.h>
+#include <linux/stmmac.h>
 #include <video/db9000fb.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
@@ -105,6 +107,35 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1310 specific devices */
 	&spear1310_plgpio_device,
 	&spear1310_otg_device,
+};
+
+/* Ethernet PLatform data */
+/* MDIO Bus Data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = -1,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe = STMMAC_RX_COE_TYPE2,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.init = spear13xx_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
 };
 
 static struct mtd_partition nand_partition_info[] __initdata = {
@@ -277,6 +308,13 @@ static void __init spear1310_evb_init(void)
 
 	/* call spear1310 machine init function */
 	spear1310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));
+
+	/* Set stmmac plat data */
+	if (platform_device_add_data(&spear13xx_eth_device, &eth_data,
+			sizeof(eth_data)))
+		printk(KERN_WARNING "%s: couldn't add plat_data",
+				spear13xx_eth_device.name);
+
 
 	/* initialize serial nor related data in smi plat data */
 	smi_init_board_info(&spear13xx_smi_device);
