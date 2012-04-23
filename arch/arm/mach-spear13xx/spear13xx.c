@@ -1478,11 +1478,17 @@ void spear13xx_init(void)
 #endif
 }
 
-/* This will initialize vic */
+static int spear13xx_set_wake(struct irq_data *data, unsigned int on)
+{
+	return 0;
+}
+
+/* This will initialize gic */
 void __init spear13xx_init_irq(void)
 {
 	gic_init(0, 29, __io_address(SPEAR13XX_GIC_DIST_BASE),
 			__io_address(SPEAR13XX_GIC_CPU_BASE));
+	gic_arch_extn.irq_set_wake = spear13xx_set_wake;
 }
 
 unsigned long reserve_mem(struct meminfo *mi, unsigned long size)
