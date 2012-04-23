@@ -22,7 +22,6 @@
   Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
-#include <linux/stmmac.h>
 #include "common.h"
 #include "descs_com.h"
 
@@ -202,17 +201,9 @@ static void ndesc_close_tx_desc(struct dma_desc *p)
 	p->des01.tx.interrupt = 1;
 }
 
-static int ndesc_get_rx_frame_len(struct dma_desc *p, int rx_coe_type)
+static int ndesc_get_rx_frame_len(struct dma_desc *p)
 {
-	/* The type-1 checksum offload engines append the checksum at
-	 * the end of frame and the two bytes of checksum are added in
-	 * the length.
-	 * Adjust for that in the framelen for type-1 checksum offload
-	 * engines. */
-	if (rx_coe_type == STMMAC_RX_COE_T1)
-		return p->des01.rx.frame_length - 2;
-	else
-		return p->des01.rx.frame_length;
+	return p->des01.rx.frame_length;
 }
 
 const struct stmmac_desc_ops ndesc_ops = {
