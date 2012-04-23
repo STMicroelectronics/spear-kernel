@@ -358,9 +358,9 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	 */
 	if (var->hsync_len < 0 || var->hsync_len > 255)
 		return -EINVAL;
-	if (var->left_margin < 0 || var->left_margin > 255)
+	if (var->left_margin < 0 || var->left_margin > 1023)
 		return -EINVAL;
-	if (var->right_margin < 0 || var->right_margin > 255)
+	if (var->right_margin < 0 || var->right_margin > 1023)
 		return -EINVAL;
 	if (var->yres < 16 || var->yres > 4096 || (var->yres % 4))
 		return -EINVAL;
@@ -368,9 +368,9 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		return -EINVAL;
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		return -EINVAL;
-	if (var->upper_margin < 0 || var->upper_margin > 255)
+	if (var->upper_margin < 0 || var->upper_margin > 1023)
 		return -EINVAL;
-	if (var->lower_margin < 0 || var->lower_margin > 255)
+	if (var->lower_margin < 0 || var->lower_margin > 1023)
 		return -EINVAL;
 	if (var->pixclock <= 0)
 		return -EINVAL;
@@ -860,10 +860,10 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->hsync_len < 0 || var->hsync_len > 255)
 		pr_err("%s: invalid hsync_len %d\n", fbi->fb.fix.id,
 				var->hsync_len);
-	if (var->left_margin < 0 || var->left_margin > 255)
+	if (var->left_margin < 0 || var->left_margin > 1023)
 		pr_err("%s: invalid left_margin %d\n",
 			fbi->fb.fix.id, var->left_margin);
-	if (var->right_margin < 0 || var->right_margin > 255)
+	if (var->right_margin < 0 || var->right_margin > 1023)
 		pr_err("%s: invalid right_margin %d\n", fbi->fb.fix.id,
 				var->right_margin);
 	if (var->yres < 16 || var->yres > 4096)
@@ -871,10 +871,10 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		pr_err("%s: invalid vsync_len %d\n", fbi->fb.fix.id,
 				var->vsync_len);
-	if (var->upper_margin < 0 || var->upper_margin > 255)
+	if (var->upper_margin < 0 || var->upper_margin > 1023)
 		pr_err("%s: invalid upper_margin %d\n", fbi->fb.fix.id,
 				var->upper_margin);
-	if (var->lower_margin < 0 || var->lower_margin > 255)
+	if (var->lower_margin < 0 || var->lower_margin > 1023)
 		pr_err("%s: invalid lower_margin %d\n", fbi->fb.fix.id,
 				var->lower_margin);
 	if (var->pixclock <= 0)
@@ -1703,11 +1703,11 @@ static void __devinit db9000fb_check_options(struct device *dev,
 		dev_warn(dev, "Vertical resolution out of range: %d\n",
 				inf->modes->yres);
 
-	if (inf->modes->left_margin > 255)
+	if (inf->modes->left_margin > 1023)
 		dev_warn(dev, "machine Horizontal Back Port setting out of \
 				range: %d\n", inf->modes->left_margin);
 
-	if (inf->modes->right_margin > 255)
+	if (inf->modes->right_margin > 1023)
 		dev_warn(dev, "machine Horizontal Front Port setting out of \
 				range: %d\n", inf->modes->left_margin);
 }
