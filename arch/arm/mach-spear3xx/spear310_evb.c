@@ -220,6 +220,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.ale_off = SPEAR310_PLAT_NAND_ALE,
 	.cle_off = SPEAR310_PLAT_NAND_CLE,
 	.mode = USE_WORD_ACCESS,
+	.max_banks = 1,
 };
 
 /* spi board information */

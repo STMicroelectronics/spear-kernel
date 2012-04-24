@@ -144,6 +144,7 @@ static const struct fsmc_nand_platform_data nand0_plat_data __initconst = {
 	.ale_off = SPEAR300_PLAT_NAND_ALE,
 	.cle_off = SPEAR300_PLAT_NAND_CLE,
 	.mode = USE_WORD_ACCESS,
+	.max_banks = 1,
 };
 
 /* keyboard specific platform data */

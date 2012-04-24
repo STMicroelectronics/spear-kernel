@@ -223,6 +223,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.mode = USE_DMA_ACCESS,
 	.read_dma_priv = &nand_read_dma_priv,
 	.write_dma_priv = &nand_write_dma_priv,
+	.max_banks = 1,
 };
 
 #ifdef CONFIG_SPEAR_PCIE_REV341

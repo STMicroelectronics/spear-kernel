@@ -155,7 +155,7 @@ struct fsmc_nand_platform_data {
 	unsigned int		nr_partitions;
 	unsigned int		options;
 	unsigned int		width;
-	unsigned int		bank;
+	unsigned int		max_banks;
 
 	/* CLE, ALE offsets */
 	unsigned long           cle_off;
