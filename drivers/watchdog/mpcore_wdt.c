@@ -370,7 +370,7 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 			TIMER_MARGIN);
 	}
 
-	mpcore_wdt_set_heartbeat(NULL, mpcore_margin);
+	mpcore_wdt_set_heartbeat(&wdt->wdd, mpcore_margin);
 	dev_info(wdt->dev, "MPcore Watchdog Timer: 0.1. mpcore_noboot=%d "
 			"mpcore_margin=%d sec (nowayout= %d)\n", mpcore_noboot,
 			mpcore_margin, nowayout);
