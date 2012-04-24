@@ -22,6 +22,7 @@
 #include <linux/dma-direction.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/resource.h>
@@ -320,6 +321,7 @@ struct fsmc_nand_data {
 
 	/* Recieved from plat data */
 	struct fsmc_nand_timings dev_timings;
+	struct fsmc_rbpin	rbpin;
 	enum access_mode	mode;
 	uint32_t		max_banks;
 	void			(*select_chip)(uint32_t bank, uint32_t busw);
@@ -406,10 +408,14 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  * FSMC registers
  */
 static void fsmc_nand_setup(void __iomem *regs, uint32_t bank,
-			   uint32_t busw, struct fsmc_nand_timings *timings)
+			   uint32_t busw, struct fsmc_nand_timings *timings,
+			   struct fsmc_rbpin *rbpin)
 {
-	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
+	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE;
 	uint32_t tclr, tar, thiz, thold, twait, tset;
+
+	if (!rbpin || (rbpin->use_pin == FSMC_RB_WAIT))
+		value |= FSMC_WAITON;
 
 	tclr = (timings->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
 	tar = (timings->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
@@ -848,6 +854,16 @@ static bool filter(struct dma_chan *chan, void *slave)
 	return true;
 }
 
+static int fsmc_dev_ready(struct mtd_info *mtd)
+{
+	struct fsmc_nand_data *host = container_of(mtd,
+					struct fsmc_nand_data, mtd);
+	void __iomem *regs = host->regs_va;
+	unsigned int bank = host->bank;
+
+	return !!gpio_get_value(host->rbpin.gpio_pin);
+}
+
 /*
  * fsmc_nand_probe - Probe function
  * @pdev:       platform device structure
@@ -976,6 +992,11 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	else
 		host->dev_timings = default_timings;
 
+	if (pdata->rbpin)
+		host->rbpin = *(pdata->rbpin);
+	else
+		host->rbpin.use_pin = FSMC_RB_WAIT;
+
 	host->mode = pdata->mode;
 	host->max_banks = pdata->max_banks;
 
@@ -1000,6 +1021,18 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	nand->options = pdata->options;
 	nand->select_chip = fsmc_select_chip;
 	nand->badblockbits = 7;
+
+	if (host->rbpin.use_pin != FSMC_RB_WAIT)
+		nand->dev_ready = fsmc_dev_ready;
+
+	if (host->rbpin.use_pin == FSMC_RB_GPIO) {
+		ret = gpio_request(host->rbpin.gpio_pin, "fsmc-rb");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "gpio request fail: %d\n",
+					host->rbpin.gpio_pin);
+			goto err_gpio_req;
+		}
+	}
 
 	if (pdata->width == FSMC_NAND_BW16)
 		nand->options |= NAND_BUSWIDTH_16;
@@ -1034,7 +1067,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	for (bank = 0; bank < host->max_banks; bank++)
 		fsmc_nand_setup(host->regs_va, bank,
 				nand->options & NAND_BUSWIDTH_16,
-				&host->dev_timings);
+				&host->dev_timings, &host->rbpin);
 
 	if (AMBA_REV_BITS(host->pid) >= 8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -1135,6 +1168,9 @@ err_req_write_chnl:
 	if (host->mode == USE_DMA_ACCESS)
 		dma_release_channel(host->read_dma_chan);
 err_req_read_chnl:
+	if (host->rbpin.use_pin == FSMC_RB_GPIO)
+		gpio_free(host->rbpin.gpio_pin);
+err_gpio_req:
 	clk_disable(host->clk);
 err_clk_enable:
 	clk_put(host->clk);
@@ -1184,8 +1220,7 @@ static int fsmc_nand_resume(struct device *dev)
 		for (bank = 0; bank < host->max_banks; bank++)
 			fsmc_nand_setup(host->regs_va, bank,
 					host->nand.options & NAND_BUSWIDTH_16,
-					&host->dev_timings);
-
+					&host->dev_timings, &host->rbpin);
 	}
 	return 0;
 }
