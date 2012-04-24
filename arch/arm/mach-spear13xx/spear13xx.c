@@ -510,7 +510,12 @@ void nand_select_bank(u32 bank, u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, VA_FSMC_CFG);
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		writel(fsmc_cfg, VA_SPEAR1340_FSMC_CFG);
+#endif
+	} else
+		writel(fsmc_cfg, VA_FSMC_CFG);
 }
 
 struct dw_dma_slave nand_read_dma_priv = {
