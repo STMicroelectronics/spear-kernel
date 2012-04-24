@@ -342,6 +342,7 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
 
+	host->bank = chipnr;
 	switch (chipnr) {
 	case -1:
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0 | NAND_CTRL_CHANGE);
