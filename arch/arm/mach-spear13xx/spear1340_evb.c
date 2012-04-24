@@ -140,7 +140,7 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = 0x0,
+		.mask = 0x1000000,
 		.value = 0x0,
 	},
 };
@@ -301,6 +301,16 @@ static struct mtd_partition nand_partition_info[] __initdata = {
 	}
 };
 
+static const struct fsmc_rbpin fsmc_rbpin __initconst = {
+	/*
+	 * PLGPIO 247 is also enabled along with this ready/busy feature.
+	 * Disable the plgpio when ready/busy pin is being used by controller
+	 * itself
+	 */
+	.use_pin = FSMC_RB_GPIO,
+	.gpio_pin = PLGPIO_247,
+};
+
 /* fsmc platform data */
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.select_bank = nand_select_bank,
@@ -314,6 +324,7 @@ static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
 	.read_dma_priv = &nand_read_dma_priv,
 	.write_dma_priv = &nand_write_dma_priv,
 	.max_banks = 1,
+	.rbpin = &fsmc_rbpin,
 };
 
 /* arasan compact flash controller's platform data */
