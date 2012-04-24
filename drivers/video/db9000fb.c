@@ -362,9 +362,9 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		return -EINVAL;
 	if (var->right_margin < 0 || var->right_margin > 1023)
 		return -EINVAL;
-	if (var->yres < 16 || var->yres > 4096 || (var->yres % 4))
+	if (var->yres < 0 || var->yres > 4096)
 		return -EINVAL;
-	if (var->xres < 16 || var->xres > 4096 || (var->xres % 4))
+	if (var->xres < 16 || var->xres > 4096 || (var->xres % 16))
 		return -EINVAL;
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		return -EINVAL;
@@ -839,7 +839,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	size_t nbytes;
 
 #if DEBUG_VAR
-	if (var->xres < 16 || var->xres > 4096)
+	if (var->xres < 16 || var->xres > 4096 || (var->xres % 16))
 		pr_err("%s: invalid xres %d\n", fbi->fb.fix.id, var->xres);
 
 	switch (var->bits_per_pixel) {
@@ -866,7 +866,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->right_margin < 0 || var->right_margin > 1023)
 		pr_err("%s: invalid right_margin %d\n", fbi->fb.fix.id,
 				var->right_margin);
-	if (var->yres < 16 || var->yres > 4096)
+	if (var->yres < 0 || var->yres > 4096)
 		pr_err("%s: invalid yres %d\n", fbi->fb.fix.id, var->yres);
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		pr_err("%s: invalid vsync_len %d\n", fbi->fb.fix.id,
@@ -1695,11 +1695,11 @@ static void __devinit db9000fb_check_options(struct device *dev,
 		dev_warn(dev, "BPP setting illegal: %d\n", inf->ctrl_info->bpp);
 	}
 
-	if ((inf->modes->xres > 4096) || (inf->modes->xres < 16))
+	if (inf->modes->xres < 16 || inf->modes->xres > 4096 || (inf->modes->yres % 16))
 		dev_warn(dev, "Horizontal resolution out of range: %d\n",
 				inf->modes->xres);
 
-	if ((inf->modes->yres > 4096) || (inf->modes->yres < 64))
+	if ((inf->modes->yres > 4096) || (inf->modes->yres < 0))
 		dev_warn(dev, "Vertical resolution out of range: %d\n",
 				inf->modes->yres);
 
