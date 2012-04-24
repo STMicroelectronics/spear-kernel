@@ -595,6 +595,7 @@ void __init spear1310_clk_init(void);
 void __init spear1310_init(struct pmx_mode *pmx_mode,
 		struct pmx_dev **pmx_devs, u8 pmx_dev_count);
 void __init spear1310_map_io(void);
+void spear1310_nand_select_bank(u32 bank, u32 busw);
 
 #endif /* CONFIG_CPU_SPEAR1310 */
 

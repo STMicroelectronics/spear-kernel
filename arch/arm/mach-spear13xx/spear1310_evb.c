@@ -160,7 +160,7 @@ static struct mtd_partition nand_partition_info[] __initdata = {
 
 /* fsmc platform data */
 static const struct fsmc_nand_platform_data nand_plat_data __initconst = {
-	.select_bank = nand_select_bank,
+	.select_bank = spear1310_nand_select_bank,
 	.partitions = nand_partition_info,
 	.nr_partitions = ARRAY_SIZE(nand_partition_info),
 	.options = NAND_SKIP_BBTSCAN,

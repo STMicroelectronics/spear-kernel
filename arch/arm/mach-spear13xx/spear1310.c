@@ -1309,7 +1309,7 @@ struct platform_device spear1310_otg_device = {
 };
 
 /* nand device registeration */
-static void spear1310_nand_select_bank(u32 bank, u32 busw)
+void spear1310_nand_select_bank(u32 bank, u32 busw)
 {
 	u32 fsmc_cfg = readl(VA_SPEAR1310_FSMC_CFG);
 
@@ -1317,13 +1317,6 @@ static void spear1310_nand_select_bank(u32 bank, u32 busw)
 
 	writel(fsmc_cfg, VA_SPEAR1310_FSMC_CFG);
 }
-/* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data = {
-	.select_bank = spear1310_nand_select_bank,
-	.mode = USE_DMA_ACCESS,
-	.read_dma_priv = &nand_read_dma_priv,
-	.write_dma_priv = &nand_write_dma_priv,
-};
 
 static struct resource nand_resources[] = {
 	{
@@ -1344,7 +1337,6 @@ struct platform_device spear1310_nand_device = {
 	.id = -1,
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
-	.dev.platform_data = &nand_platform_data,
 };
 
 static void tdm_hdlc_setup(void)
