@@ -289,8 +289,6 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * @dma_access_complete: Completion structure
  *
  * @dev_timings:	Timings to be programmed in controller
- * @partitions:		Partition info for a NAND Flash
- * @nr_partitions:	Total number of partition of a NAND flash
  * @mode:		Defines the NAND device access mode
  *			Can be one of:
  *			- DMA access
@@ -322,8 +320,6 @@ struct fsmc_nand_data {
 
 	/* Recieved from plat data */
 	struct fsmc_nand_timings *dev_timings;
-	struct mtd_partition	*partitions;
-	unsigned int		nr_partitions;
 	enum access_mode	mode;
 	uint32_t		max_banks;
 	void			(*select_chip)(uint32_t bank, uint32_t busw);
@@ -979,8 +975,6 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		 AMBA_REV_BITS(pid), AMBA_CONFIG_BITS(pid));
 
 	host->select_chip = pdata->select_bank;
-	host->partitions = pdata->partitions;
-	host->nr_partitions = pdata->nr_partitions;
 	host->dev = &pdev->dev;
 	host->dev_timings = pdata->nand_timings;
 	host->mode = pdata->mode;
@@ -1125,8 +1119,8 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	 * Check for partition info passed
 	 */
 	host->mtd.name = "nand";
-	ret = mtd_device_parse_register(&host->mtd, NULL, 0, host->partitions,
-			host->nr_partitions);
+	ret = mtd_device_parse_register(&host->mtd, NULL, 0, pdata->partitions,
+			pdata->nr_partitions);
 	if (ret)
 		goto err_probe;
 
