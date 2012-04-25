@@ -2143,6 +2143,183 @@ static struct spear_function *spear1310_functions[] = {
 	&gpt64_function,
 };
 
+static struct pinctrl_gpio_range spear1310_plgpio_range = {
+	.name		= "SPEAr1310 PLGPIO",
+	.id		= 0,
+	.pin_base	= 0,
+	.npins		= ARRAY_SIZE(spear1310_pins),
+};
+
+static const unsigned pin18[] = { 18, };
+static const unsigned pin19[] = { 19, };
+static const unsigned pin20[] = { 20, };
+static const unsigned pin21[] = { 21, };
+static const unsigned pin22[] = { 22, };
+static const unsigned pin23[] = { 23, };
+static const unsigned pin54[] = { 54, };
+static const unsigned pin55[] = { 55, };
+static const unsigned pin56[] = { 56, };
+static const unsigned pin57[] = { 57, };
+static const unsigned pin58[] = { 58, };
+static const unsigned pin59[] = { 59, };
+static const unsigned pin60[] = { 60, };
+static const unsigned pin61[] = { 61, };
+static const unsigned pin62[] = { 62, };
+static const unsigned pin63[] = { 63, };
+static const unsigned pin143[] = { 143, };
+static const unsigned pin144[] = { 144, };
+static const unsigned pin145[] = { 145, };
+static const unsigned pin146[] = { 146, };
+static const unsigned pin147[] = { 147, };
+static const unsigned pin148[] = { 148, };
+static const unsigned pin149[] = { 149, };
+static const unsigned pin150[] = { 150, };
+static const unsigned pin151[] = { 151, };
+static const unsigned pin152[] = { 152, };
+static const unsigned pin205[] = { 205, };
+static const unsigned pin206[] = { 206, };
+static const unsigned pin211[] = { 211, };
+static const unsigned pin212[] = { 212, };
+static const unsigned pin213[] = { 213, };
+static const unsigned pin214[] = { 214, };
+static const unsigned pin215[] = { 215, };
+static const unsigned pin216[] = { 216, };
+static const unsigned pin217[] = { 217, };
+static const unsigned pin218[] = { 218, };
+static const unsigned pin219[] = { 219, };
+static const unsigned pin220[] = { 220, };
+static const unsigned pin221[] = { 221, };
+static const unsigned pin222[] = { 222, };
+static const unsigned pin223[] = { 223, };
+static const unsigned pin224[] = { 224, };
+static const unsigned pin225[] = { 225, };
+static const unsigned pin226[] = { 226, };
+static const unsigned pin227[] = { 227, };
+static const unsigned pin228[] = { 228, };
+static const unsigned pin229[] = { 229, };
+static const unsigned pin230[] = { 230, };
+static const unsigned pin231[] = { 231, };
+static const unsigned pin232[] = { 232, };
+static const unsigned pin233[] = { 233, };
+static const unsigned pin234[] = { 234, };
+static const unsigned pin235[] = { 235, };
+static const unsigned pin236[] = { 236, };
+static const unsigned pin237[] = { 237, };
+static const unsigned pin238[] = { 238, };
+static const unsigned pin239[] = { 239, };
+static const unsigned pin240[] = { 240, };
+static const unsigned pin241[] = { 241, };
+static const unsigned pin242[] = { 242, };
+static const unsigned pin243[] = { 243, };
+static const unsigned pin244[] = { 244, };
+static const unsigned pin245[] = { 245, };
+
+static const unsigned pin_grp0[] = { 173, 174, };
+static const unsigned pin_grp1[] = { 175, 185, 188, 197, 198, };
+static const unsigned pin_grp2[] = { 176, 177, 178, 179, 184, 186, 187, 189,
+	190, 191, 192, };
+static const unsigned pin_grp3[] = { 180, 181, 182, 183, 193, 194, 195, 196, };
+static const unsigned pin_grp4[] = { 199, 200, };
+static const unsigned pin_grp5[] = { 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+	75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, };
+static const unsigned pin_grp6[] = { 86, 87, 88, 89, 90, 91, 92, 93, };
+static const unsigned pin_grp7[] = { 98, 99, };
+static const unsigned pin_grp8[] = { 158, 159, 160, 161, 162, 163, 164, 165,
+	166, 167, 168, 169, 170, 171, 172, };
+
+static struct spear_gpio_pingroup spear1310_gpio_pingroup[] = {
+	GPIO_PINGROUP(i2c0_pins, PAD_FUNCTION_EN_0, PMX_I2C0_MASK, 0),
+	GPIO_PINGROUP(ssp0_pins, PAD_FUNCTION_EN_0, PMX_SSP0_MASK, 0),
+	GPIO_PINGROUP(ssp0_cs0_pins, PAD_FUNCTION_EN_2, PMX_SSP0_CS0_MASK, 0),
+	GPIO_PINGROUP(ssp0_cs1_2_pins, PAD_FUNCTION_EN_2, PMX_SSP0_CS1_2_MASK, 0),
+	GPIO_PINGROUP(i2s0_pins, PAD_FUNCTION_EN_0, PMX_I2S0_MASK, 0),
+	GPIO_PINGROUP(i2s1_pins, PAD_FUNCTION_EN_1, PMX_I2S1_MASK, 0),
+	GPIO_PINGROUP(clcd_pins, PAD_FUNCTION_EN_0, PMX_CLCD1_MASK, 0),
+	GPIO_PINGROUP(clcd_high_res_pins, PAD_FUNCTION_EN_1, PMX_CLCD2_MASK, 0),
+	GPIO_PINGROUP(pin18, PAD_FUNCTION_EN_0, PMX_EGPIO15_MASK, 0),
+	GPIO_PINGROUP(pin19, PAD_FUNCTION_EN_0, PMX_EGPIO14_MASK, 0),
+	GPIO_PINGROUP(pin20, PAD_FUNCTION_EN_0, PMX_EGPIO13_MASK, 0),
+	GPIO_PINGROUP(pin21, PAD_FUNCTION_EN_0, PMX_EGPIO12_MASK, 0),
+	GPIO_PINGROUP(pin22, PAD_FUNCTION_EN_0, PMX_EGPIO11_MASK, 0),
+	GPIO_PINGROUP(pin23, PAD_FUNCTION_EN_0, PMX_EGPIO10_MASK, 0),
+	GPIO_PINGROUP(pin143, PAD_FUNCTION_EN_0, PMX_EGPIO00_MASK, 0),
+	GPIO_PINGROUP(pin144, PAD_FUNCTION_EN_0, PMX_EGPIO01_MASK, 0),
+	GPIO_PINGROUP(pin145, PAD_FUNCTION_EN_0, PMX_EGPIO02_MASK, 0),
+	GPIO_PINGROUP(pin146, PAD_FUNCTION_EN_0, PMX_EGPIO03_MASK, 0),
+	GPIO_PINGROUP(pin147, PAD_FUNCTION_EN_0, PMX_EGPIO04_MASK, 0),
+	GPIO_PINGROUP(pin148, PAD_FUNCTION_EN_0, PMX_EGPIO05_MASK, 0),
+	GPIO_PINGROUP(pin149, PAD_FUNCTION_EN_0, PMX_EGPIO06_MASK, 0),
+	GPIO_PINGROUP(pin150, PAD_FUNCTION_EN_0, PMX_EGPIO07_MASK, 0),
+	GPIO_PINGROUP(pin151, PAD_FUNCTION_EN_0, PMX_EGPIO08_MASK, 0),
+	GPIO_PINGROUP(pin152, PAD_FUNCTION_EN_0, PMX_EGPIO09_MASK, 0),
+	GPIO_PINGROUP(smi_2_chips_pins, PAD_FUNCTION_EN_0, PMX_SMI_MASK, 0),
+	GPIO_PINGROUP(pin54, PAD_FUNCTION_EN_1, PMX_SMINCS3_MASK, 0),
+	GPIO_PINGROUP(pin55, PAD_FUNCTION_EN_1, PMX_SMINCS2_MASK, 0),
+	GPIO_PINGROUP(pin56, PAD_FUNCTION_EN_1, PMX_NFRSTPWDWN3_MASK, 0),
+	GPIO_PINGROUP(pin57, PAD_FUNCTION_EN_0, PMX_NFRSTPWDWN2_MASK, 0),
+	GPIO_PINGROUP(pin58, PAD_FUNCTION_EN_0, PMX_NFRSTPWDWN1_MASK, 0),
+	GPIO_PINGROUP(pin59, PAD_FUNCTION_EN_0, PMX_NFRSTPWDWN0_MASK, 0),
+	GPIO_PINGROUP(pin60, PAD_FUNCTION_EN_0, PMX_NFWPRT3_MASK, 0),
+	GPIO_PINGROUP(pin61, PAD_FUNCTION_EN_0, PMX_NFCE3_MASK, 0),
+	GPIO_PINGROUP(pin62, PAD_FUNCTION_EN_0, PMX_NFAD25_MASK, 0),
+	GPIO_PINGROUP(pin63, PAD_FUNCTION_EN_0, PMX_NFAD24_MASK, 0),
+	GPIO_PINGROUP(pin_grp0, PAD_FUNCTION_EN_0, PMX_GMIICLK_MASK, 0),
+	GPIO_PINGROUP(pin_grp1, PAD_FUNCTION_EN_0, PMX_GMIICOL_CRS_XFERER_MIITXCLK_MASK, 0),
+	GPIO_PINGROUP(pin_grp2, PAD_FUNCTION_EN_0, PMX_RXCLK_RDV_TXEN_D03_MASK, 0),
+	GPIO_PINGROUP(pin_grp3, PAD_FUNCTION_EN_0, PMX_GMIID47_MASK, 0),
+	GPIO_PINGROUP(pin_grp4, PAD_FUNCTION_EN_0, PMX_MDC_MDIO_MASK, 0),
+	GPIO_PINGROUP(pin_grp5, PAD_FUNCTION_EN_0, PMX_NFAD23_MASK, 0),
+	GPIO_PINGROUP(pin_grp6, PAD_FUNCTION_EN_0, PMX_MCI_DATA8_15_MASK, 0),
+	GPIO_PINGROUP(pin_grp7, PAD_FUNCTION_EN_1, PMX_NFCE2_MASK, 0),
+	GPIO_PINGROUP(pin_grp8, PAD_FUNCTION_EN_1, PMX_NAND8_MASK, 0),
+	GPIO_PINGROUP(nand_16bit_pins, PAD_FUNCTION_EN_1, PMX_NAND16BIT_1_MASK, 0),
+	GPIO_PINGROUP(pin205, PAD_FUNCTION_EN_1, PMX_KBD_COL1_MASK | PMX_NFCE1_MASK, 0),
+	GPIO_PINGROUP(pin206, PAD_FUNCTION_EN_1, PMX_KBD_COL0_MASK | PMX_NFCE2_MASK, 0),
+	GPIO_PINGROUP(pin211, PAD_FUNCTION_EN_1, PMX_KBD_ROW1_MASK | PMX_NFWPRT1_MASK, 0),
+	GPIO_PINGROUP(pin212, PAD_FUNCTION_EN_1, PMX_KBD_ROW0_MASK | PMX_NFWPRT2_MASK, 0),
+	GPIO_PINGROUP(pin213, PAD_FUNCTION_EN_1, PMX_MCIDATA0_MASK, 0),
+	GPIO_PINGROUP(pin214, PAD_FUNCTION_EN_1, PMX_MCIDATA1_MASK, 0),
+	GPIO_PINGROUP(pin215, PAD_FUNCTION_EN_1, PMX_MCIDATA2_MASK, 0),
+	GPIO_PINGROUP(pin216, PAD_FUNCTION_EN_1, PMX_MCIDATA3_MASK, 0),
+	GPIO_PINGROUP(pin217, PAD_FUNCTION_EN_1, PMX_MCIDATA4_MASK, 0),
+	GPIO_PINGROUP(pin218, PAD_FUNCTION_EN_2, PMX_MCIDATA5_MASK, 0),
+	GPIO_PINGROUP(pin219, PAD_FUNCTION_EN_2, PMX_MCIDATA6_MASK, 0),
+	GPIO_PINGROUP(pin220, PAD_FUNCTION_EN_2, PMX_MCIDATA7_MASK, 0),
+	GPIO_PINGROUP(pin221, PAD_FUNCTION_EN_2, PMX_MCIDATA1SD_MASK, 0),
+	GPIO_PINGROUP(pin222, PAD_FUNCTION_EN_2, PMX_MCIDATA2SD_MASK, 0),
+	GPIO_PINGROUP(pin223, PAD_FUNCTION_EN_2, PMX_MCIDATA3SD_MASK, 0),
+	GPIO_PINGROUP(pin224, PAD_FUNCTION_EN_2, PMX_MCIADDR0ALE_MASK, 0),
+	GPIO_PINGROUP(pin225, PAD_FUNCTION_EN_2, PMX_MCIADDR1CLECLK_MASK, 0),
+	GPIO_PINGROUP(pin226, PAD_FUNCTION_EN_2, PMX_MCIADDR2_MASK, 0),
+	GPIO_PINGROUP(pin227, PAD_FUNCTION_EN_2, PMX_MCICECF_MASK, 0),
+	GPIO_PINGROUP(pin228, PAD_FUNCTION_EN_2, PMX_MCICEXD_MASK, 0),
+	GPIO_PINGROUP(pin229, PAD_FUNCTION_EN_2, PMX_MCICESDMMC_MASK, 0),
+	GPIO_PINGROUP(pin230, PAD_FUNCTION_EN_2, PMX_MCICDCF1_MASK, 0),
+	GPIO_PINGROUP(pin231, PAD_FUNCTION_EN_2, PMX_MCICDCF2_MASK, 0),
+	GPIO_PINGROUP(pin232, PAD_FUNCTION_EN_2, PMX_MCICDXD_MASK, 0),
+	GPIO_PINGROUP(pin233, PAD_FUNCTION_EN_2, PMX_MCICDSDMMC_MASK, 0),
+	GPIO_PINGROUP(pin234, PAD_FUNCTION_EN_2, PMX_MCIDATADIR_MASK, 0),
+	GPIO_PINGROUP(pin235, PAD_FUNCTION_EN_2, PMX_MCIDMARQWP_MASK, 0),
+	GPIO_PINGROUP(pin236, PAD_FUNCTION_EN_2, PMX_MCIIORDRE_MASK, 0),
+	GPIO_PINGROUP(pin237, PAD_FUNCTION_EN_2, PMX_MCIIOWRWE_MASK, 0),
+	GPIO_PINGROUP(pin238, PAD_FUNCTION_EN_2, PMX_MCIRESETCF_MASK, 0),
+	GPIO_PINGROUP(pin239, PAD_FUNCTION_EN_2, PMX_MCICS0CE_MASK, 0),
+	GPIO_PINGROUP(pin240, PAD_FUNCTION_EN_2, PMX_MCICFINTR_MASK, 0),
+	GPIO_PINGROUP(pin241, PAD_FUNCTION_EN_2, PMX_MCIIORDY_MASK, 0),
+	GPIO_PINGROUP(pin242, PAD_FUNCTION_EN_2, PMX_MCICS1_MASK, 0),
+	GPIO_PINGROUP(pin243, PAD_FUNCTION_EN_2, PMX_MCIDMAACK_MASK, 0),
+	GPIO_PINGROUP(pin244, PAD_FUNCTION_EN_2, PMX_MCISDCMD_MASK, 0),
+	GPIO_PINGROUP(pin245, PAD_FUNCTION_EN_2, PMX_MCILEDS_MASK, 0),
+	GPIO_PINGROUP(keyboard_rowcol6_8_pins, PAD_FUNCTION_EN_1, PMX_KBD_ROWCOL68_MASK, 0),
+	GPIO_PINGROUP(uart0_pins, PAD_FUNCTION_EN_0, PMX_UART0_MASK, 0),
+	GPIO_PINGROUP(uart0_modem_pins, PAD_FUNCTION_EN_1, PMX_UART0_MODEM_MASK, 0),
+	GPIO_PINGROUP(gpt0_tmr0_pins, PAD_FUNCTION_EN_1, PMX_GPT0_TMR0_MASK, 0),
+	GPIO_PINGROUP(gpt0_tmr1_pins, PAD_FUNCTION_EN_1, PMX_GPT0_TMR1_MASK, 0),
+	GPIO_PINGROUP(gpt1_tmr0_pins, PAD_FUNCTION_EN_1, PMX_GPT1_TMR0_MASK, 0),
+	GPIO_PINGROUP(gpt1_tmr1_pins, PAD_FUNCTION_EN_1, PMX_GPT1_TMR1_MASK, 0),
+	GPIO_PINGROUP(touch_xy_pins, PAD_FUNCTION_EN_1, PMX_TOUCH_XY_MASK, 0),
+};
+
 static struct spear_pinctrl_machdata spear1310_machdata = {
 	.pins = spear1310_pins,
 	.npins = ARRAY_SIZE(spear1310_pins),
@@ -2150,6 +2327,9 @@ static struct spear_pinctrl_machdata spear1310_machdata = {
 	.ngroups = ARRAY_SIZE(spear1310_pingroups),
 	.functions = spear1310_functions,
 	.nfunctions = ARRAY_SIZE(spear1310_functions),
+	.ranges = &spear1310_plgpio_range,
+	.gpio_pingroups = spear1310_gpio_pingroup,
+	.ngpio_pingroups = ARRAY_SIZE(spear1310_gpio_pingroup),
 	.modes_supported = false,
 };
 

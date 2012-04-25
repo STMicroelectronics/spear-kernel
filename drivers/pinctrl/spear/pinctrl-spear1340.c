@@ -1934,6 +1934,13 @@ static struct spear_function *spear1340_functions[] = {
 	&sata_function,
 };
 
+static struct pinctrl_gpio_range spear1340_plgpio_range = {
+	.name		= "SPEAr1340 PLGPIO",
+	.id		= 0,
+	.pin_base	= 0,
+	.npins		= ARRAY_SIZE(spear1340_pins),
+};
+
 static struct spear_pinctrl_machdata spear1340_machdata = {
 	.pins = spear1340_pins,
 	.npins = ARRAY_SIZE(spear1340_pins),
@@ -1941,6 +1948,7 @@ static struct spear_pinctrl_machdata spear1340_machdata = {
 	.ngroups = ARRAY_SIZE(spear1340_pingroups),
 	.functions = spear1340_functions,
 	.nfunctions = ARRAY_SIZE(spear1340_functions),
+	.ranges = &spear1340_plgpio_range,
 	.modes_supported = false,
 };
 
