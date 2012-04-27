@@ -38,6 +38,7 @@
 #include <linux/of_i2c.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include "i2c-designware-core.h"
@@ -156,6 +157,9 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		goto err_free_irq;
 	}
 	of_i2c_register_devices(adap);
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_allow(&pdev->dev);
 
 	return 0;
 
@@ -167,6 +171,7 @@ err_unuse_clocks:
 	clk_disable(dev->clk);
 	clk_put(dev->clk);
 	dev->clk = NULL;
+	pm_runtime_disable(&pdev->dev);
 err_free_mem:
 	platform_set_drvdata(pdev, NULL);
 	put_device(&pdev->dev);
@@ -191,6 +196,7 @@ static int __devexit dw_i2c_remove(struct platform_device *pdev)
 	dev->clk = NULL;
 
 	i2c_dw_disable(dev);
+	pm_runtime_forbid(&pdev->dev);
 	free_irq(dev->irq, dev);
 	kfree(dev);
 
@@ -214,7 +220,6 @@ static int dw_i2c_suspend(struct device *dev)
 	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
 
 	clk_disable(i_dev->clk);
-
 	return 0;
 }
 
@@ -225,12 +230,31 @@ static int dw_i2c_resume(struct device *dev)
 
 	clk_enable(i_dev->clk);
 	i2c_dw_init(i_dev);
-
 	return 0;
 }
+
+static int dw_i2c_idle(struct device *dev)
+{
+	int err = pm_schedule_suspend(dev, 500);
+	dev_dbg(dev, "runtime_idle called\n");
+
+	if (err != 0)
+		return 0;
+	return -EBUSY;
+}
+
 #endif
 
-static SIMPLE_DEV_PM_OPS(dw_i2c_dev_pm_ops, dw_i2c_suspend, dw_i2c_resume);
+/*
+ * static SIMPLE_DEV_PM_OPS(dw_i2c_dev_pm_ops, dw_i2c_suspend, dw_i2c_resume);
+ */
+
+static const struct dev_pm_ops dw_i2c_dev_pm_ops = {
+	.resume         = dw_i2c_resume,
+	.suspend        = dw_i2c_suspend,
+	SET_RUNTIME_PM_OPS(dw_i2c_suspend, dw_i2c_resume,
+			dw_i2c_idle)
+};
 
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:i2c_designware");
