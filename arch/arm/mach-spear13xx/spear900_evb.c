@@ -150,6 +150,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_9x9,
+	.suspended_rate = 2000000,
 };
 
 /* Initializing platform data for SPEAr900 specific Input devices on I2C Bus */

@@ -147,6 +147,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_9x9,
+	.suspended_rate = 2000000,
 };
 
 /* Currently no gpios are free on eval board so it is kept commented */

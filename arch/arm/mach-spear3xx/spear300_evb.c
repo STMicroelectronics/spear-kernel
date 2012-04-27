@@ -121,6 +121,7 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
+	.suspended_rate = 2000000,
 };
 
 /* spi board information */

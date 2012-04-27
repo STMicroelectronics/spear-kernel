@@ -335,6 +335,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_2x2,
+	.suspended_rate = 2000000,
 };
 
 /* Ethernet specific plat data */
