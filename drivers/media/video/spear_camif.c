@@ -418,13 +418,13 @@ static void camif_prog_default_ctrl(struct camif *camif)
 {
 	u32 ctrl = 0, ctrl_save;
 	bool emb_synchro = 0;
-	bool eav_sel = 0;
+	bool eav_sel = 1;
 
 	ctrl_save = readl(camif->base + CAMIF_CTRL);
 
 	if (camif->pdata->config->sync_type == EMBEDDED_SYNC) {
 		emb_synchro = 1;
-		eav_sel = 1;
+		eav_sel = 0;
 		writel(ITU656_EMBED_EVEN_CODE, camif->base + CAMIF_EFEC);
 		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
 	}
