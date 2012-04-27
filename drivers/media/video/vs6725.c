@@ -1014,7 +1014,7 @@ static struct regval_list vs6725_patch1[] = {
 
 static struct regval_list vs6725_patch2[] = {
 	{0xc234, 0x01}, /* Core_Reg enable */
-	{OPF_DCTRL, 0x06}, /* DCTRL */
+	{OPF_DCTRL, 0x04}, /* DCTRL */
 	{E_DIV, 0x01}, /* Set Divider to 1 */
 	{MAX_DERATING, 0x10}, /* Set Output Clock DeRating Factor to 16 */
 
