@@ -2019,7 +2019,7 @@ static int vs6725_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		return -EINVAL;
 	}
 
-	return 0;
+	return ret;
 }
 
 /* set some particular settings of a control on Vs6725 */
