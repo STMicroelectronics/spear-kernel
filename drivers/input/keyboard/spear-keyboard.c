@@ -60,6 +60,8 @@ struct spear_kbd {
 	unsigned int irq_wake;
 	unsigned short last_key;
 	unsigned int mode;
+	unsigned int suspended_rate;
+	u32 mode_ctl_reg;
 	unsigned short keycodes[256];
 };
 
@@ -185,6 +187,7 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 	kbd->input = input_dev;
 	kbd->irq = irq;
 	kbd->mode = pdata->mode;
+	kbd->suspended_rate = pdata->suspended_rate;
 
 	kbd->res = request_mem_region(res->start, resource_size(res),
 				      pdev->name);
@@ -286,16 +289,46 @@ static int spear_kbd_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input;
+	unsigned int rate = 0, mode_ctl_reg, val;
 
 	mutex_lock(&input_dev->mutex);
+
+	/* explicitly enable clock as we may program device */
+	clk_enable(kbd->clk);
+
+	mode_ctl_reg = readl_relaxed(kbd->io_base + MODE_CTL_REG);
 
 	if (device_may_wakeup(&pdev->dev)) {
 		if (!enable_irq_wake(kbd->irq))
 			kbd->irq_wake = 1;
+
+		/*
+		 * reprogram the keyboard operating frequency as on some
+		 * platform it may change during system suspended
+		 */
+		if (kbd->suspended_rate)
+			rate = kbd->suspended_rate / 1000000 - 1;
+
+		val = mode_ctl_reg &
+			~(MODE_CTL_PCLK_FREQ_MSK << MODE_CTL_PCLK_FREQ_SHIFT);
+		val |= (rate & MODE_CTL_PCLK_FREQ_MSK)
+			<< MODE_CTL_PCLK_FREQ_SHIFT;
+		writel_relaxed(val, kbd->io_base + MODE_CTL_REG);
+
 	} else {
-		if (input_dev->users)
+		if (input_dev->users) {
+			writel_relaxed(mode_ctl_reg & ~MODE_CTL_START_SCAN,
+					kbd->io_base + MODE_CTL_REG);
 			clk_disable(kbd->clk);
+		}
 	}
+
+	/* store current configuration */
+	if (input_dev->users)
+		kbd->mode_ctl_reg = mode_ctl_reg;
+
+	/* restore previous clk state */
+	clk_disable(kbd->clk);
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -319,6 +352,10 @@ static int spear_kbd_resume(struct device *dev)
 		if (input_dev->users)
 			clk_enable(kbd->clk);
 	}
+
+	/* restore current configuration */
+	if (input_dev->users)
+		writel_relaxed(kbd->mode_ctl_reg, kbd->io_base + MODE_CTL_REG);
 
 	mutex_unlock(&input_dev->mutex);
 
