@@ -685,7 +685,6 @@ static void camif_do_idle(unsigned long arg)
 {
 	struct camif *camif = (struct camif *)arg;
 	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
@@ -704,7 +703,6 @@ static void camif_do_idle(unsigned long arg)
 
 		while (!list_empty(&camif->dma_queue)) {
 			vb = &camif->cur_frm->vb;
-			buf = container_of(vb, struct camif_buffer, vb);
 			vb->state = VIDEOBUF_ERROR;
 			do_gettimeofday(&vb->ts);
 
@@ -868,8 +866,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 	int status_reg;
 	unsigned long flags;
 	struct camif *camif = (struct camif *)dev_id;
-	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
 	if (!status_reg)
@@ -895,9 +891,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		camif->cur_frm =
 			list_first_entry(&camif->dma_queue,
 					struct camif_buffer, vb.queue);
-
-		vb = &camif->cur_frm->vb;
-		buf = container_of(vb, struct camif_buffer, vb);
 
 		/* mark state of the current frame to active */
 		camif->cur_frm->vb.state = VIDEOBUF_ACTIVE;
