@@ -904,7 +904,6 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct fsmc_nand_data *host;
 	struct mtd_info *mtd;
 	struct nand_chip *nand;
-	struct fsmc_regs *regs;
 	struct resource *res;
 	int nr_parts, ret = 0;
 	struct fsmc_nand_timings default_timings = {
@@ -1019,8 +1018,6 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	if (host->mode == USE_DMA_ACCESS)
 		init_completion(&host->dma_access_complete);
-
-	regs = host->regs_va;
 
 	/* Link all private pointers */
 	mtd = &host->mtd;
