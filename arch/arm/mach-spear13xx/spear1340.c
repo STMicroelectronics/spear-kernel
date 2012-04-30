@@ -1791,11 +1791,17 @@ struct platform_device spear1340_gpiokeys_device = {
 };
 #endif
 
+struct fsmc_rbpin spear1340_rbpin __initdata = {
+	.use_pin = FSMC_RB_GPIO,
+	.gpio_pin = PLGPIO_247,
+};
+
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
 	.select_bank = nand_select_bank,
 	.mode = USE_DMA_ACCESS,
 	.read_dma_priv = &nand_read_dma_priv,
 	.write_dma_priv = &nand_write_dma_priv,
+	.rbpin = &spear1340_rbpin,
 };
 
 static struct resource nand_resources[] = {
