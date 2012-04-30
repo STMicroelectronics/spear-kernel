@@ -1417,11 +1417,6 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int max_mtu;
 
-	if (netif_running(dev)) {
-		pr_err("%s: must be stopped to change its MTU\n", dev->name);
-		return -EBUSY;
-	}
-
 	if (priv->enh_desc)
 		max_mtu = JUMBO_LEN;
 	else
@@ -1433,6 +1428,10 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 	}
 
 	dev->mtu = new_mtu;
+	if (netif_running(dev)) {
+		stmmac_release(dev);
+		return stmmac_open(dev);
+	}
 
 	return 0;
 }
