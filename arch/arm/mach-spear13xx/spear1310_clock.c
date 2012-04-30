@@ -366,6 +366,13 @@ static struct clk gpt3_clk = {
 	.recalc = &follow_parent,
 };
 
+/* per-cpu local timer clock */
+static struct clk smp_twd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &cpu_clk,
+	.recalc = &follow_parent,
+};
+
 /* watch dog timer clock */
 static struct clk wdt_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -1816,6 +1823,9 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "gpt2",			.clk = &gpt2_clk},
 	{.dev_id = "gpt3",			.clk = &gpt3_clk},
 	{.dev_id = "uart",			.clk = &uart_clk},
+
+	/* clock derived from cpu clk */
+	{.dev_id = "smp_twd",			.clk = &smp_twd_clk},
 
 	/* clock derived from ahb clk */
 	{.dev_id = "smi",			.clk = &smi_clk},
