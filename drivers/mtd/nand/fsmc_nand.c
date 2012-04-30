@@ -345,9 +345,9 @@ struct fsmc_nand_data {
 	struct completion	dma_access_complete;
 
 	/* Recieved from plat data */
-	struct fsmc_nand_timings *dev_timings;
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
+	struct fsmc_nand_timings dev_timings;
 	enum access_mode	mode;
 	uint32_t		max_banks;
 	void			(*select_chip)(uint32_t bank, uint32_t busw);
@@ -437,27 +437,13 @@ static void fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
 {
 	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
 	uint32_t tclr, tar, thiz, thold, twait, tset;
-	struct fsmc_nand_timings *tims;
-	struct fsmc_nand_timings default_timings = {
-		.tclr	= FSMC_TCLR_1,
-		.tar	= FSMC_TAR_1,
-		.thiz	= FSMC_THIZ_1,
-		.thold	= FSMC_THOLD_4,
-		.twait	= FSMC_TWAIT_6,
-		.tset	= FSMC_TSET_0,
-	};
 
-	if (timings)
-		tims = timings;
-	else
-		tims = &default_timings;
-
-	tclr = (tims->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
-	tar = (tims->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
-	thiz = (tims->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
-	thold = (tims->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
-	twait = (tims->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
-	tset = (tims->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
+	tclr = (timings->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
+	tar = (timings->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
+	thiz = (timings->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
+	thold = (timings->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
+	twait = (timings->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
+	tset = (timings->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
 
 	if (busw)
 		writel(value | FSMC_DEVWID_16, &regs->bank_regs[bank].pc);
@@ -907,6 +893,14 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct fsmc_regs *regs;
 	struct resource *res;
 	int nr_parts, ret = 0;
+	struct fsmc_nand_timings default_timings = {
+		.tclr	= FSMC_TCLR_1,
+		.tar	= FSMC_TAR_1,
+		.thiz	= FSMC_THIZ_1,
+		.thold	= FSMC_THOLD_4,
+		.twait	= FSMC_TWAIT_6,
+		.tset	= FSMC_TSET_0,
+	};
 	dma_cap_mask_t mask;
 	uint32_t bank;
 
@@ -995,7 +989,12 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	host->select_chip = pdata->select_bank;
 	host->dev = &pdev->dev;
-	host->dev_timings = pdata->nand_timings;
+
+	if (pdata->nand_timings)
+		host->dev_timings = *(pdata->nand_timings);
+	else
+		host->dev_timings = default_timings;
+
 	host->mode = pdata->mode;
 	host->max_banks = pdata->max_banks;
 
@@ -1056,7 +1055,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	for (bank = 0; bank < host->max_banks; bank++)
 		fsmc_nand_setup(host->regs_va, bank,
 				nand->options & NAND_BUSWIDTH_16,
-				host->dev_timings);
+				&host->dev_timings);
 
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -1307,7 +1306,7 @@ static int fsmc_nand_resume(struct device *dev)
 		for (bank = 0; bank < host->max_banks; bank++)
 			fsmc_nand_setup(host->regs_va, bank,
 					host->nand.options & NAND_BUSWIDTH_16,
-					host->dev_timings);
+					&host->dev_timings);
 
 	}
 
