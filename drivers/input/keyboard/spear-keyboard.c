@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/keyboard.h>
+#include<linux/pm_runtime.h>
 
 /* Keyboard Registers */
 #define MODE_REG	0x00	/* 16 bit reg */
@@ -101,6 +102,7 @@ static int spear_kbd_open(struct input_dev *dev)
 	int error;
 	u16 val;
 
+	pm_runtime_get_sync(dev->dev.parent);
 	kbd->last_key = KEY_RESERVED;
 
 	error = clk_enable(kbd->clk);
@@ -134,6 +136,7 @@ static void spear_kbd_close(struct input_dev *dev)
 	clk_disable(kbd->clk);
 
 	kbd->last_key = KEY_RESERVED;
+	pm_runtime_put_sync(dev->dev.parent);
 }
 
 static int __devinit spear_kbd_probe(struct platform_device *pdev)
@@ -240,6 +243,7 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 	platform_set_drvdata(pdev, kbd);
+	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
@@ -269,6 +273,7 @@ static int __devexit spear_kbd_remove(struct platform_device *pdev)
 	release_mem_region(kbd->res->start, resource_size(kbd->res));
 	kfree(kbd);
 
+	pm_runtime_disable(&pdev->dev);
 	device_init_wakeup(&pdev->dev, 0);
 	platform_set_drvdata(pdev, NULL);
 
@@ -315,7 +320,10 @@ static int spear_kbd_resume(struct device *dev)
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(spear_kbd_pm_ops, spear_kbd_suspend, spear_kbd_resume);
+static const struct dev_pm_ops spear_kbd_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(spear_kbd_suspend, spear_kbd_resume)
+	SET_RUNTIME_PM_OPS(spear_kbd_suspend, spear_kbd_resume, NULL)
+};
 
 static struct platform_driver spear_kbd_driver = {
 	.probe		= spear_kbd_probe,
