@@ -268,7 +268,7 @@ static void __init r1801e_init(void)
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, partition_info,
 			ARRAY_SIZE(partition_info), NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW16, NULL);
+			FSMC_NAND_BW16, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW16);
 
 	/* call spear1310 reva machine init function */

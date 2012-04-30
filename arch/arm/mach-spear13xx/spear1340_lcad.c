@@ -418,7 +418,7 @@ static void __init lcad_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW8);
 
 	/* call spear1340 machine init function */

@@ -449,7 +449,7 @@ static void __init spear1310_reva_evb_init(void)
 #if 0
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW8);
 #endif
 

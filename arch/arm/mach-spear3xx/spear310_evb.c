@@ -228,7 +228,7 @@ static void __init spear310_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear310_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 
 	/* call spear310 machine init function */
 	spear310_init(NULL, pmx_devs, ARRAY_SIZE(pmx_devs));

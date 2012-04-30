@@ -195,7 +195,7 @@ static void __init spear320_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();

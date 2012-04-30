@@ -322,6 +322,7 @@ const char *part_probes[] = { "cmdlinepart", NULL };
  *			- Word access (CPU)
  *			- None (Use driver default ie bus width specific
  *			  CPU access)
+ * @max_banks:		Maximum number of banks supported
  * @select_chip:	Select a particular bank
  *
  * @data_pa:		NAND Physical port for Data
@@ -348,6 +349,7 @@ struct fsmc_nand_data {
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
 	enum access_mode	mode;
+	uint32_t		max_banks;
 	void			(*select_chip)(uint32_t bank, uint32_t busw);
 
 	/* Virtual/Physical addresses for CPU/DMA access */
@@ -906,6 +908,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct resource *res;
 	int nr_parts, ret = 0;
 	dma_cap_mask_t mask;
+	uint32_t bank;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "platform data is NULL\n");
@@ -990,11 +993,11 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_clk_enable;
 
-	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
 	host->dev = &pdev->dev;
 	host->dev_timings = pdata->nand_timings;
 	host->mode = pdata->mode;
+	host->max_banks = pdata->max_banks;
 
 	if (host->mode == USE_DMA_ACCESS)
 		init_completion(&host->dma_access_complete);
@@ -1050,8 +1053,10 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		break;
 	}
 
-	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16,
-			host->dev_timings);
+	for (bank = 0; bank < host->max_banks; bank++)
+		fsmc_nand_setup(host->regs_va, bank,
+				nand->options & NAND_BUSWIDTH_16,
+				host->dev_timings);
 
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -1294,12 +1299,16 @@ static int fsmc_nand_suspend(struct device *dev)
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
+	uint32_t bank;
 
 	if (host) {
 		clk_enable(host->clk);
-		fsmc_nand_setup(host->regs_va, host->bank,
-				host->nand.options & NAND_BUSWIDTH_16,
-				host->dev_timings);
+
+		for (bank = 0; bank < host->max_banks; bank++)
+			fsmc_nand_setup(host->regs_va, bank,
+					host->nand.options & NAND_BUSWIDTH_16,
+					host->dev_timings);
+
 	}
 
 	return 0;
