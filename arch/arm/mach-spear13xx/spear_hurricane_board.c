@@ -115,7 +115,7 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = 0x0,
+		.mask = 0x1000000,
 		.value = 0x0,
 	},
 };
