@@ -2330,7 +2330,7 @@ static int vs6725_set_image_format(struct i2c_client *client,
 				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_YCBCR_SETUP,
-				CBYCRY_DATA_SEQUENCE);
+				YCBYCR_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		ret |= vs6725_reg_write(client,
@@ -2348,7 +2348,7 @@ static int vs6725_set_image_format(struct i2c_client *client,
 				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_YCBCR_SETUP,
-				CBYCRY_DATA_SEQUENCE);
+				YCRYCB_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_VYUY8_2X8:
 		ret |= vs6725_reg_write(client,
@@ -2357,13 +2357,13 @@ static int vs6725_set_image_format(struct i2c_client *client,
 				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_YCBCR_SETUP,
-				CBYCRY_DATA_SEQUENCE);
+				CRYCBY_DATA_SEQUENCE);
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-				DATA_FORMAT_RGB_444);
+				DATA_FORMAT_RGB_444_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_RGB_SETUP,
 				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE) |
@@ -2373,7 +2373,7 @@ static int vs6725_set_image_format(struct i2c_client *client,
 		ret |= vs6725_reg_write(client,
 			priv->active_pipe == PIPE_0 ? PIPE0_DATA_FORMAT :
 				PIPE1_DATA_FORMAT,
-				DATA_FORMAT_RGB_565);
+				DATA_FORMAT_RGB_565_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_RGB_SETUP,
 				RGB_FLIP_SHIFT(RGB_DATA_SEQUENCE));
@@ -2393,7 +2393,7 @@ static int vs6725_set_image_format(struct i2c_client *client,
 				DATA_FORMAT_YCBCR_CUSTOM);
 		ret |= vs6725_reg_write(client,
 				OPF_YCBCR_SETUP,
-				CBYCRY_DATA_SEQUENCE);
+				YCBYCR_DATA_SEQUENCE);
 		break;
 	}
 
