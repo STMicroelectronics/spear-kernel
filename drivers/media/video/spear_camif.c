@@ -84,6 +84,21 @@
 #define CTRL_HS_POL_HI		BIT(6)
 #define CTRL_PCK_POL_HI		BIT(5)
 
+/* camif supported storage swappings */
+enum camif_transformation {
+	DISABLED = 0,
+	YUVCbYCrY,
+	YUVCrYCbY,
+	RGB888A,
+	BGR888A,
+	ARGB888,
+	ABGR888,
+	RGB565,
+	BGR565,
+	RGB888,
+	JPEG,
+};
+
 /* interrupt and dma mask register bits */
 #define IR_DUR_MASK_BREQ	BIT(15)
 #define IR_DUR_UNMASK_BREQ	(~BIT(15))
@@ -433,7 +448,7 @@ static void camif_prog_default_ctrl(struct camif *camif)
 				camif->pdata->config->burst_size) |
 		CTRL_EAV_SEL(eav_sel) |
 		CTRL_IF_SYNC_TYPE(emb_synchro) |
-		CTRL_IF_TRANS(camif->pdata->config->transform) |
+		CTRL_IF_TRANS(DISABLED) |
 		CTRL_VS_POL(camif->pdata->config->vsync_polarity) |
 		CTRL_HS_POL(camif->pdata->config->hsync_polarity) |
 		CTRL_PCK_POL(camif->pdata->config->pclk_polarity) |
