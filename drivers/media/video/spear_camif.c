@@ -1559,6 +1559,7 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
 	int ret;
+	u32 ctrl;
 
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
@@ -1567,6 +1568,28 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	}
 
 	v4l2_fill_mbus_format(&mf, pix, xlate->code);
+
+	ctrl = readl(camif->base + CAMIF_CTRL);
+	switch (xlate->code) {
+	case V4L2_MBUS_FMT_RGB24_2X8_LE:
+		ctrl |= CTRL_IF_TRANS(RGB888);
+		break;
+	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
+	case V4L2_MBUS_FMT_RGB565_2X8_BE:
+		ctrl |= CTRL_IF_TRANS(RGB565);
+		break;
+	case V4L2_MBUS_FMT_BGR565_2X8_BE:
+		ctrl |= CTRL_IF_TRANS(BGR565);
+		break;
+	case V4L2_MBUS_FMT_YUYV8_2X8:
+	case V4L2_MBUS_FMT_YVYU8_2X8:
+	case V4L2_MBUS_FMT_UYVY8_2X8:
+	case V4L2_MBUS_FMT_VYUY8_2X8:
+	default:
+		ctrl |= CTRL_IF_TRANS(YUVCbYCrY);
+		break;
+	}
+	writel(ctrl, camif->base + CAMIF_CTRL);
 
 	/* limit to sensor capabilities */
 	ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
