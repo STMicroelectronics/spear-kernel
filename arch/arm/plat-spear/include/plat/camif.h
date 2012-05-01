@@ -29,21 +29,6 @@ enum camif_polarity {
 	ACTIVE_HIGH,
 };
 
-/* camif supported storage swappings */
-enum camif_transformation {
-	DISABLED = 0,
-	YUVCbYCrY,
-	YUVCrYCbY,
-	RGB888A,
-	BGR888A,
-	ARGB888,
-	ABGR888,
-	RGB565,
-	BGR565,
-	RGB888,
-	JPEG,
-};
-
 /* camif capture modes */
 enum camif_capture_modes {
 	NO_CAPTURE = 0,
@@ -90,7 +75,6 @@ enum camif_channel_type {
  * @vsync_polarity: ploarity of vsync signal
  * @hsync_polarity: polarity of hsync signal
  * @pclk_polarity: polarity of pixel clock signal
- * @transform: swapping supported while storing
  * @capture_mode: photo or video mode
  * @burst_size: DMA burst size
  * (should be programmed consistently with the DMA IP burst size used)
@@ -101,7 +85,6 @@ struct camif_config_data {
 	enum camif_polarity vsync_polarity;
 	enum camif_polarity hsync_polarity;
 	enum camif_polarity pclk_polarity;
-	enum camif_transformation transform;
 	enum camif_capture_modes capture_mode;
 	enum camif_dma_burst_size burst_size;
 	enum camif_channel_type channel;
