@@ -1826,6 +1826,7 @@ struct platform_device spear1340_nand_device = {
 	.dev.platform_data = &spear1340_nand_platform_data,
 };
 
+#if 0
 /*
  * This routine does i2c bus recovery as specified in the
  * i2c protocol Rev. 03 section 3.16 titled "Bus clear"
@@ -1876,6 +1877,7 @@ free_gpio:
 	gpio_free(i2c_clk_gpio);
 
 }
+#endif
 
 /* i2c device registeration */
 static struct resource i2c1_resources[] = {
