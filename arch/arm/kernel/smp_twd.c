@@ -39,6 +39,7 @@ static void twd_set_mode(enum clock_event_mode mode,
 
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
+		__raw_writel(0, twd_base + TWD_TIMER_CONTROL);
 		/* timer load already set up */
 		ctrl = TWD_TIMER_CONTROL_ENABLE | TWD_TIMER_CONTROL_IT_ENABLE
 			| TWD_TIMER_CONTROL_PERIODIC;
@@ -94,9 +95,15 @@ int twd_timer_ack(void)
  */
 static void twd_update_frequency(void *data)
 {
+	struct clock_event_device *twd;
+
 	twd_timer_rate = clk_get_rate(twd_clk);
 
-	clockevents_update_freq(*__this_cpu_ptr(twd_evt), twd_timer_rate);
+	twd = *__this_cpu_ptr(twd_evt);
+
+	clockevents_update_freq(twd, twd_timer_rate);
+
+	twd_set_mode(twd->mode, twd);
 }
 
 static int twd_cpufreq_transition(struct notifier_block *nb,
