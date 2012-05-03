@@ -2325,7 +2325,6 @@ pl022_remove(struct amba_device *adev)
 		pl022_dma_remove(pl022);
 
 	free_irq(adev->irq[0], pl022);
-	clk_disable(pl022->clk);
 	clk_put(pl022->clk);
 	iounmap(pl022->virtbase);
 	amba_release_regions(adev);
@@ -2333,6 +2332,7 @@ pl022_remove(struct amba_device *adev)
 	spi_unregister_master(pl022->master);
 	spi_master_put(pl022->master);
 	amba_set_drvdata(adev, NULL);
+	amba_pclk_enable(adev);
 	return 0;
 }
 
