@@ -197,7 +197,6 @@ static struct clk *twd_get_clock(void)
  */
 void __cpuinit twd_timer_setup(struct clock_event_device *clk)
 {
-	unsigned long flags;
 	struct clock_event_device **this_cpu_clk;
 
 	if (!twd_evt) {
