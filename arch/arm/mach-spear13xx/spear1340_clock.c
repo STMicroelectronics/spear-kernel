@@ -537,6 +537,7 @@ static struct clk gpt3_clk = {
 static struct clk smp_twd_clk = {
 	.flags = ALWAYS_ENABLED,
 	.pclk = &cpu_clk,
+	.div_factor = 2,
 	.recalc = &follow_parent,
 };
 
