@@ -104,6 +104,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	spear_clocksource_suspend();
 	/* Move the cpu into suspend */
 	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
+	cpu_init();
 	/* Resume Operations begin */
 	spear13xx_l2x0_init();
 	/* Call the CPU PM notifiers to notify exit from sleep */
