@@ -20,6 +20,7 @@
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <mach/suspend.h>
@@ -41,6 +42,23 @@
 #define SWITCH_CTR_CFG	0xff
 
 static void __iomem *mpmc_regs_base;
+
+static void spear_power_off(void)
+{
+	while (1);
+}
+
+static void lcad_power_off(void)
+{
+	int ret = 0;
+
+	/* Request the GPIO to switch off the board */
+	ret = gpio_request_one(GPIO0_3, GPIOF_OUT_INIT_HIGH, "power_off_gpio");
+	if (ret)
+		pr_err("couldn't req gpio %d\n", ret);
+
+	return;
+}
 
 static void memcpy_decr_ptr(void *dest, void *src, u32 len)
 {
@@ -281,23 +299,23 @@ static void empty_exit(void)
 	return;
 }
 
+static int lcad_hiber_enter(void)
+{
+	lcad_power_off();
+	return 0;
+}
+
 static struct platform_hibernation_ops spear_hiber_ops = {
 	.begin = empty_enter,
 	.end = empty_exit,
 	.pre_snapshot = empty_enter,
 	.finish = empty_exit,
 	.prepare = empty_enter,
-	.enter = empty_enter,
 	.leave = empty_exit,
 	.pre_restore = empty_enter,
 	.restore_cleanup = empty_exit,
 };
 #endif
-
-static void spear_power_off(void)
-{
-	while (1);
-}
 
 static int __init spear_pm_init(void)
 {
@@ -314,9 +332,16 @@ static int __init spear_pm_init(void)
 
 	suspend_set_ops(&spear_pm_ops);
 #ifdef CONFIG_HIBERNATION
+	if (machine_is_spear1340_lcad()) {
+		spear_hiber_ops.enter = lcad_hiber_enter;
+		pm_power_off = lcad_power_off;
+	} else {
+		spear_hiber_ops.enter = empty_enter;
+		pm_power_off = spear_power_off;
+	}
+
 	hibernation_set_ops(&spear_hiber_ops);
 #endif
-	pm_power_off = spear_power_off;
 	return 0;
 }
 arch_initcall(spear_pm_init);
