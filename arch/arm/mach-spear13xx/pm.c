@@ -210,7 +210,6 @@ void spear_sys_suspend(suspend_state_t state)
 	cpu_pm_enter();
 	/* Flush the cache */
 	flush_cache_all();
-	outer_flush_all();
 	outer_disable();
 	outer_sync();
 	/* Jump to the suspend routines in sram */
