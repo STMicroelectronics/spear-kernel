@@ -545,16 +545,6 @@ srefresh_end_rev_0:
 	orr	r0, r0, #0x50
 	str	r0, [r7, #0x038]
 #endif
-	/*
-	 * Invalidate all instruction caches to PoU
-	 */
-	mov	r0, #0
-	mcr	p15, 0, r0, c7, c5, 0
-	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
-	mcr	p15, 0, r0, c7, c5, 7
-	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
-	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
-
 	msr	cpsr, r4
 	ldmia	r8!, {r0}
 	mov	pc, r0

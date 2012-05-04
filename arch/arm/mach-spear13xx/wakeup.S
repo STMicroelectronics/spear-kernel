@@ -52,6 +52,7 @@ check:
 
 /* L1 invalidate */
 cache_invalidate:
+	dmb
 	/* Data Cache Invalidate */
 	/* read clidr */
 	mrc	p15, 1, r0, c0, c0, 1
@@ -138,7 +139,7 @@ finished:
 	mcr	p15, 0, r0, c7, c10, 4
 	dsb
 	isb
-	mov	r0, #0x1800
+	mov	r0, #0x0
 	mcr	p15, 0, r0, c1, c0, 0
 	dsb
 	isb
