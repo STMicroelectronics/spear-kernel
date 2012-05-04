@@ -199,6 +199,12 @@ void spear_sys_suspend(suspend_state_t state)
 		spear_sram_sleep =
 			memcpy(sram_dest, (void *)spear1340_sleep_mode,
 				spear1340_sleep_mode_sz);
+	} else if (cpu_is_spear1310()) {
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
+		/* Copy the Sleep code on to the SRAM*/
+		spear_sram_sleep =
+			memcpy(sram_dest, (void *)spear1310_sleep_mode,
+				spear1310_sleep_mode_sz);
 	} else {
 		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
 		/* Copy the Sleep code on to the SRAM*/
@@ -325,6 +331,8 @@ static int __init spear_pm_init(void)
 
 	if (cpu_is_spear1340())
 		spear_sleep_mode_sz = spear1340_sleep_mode_sz;
+	else if (cpu_is_spear1310())
+		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
 
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
