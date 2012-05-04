@@ -180,14 +180,14 @@ void spear_sys_suspend(suspend_state_t state)
 		writel(pm_cfg | PCM_SET_WAKEUP_CFG, VA_PCM_WKUP_CFG);
 		/* Set the  VA_SWITCH_CTR to Max Restart Current */
 		writel(SWITCH_CTR_CFG, VA_SWITCH_CTR);
-	} else
+	} else {
+#endif
 		/* source gpio interrupt through GIC */
-		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
-#else
 		pm_cfg |= PWR_DOM_ON;
 		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
+#ifdef CPU_PWR_DOMAIN_OFF
+	}
 #endif
-
 	/*
 	 * Copy in the MPMC registers at the end of SRAM
 	 * Ensure that the backup of these registers does not
