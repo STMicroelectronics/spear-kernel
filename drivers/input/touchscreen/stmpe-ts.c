@@ -24,6 +24,7 @@
 #include <linux/workqueue.h>
 
 #include <linux/mfd/stmpe.h>
+#include <linux/pm_runtime.h>
 
 /* Register layouts and functionalities are identical on all stmpexxx variants
  * with touchscreen controller
@@ -340,6 +341,7 @@ static int __devinit stmpe_input_probe(struct platform_device *pdev)
 		goto err_free_irq;
 	}
 
+	pm_runtime_enable(&pdev->dev);
 	return ret;
 
 err_free_irq:
@@ -353,6 +355,37 @@ err_out:
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int stmpe_ts_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct stmpe_touch *ts = platform_get_drvdata(pdev);
+
+	stmpe_disable(ts->stmpe, STMPE_BLOCK_TOUCHSCREEN);
+	return 0;
+}
+
+static int stmpe_ts_resume(struct device *dev)
+{
+	int ret;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct stmpe_touch *ts = platform_get_drvdata(pdev);
+
+	ret = stmpe_enable(ts->stmpe, STMPE_BLOCK_TOUCHSCREEN |
+			STMPE_BLOCK_ADC);
+	if (ret) {
+		dev_err(dev, "Could not enable clock for ADC and TS\n");
+		return ret;
+	}
+	return 0;
+}
+
+static const struct dev_pm_ops stmpe_ts_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(stmpe_ts_suspend, stmpe_ts_resume)
+	SET_RUNTIME_PM_OPS(stmpe_ts_suspend, stmpe_ts_resume, NULL)
+};
+#endif
+
 static int __devexit stmpe_ts_remove(struct platform_device *pdev)
 {
 	struct stmpe_touch *ts = platform_get_drvdata(pdev);
@@ -364,6 +397,7 @@ static int __devexit stmpe_ts_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
+	pm_runtime_disable(&pdev->dev);
 	input_unregister_device(ts->idev);
 
 	kfree(ts);
@@ -375,6 +409,9 @@ static struct platform_driver stmpe_ts_driver = {
 	.driver = {
 		   .name = STMPE_TS_NAME,
 		   .owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		   .pm = &stmpe_ts_pm_ops,
+#endif
 		   },
 	.probe = stmpe_input_probe,
 	.remove = __devexit_p(stmpe_ts_remove),
