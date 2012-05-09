@@ -35,11 +35,13 @@
 #define GPIO_WKUP	0x4
 #define USB_WKUP	0x2
 #define PWR_DOM_ON	0x3c00
+#define PWR_DOM_ON_1310	0xf000
+
 /* Use all Sources except USB as wake up trigger */
-#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP \
-		| USB_WKUP)
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
+
+static int pcm_set_cfg;
 
 static void __iomem *mpmc_regs_base;
 
@@ -126,7 +128,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	}
 
 	/* Explicit set all the power domain to on */
-	writel((readl(VA_PCM_CFG) | PCM_SET_CFG),
+	writel((readl(VA_PCM_CFG) | pcm_set_cfg),
 		VA_PCM_CFG);
 
 	/* Resume the event timer */
@@ -173,7 +175,7 @@ void spear_sys_suspend(suspend_state_t state)
 		 * The currrent S2R operations enable all the wake up
 		 * sources by default.
 		 */
-		writel(pm_cfg | PCM_SET_CFG, VA_PCM_CFG);
+		writel(pm_cfg | pcm_set_cfg, VA_PCM_CFG);
 		/* Set up the desired wake up state */
 		pm_cfg = readl(VA_PCM_WKUP_CFG);
 		/* Set the states for all power island on */
@@ -183,7 +185,11 @@ void spear_sys_suspend(suspend_state_t state)
 	} else {
 #endif
 		/* source gpio interrupt through GIC */
-		pm_cfg |= PWR_DOM_ON;
+		if (cpu_is_spear1310())
+			pm_cfg |= PWR_DOM_ON_1310;
+		else
+			pm_cfg |= PWR_DOM_ON;
+
 		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
 #ifdef CPU_PWR_DOMAIN_OFF
 	}
@@ -200,7 +206,7 @@ void spear_sys_suspend(suspend_state_t state)
 			memcpy(sram_dest, (void *)spear1340_sleep_mode,
 				spear1340_sleep_mode_sz);
 	} else if (cpu_is_spear1310()) {
-		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
 		/* Copy the Sleep code on to the SRAM*/
 		spear_sram_sleep =
 			memcpy(sram_dest, (void *)spear1310_sleep_mode,
@@ -329,11 +335,16 @@ static int __init spear_pm_init(void)
 	void * sram_st_va = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 	int spear_sleep_mode_sz = spear13xx_sleep_mode_sz;
 
+	pcm_set_cfg = GPIO_WKUP | RTC_WKUP | ETH_WKUP | USB_WKUP |
+		PWR_DOM_ON;
+
 	if (cpu_is_spear1340())
 		spear_sleep_mode_sz = spear1340_sleep_mode_sz;
-	else if (cpu_is_spear1310())
+	else if (cpu_is_spear1310()) {
 		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
-
+		pcm_set_cfg &= ~(PWR_DOM_ON | USB_WKUP);
+		pcm_set_cfg |= PWR_DOM_ON_1310;
+	}
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
 		return	-ENOMEM;

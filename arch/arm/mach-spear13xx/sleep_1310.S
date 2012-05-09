@@ -153,10 +153,10 @@ swoff_pll:
 
 	/* Switch on certan sections as suggested by HW team */
 	/* Let the USB Host clock be on */
-	ldr	r0, [r6, #0x274]
-	orr	r0, r0, #0xE00
-	str	r0, [r6, #0x274]
 	ldr	r6, =MISC_BASE_PA
+	ldr	r0, [r6, #0x300]
+	orr	r0, r0, #0xE00
+	str	r0, [r6, #0x300]
 	ldr	r0, [r6, #0x100]
 	/*
 	 * Switch off the power domains.
@@ -177,7 +177,7 @@ wait_ack1:
 	bic	r0, r0, #0x30000
 	str	r0, [r6, #0x100]
 
-	bic	r0, r0, #0x1000
+	bic	r0, r0, #0x2000
 	str	r0, [r6, #0x100]
 wait_ack2:
 	ldr	r0, [r6, #0x100]
