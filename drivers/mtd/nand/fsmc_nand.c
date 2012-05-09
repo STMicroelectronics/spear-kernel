@@ -310,9 +310,9 @@ const char *part_probes[] = { "cmdlinepart", NULL };
  * @ecc_place:		ECC placing locations in oobfree type format
  * @bank:		Bank number for probed device
  *
- * @read_dma_chan:	DMA channel for read access
- * @write_dma_chan:	DMA channel for write access to NAND
  * @dma_access_complete: Completion structure
+ * @read_dma_priv:	DMA specific private data for read
+ * @write_dma_priv:	DMA specific private data for write
  *
  * @dev_timings:	Timings to be programmed in controller
  * @partitions:		Partition info for a NAND Flash
@@ -341,9 +341,10 @@ struct fsmc_nand_data {
 	unsigned int		bank;
 
 	/* DMA related objects */
-	struct dma_chan		*read_dma_chan;
-	struct dma_chan		*write_dma_chan;
 	struct completion	dma_access_complete;
+	/* priv structures for dma accesses */
+	void			*read_dma_priv;
+	void			*write_dma_priv;
 
 	/* Recieved from plat data */
 	struct mtd_partition	*partitions;
@@ -567,6 +568,12 @@ static int count_written_bits(uint8_t *buff, int size, int max_bits)
 	return written_bits;
 }
 
+static bool filter(struct dma_chan *chan, void *slave)
+{
+	chan->private = slave;
+	return true;
+}
+
 static void dma_complete(void *param)
 {
 	struct fsmc_nand_data *host = param;
@@ -584,13 +591,22 @@ static int dma_xfer(struct fsmc_nand_data *host, void *buffer, int len,
 	dma_cookie_t cookie;
 	unsigned long flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
 	int ret;
+	dma_cap_mask_t mask;
+
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_MEMCPY, mask);
 
 	if (direction == DMA_TO_DEVICE)
-		chan = host->write_dma_chan;
+		chan = dma_request_channel(mask, filter, host->write_dma_priv);
 	else if (direction == DMA_FROM_DEVICE)
-		chan = host->read_dma_chan;
+		chan = dma_request_channel(mask, filter, host->read_dma_priv);
 	else
 		return -EINVAL;
+
+	if (!chan) {
+		dev_err(host->dev, "Unable to get dma channel\n");
+		return -EINVAL;
+	}
 
 	dma_dev = chan->device;
 	dma_addr = dma_map_single(dma_dev->dev, buffer, len, direction);
@@ -632,7 +648,8 @@ static int dma_xfer(struct fsmc_nand_data *host, void *buffer, int len,
 	if (ret <= 0) {
 		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
 		dev_err(host->dev, "wait_for_completion_timeout\n");
-		return ret ? ret : -ETIMEDOUT;
+		ret = ret ? ret : -ETIMEDOUT;
+		goto out;
 	}
 
 	preempt_disable();
@@ -640,7 +657,9 @@ static int dma_xfer(struct fsmc_nand_data *host, void *buffer, int len,
 	__this_cpu_inc(chan->local->memcpy_count);
 	preempt_enable();
 
-	return 0;
+out:
+	dma_release_channel(chan);
+	return ret;
 }
 
 /*
@@ -880,12 +899,6 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	return i;
 }
 
-static bool filter(struct dma_chan *chan, void *slave)
-{
-	chan->private = slave;
-	return true;
-}
-
 static int fsmc_dev_ready(struct mtd_info *mtd)
 {
 	struct fsmc_nand_data *host = container_of(mtd,
@@ -914,7 +927,6 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		.twait	= FSMC_TWAIT_6,
 		.tset	= FSMC_TSET_0,
 	};
-	dma_cap_mask_t mask;
 	uint32_t bank;
 
 	if (!pdata) {
@@ -1055,22 +1067,10 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	switch (host->mode) {
 	case USE_DMA_ACCESS:
-		dma_cap_zero(mask);
-		dma_cap_set(DMA_MEMCPY, mask);
-		host->read_dma_chan = dma_request_channel(mask, filter,
-				pdata->read_dma_priv);
-		if (!host->read_dma_chan) {
-			dev_err(&pdev->dev, "Unable to get read dma channel\n");
-			goto err_req_read_chnl;
-		}
-		host->write_dma_chan = dma_request_channel(mask, filter,
-				pdata->write_dma_priv);
-		if (!host->write_dma_chan) {
-			dev_err(&pdev->dev, "Unable to get write dma channel\n");
-			goto err_req_write_chnl;
-		}
 		nand->read_buf = fsmc_read_buf_dma;
 		nand->write_buf = fsmc_write_buf_dma;
+		host->write_dma_priv = pdata->write_dma_priv;
+		host->read_dma_priv = pdata->read_dma_priv;
 		break;
 
 	default:
@@ -1274,12 +1274,6 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 err_probe:
 err_scan_ident:
-	if (host->mode == USE_DMA_ACCESS)
-		dma_release_channel(host->write_dma_chan);
-err_req_write_chnl:
-	if (host->mode == USE_DMA_ACCESS)
-		dma_release_channel(host->read_dma_chan);
-err_req_read_chnl:
 	if (host->rbpin.use_pin == FSMC_RB_GPIO)
 		gpio_free(host->rbpin.gpio_pin);
 err_gpio_req:
@@ -1299,10 +1293,6 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	if (host) {
-		if (host->mode == USE_DMA_ACCESS) {
-			dma_release_channel(host->write_dma_chan);
-			dma_release_channel(host->read_dma_chan);
-		}
 #ifdef CONFIG_MTD_PARTITIONS
 		del_mtd_partitions(&host->mtd);
 #else
