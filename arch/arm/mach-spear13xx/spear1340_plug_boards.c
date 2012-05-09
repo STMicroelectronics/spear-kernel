@@ -41,6 +41,7 @@
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <video/db9000fb.h>
+#include <sound/pcm.h>
 #include <plat/plug_board.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
