@@ -249,7 +249,10 @@ static inline void jpeg_reset(struct jpeg_regs *regs)
 	 * jpeg completely.
 	 */
 #ifdef CONFIG_ARCH_SPEAR13XX
-	addr = VA_PERIP1_SW_RST;
+	if (cpu_is_spear1310())
+		addr = VA_SPEAR1310_PERIP1_SW_RST;
+	else
+		addr = VA_PERIP1_SW_RST;
 #else
 	addr = VA_PERIP1_SOF_RST;
 #endif
