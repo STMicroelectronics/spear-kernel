@@ -226,8 +226,6 @@ static void ad9889b_edid_handler(struct work_struct *work)
 			struct ad9889b_state, edid_handler);
 	int ret;
 
-	state->edid.read_retries = EDID_MAX_RETRIES;
-
 	/* Return if we received the EDID. */
 	ret = ad9889b_check_edid_status(state);
 	if (!ret || ret == -ENODEV)
@@ -253,6 +251,8 @@ static void ad9889b_edid_handler(struct work_struct *work)
  */
 static void ad9889b_edid_reader(struct ad9889b_state *state)
 {
+	state->edid.read_retries = EDID_MAX_RETRIES;
+
 	queue_delayed_work(state->work_queue, &state->edid_handler,
 			EDID_DELAY);
 	return;
