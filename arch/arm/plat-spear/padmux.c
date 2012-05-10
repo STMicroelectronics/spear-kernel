@@ -47,10 +47,10 @@ static int pmx_mode_set(struct pmx_mode *mode)
 
 	address = ioremap(pmx->mode_reg.address, SZ_16);
 	if (address) {
-		val = readl(address);
+		val = readl_relaxed(address);
 		val &= ~pmx->mode_reg.mask;
 		val |= mode->value & pmx->mode_reg.mask;
-		writel(val, address);
+		writel_relaxed(val, address);
 
 		iounmap(address);
 	}
@@ -70,10 +70,10 @@ void enable_dev_for_mode(struct pmx_dev_mode *mode)
 
 		address = ioremap(mux_reg->address, SZ_16);
 		if (address) {
-			val = readl(address);
+			val = readl_relaxed(address);
 			val &= ~mux_reg->mask;
 			val |= mux_reg->value & mux_reg->mask;
-			writel(val, address);
+			writel_relaxed(val, address);
 
 			iounmap(address);
 		}
