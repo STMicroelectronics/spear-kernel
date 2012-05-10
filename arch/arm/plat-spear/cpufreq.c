@@ -298,7 +298,7 @@ static int __init spear_cpufreq_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	spear_cpufreq.freq_tbl = kmalloc(sizeof(*spear_cpufreq.freq_tbl) *
-			pdata->tbl_len, GFP_KERNEL);
+			(pdata->tbl_len + 1), GFP_KERNEL);
 	if (!spear_cpufreq.freq_tbl) {
 		dev_err(&pdev->dev, "kzalloc fail\n");
 		return -ENOMEM;
