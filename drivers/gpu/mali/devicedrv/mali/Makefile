@@ -235,6 +235,9 @@ obj-$(CONFIG_GPU_MALI) := $(MODULE:.ko=.o)
 # Tell the Linux build system to enable building of our .c files
 $(MODULE:.ko=-y) := $(SRC:.c=.o)
 
+$(DRIVER_DIR)/__malidrv_build_info.c:
+	@echo 'const char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(DRIVER_DIR)/__malidrv_build_info.c
+
 else
 # Outside the kernel build system
 
@@ -363,6 +366,3 @@ kernelrelease:
 
 # end of outside kernel build system block
 endif
-
-$(DRIVER_DIR)/__malidrv_build_info.c:
-	@echo 'const char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(DRIVER_DIR)/__malidrv_build_info.c
