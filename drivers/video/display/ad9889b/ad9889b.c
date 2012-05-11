@@ -104,7 +104,6 @@ static int ad9889b_wr(struct i2c_client *client, u8 reg, u8 val)
 		if (ret == 0)
 			return 0;
 	}
-	dev_err(&client->dev, "I2C Write Problem\n");
 
 	return ret;
 }
