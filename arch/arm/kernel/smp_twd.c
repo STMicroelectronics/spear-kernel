@@ -101,9 +101,13 @@ static void twd_update_frequency(void *data)
 
 	twd = *__this_cpu_ptr(twd_evt);
 
-	clockevents_update_freq(twd, twd_timer_rate);
+	/* If we're in periodic mode, just put in a new load value */
+	if (twd->mode == CLOCK_EVT_MODE_PERIODIC) {
+		__raw_writel(twd_timer_rate / HZ, twd_base + TWD_TIMER_LOAD);
+		return;
+	}
 
-	twd_set_mode(twd->mode, twd);
+	clockevents_update_freq(twd, twd_timer_rate);
 }
 
 static int twd_cpufreq_transition(struct notifier_block *nb,
