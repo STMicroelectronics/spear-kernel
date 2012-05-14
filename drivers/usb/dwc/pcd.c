@@ -406,6 +406,10 @@ static void dwc_otg_ep_disable(struct core_if *core_if, struct dwc_ep *ep)
 
 	/* Disable endpoint */
 	diepctl = dwc_read32(regs + DWC_DIEPCTL);
+
+	if (DWC_DEPCTL_EPENA_RD(diepctl) == 0)
+		return;
+
 	diepctl = DWC_DEPCTL_SET_NAK_RW(diepctl, 1);
 	dwc_write32(regs + DWC_DIEPCTL, diepctl);
 	diepint = dwc_read32(regs + DWC_DIEPINT);
