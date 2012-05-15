@@ -1270,7 +1270,11 @@ static void dmac_setup(void)
 	 * operations.
 	 */
 	/* setting Peripheral flow controller for jpeg */
-	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
+	if (cpu_is_spear1310())
+		writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG,
+				VA_SPEAR1310_DMAC_FLOW_SEL);
+	else
+		writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
 }
 
 /*
