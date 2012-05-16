@@ -48,10 +48,6 @@
 #define I2C_WRITE_TRIES		10
 #define I2C_READ_TRIES		10
 
-struct ad9889b_monitor_detect {
-	int present;
-};
-
 /* AD9889B edid status */
 struct ad9889b_state_edid {
 	u8 edid_data[256];
@@ -70,7 +66,6 @@ struct ad9889b_state {
 	struct ad9889b_state_edid edid;
 	struct workqueue_struct *work_queue;
 	struct i2c_client *client;
-	int edid_detect_counter;
 	struct i2c_client *edid_client;
 	struct delayed_work edid_handler;
 	struct mutex lock_sync;
