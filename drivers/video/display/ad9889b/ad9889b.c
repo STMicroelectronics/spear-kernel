@@ -683,14 +683,14 @@ static int ad9889b_i2c_probe(struct i2c_client *client,
 	if (ret < 0) {
 		dev_err(&client->dev, "gpio request fail: %d\n",
 				pdata->irq_gpio);
-		return -1;
+		goto err_kfree;
 	}
 
 	ret = gpio_direction_input(pdata->irq_gpio);
 	if (ret) {
 		dev_err(&client->dev, "gpio set direction fail: %d\n",
 				pdata->irq_gpio);
-		goto mutex_unlock;
+		goto err_free_gpio;
 	}
 
 	ret = request_threaded_irq(gpio_to_irq(pdata->irq_gpio),
@@ -699,7 +699,7 @@ static int ad9889b_i2c_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(&client->dev, "could not request IRQ %d for detect \
 				pin\n", gpio_to_irq(pdata->irq_type));
-		gpio_free(pdata->irq_type);
+		goto err_free_gpio;
 	}
 
 	state->edid_client = i2c_new_dummy(client->adapter, (0x7e>>1));
@@ -707,13 +707,13 @@ static int ad9889b_i2c_probe(struct i2c_client *client,
 		dev_err(&client->dev, "FATAL :failed to register edid i2c \
 				client\n");
 		ret = -ENODEV;
-		goto mutex_unlock;
+		goto err_free_irq;
 	}
 	state->work_queue = create_singlethread_workqueue("ad9889b_event");
 	if (state->work_queue == NULL) {
 		dev_err(&client->dev, "could not create workqueue\n");
 		ret = -EINVAL;
-		goto mutex_unlock;
+		goto err_unreg;
 	}
 
 	INIT_DELAYED_WORK(&state->edid_handler, ad9889b_edid_handler);
@@ -721,9 +721,19 @@ static int ad9889b_i2c_probe(struct i2c_client *client,
 	ad9889b_init_setup(client, 1);
 	/* enable isr at the end */
 	ad9889b_set_isr(client, true);
-
-mutex_unlock:
 	mutex_unlock(&state->lock_sync);
+	return ret;
+
+err_unreg:
+	i2c_unregister_device(state->edid_client);
+err_free_irq:
+	free_irq(gpio_to_irq(pdata->irq_gpio), client);
+err_free_gpio:
+	gpio_free(pdata->irq_gpio);
+err_kfree:
+	i2c_set_clientdata(client, NULL);
+	mutex_unlock(&state->lock_sync);
+	kfree(state);
 
 	return ret;
 }
