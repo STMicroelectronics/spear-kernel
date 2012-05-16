@@ -741,10 +741,17 @@ err_kfree:
 static int ad9889b_i2c_remove(struct i2c_client *client)
 {
 	struct ad9889b_state *state = i2c_get_clientdata(client);
+	struct ad9889b_pdata *pdata = dev_get_platdata(&client->dev);
 
 	ad9889b_init_setup(client, 0);
 	cancel_delayed_work(&state->edid_handler);
 	destroy_workqueue(state->work_queue);
+	i2c_unregister_device(state->edid_client);
+	free_irq(gpio_to_irq(pdata->irq_gpio), client);
+	gpio_free(pdata->irq_gpio);
+	i2c_set_clientdata(client, NULL);
+	kfree(state);
+
 	return 0;
 }
 
