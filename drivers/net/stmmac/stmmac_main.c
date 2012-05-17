@@ -1037,6 +1037,7 @@ static unsigned int stmmac_handle_jumbo_frames(struct sk_buff *skb,
 		desc->des3 = desc->des2 + BUF_SIZE_4KiB;
 		priv->hw->desc->prepare_tx_desc(desc, 1, BUF_SIZE_8KiB,
 						csum_insertion);
+		wmb();
 
 		entry = (++priv->cur_tx) % txsize;
 		desc = priv->dma_tx + entry;
@@ -1047,6 +1048,7 @@ static unsigned int stmmac_handle_jumbo_frames(struct sk_buff *skb,
 		desc->des3 = desc->des2 + BUF_SIZE_4KiB;
 		priv->hw->desc->prepare_tx_desc(desc, 0, buf2_size,
 						csum_insertion);
+		wmb();
 		priv->hw->desc->set_tx_owner(desc);
 		priv->tx_skbuff[entry] = NULL;
 	} else {
