@@ -86,11 +86,7 @@ static struct pmx_dev *pmx_devs[] = {
 	/* spear1310 specific devices */
 	&spear1310_pmx_rs485_0_1_tdm_0_1,
 	&spear1310_pmx_i2c_1_2,
-	&spear1310_pmx_pci,
 	&spear1310_pmx_smii_0_1_2,
-	&spear1310_pmx_pcie0,
-	&spear1310_pmx_pcie1,
-	&spear1310_pmx_pcie2,
 	&spear13xx_pmx_nand_8bit,
 	&spear13xx_pmx_nand_16bit,
 };
@@ -119,9 +115,6 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
 	&spear1310_nand_device,
-	&spear13xx_pcie_gadget0_device,
-	&spear13xx_pcie_host1_device,
-	&spear13xx_pcie_host2_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
