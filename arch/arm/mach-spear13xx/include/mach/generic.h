@@ -221,6 +221,9 @@ extern struct pmx_dev spear1310_reva_pmx_rgmii;
 extern struct pmx_dev spear1310_reva_pmx_i2c1;
 extern struct pmx_dev spear1310_reva_pmx_smii_0_1_2;
 extern struct pmx_dev spear1310_reva_pmx_can;
+extern struct pmx_dev spear1310_pmx_sdhci;
+extern struct pmx_dev spear1310_pmx_cf;
+extern struct pmx_dev spear1310_pmx_xd;
 #endif
 
 #ifdef CONFIG_CPU_SPEAR1310
