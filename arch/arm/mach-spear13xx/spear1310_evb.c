@@ -72,6 +72,7 @@ static struct platform_device spear1310_phy0_device = {
 /* padmux devices to enable */
 static struct pmx_dev *pmx_devs[] = {
 	/* spear13xx specific devices */
+	&spear13xx_pmx_clcd,
 	&spear13xx_pmx_i2c,
 	&spear13xx_pmx_i2s1,
 	&spear13xx_pmx_egpio_grp,
@@ -89,6 +90,10 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear1310_pmx_smii_0_1_2,
 	&spear13xx_pmx_nand_8bit,
 	&spear13xx_pmx_nand_16bit,
+	&spear1310_pmx_pcie0,
+	&spear1310_pmx_pcie1,
+	&spear1310_pmx_pcie2,
+
 };
 
 static struct amba_device *amba_devs[] __initdata = {
@@ -104,6 +109,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
+	&spear13xx_db9000_clcd_device,
 	&spear13xx_cpufreq_device,
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
@@ -114,7 +120,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
-	&spear1310_nand_device,
+	&spear13xx_pcie_gadget0_device,
+	&spear13xx_pcie_host1_device,
+	&spear13xx_pcie_host2_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
@@ -123,9 +131,10 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_wdt_device,
 
 	/* spear1310 specific devices */
+	&spear1310_nand_device,
+	&spear1310_otg_device,
 	&spear1310_phy0_device,
 	&spear1310_plgpio_device,
-	&spear1310_otg_device,
 };
 
 /* keyboard specific platform data */
