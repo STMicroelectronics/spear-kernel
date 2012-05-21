@@ -19,6 +19,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
+#include <linux/usb/dwc_otg.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
@@ -652,6 +653,11 @@ void __init spear1340_pcie_board_init(struct device *dev);
 void config_clcd_gpio_pads(bool);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
+
+#if defined(CONFIG_CPU_SPEAR1310) || defined(CONFIG_CPU_SPEAR1340)
+int otg_phy_init(void);
+int otg_param_init(struct core_params *params);
+#endif
 
 /* spear900 declarations */
 #ifdef CONFIG_CPU_SPEAR900
