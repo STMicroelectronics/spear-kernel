@@ -107,6 +107,9 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_adc_device,
 	&spear13xx_db9000_clcd_device,
 	&spear13xx_cpufreq_device,
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	&spear13xx_device_gpiokeys,
+#endif
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
