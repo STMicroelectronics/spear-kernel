@@ -82,14 +82,10 @@ static struct pmx_dev *pmx_devs[] = {
 	&spear13xx_pmx_smi_2_chips,
 	&spear13xx_pmx_ssp,
 	&spear13xx_pmx_uart0,
-	&spear1310_pmx_sdhci,
 
 	/* spear1310 specific devices */
-	&spear1310_pmx_rs485_0_1_tdm_0_1,
-	&spear1310_pmx_i2c_1_2,
-	&spear1310_pmx_smii_0_1_2,
+	&spear1310_pmx_sdhci,
 	&spear13xx_pmx_nand_8bit,
-	&spear13xx_pmx_nand_16bit,
 	&spear1310_pmx_pcie0,
 	&spear1310_pmx_pcie1,
 	&spear1310_pmx_pcie2,
