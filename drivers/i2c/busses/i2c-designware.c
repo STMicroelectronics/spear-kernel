@@ -72,6 +72,7 @@
 #define DW_IC_TXFLR		0x74
 #define DW_IC_RXFLR		0x78
 #define DW_IC_COMP_PARAM_1	0xf4
+#define DW_IC_COMP_VERSION	0xf8
 #define DW_IC_TX_ABRT_SOURCE	0x80
 
 #define DW_IC_CON_MASTER		0x1
@@ -223,6 +224,7 @@ struct dw_i2c_dev {
 	u16			tx_fifo_depth;
 	u16			rx_fifo_depth;
 	void 			(*i2c_recover_bus)(struct platform_device *);
+	u32			version;
 };
 
 static u16
@@ -292,6 +294,8 @@ static void i2c_dw_init(struct dw_i2c_dev *dev)
 {
 	u32 input_clock_khz = clk_get_rate(dev->clk) / 1000;
 	u16 ic_con, hcnt, lcnt;
+
+	dev->version = readl(dev->base + DW_IC_COMP_VERSION);
 
 	/* Disable the adapter */
 	writew(0, dev->base + DW_IC_ENABLE);
@@ -407,6 +411,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 	struct i2c_msg *msgs = dev->msgs;
 	u16 intr_mask;
 	u16 tx_limit, rx_limit;
+	u16 temp;
 	u32 addr = msgs[dev->msg_write_idx].addr;
 	u32 buf_len = dev->tx_buf_len;
 	u8 *buf = dev->tx_buf;;
@@ -445,9 +450,28 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 		while (buf_len > 0 && tx_limit > 0 && rx_limit > 0) {
 			if (msgs[dev->msg_write_idx].flags & I2C_M_RD) {
 				writew(0x100, dev->base + DW_IC_DATA_CMD);
+
+				/*
+				 * IP version > 0x312A has a facility to control
+				 * stop bit geneartion. This will control with
+				 * the help of 9th bit of command reg. On
+				 * setting this bit, STOP is issued,
+				 * regardless of whether or not the Tx FIFO is
+				 * empty.
+				 */
+
+				if (buf_len == 1 && dev->version > 0x312A)
+					writel(0x200, dev->base +
+							DW_IC_DATA_CMD);
 				rx_limit--;
-			} else
-				writew(*buf++, dev->base + DW_IC_DATA_CMD);
+			} else {
+				temp = *buf++;
+
+				if (buf_len == 1 && dev->version > 0x312A)
+					temp |= 0x200;
+
+				writel(temp, dev->base + DW_IC_DATA_CMD);
+			}
 			tx_limit--; buf_len--;
 		}
 
