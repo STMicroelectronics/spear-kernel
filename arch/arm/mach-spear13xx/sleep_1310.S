@@ -20,7 +20,7 @@
 #define MPMC_RESET
 #define PWRDOMAINS_ON
 #define GPIO_DDR_ISOLATE
-
+#define RESET_UART_REGISTERS
 /*
  * spear13xx_sleep_mode()
  * Forces SPEAr into sleep
@@ -127,7 +127,7 @@ wait_till_slow_mode:
 swoff_pll:
 	ldr	r0, [r6, r1]
 	/* Clear pll_enable bit(1) of PLL1_CTR register in Misc registers */
-	bic	r0, r0, #0x02
+	bic	r0, r0, #0x04
 	str	r0, [r6, r1]
 	add	r1, #0xc
 	add	r2, #0x1
@@ -151,11 +151,10 @@ swoff_pll:
 	ldr	r6, =SPEAR_SRAM_START_PA
 	str	r0, [r6, r3]
 
-	/* Switch on certan sections as suggested by HW team */
-	/* Let the USB Host clock be on */
+	/* Enable bootrom and always on ram clock */
 	ldr	r6, =MISC_BASE_PA
 	ldr	r0, [r6, #0x300]
-	orr	r0, r0, #0xE00
+	orr	r0, r0, #0x6
 	str	r0, [r6, #0x300]
 	ldr	r0, [r6, #0x100]
 	/*
@@ -230,7 +229,7 @@ pll_lock_4:
 swon_pll_1_3:
 	/* Switch on Pll-1/2/3 */
 	ldr	r0, [r6, r1]
-	orr	r0, r0, #0x2
+	orr	r0, r0, #0x6
 	str	r0, [r6, r1]
 pll_lock_1_3:
 	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
@@ -290,18 +289,12 @@ ddf:
 	str	r1, [r7, r0]
 	sub	r3, r3, #4
 	add	r0, r0, #4
-	cmp	r0, #0x320
+	cmp	r0, #0x340
 	bne	mpmc_restore_regs
-
 	dsb
 	isb
 
 #ifdef GPIO_DDR_ISOLATE
-	/* Disable MPMC reset */
-	ldr	r6, =MISC_BASE_PA
-	mov	r0, #0
-	str	r0, [r6, #0x30c]
-
 	ldr	r7, =GPIO_START_PA
 	/* Set the Direction of GPIO-2 as output */
 	ldr	r0, [r7, #0x400]
@@ -319,6 +312,7 @@ ddr_out_srefresh:
 	add	r0, r0, #0x1
 	cmp	r0, #0x60000
 	bne	ddr_out_srefresh
+
 #endif
 	/* Move the DDR out of self refresh mode */
 	ldr	r7, =MPMC_BASE_PA
@@ -356,6 +350,7 @@ ddr_out_srefresh:
 	 */
 	bic	r1, r1, #0x10000
 
+	ldr	r6, =MISC_BASE_PA
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x3DC]
 	/* Clear srefresh_enter bit(2) */
@@ -367,7 +362,46 @@ wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x3DC]
 	tst	r0, #0x2000
 	beq	wait_for_srefresh_exit_r0
+	ldr	r7, =GPIO_START_PA
+	ldr	r0, [r7, #0x3fc]
+	bic	r0, r0, #0x8
+	str	r0, [r7, #0x3fc]
 
+	mov	r0, #0
+ddr_out_srefresh1:
+	add	r0, r0, #0x1
+	cmp	r0, #0x60000
+	bne	ddr_out_srefresh1
+
+#ifdef RESET_UART_REGISTERS
+	/* Reprogram UART0 before wakeup */
+	ldr	r7, =UART_BASE_PA
+
+	ldr	r0, [r7, #0x024]
+	orr	r0, r0, #0x1A
+	str	r0, [r7, #0x024]
+
+	ldr	r0, [r7, #0x028]
+	orr	r0, r0, #0x3
+	str	r0, [r7, #0x028]
+
+	ldr	r0, [r7, #0x02C]
+	orr	r0, r0, #0x70
+	str	r0, [r7, #0x02C]
+
+	ldr	r0, [r7, #0x030]
+	ldr	r2, =0xF01
+	orr	r0, r0, r2
+	str	r0, [r7, #0x030]
+
+	ldr	r0, [r7, #0x034]
+	orr	r0, r0, #0x12
+	str	r0, [r7, #0x034]
+
+	ldr	r0, [r7, #0x038]
+	orr	r0, r0, #0x50
+	str	r0, [r7, #0x038]
+#endif
 	ldmia	r8!, {r0}
 	mov	pc, r0
 	nop

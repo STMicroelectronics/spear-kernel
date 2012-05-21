@@ -30,14 +30,16 @@
 #define PLAT_PHYS_OFFSET	0x00000000
 #define PCM_SET_WAKEUP_CFG	0xfffff
 /* Wake up Configurations */
+#define PCIE_WKUP	0x20
 #define ETH_WKUP	0x10
 #define RTC_WKUP	0x8
 #define GPIO_WKUP	0x4
 #define USB_WKUP	0x2
+#define RAS_WKUP	0x1
 #define PWR_DOM_ON	0x3c00
 #define PWR_DOM_ON_1310	0xf000
 
-/* Use all Sources except USB as wake up trigger */
+#define DDR_PHY_NO_SHUTOFF_CFG_1310	(~BIT(22))
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
@@ -165,7 +167,11 @@ void spear_sys_suspend(suspend_state_t state)
 		 * the lines for the switching of the DDRPHY to the
 		 * external power supply.
 		 */
-		pm_cfg &= (unsigned long)DDR_PHY_NO_SHUTOFF_CFG;
+		if (cpu_is_spear1310())
+			pm_cfg &= (unsigned
+					long)DDR_PHY_NO_SHUTOFF_CFG_1310;
+		else
+			pm_cfg &= (unsigned long)DDR_PHY_NO_SHUTOFF_CFG;
 		/*
 		 * Set up the Power Domains specific registers.
 		 * 1. Setup the wake up enable of the desired sources.
@@ -206,7 +212,7 @@ void spear_sys_suspend(suspend_state_t state)
 			memcpy(sram_dest, (void *)spear1340_sleep_mode,
 				spear1340_sleep_mode_sz);
 	} else if (cpu_is_spear1310()) {
-		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
 		/* Copy the Sleep code on to the SRAM*/
 		spear_sram_sleep =
 			memcpy(sram_dest, (void *)spear1310_sleep_mode,
@@ -343,7 +349,7 @@ static int __init spear_pm_init(void)
 	else if (cpu_is_spear1310()) {
 		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
 		pcm_set_cfg &= ~(PWR_DOM_ON | USB_WKUP);
-		pcm_set_cfg |= PWR_DOM_ON_1310;
+		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP);
 	}
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
