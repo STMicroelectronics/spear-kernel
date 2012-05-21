@@ -1263,6 +1263,98 @@ struct platform_device spear13xx_udc_device = {
 };
 #endif
 
+#if defined(CONFIG_CPU_SPEAR1340) || defined(CONFIG_CPU_SPEAR1310)
+int otg_phy_init(void)
+{
+	u32 temp, msec = 1000;
+	void __iomem *usbphy_gen_cfg_reg, *perip1_clk_enb, *perip1_sw_rst;
+	int uoc_enb_bit_off;
+
+	if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		usbphy_gen_cfg_reg = VA_SPEAR1310_USBPHY_GEN_CFG;
+		perip1_clk_enb = VA_SPEAR1310_PERIP1_CLK_ENB;
+		perip1_sw_rst = VA_SPEAR1310_PERIP1_SW_RST;
+		uoc_enb_bit_off = SPEAR1310_UOC_RST_ENB;
+#endif
+	} else if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		usbphy_gen_cfg_reg = VA_SPEAR1340_USBPHY_GEN_CFG;
+		perip1_clk_enb = VA_SPEAR1340_PERIP1_CLK_ENB;
+		perip1_sw_rst = VA_SPEAR1340_PERIP1_SW_RST;
+		uoc_enb_bit_off = SPEAR1340_UOC_RST_ENB;
+#endif
+	} else {
+		pr_err("%s:wrong cpu\n", __func__);
+		return -EINVAL;
+	}
+
+	/* phy por deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp &= ~USBPHYPOR;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* phy clock enable */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPHYRST;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* wait for pll lock */
+	while (!(readl(usbphy_gen_cfg_reg) & USBPLLLOCK)) {
+		if (msec--) {
+			pr_err(" Problem with USB PHY PLL Lock\n");
+			return -ETIMEDOUT;
+		}
+		udelay(1);
+	}
+
+	/* otg prstnt deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPRSNT;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* OTG HCLK Disable */
+	temp = readl(perip1_clk_enb);
+	temp &= ~(1 << uoc_enb_bit_off);
+	writel(temp, perip1_clk_enb);
+
+	/* OTG HRESET deassert */
+	temp = readl(perip1_sw_rst);
+	temp &= ~(1 << uoc_enb_bit_off);
+	writel(temp, perip1_sw_rst);
+
+	/* OTG HCLK Enable */
+	temp = readl(perip1_clk_enb);
+	temp |= (1 << uoc_enb_bit_off);
+	writel(temp, perip1_clk_enb);
+
+	return 0;
+}
+
+int otg_param_init(struct core_params *params)
+{
+	int i;
+
+	/* Common Dev RX fifo Size : 0x400 */
+	params->dev_rx_fifo_size = 0x400;
+	/* Dev TX fifo Size for fifo 0: 0x300 */
+	params->dev_nperio_tx_fifo_size = 0x300;
+	/* TX fifo Size for fifo 1-7: 0x200 */
+	params->fifo_number = 7;
+	for (i = 1; i <= 7; i++)
+		params->dev_tx_fifo_size[i - 1] = 0x200;
+
+	/* Common Host RX fifo Size : 0x400 */
+	params->host_rx_fifo_size = 0x400;
+	/* Host TX fifo Size for fifo 0: 0x400 */
+	params->host_nperio_tx_fifo_size = 0x400;
+	/* Host Periodic TX fifo Size for fifo 0: 0x400 */
+	params->host_perio_tx_fifo_size = 0x400;
+
+	return 0;
+}
+#endif
+
 static void dmac_setup(void)
 {
 	/*

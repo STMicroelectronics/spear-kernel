@@ -1356,6 +1356,11 @@ struct platform_device spear1310_sata2_device = {
 };
 
 /* OTG device registration */
+static struct dwc_otg_plat_data otg_platform_data = {
+	.phy_init = otg_phy_init,
+	.param_init = otg_param_init,
+};
+
 static struct resource otg_resources[] = {
 	{
 		.start = SPEAR1310_UOC_BASE,
@@ -1367,9 +1372,15 @@ static struct resource otg_resources[] = {
 	},
 };
 
+static u64 otg_dmamask = ~0;
 struct platform_device spear1310_otg_device = {
 	.name = "dwc_otg",
 	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &otg_dmamask,
+		.platform_data = &otg_platform_data,
+	},
 	.num_resources = ARRAY_SIZE(otg_resources),
 	.resource = otg_resources,
 };
