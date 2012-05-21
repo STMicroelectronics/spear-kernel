@@ -209,7 +209,7 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 		record_freq_val = 0;
 		break;
 	default:
-		dev_err(codec->dev, "bad rate", __func__);
+		dev_err(codec->dev, "bad rate");
 		return -EINVAL;
 	}
 
