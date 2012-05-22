@@ -128,7 +128,7 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	sta529_write(codec, STA529_S2PCFG0, val);
 
 	/* set serial-to-parallel interface data length to 32 bit */
-	sta529_write(codec, STA529_P2SCFG1, 0xC1);
+	sta529_write(codec, STA529_S2PCFG1, 0xC1);
 
 	/* set parallel to-serial interface data length as 32 bit */
 	sta529_write(codec, STA529_P2SCFG1, 0xC1);
