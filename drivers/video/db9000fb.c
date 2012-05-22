@@ -589,12 +589,9 @@ static int db9000fb_open(struct fb_info *info, int user)
 {
 	struct db9000fb_info *fbi = to_db9000fb(info);
 
-	/* allow only one user at a time */
-	if (atomic_inc_and_test(&fbi->usage))
-		return -EBUSY;
-
-	/* Enable Controller */
-	set_ctrlr_state(fbi, C_ENABLE);
+	/* Enable Controller only if its uses is zero*/
+	if (atomic_inc_return(&fbi->usage) == 1)
+		set_ctrlr_state(fbi, C_ENABLE);
 
 	return 0;
 }
@@ -603,8 +600,8 @@ static int db9000fb_release(struct fb_info *info, int user)
 {
 	struct db9000fb_info *fbi = to_db9000fb(info);
 
-	set_ctrlr_state(fbi, C_DISABLE);
-	atomic_dec(&fbi->usage);
+	if (atomic_dec_and_test(&fbi->usage))
+		set_ctrlr_state(fbi, C_DISABLE);
 
 	return 0;
 }
