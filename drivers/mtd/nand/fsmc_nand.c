@@ -288,7 +288,7 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * Default partition layouts for nand devices
  * Size for "Root file system" is updated in driver based on actual device size
  */
-DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 20, 256);
+DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 28, 256);
 DEFAULT_PARTITION_TABLE(64KB, 0x10000, 4, 20, 128);
 DEFAULT_PARTITION_TABLE(128KB, 0x20000, 4, 12, 48);
 DEFAULT_PARTITION_TABLE(256KB, 0x40000, 4, 6, 24);
