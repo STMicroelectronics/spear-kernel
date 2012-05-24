@@ -554,21 +554,6 @@ free_app_res:
 	return err;
 }
 
-static int pcie_clk_init(struct pcie_port *pp)
-{
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
-	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
-	return 0;
-}
-
-static int pcie_clk_exit(struct pcie_port *pp)
-{
-	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
-	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
-	return 0;
-}
-
 void spear_pcie_370_add_ops(struct pcie_port *pp)
 {
 	struct pcie_private_ops	*ops = &pp->ops;
@@ -581,6 +566,4 @@ void spear_pcie_370_add_ops(struct pcie_port *pp)
 	ops->link_up = pcie_link_up;
 	ops->host_init = pcie_host_init;
 	ops->host_exit = pcie_host_exit;
-	ops->clk_init = pcie_clk_init;
-	ops->clk_exit = pcie_clk_exit;
 }

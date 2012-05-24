@@ -689,7 +689,7 @@ int spear_pcie_suspend(void)
 		pp = controller_to_port(i);
 		if (pp->ops.link_up(pp->va_app_base)) {
 			pp->ops.host_exit(pp);
-			pp->ops.clk_exit(pp);
+			pp->config.clk_exit(pp);
 			pp->susp_state = 1;
 		}
 	}
@@ -705,7 +705,7 @@ int spear_pcie_resume(void)
 	for (i = 0; i < pci.nr_controllers; i++) {
 		pp = controller_to_port(i);
 		if (pp->susp_state) {
-			pp->ops.clk_init(pp);
+			pp->config.clk_init(pp);
 			pp->susp_state = 0;
 			if (!pp->ops.link_up(pp->va_app_base))
 				pp->ops.host_init(pp);
@@ -753,7 +753,7 @@ static int __init pcie_probe(struct platform_device *pdev)
 		goto free_mem;
 	}
 
-	if (pp->ops.clk_init(pp)) {
+	if (pp->config.clk_init(pp)) {
 		err = -EINVAL;
 		goto free_mem;
 	}
