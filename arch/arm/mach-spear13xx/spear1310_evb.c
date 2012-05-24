@@ -86,7 +86,7 @@ static struct pmx_dev *pmx_devs[] = {
 	/* spear1310 specific devices */
 	&spear1310_pmx_sdhci,
 	&spear13xx_pmx_nand_8bit,
-	&spear1310_pmx_pcie0,
+	&spear1310_pmx_sata0,
 	&spear1310_pmx_pcie1,
 	&spear1310_pmx_pcie2,
 
@@ -119,8 +119,8 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_i2s0_device,
 	&spear13xx_jpeg_device,
 	&spear13xx_kbd_device,
-	&spear13xx_pcie_gadget0_device,
-	&spear13xx_pcie_host1_device,
+/*	&spear13xx_pcie_sata0_device, */
+	&spear13xx_pcie_gadget1_device,
 	&spear13xx_pcie_host2_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
@@ -238,13 +238,6 @@ static struct spi_board_info __initdata spi_board_info[] = {
 static void __init spear1310_pcie_board_init(void)
 {
 	void *plat_data;
-
-	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
-	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
-	((struct pcie_port_info *)plat_data)->clk_init =
-		spear1310_pcie_clk_init;
-	((struct pcie_port_info *)plat_data)->clk_exit =
-		spear1310_pcie_clk_exit;
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
