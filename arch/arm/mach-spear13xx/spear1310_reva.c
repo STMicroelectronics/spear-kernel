@@ -21,6 +21,7 @@
 #include <asm/irq.h>
 #include <asm/delay.h>
 #include <plat/hdlc.h>
+#include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
@@ -1024,4 +1025,39 @@ void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+int spear1310_reva_pcie_clk_init(struct pcie_port *pp)
+{
+	/*
+	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
+
+	if (pp->clk == NULL) {
+		pp->clk = clk_get_sys("dw_pcie.0", NULL);
+
+		if (IS_ERR(pp->clk)) {
+			pr_err("%s:couldn't get clk for pcie0\n", __func__);
+			return -ENODEV;
+		}
+	}
+
+	if (clk_enable(pp->clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+
+int spear1310_reva_pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_PCIE_CFG);
+	if (pp->clk)
+		clk_disable(pp->clk);
+
+	return 0;
 }

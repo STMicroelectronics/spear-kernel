@@ -527,41 +527,6 @@ free_app_res:
 	return err;
 }
 
-static int pcie_clk_init(struct pcie_port *pp)
-{
-	/*
-	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
-	 * should have been enabled. But Controler does not work
-	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
-	 */
-	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
-
-	if (pp->clk == NULL) {
-		pp->clk = clk_get_sys("dw_pcie.0", NULL);
-
-		if (IS_ERR(pp->clk)) {
-			pr_err("%s:couldn't get clk for pcie0\n", __func__);
-			return -ENODEV;
-		}
-	}
-
-	if (clk_enable(pp->clk)) {
-		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
-		return -ENODEV;
-	}
-
-	return 0;
-}
-
-static int pcie_clk_exit(struct pcie_port *pp)
-{
-	writel(0, VA_PCIE_CFG);
-	if (pp->clk)
-		clk_disable(pp->clk);
-
-	return 0;
-}
-
 void spear_pcie_341_add_ops(struct pcie_port *pp)
 {
 	struct pcie_private_ops	*ops = &pp->ops;
@@ -574,6 +539,4 @@ void spear_pcie_341_add_ops(struct pcie_port *pp)
 	ops->link_up = pcie_link_up;
 	ops->host_init = pcie_host_init;
 	ops->host_exit = pcie_host_exit;
-	ops->clk_init = pcie_clk_init;
-	ops->clk_exit = pcie_clk_exit;
 }

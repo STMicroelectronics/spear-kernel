@@ -32,6 +32,7 @@
 #include <plat/clock.h>
 #include <plat/cpufreq.h>
 #include <mach/dma.h>
+#include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spdif.h>
@@ -2611,6 +2612,21 @@ static int spdif_out_clk_init(void)
 #endif
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
+int spear1340_pcie_clk_init(struct pcie_port *pp)
+{
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
+	return 0;
+}
+
+int spear1340_pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+	return 0;
+}
+
 /* This function is needed for board specific PCIe initilization */
 void __init spear1340_pcie_board_init(struct device *dev)
 {
@@ -2618,6 +2634,10 @@ void __init spear1340_pcie_board_init(struct device *dev)
 
 	plat_data = dev_get_platdata(dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear1340_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear1340_pcie_clk_exit;
 }
 #endif
 

@@ -241,9 +241,17 @@ static void __init spear1310_pcie_board_init(void)
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear1310_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear1310_pcie_clk_exit;
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear1310_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear1310_pcie_clk_exit;
 }
 #endif
 

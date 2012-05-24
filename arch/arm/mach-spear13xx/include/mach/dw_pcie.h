@@ -31,6 +31,8 @@ struct pcie_port_info {
 	u32	cfg1_size;
 	u32	msg_size;
 	u32	in_mem_size;
+	int (*clk_init)(struct pcie_port *pp);
+	int (*clk_exit)(struct pcie_port *pp);
 };
 
 struct pcie_private_ops {
@@ -44,8 +46,6 @@ struct pcie_private_ops {
 	int (*link_up)(void __iomem *va_app_base);
 	void (*host_init)(struct pcie_port *pp);
 	void (*host_exit)(struct pcie_port *pp);
-	int (*clk_init)(struct pcie_port *pp);
-	int (*clk_exit)(struct pcie_port *pp);
 };
 
 struct pcie_port {
@@ -114,6 +114,16 @@ struct pcie_port {
 int enable_pcie0_clk(void);
 void spear_pcie_341_add_ops(struct pcie_port *pp);
 void spear_pcie_370_add_ops(struct pcie_port *pp);
+int spear1300_pcie_clk_init(struct pcie_port *pp);
+int spear1300_pcie_clk_exit(struct pcie_port *pp);
+int spear1310_reva_pcie_clk_init(struct pcie_port *pp);
+int spear1310_reva_pcie_clk_exit(struct pcie_port *pp);
+int spear900_pcie_clk_init(struct pcie_port *pp);
+int spear900_pcie_clk_exit(struct pcie_port *pp);
+int spear1340_pcie_clk_init(struct pcie_port *pp);
+int spear1340_pcie_clk_exit(struct pcie_port *pp);
+int spear1310_pcie_clk_init(struct pcie_port *pp);
+int spear1310_pcie_clk_exit(struct pcie_port *pp);
 #endif
 
 int pci_find_own_capability(struct pcie_port *pp, int cap);
