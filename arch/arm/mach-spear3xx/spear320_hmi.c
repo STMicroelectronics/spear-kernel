@@ -49,6 +49,13 @@ static struct macb_base_data hmi_macb_data[] = {
 	},
 };
 
+/* STMPE811 platform data */
+
+static struct stmpe_gpio_platform_data stmpe811_gpio = {
+	.gpio_base = SPEAR_STMPE811_GPIO_BASE,
+	.norequest_mask = 0xf3,
+};
+
 static struct stmpe_ts_platform_data stmpe811_ts_pdata = {
 	.sample_time = 4, /* 80 clocks */
 	.mod_12b = 1, /* 12 bit */
@@ -71,6 +78,7 @@ static struct stmpe_platform_data stmpe811_pdata = {
 	.irq_over_gpio = true,
 	.irq_gpio = BASIC_GPIO_1,
 	.ts = &stmpe811_ts_pdata,
+	.gpio = &stmpe811_gpio,
 };
 
 static struct i2c_board_info __initdata i2c_board_info[] = {
