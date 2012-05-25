@@ -454,8 +454,6 @@ static struct platform_driver dwc_otg_driver = {
  */
 static int __init dwc_otg_driver_init(void)
 {
-
-	pr_info("%s: version %s\n", dwc_driver_name, DWC_DRIVER_VERSION);
 	return platform_driver_register(&dwc_otg_driver);
 }
 
