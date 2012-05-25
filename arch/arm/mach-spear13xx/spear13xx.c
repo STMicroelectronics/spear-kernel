@@ -820,6 +820,10 @@ static struct resource pcie0_resources[] = {
 		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
+		.start = SPEAR13XX_MIPHY0_BASE,
+		.end = SPEAR13XX_MIPHY0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
 		.start = SPEAR13XX_IRQ_PCIE0,
 		.flags = IORESOURCE_IRQ,
 	},
@@ -1160,6 +1164,10 @@ static struct resource pcie1_resources[] = {
 		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
+		.start = SPEAR13XX_MIPHY1_BASE,
+		.end = SPEAR13XX_MIPHY1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
 		.start = SPEAR13XX_IRQ_PCIE1,
 		.flags = IORESOURCE_IRQ,
 	},
@@ -1173,6 +1181,10 @@ static struct resource pcie2_resources[] = {
 	}, {
 		.start = SPEAR13XX_PCIE2_BASE,
 		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_MIPHY2_BASE,
+		.end = SPEAR13XX_MIPHY2_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = SPEAR13XX_IRQ_PCIE2,
