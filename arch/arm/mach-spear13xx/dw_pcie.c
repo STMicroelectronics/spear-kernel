@@ -23,6 +23,7 @@
 #include <linux/resource.h>
 #include <linux/slab.h>
 #include <mach/dw_pcie.h>
+#include <asm/signal.h>
 static struct list_head	pcie_port_list;
 static struct hw_pci pci;
 
@@ -791,8 +792,39 @@ static struct platform_driver pcie_driver = {
 	},
 };
 
+static int
+dw_pcie_abort(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
+{
+	unsigned long pc = instruction_pointer(regs);
+	unsigned long instr = *(unsigned long *)(pc - 8);
+
+	WARN_ONCE(1, "pcie abort\n");
+	/*
+	 * If the instruction being executed was a read,
+	 * make it look like it read all-ones.
+	 */
+	if ((instr & 0x0c100000) == 0x04100000) {
+		int reg = (instr >> 12) & 15;
+		unsigned long val;
+
+		if (instr & 0x00400000)
+			val = 255;
+		else
+			val = -1;
+
+		regs->uregs[reg] = val;
+		regs->ARM_pc += 4;
+		return 0;
+	}
+
+	return 1;
+}
+
 static int __init pcie_init(void)
 {
+	hook_fault_code(16+6, dw_pcie_abort, SIGBUS, 0,
+			"imprecise external abort");
+
 	INIT_LIST_HEAD(&pcie_port_list);
 	platform_driver_register(&pcie_driver);
 	if (pci.nr_controllers) {
