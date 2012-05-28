@@ -11,9 +11,11 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/ahci_platform.h>
 #include <linux/amba/pl022.h>
 #include <linux/can/platform/c_can.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
@@ -1299,6 +1301,64 @@ struct platform_device spear1310_rs485_1_device = {
 	.resource = rs485_1_resources,
 };
 
+static void sata_miphy_exit(struct device *dev)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+	writel(~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK,
+			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+
+	/* Enable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1310_PERIP1_SW_RST) | (0x1000)),
+			VA_SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+	/* Switch off sata power domain */
+	writel((readl(VA_SPEAR1310_PCM_CFG) & (~0x800)),
+			VA_SPEAR1310_PCM_CFG);
+	msleep(20);
+}
+
+
+static int sata_miphy_init(struct device *dev, void __iomem *addr)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+	temp |= SPEAR1310_SATA_CFG_VAL(0);
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+
+	temp = readl(VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp &= ~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK;
+	temp |= SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK;
+
+	writel(temp, VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	/* Switch on sata power domain */
+	writel((readl(VA_SPEAR1310_PCM_CFG) | (0x800)),
+			VA_SPEAR1310_PCM_CFG);
+	msleep(20);
+	/* Disable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1310_PERIP1_SW_RST) & (~0x1000)),
+			VA_SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+
+	return 0;
+}
+
+static struct ahci_platform_data sata_pdata = {
+	.init = sata_miphy_init,
+	.exit = sata_miphy_exit,
+};
+
+static u64 ahci_dmamask = DMA_BIT_MASK(32);
+
 /* SATA0 device registration */
 static struct resource sata0_resources[] = {
 	{
@@ -1316,6 +1376,11 @@ struct platform_device spear1310_sata0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(sata0_resources),
 	.resource = sata0_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* SATA1 device registration */
@@ -1335,6 +1400,11 @@ struct platform_device spear1310_sata1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(sata1_resources),
 	.resource = sata1_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* SATA2 device registration */
@@ -1354,6 +1424,11 @@ struct platform_device spear1310_sata2_device = {
 	.id = 2,
 	.num_resources = ARRAY_SIZE(sata2_resources),
 	.resource = sata2_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* OTG device registration */
