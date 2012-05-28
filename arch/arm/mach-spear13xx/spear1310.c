@@ -1530,19 +1530,25 @@ int spear1310_pcie_clk_init(struct pcie_port *pp)
 {
 	u32 temp;
 
-	writel(SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp = readl(VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp &= ~SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE_MASK;
+	temp |= SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE;
+
+	writel(temp, VA_SPEAR1310_PCIE_MIPHY_CFG_1);
 
 	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
 
 	switch (pp->port) {
 	case 0:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
 		temp |= SPEAR1310_PCIE_CFG_VAL(0);
 		break;
 	case 1:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(1);
 		temp |= SPEAR1310_PCIE_CFG_VAL(1);
 		break;
 	case 2:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(2);
 		temp |= SPEAR1310_PCIE_CFG_VAL(2);
 		break;
 	default:
@@ -1555,8 +1561,25 @@ int spear1310_pcie_clk_init(struct pcie_port *pp)
 
 int spear1310_pcie_clk_exit(struct pcie_port *pp)
 {
-	writel(0, VA_SPEAR1310_PCIE_SATA_CFG);
-	writel(0, VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	u32 temp;
+
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+
+	switch (pp->port) {
+	case 0:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
+		break;
+	case 1:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(1);
+		break;
+	case 2:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(2);
+		break;
+	}
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+	writel(~SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE_MASK,
+			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
 
 	return 0;
 }
