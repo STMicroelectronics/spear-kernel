@@ -167,7 +167,7 @@ DECLARE_SPI_CS_CONTROL(0, dev, SPEAR1310_SSP0_CS_SEL_CS2);
 DECLARE_SPI_CHIP_INFO(0, dev, spi0_dev_cs_control);
 
 /* spi0 touch screen Chip Select Control function, controlled by gpio pin */
-DECLARE_SPI_CS_CONTROL(0, ts, SPEAR1310_SSP0_CS_SEL_CS0);
+DECLARE_SPI_CS_GPIO_CONTROL(0, ts, GPIO1_7);
 /* spi0 touch screen Info structure */
 static struct pl022_config_chip spi0_ts_chip_info = {
 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
@@ -179,7 +179,7 @@ static struct pl022_config_chip spi0_ts_chip_info = {
 	.ctrl_len = SSP_BITS_8,
 	.wait_state = SSP_MWIRE_WAIT_ZERO,
 	.duplex = SSP_MICROWIRE_CHANNEL_FULL_DUPLEX,
-	.cs_control = spi0_ts_cs_control,
+	.cs_control = spi0_ts_cs_gpio_control,
 };
 
 static struct stmpe_ts_platform_data stmpe610_ts_pdata = {
@@ -214,7 +214,7 @@ static struct spi_board_info __initdata spi_board_info[] = {
 		.controller_data = &spi0_ts_chip_info,
 		.max_speed_hz = 1000000,
 		.bus_num = 0,
-		.chip_select = SPEAR1310_SSP0_CS_SEL_CS0,
+		.chip_select = 0,
 		.mode = SPI_MODE_1,
 	}, {
 		.modalias = "m25p80",
