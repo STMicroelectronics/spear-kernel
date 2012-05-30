@@ -449,7 +449,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 
 		while (buf_len > 0 && tx_limit > 0 && rx_limit > 0) {
 			if (msgs[dev->msg_write_idx].flags & I2C_M_RD) {
-				writew(0x100, dev->base + DW_IC_DATA_CMD);
+				temp = 0x100;
 
 				/*
 				 * IP version > 0x312A has a facility to control
@@ -459,15 +459,19 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 				 * regardless of whether or not the Tx FIFO is
 				 * empty.
 				 */
+				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
+						buf_len == 1 &&
+						dev->version > 0x312A)
+					temp |= 0x200;
 
-				if (buf_len == 1 && dev->version > 0x312A)
-					writel(0x200, dev->base +
-							DW_IC_DATA_CMD);
+				writew(temp, dev->base + DW_IC_DATA_CMD);
 				rx_limit--;
 			} else {
 				temp = *buf++;
 
-				if (buf_len == 1 && dev->version > 0x312A)
+				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
+						buf_len == 1 &&
+						dev->version > 0x312A)
 					temp |= 0x200;
 
 				writel(temp, dev->base + DW_IC_DATA_CMD);
