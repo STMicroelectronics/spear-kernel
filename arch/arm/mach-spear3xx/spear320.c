@@ -3092,8 +3092,8 @@ struct platform_device spear320s_i2c2_device = {
 int audio_clk_config(struct i2s_clk_config_data *config)
 {
 	struct clk *i2s_sclk_clk, *i2s_ref_clk;
-	int ret;
-	u32 bclk;
+	int ret = 0;
+
 
 	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
 	if (IS_ERR(i2s_sclk_clk)) {
@@ -3108,17 +3108,17 @@ int audio_clk_config(struct i2s_clk_config_data *config)
 		goto put_i2s_sclk_clk;
 	}
 
-	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate);
+	/*
+	 * 320s cannot generate accurate clock in some cases but slightly
+	 * more than that which is under acceptable limits.
+	 * But since clk_set_rate fails for this clock we explicitly try
+	 * to set the higher clock.
+	 */
+#define REF_CLK_DELTA	10000
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate +
+			REF_CLK_DELTA);
 	if (ret) {
 		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
-		goto put_i2s_ref_clk;
-	}
-
-	bclk = config->chan_nr * config->data_width * config->sample_rate;
-
-	ret = clk_set_rate(i2s_sclk_clk, bclk);
-	if (ret) {
-		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
 		goto put_i2s_ref_clk;
 	}
 
