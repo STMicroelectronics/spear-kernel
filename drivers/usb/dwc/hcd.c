@@ -1304,6 +1304,7 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	hcd->rsrc_start = otg_dev->phys_addr;
 	hcd->rsrc_len = otg_dev->base_len;
 	hcd->self.otg_port = 1;
+	hcd->has_tt = 1;
 
 	/* Initialize the DWC OTG HCD. */
 	dwc_hcd = hcd_to_dwc_otg_hcd(hcd);
