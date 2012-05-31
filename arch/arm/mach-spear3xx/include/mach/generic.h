@@ -277,6 +277,7 @@ extern struct pmx_dev spear320s_pmx_uart5[];
 extern struct pmx_dev spear320s_pmx_uart6[];
 
 /* Add spear320 machine function declarations here */
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device);
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 		**pmx_devs, u8 pmx_dev_count);
 void __init spear320_map_io(void);
