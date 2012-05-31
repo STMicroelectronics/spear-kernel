@@ -16,6 +16,7 @@
 #include <linux/can/platform/c_can.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/i2c-designware.h>
 #include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
@@ -996,6 +997,40 @@ struct platform_device spear1310_can1_device = {
 	.dev.platform_data = &can1_pdata,
 };
 
+static int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear13xx_pmx_i2c;
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+static int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear13xx_pmx_i2c;
+	/* restore I2C SLCK control to I2C controller*/
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear1310_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_103,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_102,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
+};
+
 /* i2c1 device registeration */
 static struct resource i2c1_resources[] = {
 	{
@@ -1590,6 +1625,8 @@ void __init spear1310_init(struct pmx_mode *pmx_mode,
 	spear13xx_init();
 
 	tdm_hdlc_setup();
+
+	spear13xx_i2c_device.dev.platform_data = &spear1310_i2c0_dw_pdata;
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;

@@ -655,6 +655,7 @@ void config_clcd_gpio_pads(bool);
 #endif /* CONFIG_CPU_SPEAR1340 */
 
 #if defined(CONFIG_CPU_SPEAR1310) || defined(CONFIG_CPU_SPEAR1340)
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device);
 int otg_phy_init(void);
 int otg_param_init(struct core_params *params);
 #endif
