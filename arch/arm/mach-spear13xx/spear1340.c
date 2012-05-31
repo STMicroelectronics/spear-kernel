@@ -1346,31 +1346,6 @@ struct pmx_dev spear1340_pmx_sata = {
 	.mode_count = ARRAY_SIZE(pmx_sata_modes),
 };
 
-/* padmux devices to enable */
-static void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device)
-{
-	struct pmx_mux_reg *mux_reg;
-	int ret, i, j, k;
-
-	/*
-	 * Use pas mux framework to program device pads as gpios or let
-	 * them under device control. Turn them to device pads if
-	 * to_device is true else reset to make them as gpio.
-	 */
-	for (i = 0; i < count; i++) {
-		for (j = 0; j < devs[i]->mode_count; j++) {
-			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
-				mux_reg = &devs[i]->modes[j].mux_regs[k];
-				mux_reg->value = to_device? mux_reg->mask : 0x0;
-			}
-		}
-	}
-
-	ret = pmx_devs_enable(devs, count);
-	if (ret)
-		pr_err("padmux: registeration failed. err no: %d\n", ret);
-}
-
 /* Add spear1340 specific devices here */
 /* Add Amba Devices */
 /* uart device registeration */
@@ -1908,7 +1883,7 @@ static inline struct pmx_dev *get_pmx_data(unsigned gpio_nr)
 	return pmxdev;
 }
 
-int get_i2c_gpio(unsigned gpio_nr)
+static int get_i2c_gpio(unsigned gpio_nr)
 {
 	struct pmx_dev *pmxdev;
 
@@ -1922,7 +1897,7 @@ int get_i2c_gpio(unsigned gpio_nr)
 	return 0;
 }
 
-int put_i2c_gpio(unsigned gpio_nr)
+static int put_i2c_gpio(unsigned gpio_nr)
 {
 	struct pmx_dev *pmxdev;
 
