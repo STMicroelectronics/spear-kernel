@@ -16,6 +16,7 @@
 #include <linux/amba/serial.h>
 #include <linux/can/platform/c_can.h>
 #include <linux/designware_i2s.h>
+#include <linux/i2c-designware.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
@@ -3035,6 +3036,42 @@ struct platform_device spear320_eth1_device = {
 };
 
 /* i2c device registeration */
+static int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear3xx_pmx_i2c;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+static int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear3xx_pmx_i2c;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear320_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_4,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_5,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
+};
+
 static struct resource i2c1_resources[] = {
 	{
 		.start = SPEAR320_I2C_BASE,
@@ -3619,4 +3656,8 @@ void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+
+	/* Initialize I2C platform data */
+	spear3xx_i2c_device.dev.platform_data = &spear320_i2c0_dw_pdata;
+
 }
