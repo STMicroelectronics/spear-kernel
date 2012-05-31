@@ -1692,6 +1692,13 @@ static struct clk pci_clk = {
 	.recalc = &follow_parent,
 };
 
+/* PLGPIO clock */
+static struct clk plgpio_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_aclk_clk,
+	.recalc = &follow_parent,
+};
+
 /* ssp1 parents */
 static struct pclk_info ssp1_pclk_info[] = {
 	{
@@ -1905,6 +1912,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "i2c_designware.6",		.clk = &i2c6_clk},
 	{.dev_id = "i2c_designware.7",		.clk = &i2c7_clk},
 	{.dev_id = "pci",			.clk = &pci_clk},
+	{.dev_id = "plgpio",			.clk = &plgpio_clk},
 	{.dev_id = "spear_thermal",		.clk = &thermal_clk},
 	{.dev_id = "ssp-pl022.1",		.clk = &ssp1_clk},
 	{.con_id = "tdm_hdlc.0",		.clk = &tdm1_clk},
