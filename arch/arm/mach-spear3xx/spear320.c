@@ -3179,7 +3179,7 @@ put_i2s_sclk_clk:
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
-	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S32_LE,
 	.snd_rates = (SNDRV_PCM_RATE_8000 | \
 		 SNDRV_PCM_RATE_11025 | \
 		 SNDRV_PCM_RATE_16000 | \
