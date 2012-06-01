@@ -57,6 +57,7 @@
 #define	S2PC_VALUE		0x98
 #define CLOCK_OUT		0x60
 #define LEFT_J_DATA_FORMAT	0x00
+#define STA529_DATA_FORMAT	(0x7 << 1)
 #define I2S_DATA_FORMAT		0x02
 #define RIGHT_J_DATA_FORMAT	0x04
 #define CODEC_MUTE_VAL		0x80

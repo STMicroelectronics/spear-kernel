@@ -123,6 +123,7 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	}
 
 	val = sta529_read_reg_cache(codec, STA529_S2PCFG0);
+	val &= ~STA529_DATA_FORMAT;
 	val |= mode;
 	/*this setting will be used with actual h/w */
 	sta529_write(codec, STA529_S2PCFG0, val);
