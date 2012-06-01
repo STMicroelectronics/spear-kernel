@@ -63,5 +63,7 @@
 #define CODEC_MUTE_VAL		0x80
 #define NUM_OF_MSG		2
 #define POWER_STBY		(0x1 << 6)
+#define BCLK_TO_FS_MSK		0x30
+#define PDATA_LEN_MSK		0xC0
 
 #endif /* end of codec header file */

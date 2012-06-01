@@ -128,12 +128,6 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	/*this setting will be used with actual h/w */
 	sta529_write(codec, STA529_S2PCFG0, val);
 
-	/* set serial-to-parallel interface data length to 32 bit */
-	sta529_write(codec, STA529_S2PCFG1, 0xC1);
-
-	/* set parallel to-serial interface data length as 32 bit */
-	sta529_write(codec, STA529_P2SCFG1, 0xC1);
-
 	return 0;
 }
 
@@ -173,6 +167,7 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
 	u32 play_freq_val, record_freq_val, val;
+	int pdata_len, bclk_to_fs_ratio;
 
 	if (cpu_is_spear1340()) {
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
@@ -189,6 +184,32 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 			sta529_write(codec, STA529_S2PCFG0, 0x12);
 			sta529_write(codec, STA529_P2SCFG0, 0x93);
 		}
+	}
+
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
+		pdata_len = 1;
+		bclk_to_fs_ratio = 0;
+		break;
+	case SNDRV_PCM_FORMAT_S32_LE:
+		pdata_len = 3;
+		bclk_to_fs_ratio = 1;
+		break;
+	default:
+		dev_err(codec->dev, "Unsupported format\n");
+		return -EINVAL;
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		snd_soc_update_bits(codec, STA529_S2PCFG1, PDATA_LEN_MSK,
+				pdata_len << 6);
+		snd_soc_update_bits(codec, STA529_S2PCFG1, BCLK_TO_FS_MSK,
+				bclk_to_fs_ratio << 4);
+	} else {
+		snd_soc_update_bits(codec, STA529_P2SCFG1, PDATA_LEN_MSK,
+				pdata_len << 6);
+		snd_soc_update_bits(codec, STA529_P2SCFG1, BCLK_TO_FS_MSK,
+				bclk_to_fs_ratio << 4);
 	}
 
 	switch (params_rate(params)) {
