@@ -273,12 +273,16 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		config->data_width = 16;
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		dev->ccr = 0x00;
 		dev->xfer_resolution = 0x02;
 		break;
 
 	case SNDRV_PCM_FORMAT_S32_LE:
 		config->data_width = 32;
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		dev->ccr = 0x10;
 		dev->xfer_resolution = 0x05;
 		break;
@@ -445,8 +449,6 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->capture_dma_data.addr = res->start + I2S_RXDMA;
 	dev->play_dma_data.max_burst = 16;
 	dev->capture_dma_data.max_burst = 16;
-	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
-	dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	dev->play_dma_data.filter = pdata->filter;
 	dev->capture_dma_data.filter = pdata->filter;
 
