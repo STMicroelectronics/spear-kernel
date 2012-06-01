@@ -310,12 +310,6 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	config->sample_rate = params_rate(params);
 
-	/* NOTE: Force 32bit configuration for 320s */
-	if (cpu_is_spear320()) {
-		config->data_width = 32;
-		dev->ccr = 0x10;
-	}
-
 	if (!dev->i2s_clk_cfg)
 		return -EINVAL;
 
