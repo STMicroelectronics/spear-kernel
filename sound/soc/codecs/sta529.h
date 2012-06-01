@@ -59,7 +59,6 @@
 #define LEFT_J_DATA_FORMAT	0x00
 #define I2S_DATA_FORMAT		0x02
 #define RIGHT_J_DATA_FORMAT	0x04
-#define RIGHT_J_DATA_FORMAT	0x04
 #define CODEC_MUTE_VAL		0x80
 #define NUM_OF_MSG		2
 #define POWER_STBY		(0x1 << 6)
