@@ -277,12 +277,6 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 		dev->xfer_resolution = 0x02;
 		break;
 
-	case SNDRV_PCM_FORMAT_S24_LE:
-		config->data_width = 24;
-		dev->ccr = 0x08;
-		dev->xfer_resolution = 0x04;
-		break;
-
 	case SNDRV_PCM_FORMAT_S32_LE:
 		config->data_width = 32;
 		dev->ccr = 0x10;
