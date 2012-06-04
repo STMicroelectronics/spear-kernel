@@ -30,9 +30,10 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <plat/jpeg.h>
+#include <mach/hardware.h>
 #include "designware_jpeg.h"
 
-#define DJPEG_BURST	8
+u8 djpeg_burst;
 #define DJPEG_WIDTH	4
 
 /* global dev structure for jpeg. as there is no way to pass it from char
@@ -296,8 +297,17 @@ void jpeg_enable(u32 num_lli, u32 num_burst)
 {
 	u32 val;
 
-	/* configure ctrl register for number of llis */
-	writel(NUM_LLI(num_lli), &g_drv_data->regs->CTRL_REG.STATUS);
+	if (cpu_is_spear1310()) {
+		/* configure ctrl register for number of llis */
+		val = SPEAR1310_NUM_LLI(num_lli);
+		/* configure words in last transfer in Tx FIFO */
+		val |= LAST_XFER_WORDS((g_drv_data->img_size[JPEG_WRITE] / 4)
+				% 16);
+	} else {
+		val = NUM_LLI(num_lli);
+	}
+
+	writel(val, &g_drv_data->regs->CTRL_REG.STATUS);
 
 	/* configure jpeg for interrupt on burst count transfers */
 	if (num_burst)
@@ -563,9 +573,15 @@ static void dma_write_callback(void *param)
 static void dma_read_callback(void *param)
 {
 	unsigned long flags;
+
 	/* set flag of occurance of dma interupt. both dma and jpeg interrupts
 	 ** should come before the read call is wake up */
 	spin_lock_irqsave(&g_drv_data->lock, flags);
+	if (g_drv_data->rdma_flag) {
+		spin_unlock_irqrestore(&g_drv_data->lock, flags);
+		return;
+	}
+
 	g_drv_data->rdma_flag = 1;
 	if (g_drv_data->rjpeg_flag) {
 		g_drv_data->rdma_flag = g_drv_data->rjpeg_flag = 0;
@@ -834,7 +850,7 @@ s32 jpeg_start(u32 len)
 		 ** interrupt should come after transfer of buf_size amount of
 		 ** data */
 		burst_num = g_drv_data->buf_size[JPEG_READ]/
-			(DJPEG_WIDTH * DJPEG_BURST);
+			(DJPEG_WIDTH * djpeg_burst);
 
 		/*
 		 * start transfer of encoded/decoded image to the allocated
@@ -962,16 +978,16 @@ static s32 designware_jpeg_open(struct inode *inode, struct file *file)
 			/* jpeg2mem */
 			.src_addr = g_drv_data->rx_reg,
 			.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
-			.src_maxburst = 8,
-			.dst_maxburst = 8,
+			.src_maxburst = djpeg_burst,
+			.dst_maxburst = djpeg_burst,
 			.direction = DMA_FROM_DEVICE,
 			.device_fc = true,
 		}, {
 			/* mem2jpeg */
 			.dst_addr = g_drv_data->tx_reg,
 			.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
-			.src_maxburst = 8,
-			.dst_maxburst = 8,
+			.src_maxburst = djpeg_burst,
+			.dst_maxburst = djpeg_burst,
 			.direction = DMA_TO_DEVICE,
 			.device_fc = false,
 		},
@@ -1246,6 +1262,16 @@ static irqreturn_t designware_jpeg_irq(s32 irq, void *dev_id)
 	if (status_reg & END_OF_CONVERSION) {
 		/* end of encoding/decoding */
 		g_drv_data->operation_complete = 1;
+
+		/*
+		 * In SPEAr1310, JPEG doesn't give last burst request to DMA and
+		 * thus DMA transfer on output side never completes. As after
+		 * this interrupt, we will have only 16 x 4 bytes of data in
+		 * FIFO. That will get transfered before we disable DMA.
+		 */
+		if (!g_drv_data->rdma_flag && cpu_is_spear1310())
+			g_drv_data->rdma_flag = 1;
+
 		writel(status_reg & INT_CLR,
 				&g_drv_data->regs->CTRL_REG.STATUS);
 		writel(JPEG_DISABLE, &g_drv_data->regs->REG0);
@@ -1401,6 +1427,11 @@ static s32 designware_jpeg_probe(struct platform_device *pdev)
 		(dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_IN;
 	g_drv_data->rx_reg =
 		(dma_addr_t)&((struct jpeg_regs *)(res->start))->FIFO_OUT;
+
+	if (cpu_is_spear1310())
+		djpeg_burst = 16;
+	else
+		djpeg_burst = 8;
 
 	return status;
 

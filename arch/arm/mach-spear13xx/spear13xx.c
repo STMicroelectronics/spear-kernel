@@ -28,12 +28,14 @@
 #include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/irq.h>
+#include <asm/pmu.h>
 #include <asm/setup.h>
 #include <asm/localtimer.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
 #include <plat/adc.h>
 #include <plat/clock.h>
+#include <plat/cpufreq.h>
 #include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/dma.h>
@@ -42,6 +44,7 @@
 #include <mach/irqs.h>
 #include <mach/misc_regs.h>
 #include <mach/spear_pcie.h>
+#include <sound/pcm.h>
 
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -461,10 +464,6 @@ void __init nand_mach_init(u32 busw)
 #ifdef CONFIG_CPU_SPEAR1340
 		reg = VA_SPEAR1340_FSMC_CFG;
 #endif
-	} else if (cpu_is_spear1310()) {
-#ifdef CONFIG_CPU_SPEAR1310
-		reg = VA_SPEAR1310_FSMC_CFG;
-#endif
 	} else
 		reg = VA_FSMC_CFG;
 
@@ -482,7 +481,14 @@ void __init nand_mach_init(u32 busw)
 
 void nand_select_bank(u32 bank, u32 busw)
 {
-	u32 fsmc_cfg = readl(VA_FSMC_CFG);
+	u32 fsmc_cfg;
+
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		fsmc_cfg = readl(VA_SPEAR1340_FSMC_CFG);
+#endif
+	} else
+		fsmc_cfg = readl(VA_FSMC_CFG);
 
 	fsmc_cfg &= ~(NAND_BANK_MASK << NAND_BANK_SHIFT);
 	fsmc_cfg |= (bank << NAND_BANK_SHIFT);
@@ -492,11 +498,31 @@ void nand_select_bank(u32 bank, u32 busw)
 	else
 		fsmc_cfg &= ~(1 << NAND_DEV_WIDTH16);
 
-	writel(fsmc_cfg, VA_FSMC_CFG);
+	if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		writel(fsmc_cfg, VA_SPEAR1340_FSMC_CFG);
+#endif
+	} else
+		writel(fsmc_cfg, VA_FSMC_CFG);
 }
+
+struct dw_dma_slave nand_read_dma_priv = {
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.src_master = SPEAR13XX_DMA_MASTER_FSMC,
+	.dst_master = SPEAR13XX_DMA_MASTER_MEMORY,
+};
+
+struct dw_dma_slave nand_write_dma_priv = {
+	.dma_dev = &spear13xx_dmac_device[0].dev,
+	.src_master = SPEAR13XX_DMA_MASTER_MEMORY,
+	.dst_master = SPEAR13XX_DMA_MASTER_FSMC,
+};
 
 static struct fsmc_nand_platform_data nand_platform_data = {
 	.select_bank = nand_select_bank,
+	.mode = USE_WORD_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
 };
 
 static struct resource nand_resources[] = {
@@ -519,6 +545,26 @@ struct platform_device spear13xx_nand_device = {
 	.resource = nand_resources,
 	.num_resources = ARRAY_SIZE(nand_resources),
 	.dev.platform_data = &nand_platform_data,
+};
+
+/* pmu device */
+static struct resource spear13xx_pmu_resources[] = {
+	{
+		.start	= SPEAR13XX_IRQ_PMU0,
+		.end	= SPEAR13XX_IRQ_PMU0,
+		.flags	= IORESOURCE_IRQ,
+	}, {
+		.start	= SPEAR13XX_IRQ_PMU1,
+		.end	= SPEAR13XX_IRQ_PMU1,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear13xx_pmu_device = {
+	.name		= "arm-pmu",
+	.id		= ARM_PMU_DEVICE_CPU,
+	.num_resources	= ARRAY_SIZE(spear13xx_pmu_resources),
+	.resource	= spear13xx_pmu_resources,
 };
 
 /* usb host device registeration */
@@ -774,6 +820,10 @@ static struct resource pcie0_resources[] = {
 		.end = SPEAR13XX_PCIE0_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
+		.start = SPEAR13XX_MIPHY0_BASE,
+		.end = SPEAR13XX_MIPHY0_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
 		.start = SPEAR13XX_IRQ_PCIE0,
 		.flags = IORESOURCE_IRQ,
 	},
@@ -810,6 +860,112 @@ struct platform_device spear13xx_pcie_host0_device = {
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	200000, /* 200 MHZ */
+	250000, /* 250 MHZ */
+	332000, /* 332 MHZ */
+	400000, /* 400 MHZ */
+	500000, /* 500 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device spear13xx_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
+};
+
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_clk_config_data *config)
+{
+	struct clk *i2s_sclk_clk, *i2s_ref_clk;
+	int ret;
+	u32 bclk;
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		return PTR_ERR(i2s_sclk_clk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk_clk;
+	}
+
+	if (machine_is_spear1340_evb()) {
+		if (config->sample_rate != 48000) {
+			ret = clk_set_parent_sys(NULL, "i2s_ref_clk", NULL,
+					"i2s_prs1_clk");
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_sclk_clk;
+			}
+		} else {
+			ret = clk_set_parent_sys(NULL, "i2s_ref_clk", NULL,
+					"i2s_src_clk");
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_sclk_clk;
+			}
+			goto config_bclk;
+		}
+	}
+
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+config_bclk:
+	bclk = config->chan_nr * config->data_width * config->sample_rate;
+
+	ret = clk_set_rate(i2s_sclk_clk, bclk);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_enable(i2s_sclk_clk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	return 0;
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk_clk:
+	clk_put(i2s_sclk_clk);
+
+	return ret;
+
+}
+
 /* i2s0 device registeration */
 static struct dw_dma_slave i2s0_dma_data[] = {
 	{
@@ -832,10 +988,18 @@ static struct dw_dma_slave i2s0_dma_data[] = {
 static struct i2s_platform_data i2s0_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
-	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = &i2s0_dma_data[0],
 	.capture_dma_data = &i2s0_dma_data[1],
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s0_resources[] = {
@@ -888,10 +1052,18 @@ static struct dw_dma_slave i2s1_dma_data[] = {
 static struct i2s_platform_data i2s1_data = {
 	.cap = PLAY | RECORD,
 	.channel = 4,
-	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = &i2s1_dma_data[0],
 	.capture_dma_data = &i2s1_dma_data[1],
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s1_resources[] = {
@@ -992,6 +1164,10 @@ static struct resource pcie1_resources[] = {
 		.end = SPEAR13XX_PCIE1_BASE + SZ_8K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
+		.start = SPEAR13XX_MIPHY1_BASE,
+		.end = SPEAR13XX_MIPHY1_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
 		.start = SPEAR13XX_IRQ_PCIE1,
 		.flags = IORESOURCE_IRQ,
 	},
@@ -1005,6 +1181,10 @@ static struct resource pcie2_resources[] = {
 	}, {
 		.start = SPEAR13XX_PCIE2_BASE,
 		.end = SPEAR13XX_PCIE2_BASE + SZ_8K - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR13XX_MIPHY2_BASE,
+		.end = SPEAR13XX_MIPHY2_BASE + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	}, {
 		.start = SPEAR13XX_IRQ_PCIE2,
@@ -1095,6 +1275,123 @@ struct platform_device spear13xx_udc_device = {
 };
 #endif
 
+#if defined(CONFIG_CPU_SPEAR1340) || defined(CONFIG_CPU_SPEAR1310)
+/* padmux devices to enable (only for 1340 and 1310) */
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device)
+{
+	struct pmx_mux_reg *mux_reg;
+	int ret, i, j, k;
+
+	/*
+	 * Use pas mux framework to program device pads as gpios or let
+	 * them under device control. Turn them to device pads if
+	 * to_device is true else reset to make them as gpio.
+	 */
+	for (i = 0; i < count; i++) {
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+				mux_reg = &devs[i]->modes[j].mux_regs[k];
+				mux_reg->value = to_device? mux_reg->mask : 0x0;
+			}
+		}
+	}
+
+	ret = pmx_devs_enable(devs, count);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+int otg_phy_init(void)
+{
+	u32 temp, msec = 1000;
+	void __iomem *usbphy_gen_cfg_reg, *perip1_clk_enb, *perip1_sw_rst;
+	int uoc_enb_bit_off;
+
+	if (cpu_is_spear1310()) {
+#ifdef CONFIG_CPU_SPEAR1310
+		usbphy_gen_cfg_reg = VA_SPEAR1310_USBPHY_GEN_CFG;
+		perip1_clk_enb = VA_SPEAR1310_PERIP1_CLK_ENB;
+		perip1_sw_rst = VA_SPEAR1310_PERIP1_SW_RST;
+		uoc_enb_bit_off = SPEAR1310_UOC_RST_ENB;
+#endif
+	} else if (cpu_is_spear1340()) {
+#ifdef CONFIG_CPU_SPEAR1340
+		usbphy_gen_cfg_reg = VA_SPEAR1340_USBPHY_GEN_CFG;
+		perip1_clk_enb = VA_SPEAR1340_PERIP1_CLK_ENB;
+		perip1_sw_rst = VA_SPEAR1340_PERIP1_SW_RST;
+		uoc_enb_bit_off = SPEAR1340_UOC_RST_ENB;
+#endif
+	} else {
+		pr_err("%s:wrong cpu\n", __func__);
+		return -EINVAL;
+	}
+
+	/* phy por deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp &= ~USBPHYPOR;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* phy clock enable */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPHYRST;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* wait for pll lock */
+	while (!(readl(usbphy_gen_cfg_reg) & USBPLLLOCK)) {
+		if (msec--) {
+			pr_err(" Problem with USB PHY PLL Lock\n");
+			return -ETIMEDOUT;
+		}
+		udelay(1);
+	}
+
+	/* otg prstnt deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPRSNT;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* OTG HCLK Disable */
+	temp = readl(perip1_clk_enb);
+	temp &= ~(1 << uoc_enb_bit_off);
+	writel(temp, perip1_clk_enb);
+
+	/* OTG HRESET deassert */
+	temp = readl(perip1_sw_rst);
+	temp &= ~(1 << uoc_enb_bit_off);
+	writel(temp, perip1_sw_rst);
+
+	/* OTG HCLK Enable */
+	temp = readl(perip1_clk_enb);
+	temp |= (1 << uoc_enb_bit_off);
+	writel(temp, perip1_clk_enb);
+
+	return 0;
+}
+
+int otg_param_init(struct core_params *params)
+{
+	int i;
+
+	/* Common Dev RX fifo Size : 0x400 */
+	params->dev_rx_fifo_size = 0x400;
+	/* Dev TX fifo Size for fifo 0: 0x300 */
+	params->dev_nperio_tx_fifo_size = 0x300;
+	/* TX fifo Size for fifo 1-7: 0x200 */
+	params->fifo_number = 7;
+	for (i = 1; i <= 7; i++)
+		params->dev_tx_fifo_size[i - 1] = 0x200;
+
+	/* Common Host RX fifo Size : 0x400 */
+	params->host_rx_fifo_size = 0x400;
+	/* Host TX fifo Size for fifo 0: 0x400 */
+	params->host_nperio_tx_fifo_size = 0x400;
+	/* Host Periodic TX fifo Size for fifo 0: 0x400 */
+	params->host_perio_tx_fifo_size = 0x400;
+
+	return 0;
+}
+#endif
+
 static void dmac_setup(void)
 {
 	/*
@@ -1102,7 +1399,11 @@ static void dmac_setup(void)
 	 * operations.
 	 */
 	/* setting Peripheral flow controller for jpeg */
-	writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
+	if (cpu_is_spear1310())
+		writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG,
+				VA_SPEAR1310_DMAC_FLOW_SEL);
+	else
+		writel(1 << SPEAR13XX_DMA_REQ_FROM_JPEG, VA_DMAC_FLOW_SEL);
 }
 
 /*
@@ -1191,37 +1492,62 @@ fail_get_input_pclk:
 #ifdef CONFIG_SND_SOC_STA529
 static void i2s_clk_init(void)
 {
-	struct clk *i2s_src_clk, *pll3_clk, *i2s_prs1_clk, *i2s_ref_pad_clk;
-	struct clk *i2s_ref_clk, *i2s_sclk_clk, *i2s_src_pad_clk;
+	struct clk *i2s_ref_pad_clk, *i2s_sclk_clk;
+	char *src_pclk_name, *ref_pclk_name;
 
-	i2s_src_clk = clk_get_sys(NULL, "i2s_src_clk");
-	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+	if (machine_is_spear1340_lcad() || !cpu_is_spear1340()) {
+		if (machine_is_spear1340_lcad())
+			src_pclk_name = "pll2_clk";
+		else
+			src_pclk_name = "pll3_clk";
+
+		 ref_pclk_name = "i2s_prs1_clk";
+
+		/* set pll to 49.15 Mhz */
+		if (clk_set_rate_sys(NULL, src_pclk_name, 49152000)) {
+			pr_err("%s:set_rate of %s fail\n", __func__,
+					src_pclk_name);
+			return;
+		}
+	} else {
+		src_pclk_name = "i2s_src_pad_clk";
+		ref_pclk_name = "i2s_src_clk";
+	}
+
+	/*
+	 * After this this src_clk is correctly programmed, either to
+	 * pll2, pll3 or pad.
+	 */
+	if (clk_set_parent_sys(NULL, "i2s_src_clk", NULL, src_pclk_name)) {
+		pr_err("%s:set_parent to %s for i2s_src_clk fail\n",
+				__func__, src_pclk_name);
 		return;
 	}
 
-	pll3_clk = clk_get_sys(NULL, "pll3_clk");
-	if (IS_ERR(pll3_clk)) {
-		pr_err("%s:couldn't get pll3_clck\n", __func__);
-		goto put_src_clk;
+	/* program prescalar if required */
+	if (machine_is_spear1340_lcad() || !cpu_is_spear1340()) {
+		/* set to 12.288 Mhz */
+		if (clk_set_rate_sys(NULL, ref_pclk_name, 12288000)) {
+			pr_err("%s:set_rate of %s fail\n", __func__,
+					ref_pclk_name);
+			return;
+		}
 	}
 
-	i2s_prs1_clk = clk_get_sys(NULL, "i2s_prs1_clk");
-	if (IS_ERR(i2s_prs1_clk)) {
-		pr_err("%s:couldn't get i2s_prs1_clk\n", __func__);
-		goto put_pll3_clk;
-	}
-
-	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
-	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
-		goto put_prs1_clk;
+	/*
+	 * After this this ref_clk is correctly programmed to 12.288 and
+	 * sclk_clk to 1.536 MHz
+	 */
+	if (clk_set_parent_sys(NULL, "i2s_ref_clk", NULL, ref_pclk_name)) {
+		pr_err("%s:set_parent to %s of ref_clk fail\n",
+				__func__, ref_pclk_name);
+		return;
 	}
 
 	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
 	if (IS_ERR(i2s_sclk_clk)) {
 		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
-		goto put_ref_clk;
+		return;
 	}
 
 	i2s_ref_pad_clk = clk_get_sys(NULL, "i2s_ref_pad_clk");
@@ -1230,71 +1556,20 @@ static void i2s_clk_init(void)
 		goto put_sclk_clk;
 	}
 
-	i2s_src_pad_clk = clk_get_sys(NULL, "i2s_src_pad_clk");
-	if (IS_ERR(i2s_src_pad_clk)) {
-		pr_err("%s:couldn't get i2s_src_pad_clk\n", __func__);
-		goto put_ref_pad_clk;
-	}
-
-	if (cpu_is_spear1340()) {
-		if (clk_set_parent(i2s_src_clk, i2s_src_pad_clk)) {
-			pr_err("%s:set_parent pad clk to i2s_src_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-
-		if (clk_set_parent(i2s_ref_clk, i2s_src_clk)) {
-			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-	} else {
-		if (clk_set_parent(i2s_src_clk, pll3_clk)) {
-			pr_err("%s:set_parent pll3_clk of i2s_src_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-
-		if (clk_set_rate(pll3_clk, 49152000)) /* 49.15 Mhz */
-			goto put_src_pad_clk;
-
-		if (clk_set_rate(i2s_prs1_clk, 12288000)) /*12.288 Mhz */
-			goto put_src_pad_clk;
-
-		if (clk_set_parent(i2s_ref_clk, i2s_prs1_clk)) {
-			pr_err("%s:set_parent prs1_clk of ref_clk fail\n",
-					__func__);
-			goto put_src_pad_clk;
-		}
-	}
-
 	if (clk_enable(i2s_ref_pad_clk)) {
 		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
-		goto put_src_pad_clk;
+		goto put_ref_pad_clk;
 	}
 
 	if (clk_enable(i2s_sclk_clk)) {
 		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-		goto put_src_pad_clk;
+		goto put_ref_pad_clk;
 	}
 
-	if (clk_enable(i2s_ref_clk))
-		pr_err("%s:enabling i2s_ref_clk\n", __func__);
-
-put_src_pad_clk:
-	clk_put(i2s_src_pad_clk);
 put_ref_pad_clk:
 	clk_put(i2s_ref_pad_clk);
 put_sclk_clk:
 	clk_put(i2s_sclk_clk);
-put_ref_clk:
-	clk_put(i2s_ref_clk);
-put_prs1_clk:
-	clk_put(i2s_prs1_clk);
-put_pll3_clk:
-	clk_put(pll3_clk);
-put_src_clk:
-	clk_put(i2s_src_clk);
 }
 #endif
 

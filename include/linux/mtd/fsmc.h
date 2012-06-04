@@ -162,6 +162,21 @@ struct fsmc_nand_timings {
 	uint8_t tset;
 };
 
+enum rbpin {
+	FSMC_RB_WAIT = 0,
+	FSMC_RB_GPIO,
+};
+
+struct fsmc_rbpin {
+	enum rbpin	use_pin;
+	uint32_t	gpio_pin;
+};
+
+enum access_mode {
+	USE_DMA_ACCESS = 1,
+	USE_WORD_ACCESS,
+};
+
 /**
  * fsmc_nand_platform_data - platform specific NAND controller config
  * @partitions: partition table for the platform, use a default fallback
@@ -175,18 +190,24 @@ struct fsmc_nand_timings {
  * this may be set to NULL
  */
 struct fsmc_nand_platform_data {
-	struct fsmc_nand_timings *nand_timings;
+	const struct fsmc_nand_timings *nand_timings;
+	const struct fsmc_rbpin	*rbpin;
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
 	unsigned int		options;
 	unsigned int		width;
-	unsigned int		bank;
+	unsigned int		max_banks;
 
 	/* CLE, ALE offsets */
 	unsigned long           cle_off;
 	unsigned long           ale_off;
+	enum access_mode	mode;
 
 	void			(*select_bank)(uint32_t bank, uint32_t busw);
+
+	/* priv structures for dma accesses */
+	void			*read_dma_priv;
+	void			*write_dma_priv;
 };
 
 extern int __init fsmc_nor_init(struct platform_device *pdev,

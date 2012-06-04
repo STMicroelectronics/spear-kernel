@@ -16,6 +16,7 @@
 #include <linux/amba/serial.h>
 #include <linux/can/platform/c_can.h>
 #include <linux/designware_i2s.h>
+#include <linux/i2c-designware.h>
 #include <linux/mtd/physmap.h>
 #include <linux/ptrace.h>
 #include <linux/types.h>
@@ -30,6 +31,7 @@
 #include <mach/hardware.h>
 #include <mach/macb_eth.h>
 #include <mach/misc_regs.h>
+#include <sound/pcm.h>
 
 /* modes */
 #define AUTO_NET_SMII_MODE	(1 << 0)
@@ -3034,6 +3036,42 @@ struct platform_device spear320_eth1_device = {
 };
 
 /* i2c device registeration */
+static int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear3xx_pmx_i2c;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+static int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear3xx_pmx_i2c;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear320_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_4,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_5,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
+};
+
 static struct resource i2c1_resources[] = {
 	{
 		.start = SPEAR320_I2C_BASE,
@@ -3076,13 +3114,83 @@ struct platform_device spear320s_i2c2_device = {
 	.resource = i2c2_resources,
 };
 
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_clk_config_data *config)
+{
+	struct clk *i2s_sclk_clk, *i2s_ref_clk;
+	int ret = 0;
+
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		return PTR_ERR(i2s_sclk_clk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk_clk;
+	}
+
+	/*
+	 * 320s cannot generate accurate clock in some cases but slightly
+	 * more than that which is under acceptable limits.
+	 * But since clk_set_rate fails for this clock we explicitly try
+	 * to set the higher clock.
+	 */
+#define REF_CLK_DELTA	10000
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate +
+			REF_CLK_DELTA);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_enable(i2s_sclk_clk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	return 0;
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk_clk:
+	clk_put(i2s_sclk_clk);
+
+	return ret;
+
+}
+
 static struct i2s_platform_data i2s_data = {
 	.cap = PLAY | RECORD,
 	.channel = 2,
-	.swidth = 32,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S32_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
 	.play_dma_data = "i2s_tx",
 	.capture_dma_data = "i2s_rx",
 	.filter = pl08x_filter_id,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 /* i2s device registeration */
@@ -3111,7 +3219,9 @@ struct platform_device spear320_pcm_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand_resources[] = {
 	{
@@ -3391,12 +3501,28 @@ static struct map_desc spear320_io_desc[] __initdata = {
 	},
 };
 
-/* spear320 routines */
+/* spear320s routines */
+static void c_can_disable_bugfix(struct platform_device *c_can)
+{
+	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
+
+	pdata->is_quirk_required = false;
+	pdata->devtype_data.rx_first = 1;
+	pdata->devtype_data.rx_split = 20;
+	pdata->devtype_data.rx_last = 26;
+	pdata->devtype_data.tx_num = 6;
+}
+
+/* spear320s routines */
 static void c_can_enable_bugfix(struct platform_device *c_can)
 {
 	struct c_can_platform_data *pdata = dev_get_platdata(&c_can->dev);
 
-	pdata->is_quirk_required = 1;
+	pdata->is_quirk_required = true;
+	pdata->devtype_data.rx_first = 1;
+	pdata->devtype_data.rx_split = 25;
+	pdata->devtype_data.rx_last = 31;
+	pdata->devtype_data.tx_num = 1;
 }
 
 static void i2s_clk_init(void)
@@ -3471,6 +3597,10 @@ void __init spear320_init(void)
 
 void __init spear320s_init(struct pmx_mode *pmx_mode)
 {
+	/* disable bug-fix for CAN controllers */
+	c_can_disable_bugfix(&spear320_can0_device);
+	c_can_disable_bugfix(&spear320_can1_device);
+
 	if (pmx_mode == &spear320s_extended_mode) {
 		/* Fix SPEAr320s specific pmx stuff */
 		pmx_driver.mode_reg.address = SPEAR320S_EXT_CTRL_REG;
@@ -3526,4 +3656,8 @@ void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+
+	/* Initialize I2C platform data */
+	spear3xx_i2c_device.dev.platform_data = &spear320_i2c0_dw_pdata;
+
 }

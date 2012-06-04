@@ -285,32 +285,13 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	gusbcfg_addr = (ulong) (dwc_dev->core_if->core_global_regs)
 		+ DWC_GUSBCFG;
 
-	if (dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
-		usbcfg = dwc_read32(gusbcfg_addr);
-		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
-		usbcfg |= DWC_USBCFG_FRC_DEV_MODE;
-		dwc_write32(gusbcfg_addr, usbcfg);
-	}
-
-	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
-		/* Initialize the PCD */
-		retval = dwc_otg_pcd_init(dev);
-		if (retval) {
-			dev_err(dev, "dwc_otg_pcd_init failed\n");
-			dwc_dev->pcd = NULL;
-			goto fail_req_irq;
-		}
-	}
-
-	if (dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
 		/* Initialize the HCD and force_host_mode */
 		usbcfg = dwc_read32(gusbcfg_addr);
-		usbcfg |= DWC_USBCFG_FRC_HST_MODE;
 		usbcfg &= ~DWC_USBCFG_FRC_DEV_MODE;
+		usbcfg |= DWC_USBCFG_FRC_HST_MODE;
 		dwc_write32(gusbcfg_addr, usbcfg);
-	}
 
-	if (!dwc_has_feature(dwc_dev->core_if, DWC_DEVICE_ONLY)) {
 		/* update transiver state */
 		dwc_dev->core_if->xceiv->state = OTG_STATE_A_HOST;
 
@@ -340,6 +321,30 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 			}
 		}
 	}
+
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
+		usbcfg = dwc_read32(gusbcfg_addr);
+		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
+		usbcfg |= DWC_USBCFG_FRC_DEV_MODE;
+		dwc_write32(gusbcfg_addr, usbcfg);
+
+		/* Initialize the PCD */
+		retval = dwc_otg_pcd_init(dev);
+		if (retval) {
+			dev_err(dev, "dwc_otg_pcd_init failed\n");
+			dwc_dev->pcd = NULL;
+			goto fail_req_irq;
+		}
+	}
+
+	if (!dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)
+			&& !dwc_has_feature(dwc_dev->core_if, DWC_HOST_ONLY)) {
+		usbcfg = dwc_read32(gusbcfg_addr);
+		usbcfg &= ~DWC_USBCFG_FRC_HST_MODE;
+		usbcfg &= ~DWC_USBCFG_FRC_DEV_MODE;
+		dwc_write32(gusbcfg_addr, usbcfg);
+	}
+
 	/*
 	 * Enable the global interrupt after all the interrupt
 	 * handlers are installed.
@@ -449,8 +454,6 @@ static struct platform_driver dwc_otg_driver = {
  */
 static int __init dwc_otg_driver_init(void)
 {
-
-	pr_info("%s: version %s\n", dwc_driver_name, DWC_DRIVER_VERSION);
 	return platform_driver_register(&dwc_otg_driver);
 }
 

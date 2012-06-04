@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -140,7 +140,11 @@ _mali_osk_errcode_t _ump_osk_mem_mapregion_init( ump_memory_allocation * descrip
 	}
 
 	vma = (struct vm_area_struct*)descriptor->process_mapping_info;
-	if (NULL == vma ) return _MALI_OSK_ERR_FAULT;
+	if (NULL == vma )
+	{
+		kfree(vma_usage_tracker);
+		return _MALI_OSK_ERR_FAULT;
+	}
 
 	vma->vm_private_data = vma_usage_tracker;
 	vma->vm_flags |= VM_IO;

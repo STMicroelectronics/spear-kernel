@@ -17,7 +17,10 @@
  */
 
 #include <linux/clk.h>
+#include <linux/completion.h>
+#include <linux/dmaengine.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/resource.h>
@@ -285,7 +288,7 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * Default partition layouts for nand devices
  * Size for "Root file system" is updated in driver based on actual device size
  */
-DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 20, 256);
+DEFAULT_PARTITION_TABLE(16KB, 0x4000, 4, 28, 256);
 DEFAULT_PARTITION_TABLE(64KB, 0x10000, 4, 20, 128);
 DEFAULT_PARTITION_TABLE(128KB, 0x20000, 4, 12, 48);
 DEFAULT_PARTITION_TABLE(256KB, 0x40000, 4, 6, 24);
@@ -300,43 +303,64 @@ const char *part_probes[] = { "cmdlinepart", NULL };
 /**
  * struct fsmc_nand_data - atructure for FSMC NAND device state
  *
- * @mtd:		MTD info for a NAND flash.
- * @nand:		Chip related info for a NAND flash.
- * @partitions:		Partition info for a NAND Flash.
- * @nr_partitions:	Total number of partition of a NAND flash.
+ * @mtd:		MTD info for a NAND flash
+ * @nand:		Chip related info for a NAND flash
+ * @dev:		Device structure pointer
+ * @clk:		Clock structure for FSMC
+ * @ecc_place:		ECC placing locations in oobfree type format
+ * @bank:		Bank number for probed device
  *
- * @ecc_place:		ECC placing locations in oobfree type format.
- * @bank:		Bank number for probed device.
- * @clk:		Clock structure for FSMC.
+ * @read_dma_chan:	DMA channel for read access
+ * @write_dma_chan:	DMA channel for write access to NAND
+ * @dma_access_complete: Completion structure
  *
- * @data_va:		NAND port for Data.
- * @cmd_va:		NAND port for Command.
- * @addr_va:		NAND port for Address.
- * @regs_va:		FSMC regs base address.
+ * @dev_timings:	Timings to be programmed in controller
+ * @partitions:		Partition info for a NAND Flash
+ * @nr_partitions:	Total number of partition of a NAND flash
+ * @mode:		Defines the NAND device access mode
+ *			Can be one of:
+ *			- DMA access
+ *			- Word access (CPU)
+ *			- None (Use driver default ie bus width specific
+ *			  CPU access)
+ * @max_banks:		Maximum number of banks supported
+ * @select_chip:	Select a particular bank
+ *
+ * @data_pa:		NAND Physical port for Data
+ * @data_va:		NAND port for Data
+ * @cmd_va:		NAND port for Command
+ * @addr_va:		NAND port for Address
+ * @regs_va:		FSMC regs base address
  */
 struct fsmc_nand_data {
 	struct mtd_info		mtd;
 	struct nand_chip	nand;
-	struct mtd_partition	*partitions;
-	unsigned int		nr_partitions;
-
+	struct device		*dev;
+	struct clk		*clk;
 	struct fsmc_eccplace	*ecc_place;
 	unsigned int		bank;
-	struct clk		*clk;
 
-	struct resource		*resregs;
-	struct resource		*rescmd;
-	struct resource		*resaddr;
-	struct resource		*resdata;
+	/* DMA related objects */
+	struct dma_chan		*read_dma_chan;
+	struct dma_chan		*write_dma_chan;
+	struct completion	dma_access_complete;
+	void			*dma_buf;
 
-	struct fsmc_nand_timings *dev_timings;
+	/* Recieved from plat data */
+	struct mtd_partition	*partitions;
+	unsigned int		nr_partitions;
+	struct fsmc_nand_timings dev_timings;
+	struct fsmc_rbpin	rbpin;
+	enum access_mode	mode;
+	uint32_t		max_banks;
+	void			(*select_chip)(uint32_t bank, uint32_t busw);
 
+	/* Virtual/Physical addresses for CPU/DMA access */
+	dma_addr_t		data_pa;
 	void __iomem		*data_va;
 	void __iomem		*cmd_va;
 	void __iomem		*addr_va;
 	void __iomem		*regs_va;
-
-	void			(*select_chip)(uint32_t bank, uint32_t busw);
 };
 
 /* Assert CS signal based on chipnr */
@@ -347,6 +371,7 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
 
+	host->bank = chipnr;
 	switch (chipnr) {
 	case -1:
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0 | NAND_CTRL_CHANGE);
@@ -376,6 +401,7 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
 					struct fsmc_nand_data, mtd);
 	struct fsmc_regs *regs = host->regs_va;
 	unsigned int bank = host->bank;
+	uint32_t *pc_p = &regs->bank_regs[bank].pc;
 
 	if (ctrl & NAND_CTRL_CHANGE) {
 		if (ctrl & NAND_CLE) {
@@ -389,19 +415,16 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
 			this->IO_ADDR_W = (void __iomem *)host->data_va;
 		}
 
-		if (ctrl & NAND_NCE) {
-			writel(readl(&regs->bank_regs[bank].pc) | FSMC_ENABLE,
-					&regs->bank_regs[bank].pc);
-		} else {
-			writel(readl(&regs->bank_regs[bank].pc) & ~FSMC_ENABLE,
-				       &regs->bank_regs[bank].pc);
-		}
+		if (ctrl & NAND_NCE)
+			writel_relaxed(readl_relaxed(pc_p) | FSMC_ENABLE, pc_p);
+		else
+			writel_relaxed(readl_relaxed(pc_p) & ~FSMC_ENABLE, pc_p);
 	}
 
 	mb();
 
 	if (cmd != NAND_CMD_NONE)
-		writeb(cmd, this->IO_ADDR_W);
+		writeb_relaxed(cmd, this->IO_ADDR_W);
 }
 
 /*
@@ -411,41 +434,36 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  * FSMC registers
  */
 static void fsmc_nand_setup(struct fsmc_regs *regs, uint32_t bank,
-			   uint32_t busw, struct fsmc_nand_timings *timings)
+			   uint32_t busw, struct fsmc_nand_timings *timings,
+			   struct fsmc_rbpin *rbpin)
 {
-	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
+	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE;
 	uint32_t tclr, tar, thiz, thold, twait, tset;
-	struct fsmc_nand_timings *tims;
-	struct fsmc_nand_timings default_timings = {
-		.tclr	= FSMC_TCLR_1,
-		.tar	= FSMC_TAR_1,
-		.thiz	= FSMC_THIZ_1,
-		.thold	= FSMC_THOLD_4,
-		.twait	= FSMC_TWAIT_6,
-		.tset	= FSMC_TSET_0,
-	};
 
-	if (timings)
-		tims = timings;
-	else
-		tims = &default_timings;
+	if (!rbpin || (rbpin->use_pin == FSMC_RB_WAIT))
+		value |= FSMC_WAITON;
 
-	tclr = (tims->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
-	tar = (tims->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
-	thiz = (tims->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
-	thold = (tims->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
-	twait = (tims->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
-	tset = (tims->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
+	tclr = (timings->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
+	tar = (timings->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
+	thiz = (timings->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
+	thold = (timings->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
+	twait = (timings->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
+	tset = (timings->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
 
-	if (busw)
-		writel(value | FSMC_DEVWID_16, &regs->bank_regs[bank].pc);
-	else
-		writel(value | FSMC_DEVWID_8, &regs->bank_regs[bank].pc);
+	if (busw) {
+		writel_relaxed(value | FSMC_DEVWID_16,
+				&regs->bank_regs[bank].pc);
+	} else {
+		writel_relaxed(value | FSMC_DEVWID_8,
+				&regs->bank_regs[bank].pc);
+	}
 
-	writel(readl(&regs->bank_regs[bank].pc) | tclr | tar,
-	       &regs->bank_regs[bank].pc);
-	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].comm);
-	writel(thiz | thold | twait | tset, &regs->bank_regs[bank].attrib);
+	writel_relaxed(readl_relaxed(&regs->bank_regs[bank].pc) | tclr | tar,
+			&regs->bank_regs[bank].pc);
+	writel_relaxed(thiz | thold | twait | tset,
+			&regs->bank_regs[bank].comm);
+	writel_relaxed(thiz | thold | twait | tset,
+			&regs->bank_regs[bank].attrib);
 }
 
 /*
@@ -457,13 +475,11 @@ static void fsmc_enable_hwecc(struct mtd_info *mtd, int mode)
 					struct fsmc_nand_data, mtd);
 	struct fsmc_regs *regs = host->regs_va;
 	uint32_t bank = host->bank;
+	uint32_t *pc_p = &regs->bank_regs[bank].pc;
 
-	writel(readl(&regs->bank_regs[bank].pc) & ~FSMC_ECCPLEN_256,
-		       &regs->bank_regs[bank].pc);
-	writel(readl(&regs->bank_regs[bank].pc) & ~FSMC_ECCEN,
-			&regs->bank_regs[bank].pc);
-	writel(readl(&regs->bank_regs[bank].pc) | FSMC_ECCEN,
-			&regs->bank_regs[bank].pc);
+	writel_relaxed(readl_relaxed(pc_p) & ~FSMC_ECCPLEN_256, pc_p);
+	writel_relaxed(readl_relaxed(pc_p) & ~FSMC_ECCEN, pc_p);
+	writel_relaxed(readl_relaxed(pc_p) | FSMC_ECCEN, pc_p);
 }
 
 /*
@@ -482,31 +498,36 @@ static int fsmc_read_hwecc_ecc4(struct mtd_info *mtd, const uint8_t *data,
 	unsigned long deadline = jiffies + FSMC_BUSY_WAIT_TIMEOUT;
 
 	do {
-		if (readl(&regs->bank_regs[bank].sts) & FSMC_CODE_RDY)
+		if (readl_relaxed(&regs->bank_regs[bank].sts) & FSMC_CODE_RDY)
 			break;
 		else
 			cond_resched();
 	} while (!time_after_eq(jiffies, deadline));
 
-	ecc_tmp = readl(&regs->bank_regs[bank].ecc1);
+	if (time_after_eq(jiffies, deadline)) {
+		dev_err(host->dev, "calculate ecc timed out\n");
+		return -ETIMEDOUT;
+	}
+
+	ecc_tmp = readl_relaxed(&regs->bank_regs[bank].ecc1);
 	ecc[0] = (uint8_t) (ecc_tmp >> 0);
 	ecc[1] = (uint8_t) (ecc_tmp >> 8);
 	ecc[2] = (uint8_t) (ecc_tmp >> 16);
 	ecc[3] = (uint8_t) (ecc_tmp >> 24);
 
-	ecc_tmp = readl(&regs->bank_regs[bank].ecc2);
+	ecc_tmp = readl_relaxed(&regs->bank_regs[bank].ecc2);
 	ecc[4] = (uint8_t) (ecc_tmp >> 0);
 	ecc[5] = (uint8_t) (ecc_tmp >> 8);
 	ecc[6] = (uint8_t) (ecc_tmp >> 16);
 	ecc[7] = (uint8_t) (ecc_tmp >> 24);
 
-	ecc_tmp = readl(&regs->bank_regs[bank].ecc3);
+	ecc_tmp = readl_relaxed(&regs->bank_regs[bank].ecc3);
 	ecc[8] = (uint8_t) (ecc_tmp >> 0);
 	ecc[9] = (uint8_t) (ecc_tmp >> 8);
 	ecc[10] = (uint8_t) (ecc_tmp >> 16);
 	ecc[11] = (uint8_t) (ecc_tmp >> 24);
 
-	ecc_tmp = readl(&regs->bank_regs[bank].sts);
+	ecc_tmp = readl_relaxed(&regs->bank_regs[bank].sts);
 	ecc[12] = (uint8_t) (ecc_tmp >> 16);
 
 	return 0;
@@ -526,7 +547,7 @@ static int fsmc_read_hwecc_ecc1(struct mtd_info *mtd, const uint8_t *data,
 	uint32_t bank = host->bank;
 	uint32_t ecc_tmp;
 
-	ecc_tmp = readl(&regs->bank_regs[bank].ecc1);
+	ecc_tmp = readl_relaxed(&regs->bank_regs[bank].ecc1);
 	ecc[0] = (uint8_t) (ecc_tmp >> 0);
 	ecc[1] = (uint8_t) (ecc_tmp >> 8);
 	ecc[2] = (uint8_t) (ecc_tmp >> 16);
@@ -546,6 +567,159 @@ static int count_written_bits(uint8_t *buff, int size, int max_bits)
 	}
 
 	return written_bits;
+}
+
+static void dma_complete(void *param)
+{
+	struct fsmc_nand_data *host = param;
+
+	complete(&host->dma_access_complete);
+}
+
+static int dma_xfer(struct fsmc_nand_data *host, void *buffer, int len,
+		enum dma_data_direction direction)
+{
+	struct dma_chan *chan;
+	struct dma_device *dma_dev;
+	struct dma_async_tx_descriptor *tx;
+	dma_addr_t dma_dst, dma_src, dma_addr;
+	dma_cookie_t cookie;
+	unsigned long flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
+	int ret;
+
+	if (direction == DMA_TO_DEVICE)
+		chan = host->write_dma_chan;
+	else if (direction == DMA_FROM_DEVICE)
+		chan = host->read_dma_chan;
+	else
+		return -EINVAL;
+
+	dma_dev = chan->device;
+	dma_addr = dma_map_single(dma_dev->dev, buffer, len, direction);
+
+	if (direction == DMA_TO_DEVICE) {
+		dma_src = dma_addr;
+		dma_dst = host->data_pa;
+		flags |= DMA_COMPL_SRC_UNMAP_SINGLE | DMA_COMPL_SKIP_DEST_UNMAP;
+	} else {
+		dma_src = host->data_pa;
+		dma_dst = dma_addr;
+		flags |= DMA_COMPL_DEST_UNMAP_SINGLE | DMA_COMPL_SKIP_SRC_UNMAP;
+	}
+
+	tx = dma_dev->device_prep_dma_memcpy(chan, dma_dst, dma_src,
+			len, flags);
+
+	if (!tx) {
+		dev_err(host->dev, "device_prep_dma_memcpy error\n");
+		dma_unmap_single(dma_dev->dev, dma_addr, len, direction);
+		return -EIO;
+	}
+
+	tx->callback = dma_complete;
+	tx->callback_param = host;
+	cookie = tx->tx_submit(tx);
+
+	ret = dma_submit_error(cookie);
+	if (ret) {
+		dev_err(host->dev, "dma_submit_error %d\n", cookie);
+		return ret;
+	}
+
+	dma_async_issue_pending(chan);
+
+	ret =
+	wait_for_completion_timeout(&host->dma_access_complete,
+				msecs_to_jiffies(3000));
+	if (ret <= 0) {
+		chan->device->device_control(chan, DMA_TERMINATE_ALL, 0);
+		dev_err(host->dev, "wait_for_completion_timeout\n");
+		return ret ? ret : -ETIMEDOUT;
+	}
+
+	preempt_disable();
+	__this_cpu_add(chan->local->bytes_transferred, len);
+	__this_cpu_inc(chan->local->memcpy_count);
+	preempt_enable();
+
+	return 0;
+}
+
+/*
+ * fsmc_write_buf - write buffer to chip
+ * @mtd:	MTD device structure
+ * @buf:	data buffer
+ * @len:	number of bytes to write
+ */
+static void fsmc_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
+{
+	int i;
+	struct nand_chip *chip = mtd->priv;
+
+	if (IS_ALIGNED((uint32_t)buf, sizeof(uint32_t)) &&
+			IS_ALIGNED(len, sizeof(uint32_t))) {
+		uint32_t *p = (uint32_t *)buf;
+		len = len >> 2;
+		for (i = 0; i < len; i++)
+			writel_relaxed(p[i], chip->IO_ADDR_W);
+	} else {
+		for (i = 0; i < len; i++)
+			writeb_relaxed(buf[i], chip->IO_ADDR_W);
+	}
+}
+
+/*
+ * fsmc_read_buf - read chip data into buffer
+ * @mtd:	MTD device structure
+ * @buf:	buffer to store date
+ * @len:	number of bytes to read
+ */
+static void fsmc_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
+{
+	int i;
+	struct nand_chip *chip = mtd->priv;
+
+	if (IS_ALIGNED((uint32_t)buf, sizeof(uint32_t)) &&
+			IS_ALIGNED(len, sizeof(uint32_t))) {
+		uint32_t *p = (uint32_t *)buf;
+		len = len >> 2;
+		for (i = 0; i < len; i++)
+			p[i] = readl_relaxed(chip->IO_ADDR_R);
+	} else {
+		for (i = 0; i < len; i++)
+			buf[i] = readb_relaxed(chip->IO_ADDR_R);
+	}
+}
+
+/*
+ * fsmc_read_buf_dma - read chip data into buffer
+ * @mtd:	MTD device structure
+ * @buf:	buffer to store date
+ * @len:	number of bytes to read
+ */
+static void fsmc_read_buf_dma(struct mtd_info *mtd, uint8_t *buf, int len)
+{
+	struct fsmc_nand_data *host;
+
+	host = container_of(mtd, struct fsmc_nand_data, mtd);
+	dma_xfer(host, host->dma_buf, len, DMA_FROM_DEVICE);
+	memcpy(buf, (const void *)host->dma_buf, len);
+}
+
+/*
+ * fsmc_write_buf_dma - write buffer to chip
+ * @mtd:	MTD device structure
+ * @buf:	data buffer
+ * @len:	number of bytes to write
+ */
+static void fsmc_write_buf_dma(struct mtd_info *mtd, const uint8_t *buf,
+		int len)
+{
+	struct fsmc_nand_data *host;
+
+	host = container_of(mtd, struct fsmc_nand_data, mtd);
+	memcpy(host->dma_buf, buf, len);
+	dma_xfer(host, host->dma_buf, len, DMA_TO_DEVICE);
 }
 
 /*
@@ -640,7 +814,7 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	uint32_t num_err, i;
 	uint32_t ecc1, ecc2, ecc3, ecc4;
 
-	num_err = (readl(&regs->bank_regs[bank].sts) >> 10) & 0xF;
+	num_err = (readl_relaxed(&regs->bank_regs[bank].sts) >> 10) & 0xF;
 
 	/* no bit flipping */
 	if (likely(num_err == 0))
@@ -683,10 +857,10 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	 * uint64_t array and error offset indexes are populated in err_idx
 	 * array
 	 */
-	ecc1 = readl(&regs->bank_regs[bank].ecc1);
-	ecc2 = readl(&regs->bank_regs[bank].ecc2);
-	ecc3 = readl(&regs->bank_regs[bank].ecc3);
-	ecc4 = readl(&regs->bank_regs[bank].sts);
+	ecc1 = readl_relaxed(&regs->bank_regs[bank].ecc1);
+	ecc2 = readl_relaxed(&regs->bank_regs[bank].ecc2);
+	ecc3 = readl_relaxed(&regs->bank_regs[bank].ecc3);
+	ecc4 = readl_relaxed(&regs->bank_regs[bank].sts);
 
 	err_idx[0] = (ecc1 >> 0) & 0x1FFF;
 	err_idx[1] = (ecc1 >> 13) & 0x1FFF;
@@ -703,11 +877,27 @@ static int fsmc_bch8_correct_data(struct mtd_info *mtd, uint8_t *dat,
 		change_bit(1, (unsigned long *)&err_idx[i]);
 
 		if (err_idx[i] < 512 * 8) {
-			change_bit(err_idx[i], (unsigned long *)dat);
+			uint8_t *p = dat + err_idx[i] / 8;
+			*p = *p ^ (1 << (err_idx[i] % 8));
+
 			i++;
 		}
 	}
 	return i;
+}
+
+static bool filter(struct dma_chan *chan, void *slave)
+{
+	chan->private = slave;
+	return true;
+}
+
+static int fsmc_dev_ready(struct mtd_info *mtd)
+{
+	struct fsmc_nand_data *host = container_of(mtd,
+					struct fsmc_nand_data, mtd);
+
+	return !!gpio_get_value(host->rbpin.gpio_pin);
 }
 
 /*
@@ -720,9 +910,18 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct fsmc_nand_data *host;
 	struct mtd_info *mtd;
 	struct nand_chip *nand;
-	struct fsmc_regs *regs;
 	struct resource *res;
 	int nr_parts, ret = 0;
+	struct fsmc_nand_timings default_timings = {
+		.tclr	= FSMC_TCLR_1,
+		.tar	= FSMC_TAR_1,
+		.thiz	= FSMC_THIZ_1,
+		.thold	= FSMC_THOLD_4,
+		.twait	= FSMC_TWAIT_6,
+		.tset	= FSMC_TSET_0,
+	};
+	dma_cap_mask_t mask;
+	uint32_t bank;
 
 	if (!pdata) {
 		dev_err(&pdev->dev, "platform data is NULL\n");
@@ -730,93 +929,101 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	}
 
 	/* Allocate memory for the device structure (and zero it) */
-	host = kzalloc(sizeof(*host), GFP_KERNEL);
+	host = devm_kzalloc(&pdev->dev, sizeof(*host), GFP_KERNEL);
 	if (!host) {
 		dev_err(&pdev->dev, "failed to allocate device structure\n");
 		return -ENOMEM;
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "nand_data");
-	if (!res) {
-		ret = -EIO;
-		goto err_probe1;
+	if (!res)
+		return -EINVAL;
+
+	if (!devm_request_mem_region(&pdev->dev, res->start, resource_size(res),
+				pdev->name)) {
+		dev_err(&pdev->dev, "Failed to get memory data resourse\n");
+		return -ENOENT;
 	}
 
-	host->resdata = request_mem_region(res->start, resource_size(res),
-			pdev->name);
-	if (!host->resdata) {
-		ret = -EIO;
-		goto err_probe1;
-	}
-
-	host->data_va = ioremap(res->start, resource_size(res));
+	host->data_pa = (dma_addr_t)res->start;
+	host->data_va = devm_ioremap(&pdev->dev, res->start,
+			resource_size(res));
 	if (!host->data_va) {
-		ret = -EIO;
-		goto err_probe1;
+		dev_err(&pdev->dev, "data ioremap failed\n");
+		return -ENOMEM;
 	}
 
-	host->resaddr = request_mem_region(res->start + pdata->ale_off,
-			resource_size(res), pdev->name);
-	if (!host->resaddr) {
-		ret = -EIO;
-		goto err_probe1;
+	if (!devm_request_mem_region(&pdev->dev, res->start + pdata->ale_off,
+			resource_size(res), pdev->name)) {
+		dev_err(&pdev->dev, "Failed to get memory ale resourse\n");
+		return -ENOENT;
 	}
 
-	host->addr_va = ioremap(res->start + pdata->ale_off,
+	host->addr_va = devm_ioremap(&pdev->dev, res->start + pdata->ale_off,
 			resource_size(res));
 	if (!host->addr_va) {
-		ret = -EIO;
-		goto err_probe1;
+		dev_err(&pdev->dev, "ale ioremap failed\n");
+		return -ENOMEM;
 	}
 
-	host->rescmd = request_mem_region(res->start + pdata->cle_off,
-			resource_size(res), pdev->name);
-	if (!host->rescmd) {
-		ret = -EIO;
-		goto err_probe1;
+	if (!devm_request_mem_region(&pdev->dev, res->start + pdata->cle_off,
+			resource_size(res), pdev->name)) {
+		dev_err(&pdev->dev, "Failed to get memory cle resourse\n");
+		return -ENOENT;
 	}
 
-	host->cmd_va = ioremap(res->start + pdata->cle_off, resource_size(res));
+	host->cmd_va = devm_ioremap(&pdev->dev, res->start + pdata->cle_off,
+			resource_size(res));
 	if (!host->cmd_va) {
-		ret = -EIO;
-		goto err_probe1;
+		dev_err(&pdev->dev, "ale ioremap failed\n");
+		return -ENOMEM;
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "fsmc_regs");
-	if (!res) {
-		ret = -EIO;
-		goto err_probe1;
+	if (!res)
+		return -EINVAL;
+
+	if (!devm_request_mem_region(&pdev->dev, res->start, resource_size(res),
+			pdev->name)) {
+		dev_err(&pdev->dev, "Failed to get memory regs resourse\n");
+		return -ENOENT;
 	}
 
-	host->resregs = request_mem_region(res->start, resource_size(res),
-			pdev->name);
-	if (!host->resregs) {
-		ret = -EIO;
-		goto err_probe1;
-	}
-
-	host->regs_va = ioremap(res->start, resource_size(res));
+	host->regs_va = devm_ioremap(&pdev->dev, res->start,
+			resource_size(res));
 	if (!host->regs_va) {
-		ret = -EIO;
-		goto err_probe1;
+		dev_err(&pdev->dev, "regs ioremap failed\n");
+		return -ENOMEM;
 	}
 
 	host->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(host->clk)) {
 		dev_err(&pdev->dev, "failed to fetch block clock\n");
-		ret = PTR_ERR(host->clk);
-		host->clk = NULL;
-		goto err_probe1;
+		return PTR_ERR(host->clk);
 	}
 
 	ret = clk_enable(host->clk);
 	if (ret)
-		goto err_probe1;
+		goto err_clk_enable;
 
-	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
-	host->dev_timings = pdata->nand_timings;
-	regs = host->regs_va;
+	host->dev = &pdev->dev;
+
+	if (pdata->nand_timings)
+		host->dev_timings = *(pdata->nand_timings);
+	else
+		host->dev_timings = default_timings;
+
+	if (pdata->rbpin)
+		host->rbpin = *(pdata->rbpin);
+	else
+		host->rbpin.use_pin = FSMC_RB_WAIT;
+
+	host->mode = pdata->mode;
+	host->max_banks = pdata->max_banks;
+
+	if (host->mode == USE_DMA_ACCESS)
+		init_completion(&host->dma_access_complete);
 
 	/* Link all private pointers */
 	mtd = &host->mtd;
@@ -837,11 +1044,59 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	nand->select_chip = fsmc_select_chip;
 	nand->badblockbits = 7;
 
+	if (host->rbpin.use_pin != FSMC_RB_WAIT)
+		nand->dev_ready = fsmc_dev_ready;
+
+	if (host->rbpin.use_pin == FSMC_RB_GPIO) {
+		ret = gpio_request(host->rbpin.gpio_pin, "fsmc-rb");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "gpio request fail: %d\n",
+					host->rbpin.gpio_pin);
+			goto err_gpio_req;
+		}
+	}
+
 	if (pdata->width == FSMC_NAND_BW16)
 		nand->options |= NAND_BUSWIDTH_16;
 
-	fsmc_nand_setup(regs, host->bank, nand->options & NAND_BUSWIDTH_16,
-			host->dev_timings);
+	switch (host->mode) {
+	case USE_DMA_ACCESS:
+		dma_cap_zero(mask);
+		dma_cap_set(DMA_MEMCPY, mask);
+		host->read_dma_chan = dma_request_channel(mask, filter,
+				pdata->read_dma_priv);
+		if (!host->read_dma_chan) {
+			dev_err(&pdev->dev, "Unable to get read dma channel\n");
+			goto err_req_read_chnl;
+		}
+		host->write_dma_chan = dma_request_channel(mask, filter,
+				pdata->write_dma_priv);
+		if (!host->write_dma_chan) {
+			dev_err(&pdev->dev, "Unable to get write dma channel\n");
+			goto err_req_write_chnl;
+		}
+
+		host->dma_buf = kmalloc(NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE,
+				GFP_KERNEL);
+		if (!host->dma_buf) {
+			dev_err(&pdev->dev, "failed to allocate dma buffer\n");
+			goto err_req_dma_buf;
+		}
+		nand->read_buf = fsmc_read_buf_dma;
+		nand->write_buf = fsmc_write_buf_dma;
+		break;
+
+	default:
+	case USE_WORD_ACCESS:
+		nand->read_buf = fsmc_read_buf;
+		nand->write_buf = fsmc_write_buf;
+		break;
+	}
+
+	for (bank = 0; bank < host->max_banks; bank++)
+		fsmc_nand_setup(host->regs_va, bank,
+				nand->options & NAND_BUSWIDTH_16,
+				&host->dev_timings, &host->rbpin);
 
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -860,7 +1115,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	if (nand_scan_ident(&host->mtd, 1, NULL)) {
 		ret = -ENXIO;
 		dev_err(&pdev->dev, "No NAND Device found!\n");
-		goto err_probe;
+		goto err_scan_ident;
 	}
 
 	if (get_fsmc_version(host->regs_va) == FSMC_VER8) {
@@ -1031,32 +1286,22 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	return 0;
 
 err_probe:
+err_scan_ident:
+	if (host->mode == USE_DMA_ACCESS)
+		kfree(host->dma_buf);
+err_req_dma_buf:
+	if (host->mode == USE_DMA_ACCESS)
+		dma_release_channel(host->write_dma_chan);
+err_req_write_chnl:
+	if (host->mode == USE_DMA_ACCESS)
+		dma_release_channel(host->read_dma_chan);
+err_req_read_chnl:
+	if (host->rbpin.use_pin == FSMC_RB_GPIO)
+		gpio_free(host->rbpin.gpio_pin);
+err_gpio_req:
 	clk_disable(host->clk);
-err_probe1:
-	if (host->clk)
-		clk_put(host->clk);
-	if (host->regs_va)
-		iounmap(host->regs_va);
-	if (host->resregs)
-		release_mem_region(host->resregs->start,
-				resource_size(host->resregs));
-	if (host->cmd_va)
-		iounmap(host->cmd_va);
-	if (host->rescmd)
-		release_mem_region(host->rescmd->start,
-				resource_size(host->rescmd));
-	if (host->addr_va)
-		iounmap(host->addr_va);
-	if (host->resaddr)
-		release_mem_region(host->resaddr->start,
-				resource_size(host->resaddr));
-	if (host->data_va)
-		iounmap(host->data_va);
-	if (host->resdata)
-		release_mem_region(host->resdata->start,
-				resource_size(host->resdata));
-
-	kfree(host);
+err_clk_enable:
+	clk_put(host->clk);
 	return ret;
 }
 
@@ -1070,6 +1315,10 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	if (host) {
+		if (host->mode == USE_DMA_ACCESS) {
+			dma_release_channel(host->write_dma_chan);
+			dma_release_channel(host->read_dma_chan);
+		}
 #ifdef CONFIG_MTD_PARTITIONS
 		del_mtd_partitions(&host->mtd);
 #else
@@ -1077,22 +1326,8 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 #endif
 		clk_disable(host->clk);
 		clk_put(host->clk);
-
-		iounmap(host->regs_va);
-		release_mem_region(host->resregs->start,
-				resource_size(host->resregs));
-		iounmap(host->cmd_va);
-		release_mem_region(host->rescmd->start,
-				resource_size(host->rescmd));
-		iounmap(host->addr_va);
-		release_mem_region(host->resaddr->start,
-				resource_size(host->resaddr));
-		iounmap(host->data_va);
-		release_mem_region(host->resdata->start,
-				resource_size(host->resdata));
-
-		kfree(host);
 	}
+
 	return 0;
 }
 
@@ -1110,12 +1345,15 @@ static int fsmc_nand_suspend(struct device *dev)
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
+	uint32_t bank;
 
 	if (host) {
 		clk_enable(host->clk);
-		fsmc_nand_setup(host->regs_va, host->bank,
-				host->nand.options & NAND_BUSWIDTH_16,
-				host->dev_timings);
+
+		for (bank = 0; bank < host->max_banks; bank++)
+			fsmc_nand_setup(host->regs_va, bank,
+					host->nand.options & NAND_BUSWIDTH_16,
+					&host->dev_timings, &host->rbpin);
 	}
 
 	return 0;

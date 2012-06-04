@@ -193,6 +193,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
+	&spear13xx_cpufreq_device,
 	&spear13xx_dmac_device[0],
 	&spear13xx_dmac_device[1],
 	&spear13xx_ehci0_device,
@@ -267,7 +268,7 @@ static void __init r1801e_init(void)
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, partition_info,
 			ARRAY_SIZE(partition_info), NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW16, NULL);
+			FSMC_NAND_BW16, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW16);
 
 	/* call spear1310 reva machine init function */

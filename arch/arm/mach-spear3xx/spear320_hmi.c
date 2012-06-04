@@ -49,6 +49,13 @@ static struct macb_base_data hmi_macb_data[] = {
 	},
 };
 
+/* STMPE811 platform data */
+
+static struct stmpe_gpio_platform_data stmpe811_gpio = {
+	.gpio_base = SPEAR_STMPE811_GPIO_BASE,
+	.norequest_mask = 0xf3,
+};
+
 static struct stmpe_ts_platform_data stmpe811_ts_pdata = {
 	.sample_time = 4, /* 80 clocks */
 	.mod_12b = 1, /* 12 bit */
@@ -65,12 +72,13 @@ static struct stmpe_platform_data stmpe811_pdata = {
 	.id = 0,
 	.blocks = STMPE_BLOCK_TOUCHSCREEN | STMPE_BLOCK_GPIO,
 	.irq_base = SPEAR320_STMPE_INT_BASE,
-	.irq_trigger = IRQ_TYPE_EDGE_FALLING,
+	.irq_trigger = IRQ_TYPE_EDGE_RISING,
 	.irq_invert_polarity = false,
 	.autosleep = false,
 	.irq_over_gpio = true,
 	.irq_gpio = BASIC_GPIO_1,
 	.ts = &stmpe811_ts_pdata,
+	.gpio = &stmpe811_gpio,
 };
 
 static struct i2c_board_info __initdata i2c_board_info[] = {
@@ -119,6 +127,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_adc_device,
+	&spear3xx_cpufreq_device,
 	&spear3xx_ehci_device,
 	&spear3xx_i2c_device,
 	&spear3xx_jpeg_device,
@@ -157,7 +166,7 @@ static void __init spear320_hmi_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear320_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();

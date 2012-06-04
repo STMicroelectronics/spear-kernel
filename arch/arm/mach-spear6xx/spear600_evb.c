@@ -65,6 +65,7 @@ static struct amba_device *amba_devs[] __initdata = {
 
 static struct platform_device *plat_devs[] __initdata = {
 	&adc_device,
+	&cpufreq_device,
 	&ehci0_device,
 	&ehci1_device,
 	&eth_device,
@@ -121,7 +122,7 @@ static void __init spear600_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&nand_device, NULL, 0, NAND_SKIP_BBTSCAN,
-			FSMC_NAND_BW8, NULL);
+			FSMC_NAND_BW8, NULL, 1);
 
 	/* call spear600 machine init function */
 	spear600_init();

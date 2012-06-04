@@ -27,6 +27,7 @@
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
 #include <plat/adc.h>
+#include <plat/cpufreq.h>
 #include <plat/jpeg.h>
 #include <plat/touchscreen.h>
 #include <plat/udc.h>
@@ -299,6 +300,26 @@ struct platform_device adc_device = {
 	.resource = adc_resources,
 };
 
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	166000, /* 166 MHZ */
+	266000, /* 266 MHZ */
+	332000, /* 332 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
+};
+
 /* stmmac device registeration */
 static struct plat_stmmacenet_data eth_platform_data = {
 	.bus_id = 0,
@@ -385,7 +406,9 @@ struct platform_device irda_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand_resources[] = {
 	{

@@ -455,6 +455,16 @@ void gic_cpu_exit(unsigned int gic_nr)
 	writel(0, gic_data[gic_nr].cpu_base + GIC_CPU_CTRL);
 }
 
+void __cpuinit gic_enable_ppi(unsigned int irq)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+	irq_to_desc(irq)->status |= IRQ_NOPROBE;
+	gic_unmask_irq(irq);
+	local_irq_restore(flags);
+}
+
 #ifdef CONFIG_SMP
 void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 {

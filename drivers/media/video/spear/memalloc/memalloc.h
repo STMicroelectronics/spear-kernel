@@ -1,4 +1,4 @@
-/* 
+/*
  * Memalloc, encoder memory allocation driver (kernel module headers)
  *
  * Copyright (C) 2011  Hantro Products Oy.
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
 --------------------------------------------------------------------------------
 --
@@ -64,15 +64,14 @@
 #define MEMALLOC_IOCHARDRESET	_IO(MEMALLOC_IOC_MAGIC, 15) /* debug tool */
 #define MEMALLOC_IOC_MAXNR 15
 
-typedef struct {
+struct MemallocParams {
 	unsigned busAddress;
 	unsigned size;
-}MemallocParams;
+};
 
-struct memalloc_dev
-{
+struct memalloc_dev {
 	struct cdev cdev;
-	struct class *  memalloc_class;
+	struct class *memalloc_class;
 };
 
 #endif /* _HMP4ENC_H_ */

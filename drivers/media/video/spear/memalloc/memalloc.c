@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
 --------------------------------------------------------------------------------
 --
@@ -23,32 +23,19 @@
 --
 ------------------------------------------------------------------------------*/
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-/* needed for __init,__exit directives */
-#include <linux/init.h>
-/* needed for remap_page_range */
-#include <linux/mm.h>
-/* obviously, for kmalloc */
-#include <linux/slab.h>
-/* for struct file_operations, register_chrdev() */
-#include <linux/fs.h>
-/* standard error codes */
 #include <linux/errno.h>
-/* this header files wraps some common module-space operations ...
-   here we use mem_map_reserve() macro */
-
+#include <linux/fs.h>
+#include <linux/init.h>
 #include <linux/io.h>
-#include <linux/uaccess.h>
 #include <linux/ioport.h>
+#include <linux/kernel.h>
 #include <linux/list.h>
-/* for current pid */
-#include <linux/sched.h>
-
-/* different kernel versions have different ioctl in include/fs/vfs.h */
-#include <linux/version.h>
-
+#include <linux/mm.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/uaccess.h>
 
 /* Our header */
 #include "memalloc.h"
@@ -81,9 +68,9 @@ MODULE_DESCRIPTION("RAM allocation");
 scheme table is used by default */
 unsigned int alloc_method = MEMALLOC_SPEAR1340_64MiB;
 
-static char memalloc_dev_name[] = "memalloc";
+static const char memalloc_dev_name[] = "memalloc";
 
-static int memalloc_major = 0;  /* dynamic */
+static int memalloc_major;
 
 int id[MAX_OPEN] = { ID_UNUSED };
 
@@ -102,17 +89,17 @@ struct allocation {
 
 struct list_head heap_list;
 
-static spinlock_t mem_lock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(mem_lock);
 
-typedef struct hlinc {
+struct hlina_chunk {
 	unsigned int bus_address;
 	unsigned int used;
 	unsigned int size;
 	int file_id;
-} hlina_chunk;
+};
 
-static unsigned int *size_table = NULL;
-static size_t chunks = 0;
+static unsigned int *size_table;
+static size_t chunks;
 
 unsigned int size_table_0[] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -164,7 +151,8 @@ unsigned int size_table_2[] = {
 	4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 	10, 10, 10, 10, 10, 10, 10, 10,
 	22, 22, 22, 22, 22, 22, 22, 22,
-	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
+	38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38,
 	50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
 	75, 75, 75, 75, 75, 75, 75, 75, 75, 75,
 	86, 86, 86, 86, 86, 86, 86, 86, 86, 86,
@@ -246,7 +234,7 @@ unsigned int size_table_5[] = {
 	152, 152,
 	162, 162, 162,
 	270, 270, 270,
-	403, 403, 403, 403,403, 403,
+	403, 403, 403, 403, 403, 403,
 	450, 450,
 	893, 893, 893, 893,
 	1999,
@@ -342,50 +330,42 @@ unsigned int size_table_SPEAR1340_256MiB[] = {
 	8192, 8192, 8192
 };/* (15925 + 48856) * 4 = 64781*4 = 259124 KiB ~= 253 MiB*/
 
-static hlina_chunk hlina_chunks[256];
+/*static hlina_chunk hlina_chunks[256];*/
+static struct hlina_chunk hlina_chunks[256];
 
 static int AllocMemory(unsigned *busaddr, unsigned int size, struct file *filp);
 static int FreeMemory(unsigned long busaddr);
 static void ResetMems(void);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-static int memalloc_ioctl(struct inode *inode, struct file *filp,
-				unsigned int cmd, unsigned long arg)
-#else
-/* From Linux 2.6.36 the locked ioctl was removed in favor of unlocked one */
-static long memalloc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-#endif
+
+static long memalloc_ioctl(struct file *filp, unsigned int cmd,
+			unsigned long arg)
 {
 	int err = 0;
 	int ret;
 
 	PDEBUG("ioctl cmd 0x%08x\n", cmd);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-	if (inode == NULL || filp == NULL || arg == 0)
-#else
+
 	if (filp == NULL || arg == 0)
-#endif
-	{
 		return -EFAULT;
-	}
+
 	/*
 	 * extract the type and number bitfields, and don't decode
 	 * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
 	 */
-	if(_IOC_TYPE(cmd) != MEMALLOC_IOC_MAGIC)
+	if (_IOC_TYPE(cmd) != MEMALLOC_IOC_MAGIC)
 		return -ENOTTY;
-	if(_IOC_NR(cmd) > MEMALLOC_IOC_MAXNR)
+	if (_IOC_NR(cmd) > MEMALLOC_IOC_MAXNR)
 		return -ENOTTY;
 
-	if(_IOC_DIR(cmd) & _IOC_READ)
+	if (_IOC_DIR(cmd) & _IOC_READ)
 		err = !access_ok(VERIFY_WRITE, (void *) arg, _IOC_SIZE(cmd));
-	else if(_IOC_DIR(cmd) & _IOC_WRITE)
+	else if (_IOC_DIR(cmd) & _IOC_WRITE)
 		err = !access_ok(VERIFY_READ, (void *) arg, _IOC_SIZE(cmd));
-	if(err)
+	if (err)
 		return -EFAULT;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case MEMALLOC_IOCHARDRESET:
 
 		PDEBUG("HARDRESET\n");
@@ -396,16 +376,21 @@ static long memalloc_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	case MEMALLOC_IOCXGETBUFFER:
 		{
 			int result;
-			MemallocParams memparams;
+			struct MemallocParams memparams;
 
 			PDEBUG("GETBUFFER\n");
 			spin_lock(&mem_lock);
 
-			__copy_from_user(&memparams, (const void *) arg, sizeof(memparams));
+			if (__copy_from_user(&memparams, (const void *) arg,
+						sizeof(memparams)))
+				return -EFAULT;
 
-			result = AllocMemory(&memparams.busAddress, memparams.size, filp);
+			result = AllocMemory(&memparams.busAddress,
+					memparams.size, filp);
 
-			__copy_to_user((void *) arg, &memparams, sizeof(memparams));
+			if (__copy_to_user((void *) arg, &memparams,
+						sizeof(memparams)))
+				return -EFAULT;
 
 			spin_unlock(&mem_lock);
 
@@ -432,10 +417,8 @@ static int memalloc_open(struct inode *inode, struct file *filp)
 {
 	int i = 0;
 
-	for(i = 0; i < MAX_OPEN + 1; i++)
-	{
-
-		if(i == MAX_OPEN)
+	for (i = 0; i < MAX_OPEN + 1; i++) {
+		if (i == MAX_OPEN)
 			return -1;
 		if (id[i] == ID_UNUSED) {
 			id[i] = i;
@@ -453,10 +436,8 @@ static int memalloc_release(struct inode *inode, struct file *filp)
 
 	int i = 0;
 
-	for(i = 0; i < chunks; i++)
-	{
-		if(hlina_chunks[i].file_id == *((int *) (filp->private_data)))
-		{
+	for (i = 0; i < chunks; i++) {
+		if (hlina_chunks[i].file_id == *((int *) filp->private_data)) {
 			hlina_chunks[i].used = 0;
 			hlina_chunks[i].file_id = ID_UNUSED;
 		}
@@ -467,32 +448,27 @@ static int memalloc_release(struct inode *inode, struct file *filp)
 }
 
 /* VFS methods */
-static struct file_operations memalloc_fops = {
-	open:memalloc_open,
-	release:memalloc_release,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
-	ioctl:memalloc_ioctl,
-#else
-	/* From Linux 2.6.36 the locked ioctl was removed */
-	unlocked_ioctl:memalloc_ioctl,
-#endif
+static const struct file_operations memalloc_fops = {
+	.open		= memalloc_open,
+	.release	= memalloc_release,
+	.unlocked_ioctl	= memalloc_ioctl,
 };
 
 
-int memalloc_sysfs_register(struct memalloc_dev *device, dev_t dev, const char *memalloc_dev_name)
+int memalloc_sysfs_register(struct memalloc_dev *device, dev_t dev,
+			const char *memalloc_dev_name)
 {
 	int err = 0;
-	struct device * mdev;
+	struct device *mdev;
 
 	device->memalloc_class = class_create(THIS_MODULE, memalloc_dev_name);
-	if (IS_ERR(device->memalloc_class))
-	{
+	if (IS_ERR(device->memalloc_class)) {
 		err = PTR_ERR(device->memalloc_class);
 		goto init_class_err;
 	}
-	mdev = device_create(device->memalloc_class, NULL, dev, NULL, memalloc_dev_name);
-	if (IS_ERR(mdev))
-	{
+	mdev = device_create(device->memalloc_class, NULL, dev, NULL,
+			memalloc_dev_name);
+	if (IS_ERR(mdev))	{
 		err = PTR_ERR(mdev);
 		goto init_mdev_err;
 	}
@@ -516,87 +492,91 @@ int __init memalloc_init(void)
 	int i = 0;
 	dev_t dev = 0;
 
+	memalloc_major = 0; /* dynamic if set to 0 */
+	size_table = NULL;
+	chunks = 0;
+
 	PDEBUG("module init\n");
-	printk(KERN_INFO "memalloc: 8190 Linear Memory Allocator, %s\n", "$Revision: 1.2 $");
-	printk(KERN_INFO "memalloc: linear memory base = 0x%08x\n", HLINA_START_ADDRESS);
+	pr_info("memalloc: 8190 Linear Memory Allocator, %s\n", "Rev. 1.2");
+	pr_info("memalloc: linear memory base = 0x%08x\n", HLINA_START_ADDRESS);
 
 	switch (alloc_method) {
 
 	case MEMALLOC_MAX_OUTPUT:
 		size_table = size_table_1;
 		chunks = (sizeof(size_table_1) / sizeof(*size_table_1));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_MAX_OUTPUT\n");
+		pr_info("memalloc: allocation method: MEMALLOC_MAX_OUTPUT\n");
 		break;
 	case MEMALLOC_BASIC_X2:
 		size_table = size_table_2;
 		chunks = (sizeof(size_table_2) / sizeof(*size_table_2));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_BASIC x 2\n");
+		pr_info("memalloc: allocation method: MEMALLOC_BASIC x 2\n");
 		break;
 	case MEMALLOC_BASIC_AND_16K_STILL_OUTPUT:
 		size_table = size_table_3;
 		chunks = (sizeof(size_table_3) / sizeof(*size_table_3));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_BASIC_AND_16K_STILL_OUTPUT\n");
+		pr_info("memalloc: allocation method: MEMALLOC_BASIC_AND_16K_STILL_OUTPUT\n");
 		break;
 	case MEMALLOC_BASIC_AND_MVC_DBP:
 		size_table = size_table_4;
 		chunks = (sizeof(size_table_4) / sizeof(*size_table_4));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_BASIC_AND_MVC_DBP\n");
+		pr_info("memalloc: allocation method: MEMALLOC_BASIC_AND_MVC_DBP\n");
 		break;
 	case MEMALLOC_BASIC_AND_4K_OUTPUT:
 		size_table = size_table_5;
 		chunks = (sizeof(size_table_5) / sizeof(*size_table_5));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_BASIC_AND_4K_OUTPUT\n");
+		pr_info("memalloc: allocation method: MEMALLOC_BASIC_AND_4K_OUTPUT\n");
 		break;
 	case MEMALLOC_SPEAR1340_30MiB:
 		size_table = size_table_SPEAR1340_30MiB;
-		chunks = (sizeof(size_table_SPEAR1340_30MiB) / sizeof(*size_table_SPEAR1340_30MiB));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_SPEAR1340_30MiB\n");
+		chunks = (sizeof(size_table_SPEAR1340_30MiB) /
+			sizeof(*size_table_SPEAR1340_30MiB));
+		pr_info("memalloc: allocation method: MEMALLOC_SPEAR1340_30MiB\n");
 		break;
 	case MEMALLOC_SPEAR1340_48MiB:
 		size_table = size_table_SPEAR1340_48MiB;
-		chunks = (sizeof(size_table_SPEAR1340_48MiB) / sizeof(*size_table_SPEAR1340_48MiB));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_SPEAR1340_48MiB\n");
+		chunks = (sizeof(size_table_SPEAR1340_48MiB) /
+			sizeof(*size_table_SPEAR1340_48MiB));
+		pr_info("memalloc: allocation method: MEMALLOC_SPEAR1340_48MiB\n");
 		break;
 	case MEMALLOC_SPEAR1340_64MiB:
 		size_table = size_table_SPEAR1340_64MiB;
-		chunks = (sizeof(size_table_SPEAR1340_64MiB) / sizeof(*size_table_SPEAR1340_64MiB));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_SPEAR1340_64MiB\n");
+		chunks = (sizeof(size_table_SPEAR1340_64MiB) /
+			sizeof(*size_table_SPEAR1340_64MiB));
+		pr_info("memalloc: allocation method: MEMALLOC_SPEAR1340_64MiB\n");
 		break;
 	case MEMALLOC_SPEAR1340_128MiB:
 		size_table = size_table_SPEAR1340_128MiB;
-		chunks = (sizeof(size_table_SPEAR1340_128MiB) / sizeof(*size_table_SPEAR1340_128MiB));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_SPEAR1340_128MiB\n");
+		chunks = (sizeof(size_table_SPEAR1340_128MiB) /
+			sizeof(*size_table_SPEAR1340_128MiB));
+		pr_info("memalloc: allocation method: MEMALLOC_SPEAR1340_128MiB\n");
 		break;
 	case MEMALLOC_SPEAR1340_256MiB:
 		size_table = size_table_SPEAR1340_256MiB;
-		chunks = (sizeof(size_table_SPEAR1340_256MiB) / sizeof(*size_table_SPEAR1340_256MiB));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_SPEAR1340_256MiB\n");
+		chunks = (sizeof(size_table_SPEAR1340_256MiB) /
+			sizeof(*size_table_SPEAR1340_256MiB));
+		pr_info("memalloc: allocation method: MEMALLOC_SPEAR1340_256MiB\n");
 		break;
 	default:
 		size_table = size_table_0;
 		chunks = (sizeof(size_table_0) / sizeof(*size_table_0));
-		printk(KERN_INFO "memalloc: allocation method: MEMALLOC_BASIC\n");
+		pr_info("memalloc: allocation method: MEMALLOC_BASIC\n");
 		break;
 	}
 
 
-	if (0 == memalloc_major)
-	{
+	if (0 == memalloc_major) {
 		/* auto select a major */
-		result = alloc_chrdev_region(&dev, 0/*first minor*/, 1/*count*/, memalloc_dev_name);
+		result = alloc_chrdev_region(&dev, 0, 1, memalloc_dev_name);
 		memalloc_major = MAJOR(dev);
-	}
-	else
-	{
+	} else {
 		/* use load time defined major number */
 		dev = MKDEV(memalloc_major, 0);
-		result = register_chrdev_region(dev, 1/*count*/, memalloc_dev_name);
+		result = register_chrdev_region(dev, 1, memalloc_dev_name);
 	}
 
 	if (result)
-	{
 		goto init_chrdev_err;
-	}
 
 	memset(&device, 0, sizeof(device));
 
@@ -608,23 +588,17 @@ int __init memalloc_init(void)
 	/* register char dev with the kernel */
 	result = cdev_add(&device.cdev, dev, 1/*count*/);
 	if (result)
-	{
 		goto init_cdev_err;
-	}
 
 	result = memalloc_sysfs_register(&device, dev, memalloc_dev_name);
 	if (result)
-	{
 		goto init_sysfs_err;
-	}
 
 	ResetMems();
 
 	/* We keep a register of out customers, reset it */
-	for(i = 0; i < MAX_OPEN; i++)
-	{
+	for (i = 0; i < MAX_OPEN; i++)
 		id[i] = ID_UNUSED;
-	}
 
 	return 0;
 
@@ -659,27 +633,21 @@ static int AllocMemory(unsigned *busaddr, unsigned int size, struct file *filp)
 
 	*busaddr = 0;
 
-	for(i = 0; i < chunks; i++)
-	{
-
-		if(!hlina_chunks[i].used && (hlina_chunks[i].size >= size))
-		{
+	for (i = 0; i < chunks; i++) {
+		if (!hlina_chunks[i].used && (hlina_chunks[i].size >= size)) {
 			*busaddr = hlina_chunks[i].bus_address;
 			hlina_chunks[i].used = 1;
-			hlina_chunks[i].file_id = *((int *) (filp->private_data));
+			hlina_chunks[i].file_id = *((int *) filp->private_data);
 			break;
 		}
 	}
 
-	if(*busaddr == 0)
-	{
-		printk(KERN_INFO "memalloc: Allocation FAILED: size = %d\n", size);
-	}
+	if (*busaddr == 0)
+		pr_info("memalloc: Allocation FAILED: size = %d\n",
+			size);
 	else
-	{
 		PDEBUG("MEMALLOC OK: size: %d, size reserved: %d\n", size,
 			   hlina_chunks[i].size);
-	}
 
 	return 0;
 }
@@ -689,10 +657,8 @@ static int FreeMemory(unsigned long busaddr)
 {
 	int i = 0;
 
-	for(i = 0; i < chunks; i++)
-	{
-		if(hlina_chunks[i].bus_address == busaddr)
-		{
+	for (i = 0; i < chunks; i++) {
+		if (hlina_chunks[i].bus_address == busaddr) {
 			hlina_chunks[i].used = 0;
 			hlina_chunks[i].file_id = ID_UNUSED;
 		}
@@ -707,8 +673,7 @@ void ResetMems(void)
 	int i = 0;
 	unsigned int ba = HLINA_START_ADDRESS;
 
-	for(i = 0; i < chunks; i++)
-	{
+	for (i = 0; i < chunks; i++) {
 
 		hlina_chunks[i].bus_address = ba;
 		hlina_chunks[i].used = 0;
@@ -718,13 +683,11 @@ void ResetMems(void)
 		ba += hlina_chunks[i].size;
 	}
 
-	printk(KERN_INFO "memalloc: %d bytes (%dMB) configured. Check RAM size!\n",
+	pr_info("memalloc: %d bytes (%dMB) configured.\n",
 		   ba - (unsigned int)(HLINA_START_ADDRESS),
 		  (ba - (unsigned int)(HLINA_START_ADDRESS)) / (1024 * 1024));
 
-	if(ba - (unsigned int)(HLINA_START_ADDRESS) > 96 * 1024 * 1024)
-	{
+	if (ba - (unsigned int)(HLINA_START_ADDRESS) > 96 * 1024 * 1024)
 		PDEBUG("MEMALLOC ERROR: MEMORY ALLOC BUG\n");
-	}
 
 }

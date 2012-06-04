@@ -21,7 +21,9 @@
 #include <linux/slab.h>
 #include <linux/spear_dma.h>
 #include <sound/pcm.h>
+#include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <mach/hardware.h>
 
 /* common register for all channel */
 #define IER		0x000
@@ -54,8 +56,6 @@
 #define I2S_COMP_VERSION	0x01F8
 #define I2S_COMP_TYPE		0x01FC
 
-#define DESIGNWARE_I2S_RATES	SNDRV_PCM_RATE_48000
-#define DESIGNWARE_I2S_FORMAT	SNDRV_PCM_FMTBIT_S16_LE
 #define MAX_CHANNEL_NUM		8
 #define MIN_CHANNEL_NUM		2
 
@@ -65,16 +65,19 @@ struct dw_i2s_dev {
 	struct clk *clk;
 	int active;
 	int play_irq;
-	int max_channel;
 	int capture_irq;
+	u32 ch_reg;
+	u32 ccr;
+	u32 xfer_resolution;
 	unsigned int capability;
 	struct device *dev;
 	struct snd_soc_dai_driver *dai_driver;
 
 	/* data related to DMA transfers b/w i2s and DMAC */
-	u8 swidth;
 	struct dma_data play_dma_data;
 	struct dma_data capture_dma_data;
+	struct i2s_clk_config_data config;
+	int (*i2s_clk_cfg)(struct i2s_clk_config_data *config);
 };
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -85,26 +88,6 @@ static inline void i2s_write_reg(void *io_base, int reg, u32 val)
 static inline u32 i2s_read_reg(void *io_base, int reg)
 {
 	return readl(io_base + reg);
-}
-
-static inline void
-i2s_config_channel(struct dw_i2s_dev *dev, u32 ch, u32 stream, u32 cr)
-{
-	u32 irq;
-
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		i2s_write_reg(dev->i2s_base, TCR(ch), cr);
-		i2s_write_reg(dev->i2s_base, TFCR(ch), 0x02);
-		irq = i2s_read_reg(dev->i2s_base, IMR(ch));
-		i2s_write_reg(dev->i2s_base, IMR(ch), irq & ~0x30);
-		i2s_write_reg(dev->i2s_base, TER(ch), 1);
-	} else {
-		i2s_write_reg(dev->i2s_base, RCR(ch), cr);
-		i2s_write_reg(dev->i2s_base, RFCR(ch), 0x07);
-		irq = i2s_read_reg(dev->i2s_base, IMR(ch));
-		i2s_write_reg(dev->i2s_base, IMR(ch), irq & ~0x03);
-		i2s_write_reg(dev->i2s_base, RER(ch), 1);
-	}
 }
 
 static inline void
@@ -137,36 +120,30 @@ i2s_clear_irqs(struct dw_i2s_dev *dev, u32 stream)
 
 void i2s_start(struct dw_i2s_dev *dev, struct snd_pcm_substream *substream)
 {
+	u32 irq;
+
 	i2s_write_reg(dev->i2s_base, IER, 1);
 	i2s_disable_channels(dev, substream->stream);
 
-	switch (dev->max_channel) {
-	case EIGHT_CHANNEL_SUPPORT:
-		i2s_config_channel(dev, 3, substream->stream, 0x5);
-	case SIX_CHANNEL_SUPPORT:
-		i2s_config_channel(dev, 2, substream->stream, 0x5);
-	case FOUR_CHANNEL_SUPPORT:
-		i2s_config_channel(dev, 1, substream->stream, 0x5);
-	case TWO_CHANNEL_SUPPORT:
-		i2s_config_channel(dev, 0, substream->stream, 0x2);
-		break;
-	default:
-		dev_err(dev->dev, "channel not supported\n");
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		i2s_write_reg(dev->i2s_base, TCR(dev->ch_reg),
+				dev->xfer_resolution);
+		i2s_write_reg(dev->i2s_base, TFCR(dev->ch_reg), 0x02);
+		irq = i2s_read_reg(dev->i2s_base, IMR(dev->ch_reg));
+		i2s_write_reg(dev->i2s_base, IMR(dev->ch_reg), irq & ~0x30);
+		i2s_write_reg(dev->i2s_base, TER(dev->ch_reg), 1);
+		i2s_write_reg(dev->i2s_base, ITER, 1);
+	} else {
+		i2s_write_reg(dev->i2s_base, RCR(dev->ch_reg),
+				dev->xfer_resolution);
+		i2s_write_reg(dev->i2s_base, RFCR(dev->ch_reg), 0x07);
+		irq = i2s_read_reg(dev->i2s_base, IMR(dev->ch_reg));
+		i2s_write_reg(dev->i2s_base, IMR(dev->ch_reg), irq & ~0x03);
+		i2s_write_reg(dev->i2s_base, RER(dev->ch_reg), 1);
+		i2s_write_reg(dev->i2s_base, IRER, 1);
 	}
 
-	/*
-	 * AD9889B has a limitation. It requires 64 SCLK per
-	 * LRCLK even for 16 bit samples
-	 */
-	if (dev->swidth == 32)
-		i2s_write_reg(dev->i2s_base, CCR, 0x10);
-	else
-		i2s_write_reg(dev->i2s_base, CCR, 0x00);
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		i2s_write_reg(dev->i2s_base, ITER, 1);
-	else
-		i2s_write_reg(dev->i2s_base, IRER, 1);
+	i2s_write_reg(dev->i2s_base, CCR, dev->ccr);
 
 	i2s_write_reg(dev->i2s_base, CER, 1);
 }
@@ -289,10 +266,65 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
-	u32 channel;
+	struct i2s_clk_config_data *config = &dev->config;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 
-	channel = params_channels(params);
-	dev->max_channel = channel;
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
+		config->data_width = 16;
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		dev->ccr = 0x00;
+		dev->xfer_resolution = 0x02;
+		break;
+
+	case SNDRV_PCM_FORMAT_S32_LE:
+		config->data_width = 32;
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		dev->ccr = 0x10;
+		dev->xfer_resolution = 0x05;
+		break;
+
+	default:
+		dev_err(dev->dev, "designware-i2s: unsuppted PCM fmt");
+		return -EINVAL;
+	}
+
+	config->chan_nr = params_channels(params);
+
+	switch (config->chan_nr) {
+	case EIGHT_CHANNEL_SUPPORT:
+		dev->ch_reg = 3;
+	case SIX_CHANNEL_SUPPORT:
+		dev->ch_reg = 2;
+	case FOUR_CHANNEL_SUPPORT:
+		dev->ch_reg = 1;
+	case TWO_CHANNEL_SUPPORT:
+		dev->ch_reg = 0;
+		break;
+	default:
+		dev_err(dev->dev, "channel not supported\n");
+	}
+
+	config->sample_rate = params_rate(params);
+
+	if (!dev->i2s_clk_cfg)
+		return -EINVAL;
+
+	if (dev->i2s_clk_cfg(config)) {
+		dev_err(dev->dev, "runtime audio clk config fail\n");
+		if (cpu_dai->driver->ops->trigger) {
+			int ret = cpu_dai->driver->ops->trigger(substream,
+					SNDRV_PCM_TRIGGER_STOP, cpu_dai);
+			if (ret < 0) {
+				dev_err(dev->dev, "trigger stop fail\n");
+				return ret;
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -400,9 +432,8 @@ dw_i2s_probe(struct platform_device *pdev)
 	}
 
 	dev->res = res;
-	dev->max_channel = pdata->channel;
 	dev->capability = cap;
-	dev->swidth = pdata->swidth;
+	dev->i2s_clk_cfg = pdata->i2s_clk_cfg;
 
 	/* Set DMA slaves info */
 
@@ -412,8 +443,6 @@ dw_i2s_probe(struct platform_device *pdev)
 	dev->capture_dma_data.addr = res->start + I2S_RXDMA;
 	dev->play_dma_data.max_burst = 16;
 	dev->capture_dma_data.max_burst = 16;
-	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
-	dev->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	dev->play_dma_data.filter = pdata->filter;
 	dev->capture_dma_data.filter = pdata->filter;
 
@@ -457,9 +486,9 @@ dw_i2s_probe(struct platform_device *pdev)
 		}
 
 		dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
-		dw_i2s_dai->playback.channels_max = dev->max_channel;
-		dw_i2s_dai->playback.rates = DESIGNWARE_I2S_RATES;
-		dw_i2s_dai->playback.formats = DESIGNWARE_I2S_FORMAT;
+		dw_i2s_dai->playback.channels_max = pdata->channel;
+		dw_i2s_dai->playback.formats = pdata->snd_fmts;
+		dw_i2s_dai->playback.rates = pdata->snd_rates;
 	}
 
 	if (cap & RECORD) {
@@ -478,9 +507,9 @@ dw_i2s_probe(struct platform_device *pdev)
 		}
 
 		dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
-		dw_i2s_dai->capture.channels_max = dev->max_channel;
-		dw_i2s_dai->capture.rates = DESIGNWARE_I2S_RATES;
-		dw_i2s_dai->capture.formats = DESIGNWARE_I2S_FORMAT;
+		dw_i2s_dai->capture.channels_max = pdata->channel;
+		dw_i2s_dai->capture.formats = pdata->snd_fmts;
+		dw_i2s_dai->capture.rates = pdata->snd_rates;
 	}
 
 	dw_i2s_dai->ops = &dw_i2s_dai_ops,

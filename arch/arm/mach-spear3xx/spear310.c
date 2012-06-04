@@ -272,70 +272,70 @@ static struct pl08x_channel_data pl080_slave_channels[] = {
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras0_rx",
+		.bus_id = "uart1_rx",
 		.min_signal = 0,
 		.max_signal = 0,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras0_tx",
+		.bus_id = "uart1_tx",
 		.min_signal = 1,
 		.max_signal = 1,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras1_rx",
+		.bus_id = "uart2_rx",
 		.min_signal = 2,
 		.max_signal = 2,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras1_tx",
+		.bus_id = "uart2_tx",
 		.min_signal = 3,
 		.max_signal = 3,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras2_rx",
+		.bus_id = "uart3_rx",
 		.min_signal = 4,
 		.max_signal = 4,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras2_tx",
+		.bus_id = "uart3_tx",
 		.min_signal = 5,
 		.max_signal = 5,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras3_rx",
+		.bus_id = "uart4_rx",
 		.min_signal = 6,
 		.max_signal = 6,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras3_tx",
+		.bus_id = "uart4_tx",
 		.min_signal = 7,
 		.max_signal = 7,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras4_rx",
+		.bus_id = "uart5_rx",
 		.min_signal = 8,
 		.max_signal = 8,
 		.muxval = 1,
 		.cctl = 0,
 		.periph_buses = PL08X_AHB1,
 	}, {
-		.bus_id = "ras4_tx",
+		.bus_id = "uart5_tx",
 		.min_signal = 9,
 		.max_signal = 9,
 		.muxval = 1,
@@ -575,7 +575,9 @@ struct platform_device spear310_eth_macb4_device = {
 };
 
 /* nand device registeration */
-static struct fsmc_nand_platform_data nand_platform_data;
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.mode = USE_WORD_ACCESS,
+};
 
 static struct resource nand_resources[] = {
 	{

@@ -62,8 +62,7 @@
 /* Complain if VAR is out of range. */
 #define DEBUG_VAR 1
 #define DRIVER_NAME "clcd-db9000"
-
-#define SYNTH_MIN 55555
+#define DEF_BRIGHTNESS 0x80
 
 static char *mode_option __devinitdata;
 
@@ -243,7 +242,7 @@ db9000fb_setcolreg(u_int regno, u_int red, u_int green, u_int blue, u_int trans,
 		 * RGB bitfield information.
 		 */
 		if (regno < 16) {
-			u16 *pal = fbi->fb.pseudo_palette;
+			u32 *pal = fbi->fb.pseudo_palette;
 
 			val = convert_bitfield(red, &fbi->fb.var.red);
 			val |= convert_bitfield(green, &fbi->fb.var.green);
@@ -359,19 +358,19 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	 */
 	if (var->hsync_len < 0 || var->hsync_len > 255)
 		return -EINVAL;
-	if (var->left_margin < 0 || var->left_margin > 255)
+	if (var->left_margin < 0 || var->left_margin > 1023)
 		return -EINVAL;
-	if (var->right_margin < 0 || var->right_margin > 255)
+	if (var->right_margin < 0 || var->right_margin > 1023)
 		return -EINVAL;
-	if (var->yres < 16 || var->yres > 4096 || (var->yres % 4))
+	if (var->yres < 0 || var->yres > 4096)
 		return -EINVAL;
-	if (var->xres < 16 || var->xres > 4096 || (var->xres % 4))
+	if (var->xres < 16 || var->xres > 4096 || (var->xres % 16))
 		return -EINVAL;
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		return -EINVAL;
-	if (var->upper_margin < 0 || var->upper_margin > 255)
+	if (var->upper_margin < 0 || var->upper_margin > 1023)
 		return -EINVAL;
-	if (var->lower_margin < 0 || var->lower_margin > 255)
+	if (var->lower_margin < 0 || var->lower_margin > 1023)
 		return -EINVAL;
 	if (var->pixclock <= 0)
 		return -EINVAL;
@@ -386,7 +385,7 @@ db9000fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		var->red.length		= var->bits_per_pixel;
 		var->green.length	= var->bits_per_pixel;
 		var->blue.length	= var->bits_per_pixel;
-		var->transp.length	= var->bits_per_pixel;
+		var->transp.length	= 0;
 		break;
 	case 16:
 		var->red.offset		= 11;
@@ -586,6 +585,27 @@ static int db9000fb_blank(int blank, struct fb_info *info)
 	return 0;
 }
 
+static int db9000fb_open(struct fb_info *info, int user)
+{
+	struct db9000fb_info *fbi = to_db9000fb(info);
+
+	/* Enable Controller only if its uses is zero*/
+	if (atomic_inc_return(&fbi->usage) == 1)
+		set_ctrlr_state(fbi, C_ENABLE);
+
+	return 0;
+}
+
+static int db9000fb_release(struct fb_info *info, int user)
+{
+	struct db9000fb_info *fbi = to_db9000fb(info);
+
+	if (atomic_dec_and_test(&fbi->usage))
+		set_ctrlr_state(fbi, C_DISABLE);
+
+	return 0;
+}
+
 /* Pan the display if device supports it. */
 static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	struct fb_info *info)
@@ -621,39 +641,49 @@ static int db9000fb_pan_display(struct fb_var_screeninfo *var,
 	return 0;
 }
 
+static int db9000fb_ioctl(struct fb_info *fb, unsigned int cmd,
+		unsigned long arg)
+{
+	int ret = 0;
 #ifdef CONFIG_FB_DB9000_DRM
-/* handle additional 'ioctl' for secure ID */
-int db9000_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg) {
 	u32 __user *psecureid = (u32 __user *) arg;
 	ump_secure_id secure_id;
-	if(cmd == GET_UMP_SECURE_ID) {
-		if(!got_ump_handle){
-			ump_wrapped_buffer = ump_dd_handle_create_from_phys_blocks(&ump_memory_description, 1);
-			got_ump_handle = 1;
-		}
-		secure_id = ump_dd_secure_id_get( ump_wrapped_buffer );
-		return put_user( (unsigned int)secure_id, psecureid );
-	}
- 
-	return -EINVAL;
-}
 #endif /* CONFIG_FB_DB9000_DRM */
 
+	switch (cmd) {
+#ifdef CONFIG_FB_DB9000_DRM
+	/* handle additional 'ioctl' for secure ID */
+	case GET_UMP_SECURE_ID:
+		if (!got_ump_handle) {
+			ump_wrapped_buffer =
+				ump_dd_handle_create_from_phys_blocks(
+					&ump_memory_description, 1);
+			got_ump_handle = 1;
+		}
+		secure_id = ump_dd_secure_id_get(ump_wrapped_buffer);
+		ret = put_user((unsigned int)secure_id, psecureid);
+		break;
+#endif /* CONFIG_FB_DB9000_DRM */
+	default:
+		break;
+	}
+	return ret;
+}
 
 static struct fb_ops db9000fb_ops = {
 	.owner		= THIS_MODULE,
+	.fb_open	= db9000fb_open,
+	.fb_release	= db9000fb_release,
 	.fb_check_var	= db9000fb_check_var,
 	.fb_set_par	= db9000fb_set_par,
 	.fb_setcolreg	= db9000fb_setcolreg,
 	.fb_pan_display = db9000fb_pan_display,
-#ifdef CONFIG_FB_DB9000_DRM
-	.fb_ioctl		= db9000_ioctl,
-#endif
 	.fb_setcmap	= db9000fb_setcmap,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
 	.fb_imageblit	= cfb_imageblit,
 	.fb_blank	= db9000fb_blank,
+	.fb_ioctl	= db9000fb_ioctl,
 };
 
 /*
@@ -744,12 +774,11 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 	clk_rate = PICOS2KHZ(var->pixclock) * 1000;
 	pr_debug("Clock value is %d", clk_rate);
 
-	fbi->reg_pctr &= ~DB9000_PCTR_PCR;
+	fbi->reg_pctr &= ~0x7FF;
 
 	pcd = get_pcd(fbi, var->pixclock);
 	if (pcd >= 0) {
 		/* first try bus clk src */
-		fbi->reg_pctr &= ~(DB9000_PCTR_PCI | DB9000_PCTR_PCB);
 		fbi->reg_pctr |= DB9000_PCTR_PCD(pcd);
 		set_hsync_time(fbi, pcd);
 		clk_set_parent(fbi->clk, fbi->bus_clk);
@@ -807,7 +836,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	size_t nbytes;
 
 #if DEBUG_VAR
-	if (var->xres < 16 || var->xres > 4096)
+	if (var->xres < 16 || var->xres > 4096 || (var->xres % 16))
 		pr_err("%s: invalid xres %d\n", fbi->fb.fix.id, var->xres);
 
 	switch (var->bits_per_pixel) {
@@ -828,21 +857,21 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 	if (var->hsync_len < 0 || var->hsync_len > 255)
 		pr_err("%s: invalid hsync_len %d\n", fbi->fb.fix.id,
 				var->hsync_len);
-	if (var->left_margin < 0 || var->left_margin > 255)
+	if (var->left_margin < 0 || var->left_margin > 1023)
 		pr_err("%s: invalid left_margin %d\n",
 			fbi->fb.fix.id, var->left_margin);
-	if (var->right_margin < 0 || var->right_margin > 255)
+	if (var->right_margin < 0 || var->right_margin > 1023)
 		pr_err("%s: invalid right_margin %d\n", fbi->fb.fix.id,
 				var->right_margin);
-	if (var->yres < 16 || var->yres > 4096)
+	if (var->yres < 0 || var->yres > 4096)
 		pr_err("%s: invalid yres %d\n", fbi->fb.fix.id, var->yres);
 	if (var->vsync_len < 0 || var->vsync_len > 255)
 		pr_err("%s: invalid vsync_len %d\n", fbi->fb.fix.id,
 				var->vsync_len);
-	if (var->upper_margin < 0 || var->upper_margin > 255)
+	if (var->upper_margin < 0 || var->upper_margin > 1023)
 		pr_err("%s: invalid upper_margin %d\n", fbi->fb.fix.id,
 				var->upper_margin);
-	if (var->lower_margin < 0 || var->lower_margin > 255)
+	if (var->lower_margin < 0 || var->lower_margin > 1023)
 		pr_err("%s: invalid lower_margin %d\n", fbi->fb.fix.id,
 				var->lower_margin);
 	if (var->pixclock <= 0)
@@ -880,6 +909,7 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
 		(lcd_readl(fbi, DB9000_VTR2) != fbi->reg_vtr2) ||
 		(lcd_readl(fbi, DB9000_HVTER) != fbi->reg_hvter) ||
 		(lcd_readl(fbi, DB9000_PCTR) != fbi->reg_pctr) ||
+		(lcd_readl(fbi, DB9000_DBAR) != fbi->reg_dbar) ||
 		(lcd_readl(fbi, DB9000_DEAR) != fbi->reg_dear))
 		db9000fb_schedule_work(fbi, C_REENABLE);
 
@@ -894,10 +924,17 @@ static int db9000fb_activate_var(struct fb_var_screeninfo *var,
  */
 static inline void db9000fb_backlight_power(struct db9000fb_info *fbi, int on)
 {
-#ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	fbi->reg_pwmdcr		= 0x80;
-	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
-#endif
+	fbi->reg_pwmfr &= ~DB9000_PWMFR_PWM_FCE;
+
+	if (on) {
+		fbi->reg_pwmfr |= DB9000_PWMFR_PWM_FCE;
+		lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
+	} else {
+		fbi->reg_pwmdcr = lcd_readl(fbi, DB9000_PWMDCR);
+		lcd_writel(fbi, DB9000_PWMDCR, 0x0);
+	}
+
+	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
 }
 
 static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
@@ -950,6 +987,8 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	lcd_writel(fbi, DB9000_PCTR, fbi->reg_pctr | DB9000_PCTR_PCR);
 
 	fbi->reg_dbar = fbi->fb.fix.smem_start;
+	fbi->reg_dear = fbi->reg_dbar + (fbi->video_mem_size /
+			NUM_OF_FRAMEBUFFERS);
 
 	lcd_writel(fbi, DB9000_DBAR, fbi->reg_dbar);
 	lcd_writel(fbi, DB9000_DEAR, fbi->reg_dear);
@@ -967,11 +1006,6 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 
 	lcd_writel(fbi, DB9000_CR1,
 		fbi->reg_cr1 | DB9000_CR1_ENB | DB9000_CR1_DEE);
-
-#ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	lcd_writel(fbi, DB9000_PWMFR, fbi->reg_pwmfr);
-	lcd_writel(fbi, DB9000_PWMDCR, fbi->reg_pwmdcr);
-#endif
 }
 
 static void db9000fb_disable_controller(struct db9000fb_info *fbi)
@@ -1028,7 +1062,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 
 	/* Hack around fbcon initialisation. */
 	if (old_state == C_STARTUP && state == C_REENABLE)
-		state = C_ENABLE;
+		state = C_STARTUP;
 
 	switch (state) {
 	case C_DISABLE_CLKCHANGE:
@@ -1037,6 +1071,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * already disabled, then do nothing.
 		 */
 		if (old_state != C_DISABLE && old_state != C_DISABLE_PM) {
+			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
 			db9000fb_setup_gpio(fbi, false);
 			fbi->state = state;
@@ -1077,6 +1112,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 		 * This is so we reprogram the control registers.
 		 */
 		if (old_state == C_ENABLE) {
+			db9000fb_backlight_power(fbi, 0);
 			db9000fb_lcd_power(fbi, 0);
 			db9000fb_setup_gpio(fbi, false);
 			db9000fb_disable_controller(fbi);
@@ -1084,6 +1120,7 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			db9000fb_setup_gpio(fbi, true);
 			db9000fb_lcd_power(fbi, 1);
 			db9000fb_enable_controller(fbi);
+			db9000fb_backlight_power(fbi, 1);
 		}
 		break;
 
@@ -1110,6 +1147,19 @@ static void set_ctrlr_state(struct db9000fb_info *fbi, u_int state)
 			db9000fb_enable_controller(fbi);
 			db9000fb_backlight_power(fbi, 1);
 		}
+		break;
+
+	case C_STARTUP:
+		fbi->state = C_STARTUP;
+		db9000fb_setup_gpio(fbi, true);
+		db9000fb_lcd_power(fbi, 1);
+		db9000fb_enable_controller(fbi);
+		db9000fb_backlight_power(fbi, 1);
+		msleep(100);
+		db9000fb_backlight_power(fbi, 0);
+		db9000fb_lcd_power(fbi, 0);
+		db9000fb_setup_gpio(fbi, false);
+		db9000fb_disable_controller(fbi);
 		break;
 	}
 	mutex_unlock(&fbi->ctrlr_lock);
@@ -1145,12 +1195,15 @@ db9000fb_freq_transition(
 
 	switch (val) {
 	case CPUFREQ_PRECHANGE:
-		set_ctrlr_state(fbi, C_DISABLE_CLKCHANGE);
+		if (!fbi->ignore_cpufreq_notification)
+			set_ctrlr_state(fbi, C_DISABLE_CLKCHANGE);
 		break;
 
 	case CPUFREQ_POSTCHANGE:
-		setup_parallel_timing(fbi, var);
-		set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
+		if (!fbi->ignore_cpufreq_notification) {
+			setup_parallel_timing(fbi, var);
+			set_ctrlr_state(fbi, C_ENABLE_CLKCHANGE);
+		}
 		break;
 	}
 	return 0;
@@ -1299,8 +1352,10 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->state		= C_STARTUP;
 	fbi->task_state		= (u_char)-1;
 	fbi->frame_base		= inf->frame_buf_base;
+	fbi->video_mem_size	= inf->mem_size;
 	db9000fb_decode_mach_info(fbi, inf);
 
+	atomic_set(&fbi->usage, 0);
 	init_waitqueue_head(&fbi->ctrlr_wait);
 	INIT_WORK(&fbi->task, db9000fb_task);
 	mutex_init(&fbi->ctrlr_lock);
@@ -1637,19 +1692,19 @@ static void __devinit db9000fb_check_options(struct device *dev,
 		dev_warn(dev, "BPP setting illegal: %d\n", inf->ctrl_info->bpp);
 	}
 
-	if ((inf->modes->xres > 4096) || (inf->modes->xres < 16))
+	if (inf->modes->xres < 16 || inf->modes->xres > 4096 || (inf->modes->yres % 16))
 		dev_warn(dev, "Horizontal resolution out of range: %d\n",
 				inf->modes->xres);
 
-	if ((inf->modes->yres > 4096) || (inf->modes->yres < 64))
+	if ((inf->modes->yres > 4096) || (inf->modes->yres < 0))
 		dev_warn(dev, "Vertical resolution out of range: %d\n",
 				inf->modes->yres);
 
-	if (inf->modes->left_margin > 255)
+	if (inf->modes->left_margin > 1023)
 		dev_warn(dev, "machine Horizontal Back Port setting out of \
 				range: %d\n", inf->modes->left_margin);
 
-	if (inf->modes->right_margin > 255)
+	if (inf->modes->right_margin > 1023)
 		dev_warn(dev, "machine Horizontal Front Port setting out of \
 				range: %d\n", inf->modes->left_margin);
 }
@@ -1723,7 +1778,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (inf->ctrl_info->bpp < 16)
 		fbi->video_mem_size += PALETTE_SIZE;
 
-	fbi->video_mem_size = inf->mem_size;
 	/* Initialize video memory */
 	addr = ioremap(fbi->frame_base, fbi->video_mem_size);
 	if (!addr) {
@@ -1755,12 +1809,8 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_framebuffer_addr;
 	}
 
-	/*
-	 * This makes sure that our colour bitfield descriptors are correctly
-	 * initialised.
-	 */
-
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	fbi->reg_pwmdcr = DEF_BRIGHTNESS;
 	fbi->pdev = pdev;
 	init_backlight(fbi);
 #endif
@@ -1774,8 +1824,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	if (fbi->palette_mode == PAL_IN_FB)
 		fbi->video_mem_size += (fbi->palette_size * 2);
 
-	 /* Ok, now enable the LCD controller */
-	set_ctrlr_state(fbi, C_ENABLE);
 	platform_set_drvdata(pdev, fbi);
 
 	ret = register_framebuffer(&fbi->fb);
@@ -1805,19 +1853,12 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_clear_plat_data;
 	}
 
-#if !defined(CONFIG_FRAMEBUFFER_CONSOLE) && defined(CONFIG_LOGO)
-	if (fb_prepare_logo(&fbi->fb, FB_ROTATE_UR)) {
-		/* Start display and show logo on boot */
-		fb_set_cmap(&fbi->fb.cmap, &fbi->fb);
-
-		fb_show_logo(&fbi->fb, FB_ROTATE_UR);
-	}
-#endif
-
 #ifdef CONFIG_FB_DB9000_DRM
 	ump_memory_description.addr = fbi->fb.fix.smem_start;
 	ump_memory_description.size = ((fbi->fb.fix.smem_len / 4096) + 1)* 4096;
 #endif /* CONFIG_FB_DB9000_DRM */
+
+	fbi->ignore_cpufreq_notification = inf->ignore_cpufreq_notification;
 
 	return 0;
 
@@ -1926,7 +1967,7 @@ static int __init db9000fb_init(void)
 
 	return platform_driver_register(&db9000fb_driver);
 }
-subsys_initcall(db9000fb_init);
+module_init(db9000fb_init);
 
 static void __exit db9000fb_exit(void)
 {

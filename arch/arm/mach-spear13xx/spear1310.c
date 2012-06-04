@@ -11,10 +11,16 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/ahci_platform.h>
 #include <linux/amba/pl022.h>
+#include <linux/can/platform/c_can.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
+#include <linux/i2c-designware.h>
+#include <linux/mtd/fsmc.h>
 #include <asm/irq.h>
 #include <plat/hdlc.h>
+#include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spear1310_misc_regs.h>
@@ -775,6 +781,72 @@ struct pmx_dev spear1310_pmx_sata2 = {
 	.mode_count = ARRAY_SIZE(pmx_sata2_modes),
 };
 
+/* Pad multiplexing for sdhci device */
+static struct pmx_mux_reg pmx_sdhci_mux[] = {
+	{
+		.address = SPEAR1310_PERIP_CFG,
+		.mask = SPEAR1310_MCIF_SEL_MASK << SPEAR1310_MCIF_SEL_SHIFT,
+		.value = SPEAR1310_MCIF_SEL_SD << SPEAR1310_MCIF_SEL_SHIFT,
+	},
+};
+
+static struct pmx_dev_mode pmx_sdhci_modes[] = {
+	{
+		.mux_regs = pmx_sdhci_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_sdhci_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_sdhci = {
+	.name = "sdhci",
+	.modes = pmx_sdhci_modes,
+	.mode_count = ARRAY_SIZE(pmx_sdhci_modes),
+};
+
+/* Pad multiplexing for cf device */
+static struct pmx_mux_reg pmx_cf_mux[] = {
+	{
+		.address = SPEAR1310_PERIP_CFG,
+		.mask = SPEAR1310_MCIF_SEL_MASK << SPEAR1310_MCIF_SEL_SHIFT,
+		.value = SPEAR1310_MCIF_SEL_CF << SPEAR1310_MCIF_SEL_SHIFT,
+	},
+};
+
+static struct pmx_dev_mode pmx_cf_modes[] = {
+	{
+		.mux_regs = pmx_cf_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_cf_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_cf = {
+	.name = "cf",
+	.modes = pmx_cf_modes,
+	.mode_count = ARRAY_SIZE(pmx_cf_modes),
+};
+
+/* Pad multiplexing for xd device */
+static struct pmx_mux_reg pmx_xd_mux[] = {
+	{
+		.address = SPEAR1310_PERIP_CFG,
+		.mask = SPEAR1310_MCIF_SEL_MASK << SPEAR1310_MCIF_SEL_SHIFT,
+		.value = SPEAR1310_MCIF_SEL_XD << SPEAR1310_MCIF_SEL_SHIFT,
+	},
+};
+
+static struct pmx_dev_mode pmx_xd_modes[] = {
+	{
+		.mux_regs = pmx_xd_mux,
+		.mux_reg_cnt = ARRAY_SIZE(pmx_xd_mux),
+	},
+};
+
+struct pmx_dev spear1310_pmx_xd = {
+	.name = "xd",
+	.modes = pmx_xd_modes,
+	.mode_count = ARRAY_SIZE(pmx_xd_modes),
+};
+
 /* Add spear1310 specific devices here */
 /* ssp1 device registeration */
 static struct pl022_ssp_controller ssp1_platform_data = {
@@ -867,6 +939,16 @@ struct amba_device spear1310_uart5_device = {
 };
 
 /* CAN device registeration */
+static struct c_can_platform_data can0_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 20,
+		.rx_last = 26,
+		.tx_num = 6,
+	},
+};
+
 static struct resource can0_resources[] = {
 	{
 		.start = SPEAR1310_CAN0_BASE,
@@ -883,6 +965,17 @@ struct platform_device spear1310_can0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
 	.resource = can0_resources,
+	.dev.platform_data = &can0_pdata,
+};
+
+static struct c_can_platform_data can1_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 20,
+		.rx_last = 26,
+		.tx_num = 6,
+	},
 };
 
 static struct resource can1_resources[] = {
@@ -901,6 +994,41 @@ struct platform_device spear1310_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+	.dev.platform_data = &can1_pdata,
+};
+
+static int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear13xx_pmx_i2c;
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+static int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = &spear13xx_pmx_i2c;
+	/* restore I2C SLCK control to I2C controller*/
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear1310_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_103,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_102,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
 };
 
 /* i2c1 device registeration */
@@ -1208,6 +1336,64 @@ struct platform_device spear1310_rs485_1_device = {
 	.resource = rs485_1_resources,
 };
 
+static void sata_miphy_exit(struct device *dev)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+	writel(~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK,
+			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+
+	/* Enable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1310_PERIP1_SW_RST) | (0x1000)),
+			VA_SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+	/* Switch off sata power domain */
+	writel((readl(VA_SPEAR1310_PCM_CFG) & (~0x800)),
+			VA_SPEAR1310_PCM_CFG);
+	msleep(20);
+}
+
+
+static int sata_miphy_init(struct device *dev, void __iomem *addr)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+	temp |= SPEAR1310_SATA_CFG_VAL(0);
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+
+	temp = readl(VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp &= ~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK;
+	temp |= SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK;
+
+	writel(temp, VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	/* Switch on sata power domain */
+	writel((readl(VA_SPEAR1310_PCM_CFG) | (0x800)),
+			VA_SPEAR1310_PCM_CFG);
+	msleep(20);
+	/* Disable PCIE SATA Controller reset */
+	writel((readl(VA_SPEAR1310_PERIP1_SW_RST) & (~0x1000)),
+			VA_SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+
+	return 0;
+}
+
+static struct ahci_platform_data sata_pdata = {
+	.init = sata_miphy_init,
+	.exit = sata_miphy_exit,
+};
+
+static u64 ahci_dmamask = DMA_BIT_MASK(32);
+
 /* SATA0 device registration */
 static struct resource sata0_resources[] = {
 	{
@@ -1225,6 +1411,11 @@ struct platform_device spear1310_sata0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(sata0_resources),
 	.resource = sata0_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* SATA1 device registration */
@@ -1244,6 +1435,11 @@ struct platform_device spear1310_sata1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(sata1_resources),
 	.resource = sata1_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* SATA2 device registration */
@@ -1263,9 +1459,19 @@ struct platform_device spear1310_sata2_device = {
 	.id = 2,
 	.num_resources = ARRAY_SIZE(sata2_resources),
 	.resource = sata2_resources,
+	.dev = {
+		.platform_data = &sata_pdata,
+		.dma_mask = &ahci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 
 /* OTG device registration */
+static struct dwc_otg_plat_data otg_platform_data = {
+	.phy_init = otg_phy_init,
+	.param_init = otg_param_init,
+};
+
 static struct resource otg_resources[] = {
 	{
 		.start = SPEAR1310_UOC_BASE,
@@ -1277,17 +1483,62 @@ static struct resource otg_resources[] = {
 	},
 };
 
+static u64 otg_dmamask = ~0;
 struct platform_device spear1310_otg_device = {
 	.name = "dwc_otg",
 	.id = -1,
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.dma_mask = &otg_dmamask,
+		.platform_data = &otg_platform_data,
+	},
 	.num_resources = ARRAY_SIZE(otg_resources),
 	.resource = otg_resources,
+};
+
+/* nand device registeration */
+static void spear1310_nand_select_bank(u32 bank, u32 busw)
+{
+	u32 fsmc_cfg = readl(VA_SPEAR1310_FSMC_CFG);
+
+	fsmc_cfg &= ~(SPEAR1310_FSMC_CS_MEMSEL_MASK << (bank & 3));
+
+	writel(fsmc_cfg, VA_SPEAR1310_FSMC_CFG);
+}
+/* nand device registeration */
+static struct fsmc_nand_platform_data nand_platform_data = {
+	.select_bank = spear1310_nand_select_bank,
+	.mode = USE_WORD_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
+};
+
+static struct resource nand_resources[] = {
+	{
+		.name = "nand_data",
+		.start = SPEAR1310_NAND_MEM_BASE,
+		.end = SPEAR1310_NAND_MEM_BASE + SZ_16 - 1,
+		.flags = IORESOURCE_MEM,
+	}, {
+		.name = "fsmc_regs",
+		.start = SPEAR13XX_FSMC_BASE,
+		.end = SPEAR13XX_FSMC_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device spear1310_nand_device = {
+	.name = "fsmc-nand",
+	.id = -1,
+	.resource = nand_resources,
+	.num_resources = ARRAY_SIZE(nand_resources),
+	.dev.platform_data = &nand_platform_data,
 };
 
 static void tdm_hdlc_setup(void)
 {
 	struct clk *synth_clk, *vco_clk, *tdm0_clk, *tdm1_clk;
-	char *synth_clk_name = "gen_synth1_clk";
+	char *synth_clk_name = "ras_synth1_clk";
 	char *vco_clk_name = "vco1div4_clk";
 	int ret;
 
@@ -1375,6 +1626,8 @@ void __init spear1310_init(struct pmx_mode *pmx_mode,
 
 	tdm_hdlc_setup();
 
+	spear13xx_i2c_device.dev.platform_data = &spear1310_i2c0_dw_pdata;
+
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;
 	pmx_driver.devs = pmx_devs;
@@ -1383,4 +1636,62 @@ void __init spear1310_init(struct pmx_mode *pmx_mode,
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+int spear1310_pcie_clk_init(struct pcie_port *pp)
+{
+	u32 temp;
+
+	temp = readl(VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp &= ~SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE_MASK;
+	temp |= SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE;
+
+	writel(temp, VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+
+	switch (pp->port) {
+	case 0:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
+		temp |= SPEAR1310_PCIE_CFG_VAL(0);
+		break;
+	case 1:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(1);
+		temp |= SPEAR1310_PCIE_CFG_VAL(1);
+		break;
+	case 2:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(2);
+		temp |= SPEAR1310_PCIE_CFG_VAL(2);
+		break;
+	default:
+		return -EINVAL;
+	}
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+
+	return 0;
+}
+
+int spear1310_pcie_clk_exit(struct pcie_port *pp)
+{
+	u32 temp;
+
+	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
+
+	switch (pp->port) {
+	case 0:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
+		break;
+	case 1:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(1);
+		break;
+	case 2:
+		temp &= ~SPEAR1310_PCIE_CFG_MASK(2);
+		break;
+	}
+
+	writel(temp, VA_SPEAR1310_PCIE_SATA_CFG);
+	writel(~SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE_MASK,
+			VA_SPEAR1310_PCIE_MIPHY_CFG_1);
+
+	return 0;
 }

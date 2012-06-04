@@ -648,6 +648,7 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	input_set_abs_params(ddata->input_dev, ABS_Z, -32768, 32767, 0, 0);
 
 	ddata->input_dev->name = "magnetometer";
+	ddata->input_dev->phys = "magnetometer/input0";
 
 	ret = input_register_device(ddata->input_dev);
 	if (ret) {

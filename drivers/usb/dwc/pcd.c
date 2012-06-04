@@ -406,6 +406,10 @@ static void dwc_otg_ep_disable(struct core_if *core_if, struct dwc_ep *ep)
 
 	/* Disable endpoint */
 	diepctl = dwc_read32(regs + DWC_DIEPCTL);
+
+	if (DWC_DEPCTL_EPENA_RD(diepctl) == 0)
+		return;
+
 	diepctl = DWC_DEPCTL_SET_NAK_RW(diepctl, 1);
 	dwc_write32(regs + DWC_DIEPCTL, diepctl);
 	diepint = dwc_read32(regs + DWC_DIEPINT);
@@ -1819,7 +1823,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 {
 	int retval;
 	u32 dctl;
-	struct device_if *dev_if = (GET_CORE_IF(s_pcd))->dev_if;
+	struct device_if *dev_if;
 
 	if (!driver || driver->speed == USB_SPEED_UNKNOWN || !bind ||
 	    !driver->unbind || !driver->disconnect || !driver->setup)
@@ -1830,6 +1834,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 	if (s_pcd->driver != NULL)
 		return -EBUSY;
+
+	dev_if = (GET_CORE_IF(s_pcd))->dev_if;
 
 	/* hook up the driver */
 	s_pcd->driver = driver;

@@ -1,4 +1,4 @@
-/* 
+/*
  * Decoder device driver (kernel module)
  *
  * Copyright (C) 2011  Hantro Products Oy.
@@ -14,44 +14,28 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
 ------------------------------------------------------------------------------*/
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-/* needed for __init,__exit directives */
-#include <linux/init.h>
-/* needed for remap_pfn_range
-	SetPageReserved
-	ClearPageReserved
-*/
-#include <linux/mm.h>
-/* obviously, for kmalloc */
-#include <linux/slab.h>
-/* for struct file_operations, register_chrdev() */
-#include <linux/fs.h>
-/* standard error codes */
-#include <linux/errno.h>
-
-#include <linux/moduleparam.h>
-/* request_irq(), free_irq() */
-#include <linux/interrupt.h>
-
-/* needed for virt_to_phys() */
-#include <asm/io.h>
-#include <linux/pci.h>
-#include <asm/uaccess.h>
-#include <linux/ioport.h>
-
 #include <asm/irq.h>
-
-#include <linux/version.h>
-
-#include <linux/signal.h>
-#include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/errno.h>
+#include <linux/fs.h>
+#include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/io.h>
+#include <linux/ioport.h>
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/module.h>
+#include <linux/moduleparam.h>
+#include <linux/pci.h>
+#include <linux/platform_device.h>
+#include <linux/signal.h>
+#include <linux/slab.h>
+#include <linux/uaccess.h>
 
 /* our own stuff */
 #include "hx170dec.h"
@@ -83,33 +67,29 @@ MODULE_DESCRIPTION("driver module for 8170/81990 Hantro decoder/pp");
 #define HX_DEC_INTERRUPT_BIT		0x100
 #define HX_PP_INTERRUPT_BIT		0x100
 
-#define VIDEO_DEC_DEF_RATE	240*1000*1000
+#define VIDEO_DEC_DEF_RATE	(240*1000*1000)
 #define VIDEO_DEC_CHRDEV_NAME	"video_dec"
 
 static const int DecHwId[] = { 0x8190, 0x8170, 0x9170, 0x9190, 0x6731 };
 
-static char hx170dec_dev_name[] = "hx170";
+static const char hx170dec_dev_name[] = "hx170";
 
-static u32 hx_pp_instance = 0;
-static u32 hx_dec_instance = 0;
+static u32 hx_pp_instance;
+static u32 hx_dec_instance;
 
 struct clk *video_dec_clk;
 
 static struct hx170dec_dev device;
 
-unsigned long base_port = HXDEC_LOGIC_MODULE0_BASE;
-int irq = DEC_IRQ;
+char *irq = "plat";
 
 /* module_param(name, type, perm) */
-module_param(base_port, ulong, 0);
-module_param(irq, int, 0);
+module_param(irq, charp, 0);
 
-/* and this is our MAJOR; use 0 for dynamic allocation (recommended)*/
-static int hx170dec_major = 0;
+static int hx170dec_major;
 
 /* here's all the must remember stuff */
-typedef struct
-{
+struct hx170dec_t {
 	char *buffer;
 	unsigned long iobaseaddr;
 	unsigned int iosize;
@@ -117,9 +97,9 @@ typedef struct
 	int irq;
 	struct fasync_struct *async_queue_dec;
 	struct fasync_struct *async_queue_pp;
-} hx170dec_t;
+};
 
-static hx170dec_t hx170dec_data;/* dynamic allocation? */
+static struct hx170dec_t hx170dec_data;/* dynamic allocation? */
 
 #ifdef HW_PERFORMANCE
 static struct timeval end_time;
@@ -128,33 +108,23 @@ static struct timeval end_time;
 static int ReserveIO(void);
 static void ReleaseIO(void);
 
-static void ResetAsic(hx170dec_t * dev);
+static void ResetAsic(struct hx170dec_t *dev);
 
 #ifdef CONFIG_VIDEO_SPEAR_VIDEODEC_DEBUG
 static void dump_regs(unsigned long data);
 #endif
 
 /* IRQ handler */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18))
-static irqreturn_t hx170dec_isr(int irq, void *dev_id, struct pt_regs *regs);
-#else
 static irqreturn_t hx170dec_isr(int irq, void *dev_id);
-#endif
 
 /*------------------------------------------------------------------------------
     Function name   : hx170dec_ioctl
     Description     : communication method to/from the user space
 
-    Return type     : int
+    Return type     : long
 ------------------------------------------------------------------------------*/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36))
-static int hx170dec_ioctl(struct inode *inode, struct file *filp,
+static long hx170dec_ioctl(struct file *filp,
 				unsigned int cmd, unsigned long arg)
-#else
-/* From Linux 2.6.36 the locked ioctl was removed in favor of unlocked one */
-static long hx170dec_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)  
-#endif
-
 {
 	int err = 0;
 
@@ -167,9 +137,9 @@ static long hx170dec_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	 * extract the type and number bitfields, and don't decode
 	 * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
 	 */
-	if(_IOC_TYPE(cmd) != HX170DEC_IOC_MAGIC)
+	if (_IOC_TYPE(cmd) != HX170DEC_IOC_MAGIC)
 		return -ENOTTY;
-	if(_IOC_NR(cmd) > HX170DEC_IOC_MAXNR)
+	if (_IOC_NR(cmd) > HX170DEC_IOC_MAXNR)
 		return -ENOTTY;
 
 	/*
@@ -178,15 +148,14 @@ static long hx170dec_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	 * access_ok is kernel-oriented, so the concept of "read" and
 	 * "write" is reversed
 	 */
-	if(_IOC_DIR(cmd) & _IOC_READ)
+	if (_IOC_DIR(cmd) & _IOC_READ)
 		err = !access_ok(VERIFY_WRITE, (void *) arg, _IOC_SIZE(cmd));
-	else if(_IOC_DIR(cmd) & _IOC_WRITE)
+	else if (_IOC_DIR(cmd) & _IOC_WRITE)
 		err = !access_ok(VERIFY_READ, (void *) arg, _IOC_SIZE(cmd));
-	if(err)
+	if (err)
 		return -EFAULT;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case HX170DEC_IOC_CLI:
 		disable_irq(hx170dec_data.irq);
 		break;
@@ -240,24 +209,21 @@ static int hx170dec_open(struct inode *inode, struct file *filp)
 static int hx170dec_fasync(int fd, struct file *filp, int mode)
 {
 
-	hx170dec_t *dev = &hx170dec_data;
+	struct hx170dec_t *dev = &hx170dec_data;
 	struct fasync_struct **async_queue;
 
 	/* select which interrupt this instance will sign up for */
 
-	if(((u32 *) filp->private_data) == &hx_dec_instance)
-	{
+	if (((u32 *) filp->private_data) == &hx_dec_instance) {
 		/* decoder */
 		PDEBUG("decoder fasync called %d %x %d %x\n",
-			   fd, (u32) filp, mode, (u32) & dev->async_queue_dec);
+			   fd, (u32) filp, mode, (u32) &dev->async_queue_dec);
 
 		async_queue = &dev->async_queue_dec;
-	}
-	else
-	{
+	} else {
 		/* pp */
 		PDEBUG("pp fasync called %d %x %d %x\n",
-			   fd, (u32) filp, mode, (u32) & dev->async_queue_pp);
+			   fd, (u32) filp, mode, (u32) &dev->async_queue_pp);
 		async_queue = &dev->async_queue_pp;
 	}
 
@@ -276,8 +242,7 @@ static int hx170dec_release(struct inode *inode, struct file *filp)
 
 	/* hx170dec_t *dev = &hx170dec_data; */
 
-	if(filp->f_flags & FASYNC)
-	{
+	if (filp->f_flags & FASYNC) {
 		/* remove this filp from the asynchronusly notified filp's */
 		hx170dec_fasync(-1, filp, 0);
 	}
@@ -287,26 +252,36 @@ static int hx170dec_release(struct inode *inode, struct file *filp)
 }
 
 /* VFS methods */
-static struct file_operations hx170dec_fops = {
-	open:hx170dec_open,
-	release:hx170dec_release,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36))
-	ioctl:hx170dec_ioctl,
-#else
-  /* From Linux 2.6.36 the locked ioctl was removed */
-	unlocked_ioctl:hx170dec_ioctl,
-#endif
-	fasync:hx170dec_fasync,
+static const struct file_operations hx170dec_fops = {
+	.open		= hx170dec_open,
+	.release	= hx170dec_release,
+	.unlocked_ioctl	= hx170dec_ioctl,
+	.fasync		= hx170dec_fasync,
 };
+
 
 #ifdef CONFIG_PM
 static int spear_video_dec_suspend(struct device *dev)
 {
+	clk_disable(video_dec_clk);
+
+	dev_info(dev, "Suspended.\n");
+
 	return 0;
 }
 
 static int spear_video_dec_resume(struct device *dev)
 {
+	int result;
+
+	result = clk_enable(video_dec_clk);
+	if (result) {
+		dev_err(dev, "Can't enable clock\n");
+		return result;
+	}
+
+	dev_info(dev, "Resumed.\n");
+
 	return 0;
 }
 
@@ -319,20 +294,21 @@ static const struct dev_pm_ops spear_video_dec_pm_ops = {
 #endif /* CONFIG_PM */
 
 
-int hx170dec_sysfs_register(struct hx170dec_dev *device, dev_t dev, const char *hx170dec_dev_name)
+
+int hx170dec_sysfs_register(struct hx170dec_dev *device, dev_t dev,
+				const char *hx170dec_dev_name)
 {
 	int err = 0;
-	struct device * mdev;
+	struct device *mdev;
 
 	device->hx170dec_class = class_create(THIS_MODULE, hx170dec_dev_name);
-	if (IS_ERR(device->hx170dec_class))
-	{
+	if (IS_ERR(device->hx170dec_class)) {
 		err = PTR_ERR(device->hx170dec_class);
 		goto init_class_err;
 	}
-	mdev = device_create(device->hx170dec_class, NULL, dev, NULL, hx170dec_dev_name);
-	if (IS_ERR(mdev))
-	{
+	mdev = device_create(device->hx170dec_class, NULL, dev, NULL,
+				hx170dec_dev_name);
+	if (IS_ERR(mdev)) {
 		err = PTR_ERR(mdev);
 		goto init_mdev_err;
 	}
@@ -352,6 +328,40 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 {
 	int result;
 	dev_t dev = 0;
+	long unsigned int parse_irq = 0;
+	struct resource *vdec_mem;
+	struct resource *vdec_irq;
+
+	hx170dec_major = 0; /*use 0 for dynamic allocation (recommended)*/
+	hx_pp_instance = 0;
+	hx_dec_instance = 0;
+
+	/* get platform resources */
+	vdec_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!vdec_mem) {
+		dev_err(&pdev->dev, "Can't get memory resource\n");
+		goto no_res;
+	}
+
+	if ( irq == NULL || !strncmp(irq, "plat", 4)) {
+		vdec_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+		if (!vdec_irq) {
+			dev_err(&pdev->dev, "Can't get interrupt resource\n");
+			goto no_res;
+		}
+		hx170dec_data.irq = vdec_irq->start;
+		dev_info(&pdev->dev, "Platform IRQ mode selected\n");
+	} else if (!strncmp(irq, "no", 2)) {
+		hx170dec_data.irq = 0;
+		dev_info(&pdev->dev, "Disable IRQ mode selected\n");
+	} else {
+		if (strict_strtoul(irq, 10, &(parse_irq))) {
+			dev_err(&pdev->dev, "Wrong IRQ parameter: %s\n", irq);
+			goto no_res;
+		}
+		hx170dec_data.irq = parse_irq;
+		dev_info(&pdev->dev, "IRQ param: %d\n", hx170dec_data.irq);
+	}
 
 	/* clock init */
 	video_dec_clk = clk_get(&pdev->dev, NULL);
@@ -368,34 +378,29 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 		goto put_clk;
 	}
 
-	hx170dec_data.iobaseaddr = base_port;
-	hx170dec_data.iosize = DEC_IO_SIZE;
-	hx170dec_data.irq = irq;
+	hx170dec_data.iobaseaddr = vdec_mem->start;
+	hx170dec_data.iosize = vdec_mem->end - vdec_mem->start + 4;
 
 	hx170dec_data.async_queue_dec = NULL;
 	hx170dec_data.async_queue_pp = NULL;
 
 
-	if (0 == hx170dec_major)
-	{
+	if (0 == hx170dec_major) {
 		/* auto select a major */
-		result = alloc_chrdev_region(&dev, 0/*first minor*/, 1/*count*/, hx170dec_dev_name);
+		result = alloc_chrdev_region(&dev, 0, 1, hx170dec_dev_name);
 		hx170dec_major = MAJOR(dev);
-	}
-	else
-	{
+	} else {
 		/* use load time defined major number */
 		dev = MKDEV(hx170dec_major, 0);
-		result = register_chrdev_region(dev, 1/*count*/, hx170dec_dev_name);
+		result = register_chrdev_region(dev, 1, hx170dec_dev_name);
 	}
 
 	if (result)
-	{
 		goto init_chrdev_err;
-	}
-	
+
+
 	memset(&device, 0, sizeof(device));
-	
+
 	/* initialize our char dev data */
 	cdev_init(&device.cdev, &hx170dec_fops);
 	device.cdev.owner = THIS_MODULE;
@@ -404,42 +409,27 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 	/* register char dev with the kernel */
 	result = cdev_add(&device.cdev, dev, 1/*count*/);
 	if (result)
-	{
 		goto init_cdev_err;
-	}
 
 	result = hx170dec_sysfs_register(&device, dev, hx170dec_dev_name);
 	if (result)
-	{
 		goto init_sysfs_err;
-	}
-	
-	
+
 	result = ReserveIO();
-	if(result < 0)
-	{
+	if (result < 0)
 		goto err;
-	}
+
 
 	ResetAsic(&hx170dec_data);  /* reset hardware */
 	/* get the IRQ line */
-	if(irq > 0)
-	{
-		result = request_irq(irq, hx170dec_isr,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18))
-				SA_INTERRUPT | SA_SHIRQ,
-#else
+	if (hx170dec_data.irq > 0) {
+		result = request_irq(hx170dec_data.irq, hx170dec_isr,
 				IRQF_DISABLED | IRQF_SHARED,
-#endif
 				"hx170dec", (void *) &hx170dec_data);
-		if(result != 0)
-		{
-			if(result == -EINVAL)
-			{
+		if (result != 0) {
+			if (result == -EINVAL) {
 				dev_err(&pdev->dev, "Bad irq number or handler\n");
-			}
-			else if(result == -EBUSY)
-			{
+			} else if (result == -EBUSY) {
 				dev_err(&pdev->dev, "IRQ <%d> busy, change your config\n",
 					hx170dec_data.irq);
 			}
@@ -447,13 +437,12 @@ static int spear_video_dec_probe(struct platform_device *pdev)
 			ReleaseIO();
 			goto err;
 		}
-	}
-	else
-	{
+	} else {
 		dev_info(&pdev->dev, "IRQ not in use!\n");
 	}
 
-	dev_info(&pdev->dev, "Video decoder initialized. Major = %d\n", hx170dec_major);
+	dev_info(&pdev->dev, "Video decoder initialized. Major = %d\n",
+			hx170dec_major);
 
 	return 0;
 
@@ -467,6 +456,8 @@ init_cdev_err:
 	unregister_chrdev_region(dev, 1/*count*/);
 init_chrdev_err:
 	return -EFAULT;
+no_res:
+	return -ENODEV;
 err:
 	dev_err(&pdev->dev, "probe failed\n");
 	return result;
@@ -474,7 +465,7 @@ err:
 
 static int spear_video_dec_exit(struct platform_device *pdev)
 {
-	hx170dec_t *dev = (hx170dec_t *) & hx170dec_data;
+	struct hx170dec_t *dev = (struct hx170dec_t *) &hx170dec_data;
 
 	/* clear dec IRQ */
 	writel(0, dev->hwregs + X170_INTERRUPT_REGISTER_DEC);
@@ -486,10 +477,8 @@ static int spear_video_dec_exit(struct platform_device *pdev)
 #endif
 
 	/* free the IRQ */
-	if(dev->irq != -1)
-	{
+	if (dev->irq != -1)
 		free_irq(dev->irq, (void *) dev);
-	}
 
 	ReleaseIO();
 
@@ -511,6 +500,7 @@ static struct platform_driver spear1340_video_dec_driver = {
 #ifdef CONFIG_PM
 		.pm = &spear_video_dec_pm_ops,
 #endif
+
 	},
 };
 
@@ -526,7 +516,7 @@ static void __exit spear_video_dec_cleanup(void)
 }
 module_exit(spear_video_dec_cleanup);
 
-static int CheckHwId(hx170dec_t * dev)
+static int CheckHwId(struct hx170dec_t *dev)
 {
 	long int hwid;
 
@@ -537,10 +527,8 @@ static int CheckHwId(hx170dec_t * dev)
 
 	hwid = (hwid >> 16) & 0xFFFF;   /* product version only */
 
-	while(numHw--)
-	{
-		if(hwid == DecHwId[numHw])
-		{
+	while (numHw--) {
+		if (hwid == DecHwId[numHw]) {
 			printk(KERN_INFO "hx170dec: Compatible HW found at 0x%08lx\n",
 				   dev->iobaseaddr);
 			return 1;
@@ -560,27 +548,18 @@ static int CheckHwId(hx170dec_t * dev)
 ------------------------------------------------------------------------------*/
 static int ReserveIO(void)
 {
-	if(!request_mem_region
-	   (hx170dec_data.iobaseaddr, hx170dec_data.iosize, "hx170dec"))
-	{
-		printk(KERN_INFO "hx170dec: failed to reserve HW regs\n");
-		return -EBUSY;
-	}
-
 	hx170dec_data.hwregs =
 		(volatile u8 *) ioremap_nocache(hx170dec_data.iobaseaddr,
 						hx170dec_data.iosize);
 
-	if(hx170dec_data.hwregs == NULL)
-	{
+	if (hx170dec_data.hwregs == NULL) {
 		printk(KERN_INFO "hx170dec: failed to ioremap HW regs\n");
 		ReleaseIO();
 		return -EBUSY;
 	}
 
 	/* check for correct HW */
-	if(!CheckHwId(&hx170dec_data))
-	{
+	if (!CheckHwId(&hx170dec_data)) {
 		ReleaseIO();
 		return -EBUSY;
 	}
@@ -597,9 +576,8 @@ static int ReserveIO(void)
 
 static void ReleaseIO(void)
 {
-	if(hx170dec_data.hwregs)
+	if (hx170dec_data.hwregs)
 		iounmap((void *) hx170dec_data.hwregs);
-	release_mem_region(hx170dec_data.iobaseaddr, hx170dec_data.iosize);
 }
 
 /*------------------------------------------------------------------------------
@@ -608,15 +586,11 @@ static void ReleaseIO(void)
 
     Return type     : irqreturn_t
 ------------------------------------------------------------------------------*/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,18))
-irqreturn_t hx170dec_isr(int irq, void *dev_id, struct pt_regs *regs)
-#else
 irqreturn_t hx170dec_isr(int irq, void *dev_id)
-#endif
 {
 	unsigned int handled = 0;
 
-	hx170dec_t *dev = (hx170dec_t *) dev_id;
+	struct hx170dec_t *dev = (struct hx170dec_t *) dev_id;
 	u32 irq_status_dec;
 	u32 irq_status_pp;
 
@@ -626,12 +600,10 @@ irqreturn_t hx170dec_isr(int irq, void *dev_id)
 	irq_status_dec = readl(dev->hwregs + X170_INTERRUPT_REGISTER_DEC);
 	irq_status_pp = readl(dev->hwregs + X170_INTERRUPT_REGISTER_PP);
 
-	if((irq_status_dec & HX_DEC_INTERRUPT_BIT) ||
-	   (irq_status_pp & HX_PP_INTERRUPT_BIT))
-	{
+	if ((irq_status_dec & HX_DEC_INTERRUPT_BIT) ||
+	   (irq_status_pp & HX_PP_INTERRUPT_BIT)) {
 
-		if(irq_status_dec & HX_DEC_INTERRUPT_BIT)
-		{
+		if (irq_status_dec & HX_DEC_INTERRUPT_BIT) {
 #ifdef HW_PERFORMANCE
 			do_gettimeofday(&end_time);
 #endif
@@ -639,20 +611,17 @@ irqreturn_t hx170dec_isr(int irq, void *dev_id)
 			writel(irq_status_dec & (~HX_DEC_INTERRUPT_BIT),
 				   dev->hwregs + X170_INTERRUPT_REGISTER_DEC);
 			/* fasync kill for decoder instances */
-			if(dev->async_queue_dec != NULL)
-			{
-				kill_fasync(&dev->async_queue_dec, SIGIO, POLL_IN);
-			}
-			else
-			{
+			if (dev->async_queue_dec != NULL) {
+				kill_fasync(&dev->async_queue_dec, SIGIO,
+						POLL_IN);
+			} else {
 				printk(KERN_WARNING
 					   "hx170dec: DEC IRQ received w/o anybody waiting for it!\n");
 			}
 			PDEBUG("decoder IRQ received!\n");
 		}
 
-		if(irq_status_pp & HX_PP_INTERRUPT_BIT)
-		{
+		if (irq_status_pp & HX_PP_INTERRUPT_BIT) {
 #ifdef HW_PERFORMANCE
 			do_gettimeofday(&end_time);
 #endif
@@ -661,12 +630,10 @@ irqreturn_t hx170dec_isr(int irq, void *dev_id)
 				   dev->hwregs + X170_INTERRUPT_REGISTER_PP);
 
 			/* kill fasync for PP instances */
-			if(dev->async_queue_pp != NULL)
-			{
-				kill_fasync(&dev->async_queue_pp, SIGIO, POLL_IN);
-			}
-			else
-			{
+			if (dev->async_queue_pp != NULL) {
+				kill_fasync(&dev->async_queue_pp, SIGIO,
+						POLL_IN);
+			} else {
 				printk(KERN_WARNING
 					   "hx170dec: PP IRQ received w/o anybody waiting for it!\n");
 			}
@@ -674,9 +641,7 @@ irqreturn_t hx170dec_isr(int irq, void *dev_id)
 		}
 
 		handled = 1;
-	}
-	else
-	{
+	} else {
 		PDEBUG("IRQ received, but not x170's!\n");
 	}
 
@@ -690,16 +655,15 @@ irqreturn_t hx170dec_isr(int irq, void *dev_id)
     Return type     :
 ------------------------------------------------------------------------------*/
 
-void ResetAsic(hx170dec_t * dev)
+void ResetAsic(struct hx170dec_t *dev)
 {
 	int i;
 
 	writel(0, dev->hwregs + 0x04);
 
-	for(i = 4; i < dev->iosize; i += 4)
-	{
+	for (i = 4; i < dev->iosize; i += 4)
 		writel(0, dev->hwregs + i);
-	}
+
 }
 
 /*------------------------------------------------------------------------------
@@ -711,14 +675,13 @@ void ResetAsic(hx170dec_t * dev)
 #ifdef CONFIG_VIDEO_SPEAR_VIDEODEC_DEBUG
 void dump_regs(unsigned long data)
 {
-	hx170dec_t *dev = (hx170dec_t *) data;
+	struct hx170dec_t *dev = (struct hx170dec_t *) data;
 	int i;
 
 	PDEBUG("Reg Dump Start\n");
-	for(i = 0; i < dev->iosize; i += 4)
-	{
+	for (i = 0; i < dev->iosize; i += 4)
 		PDEBUG("\toffset %02X = %08X\n", i, readl(dev->hwregs + i));
-	}
+
 	PDEBUG("Reg Dump End\n");
 }
 #endif

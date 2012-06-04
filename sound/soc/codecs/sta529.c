@@ -40,7 +40,7 @@ static const u8 sta529_reg[STA529_CACHEREGNUM] = {
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
 	0x80, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x52, 0x40,
+	0x00, 0x00, 0xD2, 0x40,
 	0x21, 0xef, 0x04, 0x06,
 	0x41, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
@@ -123,17 +123,41 @@ spear_sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	}
 
 	val = sta529_read_reg_cache(codec, STA529_S2PCFG0);
+	val &= ~STA529_DATA_FORMAT;
 	val |= mode;
 	/*this setting will be used with actual h/w */
 	sta529_write(codec, STA529_S2PCFG0, val);
 
-	/* set serial-to-parallel interface data length to 32 bit */
-	sta529_write(codec, STA529_P2SCFG1, 0xC1);
-
-	/* set parallel to-serial interface data length as 32 bit */
-	sta529_write(codec, STA529_P2SCFG1, 0xC1);
-
 	return 0;
+}
+
+static int
+sta529_set_bias_level(struct snd_soc_codec *codec,
+		enum snd_soc_bias_level level)
+{
+	u16 sts;
+
+	sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
+
+	switch (level) {
+	case SND_SOC_BIAS_ON:
+	case SND_SOC_BIAS_PREPARE:
+		sta529_write(codec, STA529_FFXCFG0, sts & ~POWER_STBY);
+		break;
+	case SND_SOC_BIAS_STANDBY:
+	case SND_SOC_BIAS_OFF:
+		sta529_write(codec, STA529_FFXCFG0, sts | POWER_STBY);
+
+		break;
+	}
+
+	/*
+	 * store the label for powers down audio subsystem for suspend.
+	 * This is used by soc core layer
+	 */
+	codec->bias_level = level;
+	return 0;
+
 }
 
 static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
@@ -142,6 +166,8 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
+	u32 play_freq_val, record_freq_val, val;
+	int pdata_len, bclk_to_fs_ratio;
 
 	if (cpu_is_spear1340()) {
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
@@ -160,6 +186,65 @@ static int spear_sta529_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
+		pdata_len = 1;
+		bclk_to_fs_ratio = 0;
+		break;
+	case SNDRV_PCM_FORMAT_S32_LE:
+		pdata_len = 3;
+		bclk_to_fs_ratio = 1;
+		break;
+	default:
+		dev_err(codec->dev, "Unsupported format\n");
+		return -EINVAL;
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		snd_soc_update_bits(codec, STA529_S2PCFG1, PDATA_LEN_MSK,
+				pdata_len << 6);
+		snd_soc_update_bits(codec, STA529_S2PCFG1, BCLK_TO_FS_MSK,
+				bclk_to_fs_ratio << 4);
+	} else {
+		snd_soc_update_bits(codec, STA529_P2SCFG1, PDATA_LEN_MSK,
+				pdata_len << 6);
+		snd_soc_update_bits(codec, STA529_P2SCFG1, BCLK_TO_FS_MSK,
+				bclk_to_fs_ratio << 4);
+	}
+
+	switch (params_rate(params)) {
+	case 8000:
+	case 11025:
+		play_freq_val = 0;
+		record_freq_val = 2;
+		break;
+	case 16000:
+	case 22050:
+		play_freq_val = 1;
+		record_freq_val = 0;
+		break;
+
+	case 32000:
+	case 44100:
+	case 48000:
+		play_freq_val = 2;
+		record_freq_val = 0;
+		break;
+	default:
+		dev_err(codec->dev, "bad rate");
+		return -EINVAL;
+	}
+
+	val = sta529_read_reg_cache(codec, STA529_MISC);
+
+	/* set FFX audio frequency range */
+	val = (((val & 0x83) | (play_freq_val << 4)) | (record_freq_val << 2));
+
+	sta529_write(codec, STA529_MISC, val);
+
+	sta529_set_bias_level(codec, SND_SOC_BIAS_PREPARE);
+	mdelay(1);
+
 	return 0;
 }
 
@@ -176,33 +261,6 @@ static int spear_sta529_mute(struct snd_soc_dai *dai, int mute)
 	sta529_write(codec, STA529_FFXCFG0, mute_reg);
 
 	return 0;
-}
-
-static int
-sta529_set_bias_level(struct snd_soc_codec *codec,
-		enum snd_soc_bias_level level)
-{
-	u16 sts;
-
-	sts = sta529_read_reg_cache(codec, STA529_FFXCFG0);
-
-	switch (level) {
-	case SND_SOC_BIAS_ON:
-	case SND_SOC_BIAS_PREPARE:
-		sta529_write(codec, STA529_FFXCFG0, sts & POWER_STBY);
-		break;
-	case SND_SOC_BIAS_STANDBY:
-	case SND_SOC_BIAS_OFF:
-		sta529_write(codec, STA529_FFXCFG0, sts | ~POWER_STBY);
-
-		break;
-	}
-
-	/*store the label for powers down audio subsystem for suspend.This is
-	 ** used by soc core layer*/
-	codec->bias_level = level;
-	return 0;
-
 }
 
 static struct snd_soc_dai_ops sta529_dai_ops = {

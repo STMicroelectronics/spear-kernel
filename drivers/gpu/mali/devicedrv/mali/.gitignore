@@ -8,3 +8,5 @@
 arch
 # from module compilation:
 Module.symvers
+# created at compile time:
+__malidrv_build_info.c

@@ -30,13 +30,16 @@
 #include <plat/camif.h>
 #include <plat/gpio.h>
 #include <plat/clock.h>
+#include <plat/cpufreq.h>
 #include <mach/dma.h>
+#include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 #include <mach/spdif.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
 #include <media/vip.h>
+#include <sound/pcm.h>
 
 /* pmx driver structure */
 static struct pmx_driver pmx_driver;
@@ -1343,31 +1346,6 @@ struct pmx_dev spear1340_pmx_sata = {
 	.mode_count = ARRAY_SIZE(pmx_sata_modes),
 };
 
-/* padmux devices to enable */
-static void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device)
-{
-	struct pmx_mux_reg *mux_reg;
-	int ret, i, j, k;
-
-	/*
-	 * Use pas mux framework to program device pads as gpios or let
-	 * them under device control. Turn them to device pads if
-	 * to_device is true else reset to make them as gpio.
-	 */
-	for (i = 0; i < count; i++) {
-		for (j = 0; j < devs[i]->mode_count; j++) {
-			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
-				mux_reg = &devs[i]->modes[j].mux_regs[k];
-				mux_reg->value = to_device? mux_reg->mask : 0x0;
-			}
-		}
-	}
-
-	ret = pmx_devs_enable(devs, count);
-	if (ret)
-		pr_err("padmux: registeration failed. err no: %d\n", ret);
-}
-
 /* Add spear1340 specific devices here */
 /* Add Amba Devices */
 /* uart device registeration */
@@ -1444,7 +1422,6 @@ static struct camif_config_data cam0_data = {
 	.vsync_polarity = ACTIVE_HIGH,
 	.hsync_polarity = ACTIVE_HIGH,
 	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
@@ -1509,7 +1486,6 @@ static struct camif_config_data cam1_data = {
 	.vsync_polarity = ACTIVE_HIGH,
 	.hsync_polarity = ACTIVE_HIGH,
 	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
@@ -1574,7 +1550,6 @@ static struct camif_config_data cam2_data = {
 	.vsync_polarity = ACTIVE_HIGH,
 	.hsync_polarity = ACTIVE_HIGH,
 	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
@@ -1640,7 +1615,6 @@ static struct camif_config_data cam3_data = {
 	.vsync_polarity = ACTIVE_HIGH,
 	.hsync_polarity = ACTIVE_HIGH,
 	.pclk_polarity = ACTIVE_LOW,
-	.transform = YUVCbYCrY,
 	.capture_mode = VIDEO_MODE_ALL_FRAMES,
 	.burst_size = BURST_SIZE_128,
 	.channel = EVEN_CHANNEL,
@@ -1737,6 +1711,32 @@ struct platform_device spear1340_cec1_device = {
 	.resource = cec1_resources,
 };
 
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	166000, /* 166 MHZ */
+	200000, /* 200 MHZ */
+	250000, /* 250 MHZ */
+	332000, /* 332 MHZ */
+	400000, /* 400 MHZ */
+	500000, /* 500 MHZ */
+	600000, /* 600 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+	/* Program the actual transition time for worstcase */
+	.transition_latency = 250 * 1000, /*250 us*/
+};
+
+struct platform_device spear1340_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
+};
+
 /* SPEAr GPIO Buttons Info */
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 /* SPEAr GPIO Buttons definition */
@@ -1767,8 +1767,17 @@ struct platform_device spear1340_gpiokeys_device = {
 };
 #endif
 
+struct fsmc_rbpin spear1340_rbpin __initdata = {
+	.use_pin = FSMC_RB_GPIO,
+	.gpio_pin = PLGPIO_247,
+};
+
 static struct fsmc_nand_platform_data spear1340_nand_platform_data = {
 	.select_bank = nand_select_bank,
+	.mode = USE_WORD_ACCESS,
+	.read_dma_priv = &nand_read_dma_priv,
+	.write_dma_priv = &nand_write_dma_priv,
+	.rbpin = &spear1340_rbpin,
 };
 
 static struct resource nand_resources[] = {
@@ -1793,6 +1802,7 @@ struct platform_device spear1340_nand_device = {
 	.dev.platform_data = &spear1340_nand_platform_data,
 };
 
+#if 0
 /*
  * This routine does i2c bus recovery as specified in the
  * i2c protocol Rev. 03 section 3.16 titled "Bus clear"
@@ -1843,6 +1853,7 @@ free_gpio:
 	gpio_free(i2c_clk_gpio);
 
 }
+#endif
 
 /* i2c device registeration */
 static struct resource i2c1_resources[] = {
@@ -1856,8 +1867,73 @@ static struct resource i2c1_resources[] = {
 	},
 };
 
-static struct i2c_dw_pdata spear1340_i2c_dw_pdata = {
-	.i2c_recover_bus = spear1340_i2c_dw_recover_bus,
+static inline struct pmx_dev *get_pmx_data(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	if ((gpio_nr == PLGPIO_134) || (gpio_nr == PLGPIO_133)) {
+		pmxdev = &spear1340_pmx_i2c0;
+	} else if ((gpio_nr == PLGPIO_23) || (gpio_nr == PLGPIO_18)) {
+		pmxdev = &spear1340_pmx_i2c1;
+	} else {
+		pr_err("Invalid i2c plgpio number\n");
+		return NULL;
+	}
+
+	return pmxdev;
+}
+
+static int get_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = get_pmx_data(gpio_nr);
+	if (!pmxdev)
+		return -EINVAL;
+
+	/* take I2C SLCK control as pl-gpio */
+	config_io_pads(&pmxdev, 1, false);
+
+	return 0;
+}
+
+static int put_i2c_gpio(unsigned gpio_nr)
+{
+	struct pmx_dev *pmxdev;
+
+	pmxdev = get_pmx_data(gpio_nr);
+
+	if (!pmxdev)
+		return -EINVAL;
+
+	/* restore I2C SLCK control to I2C controller*/
+	config_io_pads(&pmxdev, 1, true);
+
+	return 0;
+}
+
+static struct i2c_dw_pdata spear1340_i2c0_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_134,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_133,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
+};
+
+static struct i2c_dw_pdata spear1340_i2c1_dw_pdata = {
+	.recover_bus = NULL,
+	.scl_gpio = PLGPIO_23,
+	.scl_gpio_flags = GPIOF_OUT_INIT_LOW,
+	.get_gpio = get_i2c_gpio,
+	.put_gpio = put_i2c_gpio,
+	.is_gpio_recovery = true,
+	.skip_sda_polling = false,
+	.sda_gpio = PLGPIO_18,
+	.sda_gpio_flags = GPIOF_OUT_INIT_LOW,
 };
 
 struct platform_device spear1340_i2c1_device = {
@@ -1865,7 +1941,7 @@ struct platform_device spear1340_i2c1_device = {
 	.id = 1,
 	.dev = {
 		.coherent_dma_mask = ~0,
-		.platform_data = &spear1340_i2c_dw_pdata,
+		.platform_data = &spear1340_i2c1_dw_pdata,
 	},
 	.num_resources = ARRAY_SIZE(i2c1_resources),
 	.resource = i2c1_resources,
@@ -1885,8 +1961,10 @@ static struct i2s_platform_data i2s_play_data = {
 	.cap = PLAY,
 	.channel = 8,
 	.play_dma_data = &i2s_play_dma_data,
-	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s_play_resources[] = {
@@ -1926,8 +2004,10 @@ static struct i2s_platform_data i2s_capture_data = {
 	.cap = RECORD,
 	.channel = 8,
 	.capture_dma_data = &i2s_capture_dma_data,
-	.swidth = 16,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
 	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
 };
 
 static struct resource i2s_record_resources[] = {
@@ -2174,75 +2254,6 @@ struct platform_device spear1340_thermal_device = {
 	.resource = spear1340_thermal_resources,
 };
 
-static int spear1340_otg_phy_init(void)
-{
-	u32 temp, msec = 1000;
-
-	/* phy por deassert */
-	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
-	temp &= ~SPEAR1340_USBPHYPOR;
-	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
-
-	/* phy clock enable */
-	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
-	temp |= SPEAR1340_USBPHYRST;
-	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
-
-	/* wait for pll lock */
-	while (!(readl(VA_SPEAR1340_USBPHY_GEN_CFG) & SPEAR1340_USBPLLLOCK)) {
-		if (msec--) {
-			pr_err(" Problem with USB PHY PLL Lock\n");
-			return -ETIMEDOUT;
-		}
-		udelay(1);
-	}
-
-	/* otg prstnt deassert */
-	temp = readl(VA_SPEAR1340_USBPHY_GEN_CFG);
-	temp |= SPEAR1340_USBPRSNT;
-	writel(temp, VA_SPEAR1340_USBPHY_GEN_CFG);
-
-	/* OTG HCLK Disable */
-	temp = readl(VA_SPEAR1340_PERIP1_CLK_ENB);
-	temp &= ~(1 << SPEAR1340_UOC_CLK_ENB);
-	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
-
-	/* OTG HRESET deassert */
-	temp = readl(VA_SPEAR1340_PERIP1_SW_RST);
-	temp &= ~(1 << SPEAR1340_UOC_RST_ENB);
-	writel(temp, VA_SPEAR1340_PERIP1_SW_RST);
-
-	/* OTG HCLK Enable */
-	temp = readl(VA_SPEAR1340_PERIP1_CLK_ENB);
-	temp |= (1 << SPEAR1340_UOC_CLK_ENB);
-	writel(temp, VA_SPEAR1340_PERIP1_CLK_ENB);
-
-	return 0;
-}
-
-static int spear1340_otg_param_init(struct core_params *params)
-{
-	int i;
-
-	/* Common Dev RX fifo Size : 0x400 */
-	params->dev_rx_fifo_size = 0x400;
-	/* Dev TX fifo Size for fifo 0: 0x300 */
-	params->dev_nperio_tx_fifo_size = 0x300;
-	/* TX fifo Size for fifo 1-7: 0x200 */
-	params->fifo_number = 7;
-	for (i = 1; i <= 7; i++)
-		params->dev_tx_fifo_size[i - 1] = 0x200;
-
-	/* Common Host RX fifo Size : 0x400 */
-	params->host_rx_fifo_size = 0x400;
-	/* Host TX fifo Size for fifo 0: 0x400 */
-	params->host_nperio_tx_fifo_size = 0x400;
-	/* Host Periodic TX fifo Size for fifo 0: 0x400 */
-	params->host_perio_tx_fifo_size = 0x400;
-
-	return 0;
-}
-
 /* OTG device registration */
 static struct resource otg_resources[] = {
 	{
@@ -2256,8 +2267,8 @@ static struct resource otg_resources[] = {
 };
 
 static struct dwc_otg_plat_data otg_platform_data = {
-	.phy_init = spear1340_otg_phy_init,
-	.param_init = spear1340_otg_param_init,
+	.phy_init = otg_phy_init,
+	.param_init = otg_param_init,
 };
 
 static u64 otg_dmamask = ~0;
@@ -2323,9 +2334,22 @@ struct platform_device spear1340_device_mali_drm = {
 };
 #endif
 
+static struct resource spear1340_video_dec_resources[] = {
+	{
+		.start = SPEAR1340_VIDEO_DEC_BASE,
+		.end =  SPEAR1340_VIDEO_DEC_BASE + (4*100),
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_VIDEO_DEC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 struct platform_device spear1340_video_dec_device = {
 	.name = "video_dec",
 	.id   = -1,
+	.num_resources = ARRAY_SIZE(spear1340_video_dec_resources),
+	.resource = spear1340_video_dec_resources,
 };
 
 static int spear1340_sys_clk_init(void)
@@ -2563,6 +2587,21 @@ static int spdif_out_clk_init(void)
 #endif
 
 #ifdef CONFIG_SPEAR_PCIE_REV370
+int spear1340_pcie_clk_init(struct pcie_port *pp)
+{
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
+			VA_SPEAR1340_PCIE_MIPHY_CFG);
+	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
+	return 0;
+}
+
+int spear1340_pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
+	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
+	return 0;
+}
+
 /* This function is needed for board specific PCIe initilization */
 void __init spear1340_pcie_board_init(struct device *dev)
 {
@@ -2570,6 +2609,10 @@ void __init spear1340_pcie_board_init(struct device *dev)
 
 	plat_data = dev_get_platdata(dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_70);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear1340_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear1340_pcie_clk_exit;
 }
 #endif
 
@@ -2601,7 +2644,7 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 		pr_err("SPEAr1340: spdif out clock init failed, err no: %d\n",
 				ret);
 #endif
-	spear13xx_i2c_device.dev.platform_data = &spear1340_i2c_dw_pdata;
+	spear13xx_i2c_device.dev.platform_data = &spear1340_i2c0_dw_pdata;
 
 	/* pmx initialization */
 	pmx_driver.mode = pmx_mode;

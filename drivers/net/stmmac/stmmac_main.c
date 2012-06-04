@@ -1037,6 +1037,7 @@ static unsigned int stmmac_handle_jumbo_frames(struct sk_buff *skb,
 		desc->des3 = desc->des2 + BUF_SIZE_4KiB;
 		priv->hw->desc->prepare_tx_desc(desc, 1, BUF_SIZE_8KiB,
 						csum_insertion);
+		wmb();
 
 		entry = (++priv->cur_tx) % txsize;
 		desc = priv->dma_tx + entry;
@@ -1047,6 +1048,7 @@ static unsigned int stmmac_handle_jumbo_frames(struct sk_buff *skb,
 		desc->des3 = desc->des2 + BUF_SIZE_4KiB;
 		priv->hw->desc->prepare_tx_desc(desc, 0, buf2_size,
 						csum_insertion);
+		wmb();
 		priv->hw->desc->set_tx_owner(desc);
 		priv->tx_skbuff[entry] = NULL;
 	} else {
@@ -1141,6 +1143,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		priv->hw->desc->prepare_tx_desc(desc, 0, len, csum_insertion);
 		wmb();
 		priv->hw->desc->set_tx_owner(desc);
+		wmb();
 	}
 
 	/* Interrupt on completition only for the latest segment */
@@ -1156,6 +1159,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	/* To avoid raise condition */
 	priv->hw->desc->set_tx_owner(first);
+	wmb();
 
 	priv->cur_tx++;
 
@@ -1216,6 +1220,7 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv)
 		}
 		wmb();
 		priv->hw->desc->set_rx_owner(p + entry);
+		wmb();
 	}
 }
 
@@ -1417,11 +1422,6 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int max_mtu;
 
-	if (netif_running(dev)) {
-		pr_err("%s: must be stopped to change its MTU\n", dev->name);
-		return -EBUSY;
-	}
-
 	if (priv->enh_desc)
 		max_mtu = JUMBO_LEN;
 	else
@@ -1433,6 +1433,10 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 	}
 
 	dev->mtu = new_mtu;
+	if (netif_running(dev)) {
+		stmmac_release(dev);
+		return stmmac_open(dev);
+	}
 
 	return 0;
 }

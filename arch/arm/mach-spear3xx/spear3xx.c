@@ -25,6 +25,7 @@
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
 #include <plat/adc.h>
+#include <plat/cpufreq.h>
 #include <plat/jpeg.h>
 #include <plat/udc.h>
 #include <mach/generic.h>
@@ -178,6 +179,26 @@ struct platform_device spear3xx_adc_device = {
 	},
 	.num_resources = ARRAY_SIZE(adc_resources),
 	.resource = adc_resources,
+};
+
+/* cpufreq platform device */
+static u32 cpu_freq_tbl[] = {
+	166000, /* 166 MHZ */
+	266000, /* 266 MHZ */
+	332000, /* 332 MHZ */
+};
+
+static struct spear_cpufreq_pdata cpufreq_pdata = {
+	.cpu_freq_table = cpu_freq_tbl,
+	.tbl_len = ARRAY_SIZE(cpu_freq_tbl),
+};
+
+struct platform_device spear3xx_cpufreq_device = {
+	.name = "cpufreq-spear",
+	.id = -1,
+	.dev = {
+		.platform_data = &cpufreq_pdata,
+	},
 };
 
 /* Ethernet device registeration */
@@ -1220,6 +1241,32 @@ void spear3xx_macb_setup(void)
 	}
 }
 #endif /* CONFIG_CPU_SPEAR310 || CONFIG_CPU_SPEAR320 */
+
+#ifdef CONFIG_CPU_SPEAR320
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device)
+{
+	struct pmx_mux_reg *mux_reg;
+	int ret, i, j, k;
+
+	/*
+	 * Use pas mux framework to program device pads as gpios or let
+	 * them under device control. Turn them to device pads if
+	 * to_device is true else reset to make them as gpio.
+	 */
+	for (i = 0; i < count; i++) {
+		for (j = 0; j < devs[i]->mode_count; j++) {
+			for (k = 0; k < devs[i]->modes[j].mux_reg_cnt; k++) {
+				mux_reg = &devs[i]->modes[j].mux_regs[k];
+				mux_reg->value = to_device? mux_reg->mask : 0x0;
+			}
+		}
+	}
+
+	ret = pmx_devs_enable(devs, count);
+	if (ret)
+		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+#endif
 
 static void __init spear3xx_timer_init(void)
 {

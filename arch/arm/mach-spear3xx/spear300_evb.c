@@ -83,6 +83,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear3xx specific devices */
 	&spear3xx_adc_device,
+	&spear3xx_cpufreq_device,
 	&spear3xx_ehci_device,
 	&spear3xx_eth_device,
 	&spear3xx_i2c_device,
@@ -120,6 +121,7 @@ static struct matrix_keymap_data keymap_data = {
 static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
+	.suspended_rate = 2000000,
 };
 
 /* spi board information */
@@ -169,7 +171,7 @@ static void __init spear300_evb_init(void)
 
 	/* set nand0 device's plat data */
 	fsmc_nand_set_plat_data(&spear300_nand0_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 
 	/* set sdhci device platform data */
 	sdhci_set_plat_data(&spear300_sdhci_device, &sdhci_plat_data);

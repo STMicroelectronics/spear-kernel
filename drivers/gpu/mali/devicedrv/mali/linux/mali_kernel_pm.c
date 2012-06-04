@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2011 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -23,11 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <asm/current.h>
-#include <asm/delay.h>
 #include <linux/suspend.h>
-#include <linux/clk.h>
-#include <linux/err.h>
-#include <linux/device.h>
 
 #include "mali_platform.h" 
 #include "mali_osk.h"
@@ -39,9 +35,6 @@
 #include "mali_kernel_pm.h"
 #include "mali_device_pause_resume.h"
 #include "mali_linux_pm.h"
-#include "mali_kernel_core.h"
-
-#define MALI_DEF_RATE 200*1000*1000
 
 #if MALI_GPU_UTILIZATION
 #include "mali_kernel_utilization.h"
@@ -50,6 +43,7 @@
 #if MALI_POWER_MGMT_TEST_SUITE
 #ifdef CONFIG_PM
 #include "mali_linux_pm_testsuite.h"
+#include "mali_platform_pmu_internal_testing.h"
 unsigned int pwr_mgmt_status_reg = 0;
 #endif /* CONFIG_PM */
 #endif /* MALI_POWER_MGMT_TEST_SUITE */
@@ -59,7 +53,6 @@ static int is_os_pmm_thread_waiting = 0;
 /* kernel should be configured with power management support */
 #ifdef CONFIG_PM
 
-/* License should be GPL */
 #if MALI_LICENSE_IS_GPL
 
 /* Linux kernel major version */
@@ -80,10 +73,6 @@ static const char* const mali_states[_MALI_MAX_DEBUG_OPERATIONS] = {
 };
 
 #endif /* CONFIG_PM_DEBUG */
-
-#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
-extern void set_mali_parent_power_domain(struct platform_device* dev);
-#endif /* MALI_PMM_RUNTIME_JOB_CONTROL_ON */
 
 #ifdef CONFIG_PM_RUNTIME
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
@@ -215,7 +204,7 @@ static struct platform_driver mali_plat_driver = {
 #endif
 
 	.driver         = {
-		.name   = "mali",
+		.name   = "mali_dev",
 		.owner  = THIS_MODULE,
 		.bus = &platform_bus_type,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(LINUX_KERNEL_MAJOR_VERSION,LINUX_KERNEL_MINOR_VERSION,LINUX_KERNEL_DEVELOPMENT_VERSION))
@@ -226,8 +215,8 @@ static struct platform_driver mali_plat_driver = {
 
 /* Mali GPU platform device */
 struct platform_device mali_gpu_device = {
-	.name = "mali",
-	.id = -1,
+	.name = "mali_dev",
+	.id = 0,
 	.dev.release = _mali_release_pm
 };
 
@@ -574,51 +563,15 @@ static int mali_pm_remove(struct platform_device *pdev)
 /** This function is called when the device is probed */
 static int mali_pm_probe(struct platform_device *pdev)
 {
-	int err;
-	struct clk *mali_clk;
 #ifdef CONFIG_PM_DEBUG
+	int err;
 	err = device_create_file(&mali_gpu_device.dev, &dev_attr_file);
 	if (err)
 	{
 		MALI_DEBUG_PRINT(4, ("PMMDEBUG: Error in creating device file\n" ));
 	}
 #endif /* CONFIG_PM_DEBUG */
-
-	/*clock init*/
-	mali_clk = clk_get(&pdev->dev, NULL);
-	if (IS_ERR(mali_clk)) {
-		dev_err(&pdev->dev, "Can't get clock\n");
-		goto error;
-	}
-
-	clk_set_rate(mali_clk, MALI_DEF_RATE);
-
-	err = clk_enable(mali_clk);
-	if (err) {
-		dev_err(&pdev->dev, "Can't enable clock\n");
-		goto put_clk;
-	}
-
-	err = mali_kernel_constructor();
-	if (_MALI_OSK_ERR_OK != err)
-	{
-#if USING_MALI_PMM
-#if MALI_LICENSE_IS_GPL
-#ifdef CONFIG_PM
-		_mali_dev_platform_unregister();
-#endif
-#endif
-#endif
-		MALI_PRINT(("Failed to initialize driver (error %d)\n", err));
-		goto error;
-	}
-
 	return 0;
-
-put_clk:
-	clk_put(mali_clk);
-error:
-	return -EFAULT;
 }
 
 /** This function is called when Mali GPU device is initialized
@@ -627,7 +580,7 @@ int _mali_dev_platform_register(void)
 {
 	int err;
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON	
-	set_mali_parent_power_domain(&mali_gpu_device);
+	set_mali_parent_power_domain((void *)&mali_gpu_device);
 #endif
 
 #ifdef CONFIG_PM_RUNTIME

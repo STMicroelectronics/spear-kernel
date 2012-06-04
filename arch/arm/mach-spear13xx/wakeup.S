@@ -29,6 +29,13 @@ ENTRY(spear_wakeup)
 back:
 	bl	cache_invalidate
 	nop
+	ldr	r3, =SPEAR13XX_L2CC_BASE
+	/* Program the Address filtering end address */
+	ldr	r6, =0x40000000
+	str	r6, [r3, #0xc04]
+	/* Enable the Address filtering. The starte address is 0x0 */
+	ldr	r6, =0x1
+	str	r6, [r3, #0xc00]
 	ldr	r3, =SRAM_SCR_REG
 	ldr	r6, =SPEAR_SRAM_START_PA
 	ldr	r0, [r6, r3]
@@ -52,6 +59,7 @@ check:
 
 /* L1 invalidate */
 cache_invalidate:
+	dmb
 	/* Data Cache Invalidate */
 	/* read clidr */
 	mrc	p15, 1, r0, c0, c0, 1
@@ -138,7 +146,7 @@ finished:
 	mcr	p15, 0, r0, c7, c10, 4
 	dsb
 	isb
-	mov	r0, #0x1800
+	mov	r0, #0x0
 	mcr	p15, 0, r0, c1, c0, 0
 	dsb
 	isb

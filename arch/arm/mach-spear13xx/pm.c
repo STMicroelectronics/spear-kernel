@@ -20,6 +20,7 @@
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/smp_twd.h>
 #include <mach/generic.h>
+#include <mach/gpio.h>
 #include <mach/hardware.h>
 #include <mach/misc_regs.h>
 #include <mach/suspend.h>
@@ -29,18 +30,39 @@
 #define PLAT_PHYS_OFFSET	0x00000000
 #define PCM_SET_WAKEUP_CFG	0xfffff
 /* Wake up Configurations */
+#define PCIE_WKUP	0x20
 #define ETH_WKUP	0x10
 #define RTC_WKUP	0x8
 #define GPIO_WKUP	0x4
 #define USB_WKUP	0x2
+#define RAS_WKUP	0x1
 #define PWR_DOM_ON	0x3c00
-/* Use all Sources except USB as wake up trigger */
-#define PCM_SET_CFG	(PWR_DOM_ON | GPIO_WKUP | RTC_WKUP | ETH_WKUP \
-		| USB_WKUP)
+#define PWR_DOM_ON_1310	0xf000
+
+#define DDR_PHY_NO_SHUTOFF_CFG_1310	(~BIT(22))
 #define DDR_PHY_NO_SHUTOFF_CFG	(~BIT(20))
 #define SWITCH_CTR_CFG	0xff
 
+static int pcm_set_cfg;
+
 static void __iomem *mpmc_regs_base;
+
+static void spear_power_off(void)
+{
+	while (1);
+}
+
+static void lcad_power_off(void)
+{
+	int ret = 0;
+
+	/* Request the GPIO to switch off the board */
+	ret = gpio_request_one(GPIO0_3, GPIOF_OUT_INIT_HIGH, "power_off_gpio");
+	if (ret)
+		pr_err("couldn't req gpio %d\n", ret);
+
+	return;
+}
 
 static void memcpy_decr_ptr(void *dest, void *src, u32 len)
 {
@@ -86,6 +108,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	spear_clocksource_suspend();
 	/* Move the cpu into suspend */
 	spear_cpu_suspend(state, PLAT_PHYS_OFFSET - PAGE_OFFSET);
+	cpu_init();
 	/* Resume Operations begin */
 	spear13xx_l2x0_init();
 	/* Call the CPU PM notifiers to notify exit from sleep */
@@ -107,7 +130,7 @@ static int spear_pm_sleep(suspend_state_t state)
 	}
 
 	/* Explicit set all the power domain to on */
-	writel((readl(VA_PCM_CFG) | PCM_SET_CFG),
+	writel((readl(VA_PCM_CFG) | pcm_set_cfg),
 		VA_PCM_CFG);
 
 	/* Resume the event timer */
@@ -144,7 +167,11 @@ void spear_sys_suspend(suspend_state_t state)
 		 * the lines for the switching of the DDRPHY to the
 		 * external power supply.
 		 */
-		pm_cfg &= (unsigned long)DDR_PHY_NO_SHUTOFF_CFG;
+		if (cpu_is_spear1310())
+			pm_cfg &= (unsigned
+					long)DDR_PHY_NO_SHUTOFF_CFG_1310;
+		else
+			pm_cfg &= (unsigned long)DDR_PHY_NO_SHUTOFF_CFG;
 		/*
 		 * Set up the Power Domains specific registers.
 		 * 1. Setup the wake up enable of the desired sources.
@@ -154,21 +181,25 @@ void spear_sys_suspend(suspend_state_t state)
 		 * The currrent S2R operations enable all the wake up
 		 * sources by default.
 		 */
-		writel(pm_cfg | PCM_SET_CFG, VA_PCM_CFG);
+		writel(pm_cfg | pcm_set_cfg, VA_PCM_CFG);
 		/* Set up the desired wake up state */
 		pm_cfg = readl(VA_PCM_WKUP_CFG);
 		/* Set the states for all power island on */
 		writel(pm_cfg | PCM_SET_WAKEUP_CFG, VA_PCM_WKUP_CFG);
 		/* Set the  VA_SWITCH_CTR to Max Restart Current */
 		writel(SWITCH_CTR_CFG, VA_SWITCH_CTR);
-	} else
-		/* source gpio interrupt through GIC */
-		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
-#else
-		pm_cfg |= PWR_DOM_ON;
-		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
+	} else {
 #endif
+		/* source gpio interrupt through GIC */
+		if (cpu_is_spear1310())
+			pm_cfg |= PWR_DOM_ON_1310;
+		else
+			pm_cfg |= PWR_DOM_ON;
 
+		writel((pm_cfg & (~(1 << 2))), VA_PCM_CFG);
+#ifdef CPU_PWR_DOMAIN_OFF
+	}
+#endif
 	/*
 	 * Copy in the MPMC registers at the end of SRAM
 	 * Ensure that the backup of these registers does not
@@ -180,6 +211,12 @@ void spear_sys_suspend(suspend_state_t state)
 		spear_sram_sleep =
 			memcpy(sram_dest, (void *)spear1340_sleep_mode,
 				spear1340_sleep_mode_sz);
+	} else if (cpu_is_spear1310()) {
+		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 208);
+		/* Copy the Sleep code on to the SRAM*/
+		spear_sram_sleep =
+			memcpy(sram_dest, (void *)spear1310_sleep_mode,
+				spear1310_sleep_mode_sz);
 	} else {
 		memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, 201);
 		/* Copy the Sleep code on to the SRAM*/
@@ -192,7 +229,6 @@ void spear_sys_suspend(suspend_state_t state)
 	cpu_pm_enter();
 	/* Flush the cache */
 	flush_cache_all();
-	outer_flush_all();
 	outer_disable();
 	outer_sync();
 	/* Jump to the suspend routines in sram */
@@ -281,23 +317,23 @@ static void empty_exit(void)
 	return;
 }
 
-static const struct platform_hibernation_ops spear_hiber_ops = {
+static int lcad_hiber_enter(void)
+{
+	lcad_power_off();
+	return 0;
+}
+
+static struct platform_hibernation_ops spear_hiber_ops = {
 	.begin = empty_enter,
 	.end = empty_exit,
 	.pre_snapshot = empty_enter,
 	.finish = empty_exit,
 	.prepare = empty_enter,
-	.enter = empty_enter,
 	.leave = empty_exit,
 	.pre_restore = empty_enter,
 	.restore_cleanup = empty_exit,
 };
 #endif
-
-static void spear_power_off(void)
-{
-	while (1);
-}
 
 static int __init spear_pm_init(void)
 {
@@ -305,18 +341,32 @@ static int __init spear_pm_init(void)
 	void * sram_st_va = (void *)IO_ADDRESS(SPEAR_START_SRAM);
 	int spear_sleep_mode_sz = spear13xx_sleep_mode_sz;
 
+	pcm_set_cfg = GPIO_WKUP | RTC_WKUP | ETH_WKUP | USB_WKUP |
+		PWR_DOM_ON;
+
 	if (cpu_is_spear1340())
 		spear_sleep_mode_sz = spear1340_sleep_mode_sz;
-
+	else if (cpu_is_spear1310()) {
+		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
+		pcm_set_cfg &= ~(PWR_DOM_ON | USB_WKUP);
+		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP);
+	}
 	/* In case the suspend code size is more than sram size return */
 	if (spear_sleep_mode_sz > (sram_limit_va - sram_st_va))
 		return	-ENOMEM;
 
 	suspend_set_ops(&spear_pm_ops);
 #ifdef CONFIG_HIBERNATION
+	if (machine_is_spear1340_lcad()) {
+		spear_hiber_ops.enter = lcad_hiber_enter;
+		pm_power_off = lcad_power_off;
+	} else {
+		spear_hiber_ops.enter = empty_enter;
+		pm_power_off = spear_power_off;
+	}
+
 	hibernation_set_ops(&spear_hiber_ops);
 #endif
-	pm_power_off = spear_power_off;
 	return 0;
 }
 arch_initcall(spear_pm_init);

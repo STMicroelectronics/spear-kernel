@@ -21,6 +21,8 @@ extern void spear1340_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear1340_sleep_mode_sz;
 extern void spear13xx_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear13xx_sleep_mode_sz;
+extern void spear1310_sleep_mode(suspend_state_t state, unsigned long *saveblk);
+extern unsigned int spear1310_sleep_mode_sz;
 extern void spear_wakeup(void);
 extern unsigned int spear_wakeup_sz;
 extern int spear_cpu_suspend(suspend_state_t, long);
@@ -35,7 +37,7 @@ extern int spear_pcie_resume(void);
  * Define this only if you want cpu + bus matrix to be off during
  * suspend to ram i.e. echo mem > /sys/power/state
  */
-/* #define CPU_PWR_DOMAIN_OFF */
+#define CPU_PWR_DOMAIN_OFF
 
 /* SRAM related defines*/
 #define SRAM_STACK_STRT_OFF	0x800

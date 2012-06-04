@@ -115,7 +115,7 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = 0x0,
+		.mask = 0x1000000,
 		.value = 0x0,
 	},
 };
@@ -214,6 +214,7 @@ static struct platform_device *plat_devs[] __initdata = {
 	/* spear1340 specific devices */
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+	&spear1340_cpufreq_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear1340_gpiokeys_device,
 #endif
@@ -242,6 +243,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_2x2,
+	.suspended_rate = 2000000,
 };
 
 /* Ethernet specific plat data */
@@ -387,7 +389,7 @@ static void __init spear_hurricane_init(void)
 	/* set nand device's plat data */
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW8);
 
 #if 0
@@ -423,7 +425,7 @@ static void __init spear_hurricane_init(void)
 		amba_device_register(amba_devs[i], &iomem_resource);
 }
 
-MACHINE_START(SPEAR_HURRICANE_BOARD, "NCOMPUTING-SPEAR-HURRICANE-BOARD")
+MACHINE_START(SPEAR_HURRICANE, "NCOMPUTING-SPEAR-HURRICANE-BOARD")
 	.boot_params	=	0x00000100,
 	.fixup		=	spear_hurricane_fixup,
 	.map_io		=	spear13xx_map_io,

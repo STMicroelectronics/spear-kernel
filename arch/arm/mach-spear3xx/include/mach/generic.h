@@ -16,6 +16,7 @@
 
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
+#include <linux/designware_i2s.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
@@ -37,6 +38,7 @@ extern struct amba_device spear3xx_ssp0_device;
 extern struct amba_device spear3xx_uart_device;
 extern struct amba_device spear3xx_wdt_device;
 extern struct platform_device spear3xx_adc_device;
+extern struct platform_device spear3xx_cpufreq_device;
 extern struct platform_device spear3xx_ehci_device;
 extern struct platform_device spear3xx_eth_device;
 extern struct platform_device spear3xx_i2c_device;
@@ -59,6 +61,7 @@ void __init spear3xx_init(void);
 void spear3xx_macb_plat_mdio_control(struct platform_device *pdev);
 void spear3xx_macb_setup(void);
 void spear3xx_pmx_init_addr(struct pmx_driver *driver, unsigned int addr);
+int audio_clk_config(struct i2s_clk_config_data *config);
 
 /* pad mux declarations */
 #define PMX_FIRDA_MASK		(1 << 14)
@@ -274,6 +277,7 @@ extern struct pmx_dev spear320s_pmx_uart5[];
 extern struct pmx_dev spear320s_pmx_uart6[];
 
 /* Add spear320 machine function declarations here */
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device);
 void __init spear320_common_init(struct pmx_mode *pmx_mode, struct pmx_dev
 		**pmx_devs, u8 pmx_dev_count);
 void __init spear320_map_io(void);

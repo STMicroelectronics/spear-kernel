@@ -101,6 +101,7 @@ static struct amba_device *amba_devs[] __initdata = {
 static struct platform_device *plat_devs[] __initdata = {
 	/* spear13xx specific devices */
 	&spear13xx_adc_device,
+	&spear13xx_cpufreq_device,
 	&spear13xx_db9000_clcd_device,
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear13xx_device_gpiokeys,
@@ -149,6 +150,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_9x9,
+	.suspended_rate = 2000000,
 };
 
 /* Initializing platform data for SPEAr900 specific Input devices on I2C Bus */
@@ -262,9 +264,17 @@ static void __init spear900_pcie_board_init(void)
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host1_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear900_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear900_pcie_clk_exit;
 
 	plat_data = dev_get_platdata(&spear13xx_pcie_host2_device.dev);
 	PCIE_PORT_INIT((struct pcie_port_info *)plat_data, SPEAR_PCIE_REV_3_41);
+	((struct pcie_port_info *)plat_data)->clk_init =
+		spear900_pcie_clk_init;
+	((struct pcie_port_info *)plat_data)->clk_exit =
+		spear900_pcie_clk_exit;
 }
 #endif
 
@@ -293,7 +303,7 @@ static void __init spear900_evb_init(void)
 
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear13xx_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW8);
 
 	/*

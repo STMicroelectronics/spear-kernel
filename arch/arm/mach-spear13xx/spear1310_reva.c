@@ -11,6 +11,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/can/platform/c_can.h>
 #include <linux/clk.h>
 #include <linux/mtd/physmap.h>
 #include <linux/netdevice.h>
@@ -20,6 +21,7 @@
 #include <asm/irq.h>
 #include <asm/delay.h>
 #include <plat/hdlc.h>
+#include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
@@ -439,6 +441,16 @@ struct amba_device spear1310_reva_uart5_device = {
 };
 
 /* CAN device registeration */
+static struct c_can_platform_data can0_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 25,
+		.rx_last = 31,
+		.tx_num = 1,
+	},
+};
+
 static struct resource can0_resources[] = {
 	{
 		.start = SPEAR1310_REVA_CAN0_BASE,
@@ -455,6 +467,17 @@ struct platform_device spear1310_reva_can0_device = {
 	.id = 0,
 	.num_resources = ARRAY_SIZE(can0_resources),
 	.resource = can0_resources,
+	.dev.platform_data = &can0_pdata,
+};
+
+static struct c_can_platform_data can1_pdata = {
+	.is_quirk_required = true,
+	.devtype_data = {
+		.rx_first = 1,
+		.rx_split = 25,
+		.rx_last = 31,
+		.tx_num = 1,
+	},
 };
 
 static struct resource can1_resources[] = {
@@ -473,6 +496,7 @@ struct platform_device spear1310_reva_can1_device = {
 	.id = 1,
 	.num_resources = ARRAY_SIZE(can1_resources),
 	.resource = can1_resources,
+	.dev.platform_data = &can1_pdata,
 };
 
 /* Ethernet GETH-1 device registeration */
@@ -1001,4 +1025,39 @@ void __init spear1310_reva_init(struct pmx_mode *pmx_mode,
 	ret = pmx_register(&pmx_driver);
 	if (ret)
 		pr_err("padmux: registeration failed. err no: %d\n", ret);
+}
+
+int spear1310_reva_pcie_clk_init(struct pcie_port *pp)
+{
+	/*
+	 * Enable all CLK in CFG registers here only. Idealy only PCIE0
+	 * should have been enabled. But Controler does not work
+	 * properly if PCIE1 and PCIE2's CFG CLK is enabled in stages.
+	 */
+	writel(PCIE0_CFG_VAL | PCIE1_CFG_VAL | PCIE2_CFG_VAL, VA_PCIE_CFG);
+
+	if (pp->clk == NULL) {
+		pp->clk = clk_get_sys("dw_pcie.0", NULL);
+
+		if (IS_ERR(pp->clk)) {
+			pr_err("%s:couldn't get clk for pcie0\n", __func__);
+			return -ENODEV;
+		}
+	}
+
+	if (clk_enable(pp->clk)) {
+		pr_err("%s:couldn't enable clk for pcie0\n", __func__);
+		return -ENODEV;
+	}
+
+	return 0;
+}
+
+int spear1310_reva_pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, VA_PCIE_CFG);
+	if (pp->clk)
+		clk_disable(pp->clk);
+
+	return 0;
 }

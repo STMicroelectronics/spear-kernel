@@ -49,6 +49,8 @@
 #define DW_IC_SS_SCL_LCNT	0x18
 #define DW_IC_FS_SCL_HCNT	0x1c
 #define DW_IC_FS_SCL_LCNT	0x20
+#define DW_IC_HS_SCL_HCNT	0x24
+#define DW_IC_HS_SCL_LCNT	0x28
 #define DW_IC_INTR_STAT		0x2c
 #define DW_IC_INTR_MASK		0x30
 #define DW_IC_RAW_INTR_STAT	0x34
@@ -70,11 +72,13 @@
 #define DW_IC_TXFLR		0x74
 #define DW_IC_RXFLR		0x78
 #define DW_IC_COMP_PARAM_1	0xf4
+#define DW_IC_COMP_VERSION	0xf8
 #define DW_IC_TX_ABRT_SOURCE	0x80
 
 #define DW_IC_CON_MASTER		0x1
 #define DW_IC_CON_SPEED_STD		0x2
 #define DW_IC_CON_SPEED_FAST		0x4
+#define DW_IC_CON_SPEED_HIGH		0x6
 #define DW_IC_CON_10BITADDR_MASTER	0x10
 #define DW_IC_CON_RESTART_EN		0x20
 #define DW_IC_CON_SLAVE_DISABLE		0x40
@@ -220,6 +224,7 @@ struct dw_i2c_dev {
 	u16			tx_fifo_depth;
 	u16			rx_fifo_depth;
 	void 			(*i2c_recover_bus)(struct platform_device *);
+	u32			version;
 };
 
 static u16
@@ -290,6 +295,8 @@ static void i2c_dw_init(struct dw_i2c_dev *dev)
 	u32 input_clock_khz = clk_get_rate(dev->clk) / 1000;
 	u16 ic_con, hcnt, lcnt;
 
+	dev->version = readl(dev->base + DW_IC_COMP_VERSION);
+
 	/* Disable the adapter */
 	writew(0, dev->base + DW_IC_ENABLE);
 
@@ -322,6 +329,20 @@ static void i2c_dw_init(struct dw_i2c_dev *dev)
 	writew(hcnt, dev->base + DW_IC_FS_SCL_HCNT);
 	writew(lcnt, dev->base + DW_IC_FS_SCL_LCNT);
 	dev_dbg(dev->dev, "Fast-mode HCNT:LCNT = %d:%d\n", hcnt, lcnt);
+
+	/* high speed-mode */
+	hcnt = i2c_dw_scl_hcnt(input_clock_khz,
+				16,	/* tHD;STA = tHIGH = 1.6 us */
+				3,	/* tf = 0.3 us */
+				0,	/* 0: DW default, 1: Ideal */
+				0);	/* No offset */
+	lcnt = i2c_dw_scl_lcnt(input_clock_khz,
+				32,	/* tLOW = 3.2 us */
+				3,	/* tf = 0.3 us */
+				0);	/* No offset */
+	writew(hcnt, dev->base + DW_IC_HS_SCL_HCNT);
+	writew(lcnt, dev->base + DW_IC_HS_SCL_LCNT);
+	dev_dbg(dev->dev, "high speed-mode:LCNT = %d:%d\n", hcnt, lcnt);
 
 	/* Configure Tx/Rx FIFO threshold levels */
 	writew(dev->tx_fifo_depth - 1, dev->base + DW_IC_TX_TL);
@@ -390,6 +411,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 	struct i2c_msg *msgs = dev->msgs;
 	u16 intr_mask;
 	u16 tx_limit, rx_limit;
+	u16 temp;
 	u32 addr = msgs[dev->msg_write_idx].addr;
 	u32 buf_len = dev->tx_buf_len;
 	u8 *buf = dev->tx_buf;;
@@ -427,10 +449,33 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 
 		while (buf_len > 0 && tx_limit > 0 && rx_limit > 0) {
 			if (msgs[dev->msg_write_idx].flags & I2C_M_RD) {
-				writew(0x100, dev->base + DW_IC_DATA_CMD);
+				temp = 0x100;
+
+				/*
+				 * IP version > 0x312A has a facility to control
+				 * stop bit geneartion. This will control with
+				 * the help of 9th bit of command reg. On
+				 * setting this bit, STOP is issued,
+				 * regardless of whether or not the Tx FIFO is
+				 * empty.
+				 */
+				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
+						buf_len == 1 &&
+						dev->version > 0x312A)
+					temp |= 0x200;
+
+				writew(temp, dev->base + DW_IC_DATA_CMD);
 				rx_limit--;
-			} else
-				writew(*buf++, dev->base + DW_IC_DATA_CMD);
+			} else {
+				temp = *buf++;
+
+				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
+						buf_len == 1 &&
+						dev->version > 0x312A)
+					temp |= 0x200;
+
+				writel(temp, dev->base + DW_IC_DATA_CMD);
+			}
 			tx_limit--; buf_len--;
 		}
 
@@ -524,7 +569,6 @@ static int
 i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
-	struct platform_device *pdev = to_platform_device(dev->dev);
 	int ret;
 
 	dev_dbg(dev->dev, "%s: msgs: %d\n", __func__, num);
@@ -552,10 +596,15 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = wait_for_completion_interruptible_timeout(&dev->cmd_complete, HZ);
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
-		if (dev->i2c_recover_bus) {
-			dev_info(dev->dev, "try i2c bus recovery\n");
-			dev->i2c_recover_bus(pdev);
+		/* disable controller */
+		writew(0, dev->base + DW_IC_ENABLE);
+		clk_disable(dev->clk);
+		if (adap->bus_recovery_info &&
+				adap->bus_recovery_info->recover_bus) {
+			dev_dbg(dev->dev, "try i2c bus recovery\n");
+			adap->bus_recovery_info->recover_bus(adap);
 		}
+		clk_enable(dev->clk);
 		i2c_dw_init(dev);
 		ret = -ETIMEDOUT;
 		goto done;
@@ -569,8 +618,6 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	/* no error */
 	if (likely(!dev->cmd_err)) {
-		/* Disable the adapter */
-		writew(0, dev->base + DW_IC_ENABLE);
 		ret = num;
 		goto done;
 	}
@@ -583,6 +630,12 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = -EIO;
 
 done:
+	/* Disable interrupts */
+	writew(0, dev->base + DW_IC_INTR_MASK);
+
+	/* Disable the adapter */
+	writew(0, dev->base + DW_IC_ENABLE);
+
 	mutex_unlock(&dev->lock);
 
 	return ret;
@@ -707,6 +760,7 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
 	struct i2c_dw_pdata *pdata;
+	struct i2c_bus_recovery_info *dw_recovery_info;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -756,8 +810,6 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	}
 
 	pdata = dev_get_platdata(&pdev->dev);
-	if (pdata && pdata->i2c_recover_bus)
-		dev->i2c_recover_bus = pdata->i2c_recover_bus;
 
 	{
 		u32 param1 = readl(dev->base + DW_IC_COMP_PARAM_1);
@@ -784,6 +836,30 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 
 	adap->nr = pdev->id;
+	if (pdata) {
+		dw_recovery_info =
+			kzalloc(sizeof(*dw_recovery_info), GFP_KERNEL);
+		if (!dw_recovery_info) {
+			r = -ENOMEM;
+			goto err_iounmap;
+		}
+		dw_recovery_info->get_gpio = pdata->get_gpio;
+		dw_recovery_info->put_gpio = pdata->put_gpio;
+		dw_recovery_info->scl_gpio = pdata->scl_gpio;
+		dw_recovery_info->scl_gpio_flags = pdata->scl_gpio_flags;
+		dw_recovery_info->recover_bus = pdata->recover_bus;
+		dw_recovery_info->is_gpio_recovery = pdata->is_gpio_recovery;
+		dw_recovery_info->clock_rate_khz =
+			clk_get_rate(dev->clk) / 1000;
+
+		if (!pdata->skip_sda_polling) {
+			dw_recovery_info->sda_gpio = pdata->sda_gpio;
+			dw_recovery_info->sda_gpio_flags =
+				pdata->sda_gpio_flags;
+		}
+		adap->bus_recovery_info = dw_recovery_info;
+	}
+
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(&pdev->dev, "failure adding adapter\n");
@@ -794,6 +870,8 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 
 err_free_irq:
 	free_irq(dev->irq, dev);
+	if (pdata)
+		kfree(dw_recovery_info);
 err_iounmap:
 	iounmap(dev->base);
 err_unuse_clocks:
@@ -813,8 +891,12 @@ err_release_region:
 static int __devexit dw_i2c_remove(struct platform_device *pdev)
 {
 	struct dw_i2c_dev *dev = platform_get_drvdata(pdev);
+	struct i2c_dw_pdata *pdata;
 	struct resource *mem;
 
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata)
+		kfree(dev->adapter.bus_recovery_info);
 	platform_set_drvdata(pdev, NULL);
 	i2c_del_adapter(&dev->adapter);
 	put_device(&pdev->dev);

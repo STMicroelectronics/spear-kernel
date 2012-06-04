@@ -347,6 +347,55 @@ struct i2c_algorithm {
 	u32 (*functionality) (struct i2c_adapter *);
 };
 
+/**
+ * struct i2c_bus_recovery_info - I2c bus recovery information
+ * @recover_bus: Recover routine. Either pass driver's recover_bus() routine, or
+ *	pass it NULL to use generic ones, i.e. gpio or scl based.
+ * @skip_sda_polling: if true, bus recovery will not poll sda line to check if
+ *	it became high or not. Only required if recover_bus == NULL.
+ * @is_gpio_recovery: true, select gpio type else scl type. Only required if
+ *	recover_bus == NULL.
+ * @clock_rate_khz: clock rate of dummy clock in khz. Required for both gpio and
+ *	scl type recovery.
+ * @clock_cnt: count of max clocks to be generated. Required for both gpio and
+ *	scl type recovery.
+ * @set_scl: controller specific scl configuration routine. Only required if
+ *	is_gpio_recovery == false
+ * @get_sda: controller specific sda read routine. Only required if
+ *	is_gpio_recovery == false and skip_sda_polling == false.
+ * @get_gpio: called before recover_bus() to get padmux configured for scl line.
+ *	as gpio. Only required if is_gpio_recovery == true.
+ * @put_gpio: called after recover_bus() to get padmux configured for scl line
+ *	as scl. Only required if is_gpio_recovery == true.
+ * @scl_gpio: gpio number of the scl line. Only required if is_gpio_recovery ==
+ *	true.
+ * @sda_gpio: gpio number of the sda line. Only required if is_gpio_recovery ==
+ *	true and skip_sda_polling == false.
+ * @scl_gpio_flags: flag for gpio_request_one of scl_gpio. 0 implies
+ *	GPIOF_OUT_INIT_LOW.
+ * @sda_gpio_flags: flag for gpio_request_one of sda_gpio. 0 implies
+ *	GPIOF_OUT_INIT_LOW.
+ */
+struct i2c_bus_recovery_info {
+	int (*recover_bus)(struct i2c_adapter *);
+	bool skip_sda_polling;
+	bool is_gpio_recovery;
+	u32 clock_rate_khz;
+	u8 clock_cnt;
+
+	/* scl/sda recovery */
+	void (*set_scl)(struct i2c_adapter *, int val);
+	int (*get_sda)(struct i2c_adapter *);
+
+	/* gpio recovery */
+	int (*get_gpio)(unsigned gpio);
+	int (*put_gpio)(unsigned gpio);
+	u32 scl_gpio;
+	u32 sda_gpio;
+	u32 scl_gpio_flags;
+	u32 sda_gpio_flags;
+};
+
 /*
  * i2c_adapter is the structure used to identify a physical i2c bus along
  * with the access algorithms necessary to access it.
@@ -371,6 +420,9 @@ struct i2c_adapter {
 
 	struct mutex userspace_clients_lock;
 	struct list_head userspace_clients;
+
+	/* Pass valid pointer if recovery infrastructure is required */
+	struct i2c_bus_recovery_info *bus_recovery_info;
 };
 #define to_i2c_adapter(d) container_of(d, struct i2c_adapter, dev)
 

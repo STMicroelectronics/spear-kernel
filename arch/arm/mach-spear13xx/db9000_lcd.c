@@ -51,7 +51,7 @@ static struct db9000fb_ctrl_info ctrl_info = {
 	.bpp = 32,
 	.cr1 = DB9000_CR1_EBO | DB9000_CR1_DEP | DB9000_CR1_HSP |
 		DB9000_CR1_VSP | DB9000_CR1_OPS(1) | DB9000_CR1_FDW(2),
-	.pwmfr = DB9000_PWMFR_PWM_FCE | DB9000_PWMFR_PWM_FCD(24),
+	.pwmfr = DB9000_PWMFR_PWM_FCD(24),
 	.pctr = DB9000_PCTR_PCI,
 	.dear = 0,
 };
@@ -123,6 +123,12 @@ static void clcd_set_plat_data(struct platform_device *pdev,
 
 	data->pixel_clk = clcd_pclk;
 	data->bus_clk = ah_clk;
+
+	/* SPEAr1340 uses different pll for cpu and clcd */
+	if (cpu_is_spear1340())
+		data->ignore_cpufreq_notification = 1;
+	else
+		data->ignore_cpufreq_notification = 0;
 
 free_fb_clk:
 	clk_put(fb_clk);

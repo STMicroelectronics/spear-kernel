@@ -22,22 +22,7 @@
 #ifndef C_CAN_H
 #define C_CAN_H
 
-/*
- * Depending on the underlying platfrom, the message object configuration
- * for c_can controller can change
- */
-enum c_can_devtype {
-	C_CAN_DEVTYPE_SPEA320 = 0,
-	C_CAN_DEVTYPE_SPEA320S,
-};
-
-struct c_can_devtype_data {
-	unsigned int rx_first;
-	unsigned int rx_split;
-	unsigned int rx_last;
-	unsigned int tx_num;
-	enum c_can_devtype type;
-};
+#include <linux/can/platform/c_can.h>
 
 /* c_can IF registers */
 struct c_can_if_regs {

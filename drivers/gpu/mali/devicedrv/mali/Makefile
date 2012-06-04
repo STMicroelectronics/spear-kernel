@@ -30,6 +30,7 @@ USING_MMU ?= 1
 USING_PMM ?= 1
 USING_UMP ?= 1
 CONFIG = SPEAr1340
+TARGET_PLATFORM = SPEAr1340
 #MALI_FLEXIBLE_ALLOC = 1
 $(shell [ -L $(DRIVER_DIR)/arch ] && rm $(DRIVER_DIR)/arch)
 $(shell ln -sf $(DRIVER_DIR)/arch-$(CONFIG) $(DRIVER_DIR)/arch)
@@ -144,8 +145,8 @@ SRC = \
 	linux/mali_kernel_sysfs.c \
 	$(MALI_PLATFORM_FILE) \
 	$(OSKFILES) \
-	$(UKKFILES)
-	#__malidrv_build_info.c
+	$(UKKFILES) \
+	__malidrv_build_info.c
 	
 ifeq ($(USING_PROFILING),1)
 SRC += \
@@ -233,6 +234,9 @@ MODULE:=mali.ko
 obj-$(CONFIG_GPU_MALI) := $(MODULE:.ko=.o)
 # Tell the Linux build system to enable building of our .c files
 $(MODULE:.ko=-y) := $(SRC:.c=.o)
+
+$(DRIVER_DIR)/__malidrv_build_info.c:
+	@echo 'const char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(DRIVER_DIR)/__malidrv_build_info.c
 
 else
 # Outside the kernel build system
@@ -353,8 +357,9 @@ clean:
 	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(CURDIR) clean
 	@([ "$(PATCH)" != "" ] && [ -f arch/$(PATCH_BACKUP_FILE) ] && mv -f arch/$(PATCH_BACKUP_FILE) arch/config.h  && echo "Patch backup restored") || echo No Unpatching needed
 
-make-build-info-file:
-	@echo 'char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(FILES_PREFIX)__malidrv_build_info.c
+$(DRIVER_DIR)/__malidrv_build_info.c:
+	@echo 'const char *__malidrv_build_info(void) { return "malidrv: $(VERSION_STRINGS)";}' > $(DRIVER_DIR)/__malidrv_build_info.c
+
 
 kernelrelease:
 	$(MAKE) -C $(KDIR) kernelrelease

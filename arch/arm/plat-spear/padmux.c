@@ -15,6 +15,8 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <plat/padmux.h>
+#include <mach/hardware.h>
+#include <mach/misc_regs.h>
 
 /*
  * struct pmx: pmx definition structure
@@ -47,10 +49,10 @@ static int pmx_mode_set(struct pmx_mode *mode)
 
 	address = ioremap(pmx->mode_reg.address, SZ_16);
 	if (address) {
-		val = readl(address);
+		val = readl_relaxed(address);
 		val &= ~pmx->mode_reg.mask;
 		val |= mode->value & pmx->mode_reg.mask;
-		writel(val, address);
+		writel_relaxed(val, address);
 
 		iounmap(address);
 	}
@@ -70,10 +72,31 @@ void enable_dev_for_mode(struct pmx_dev_mode *mode)
 
 		address = ioremap(mux_reg->address, SZ_16);
 		if (address) {
-			val = readl(address);
+			val = readl_relaxed(address);
 			val &= ~mux_reg->mask;
 			val |= mux_reg->value & mux_reg->mask;
-			writel(val, address);
+			writel_relaxed(val, address);
+
+#ifdef CONFIG_CPU_SPEAR1310
+			/*
+			 * SPEAr1310 contains PAD DIR SEL registers, which must
+			 * be configured for using pads in out mode
+			 */
+			if (cpu_is_spear1310()) {
+				u32 dirreg;
+				dirreg = mux_reg->address;
+
+				if ((dirreg >= SPEAR1310_PAD_FUNCTION_EN_1) &&
+						(dirreg <=
+						 SPEAR1310_PAD_FUNCTION_EN_3)) {
+					dirreg = (u32)address + 0xC;
+
+					val = readl_relaxed(dirreg);
+					val |= mux_reg->mask;	/* set bits */
+					writel_relaxed(val, dirreg);
+				}
+			}
+#endif
 
 			iounmap(address);
 		}

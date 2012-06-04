@@ -368,6 +368,53 @@ static void pcie_host_exit(struct pcie_port *pp)
 
 }
 
+static int patch_txdetectrx_spear1340(struct pcie_port *pp)
+{
+	u32 tempa;
+	u8 tempm;
+	u32 miphy = (u32)pp->va_phy_base;
+	struct pcie_app_reg *app_reg = pp->va_app_base;
+	int ucount = 0;
+
+	tempa = readl(&app_reg->app_status_1);
+	/* till ltsmm state is not L0 */
+	while ((tempa & 0x3F) != 0x11) {
+		while (((tempa & 0x3F) == 0) || ((tempa & 0x3F) == 1)) {
+			tempm = readb(miphy + 0x20);
+			tempm &= ~0x3;
+			writeb(tempm, miphy + 0x20);
+
+			writeb(0, miphy + 0x21);
+
+			tempm = readb(miphy + 0x16);
+			tempm &= ~(1 << 3);
+			writeb(tempm, miphy + 0x16);
+
+			tempm = readb(miphy + 0x12);
+			tempm &= ~0x3;
+			writeb(tempm, miphy + 0x12);
+
+			tempm = readb(miphy + 0x10);
+			tempm |= 0x1;
+			writeb(tempm, miphy + 0x10);
+
+			tempa = readl(&app_reg->app_status_1);
+
+			ucount++;
+			udelay(1);
+			if (ucount > MAX_LINK_UP_WAIT_MS * 1000)
+				return -ECONNRESET;
+		}
+		tempm = readb(miphy + 0x10);
+		tempm &= ~0x1;
+		writeb(tempm, miphy + 0x10);
+
+		tempa = readl(&app_reg->app_status_1);
+	}
+
+	return 0;
+}
+
 static void pcie_host_init(struct pcie_port *pp)
 {
 	struct pcie_port_info *config = &pp->config;
@@ -461,10 +508,22 @@ static void pcie_host_init(struct pcie_port *pp)
 		pcie_wr_own_conf(pp, PCIE_PORT_LOGIC, 4, val);
 	}
 
+	/* set max trial before lock fialure */
+	writeb(0xC0, pp->va_phy_base + 0x85);
+	/* set max trial before lock fialure */
+	writeb(0x01, pp->va_phy_base + 0x86);
+
+	/* txdetect RX settings for SPEAr1310 */
+	if (cpu_is_spear1310())
+		writeb(0x00, pp->va_phy_base + 0x16);
+
 	writel(DEVICE_TYPE_RC | (1 << MISCTRL_EN_ID)
 			| (1 << APP_LTSSM_ENABLE_ID)
 			| ((u32)1 << REG_TRANSLATION_ENABLE),
 			&app_reg->app_ctrl_0);
+	/* txdetect RX settings for SPEAr1340 */
+	if (cpu_is_spear1340())
+		patch_txdetectrx_spear1340(pp);
 
 	pcie_int_init(pp);
 }
@@ -491,6 +550,7 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 {
 	struct resource *base;
 	struct resource *app_base;
+	struct resource *phy_base;
 	int err;
 
 	app_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -512,11 +572,32 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 		goto free_app_res;
 	}
 
+	phy_base = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if (!phy_base) {
+		dev_err(&pdev->dev, "couldn't get phy base resource\n");
+		err = -EINVAL;
+		goto unmap_app_res;
+	}
+	if (!request_mem_region(phy_base->start, resource_size(phy_base),
+				pdev->name)) {
+		dev_err(&pdev->dev, "phy base resource is busy\n");
+		err = -EBUSY;
+		goto unmap_app_res;
+	}
+
+	pp->phy_base = (void __iomem *)phy_base->start;
+	pp->va_phy_base = ioremap(phy_base->start, resource_size(phy_base));
+	if (!pp->va_phy_base) {
+		dev_err(&pdev->dev, "error with ioremap\n");
+		err = -ENOMEM;
+		goto free_phy_res;
+	}
+
 	base = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!base) {
 		dev_err(&pdev->dev, "couldn't get base resource\n");
 		err = -EINVAL;
-		goto unmap_app_res;
+		goto unmap_phy_res;
 	}
 
 	pp->base = (void __iomem *)base->start;
@@ -534,7 +615,7 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 		if (!pp->va_cfg0_base) {
 			dev_err(&pdev->dev, "error with ioremap in function\n");
 			err = -ENOMEM;
-			goto unmap_app_res;
+			goto unmap_phy_res;
 		}
 		pp->va_cfg1_base =
 			ioremap((u32)pp->cfg1_base, pp->config.cfg1_size);
@@ -547,26 +628,15 @@ static int add_pcie_port(struct pcie_port *pp, struct platform_device *pdev)
 	}
 unmap_cfg0:
 	iounmap(pp->va_cfg0_base);
+unmap_phy_res:
+	iounmap(pp->va_phy_base);
+free_phy_res:
+	release_mem_region(phy_base->start, resource_size(phy_base));
 unmap_app_res:
 	iounmap(pp->va_app_base);
 free_app_res:
 	release_mem_region(app_base->start, resource_size(app_base));
 	return err;
-}
-
-static int pcie_clk_init(struct pcie_port *pp)
-{
-	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
-			VA_SPEAR1340_PCIE_MIPHY_CFG);
-	writel(SPEAR1340_PCIE_CFG_VAL, VA_SPEAR1340_PCIE_SATA_CFG);
-	return 0;
-}
-
-static int pcie_clk_exit(struct pcie_port *pp)
-{
-	writel(0, VA_SPEAR1340_PCIE_SATA_CFG);
-	writel(0, VA_SPEAR1340_PCIE_MIPHY_CFG);
-	return 0;
 }
 
 void spear_pcie_370_add_ops(struct pcie_port *pp)
@@ -581,6 +651,4 @@ void spear_pcie_370_add_ops(struct pcie_port *pp)
 	ops->link_up = pcie_link_up;
 	ops->host_init = pcie_host_init;
 	ops->host_exit = pcie_host_exit;
-	ops->clk_init = pcie_clk_init;
-	ops->clk_exit = pcie_clk_exit;
 }

@@ -533,6 +533,14 @@ static struct clk gpt3_clk = {
 	.recalc = &follow_parent,
 };
 
+/* per-cpu local timer clock */
+static struct clk smp_twd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &cpu_clk,
+	.div_factor = 2,
+	.recalc = &follow_parent,
+};
+
 /* watch dog timer clock */
 static struct clk wdt_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -1026,7 +1034,20 @@ static struct aux_clk_config i2s_prs1_config = {
 /* i2s prs1 aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
 	/* For parent clk = 49.152 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
+	{.xscale = 1, .yscale = 12, .eq = 0}, /* 2.048 MHz, smp freq = 8Khz */
+	{.xscale = 11, .yscale = 96, .eq = 0}, /* 2.816 MHz, smp freq = 11Khz */
+	{.xscale = 1, .yscale = 6, .eq = 0}, /* 4.096 MHz, smp freq = 16Khz */
+	{.xscale = 11, .yscale = 48, .eq = 0}, /* 5.632 MHz, smp freq = 22Khz */
+
+	/*
+	 * with parent clk = 49.152, freq gen is 8.192 MHz, smp freq = 32Khz
+	 * with parent clk = 12.288, freq gen is 2.048 MHz, smp freq = 8Khz
+	 */
+	{.xscale = 1, .yscale = 3, .eq = 0},
+
+	/* For parent clk = 49.152 MHz */
+	{.xscale = 17, .yscale = 37, .eq = 0}, /* 11.289 MHz, smp freq = 44Khz*/
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz, smp freq = 48Khz*/
 };
 
 /* i2s prs1 clock */
@@ -1036,7 +1057,7 @@ static struct clk i2s_prs1_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 0},
+	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 6},
 	.private_data = &i2s_prs1_config,
 };
 
@@ -1077,9 +1098,9 @@ static struct clk i2s_ref_pad_clk = {
 
 /* i2s sclk aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_sclk_aux_rtbl[] = {
-	/* For i2s_ref_clk = 12.288MHz */
-	{.xscale = 1, .yscale = 4, .eq = 0}, /* 1.53 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 0}, /* 3.07 Mhz */
+	/* For sclk = ref_clk * x/2/y */
+	{.xscale = 1, .yscale = 4, .eq = 0},
+	{.xscale = 1, .yscale = 2, .eq = 0},
 };
 
 /* i2s sclk (bit clock) syynthesizers masks */
@@ -1131,17 +1152,22 @@ static struct clk i2c1_clk = {
 };
 
 /* dma clock */
-static struct clk dma0_clk = {
+static struct clk dma_pclk = {
 	.en_reg = VA_SPEAR1340_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1340_DMA0_CLK_ENB,
+	.en_reg_bit = SPEAR1340_DMA_CLK_ENB,
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 
+static struct clk dma0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
+	.recalc = &follow_parent,
+};
+
 static struct clk dma1_clk = {
-	.en_reg = VA_SPEAR1340_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1340_DMA1_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1667,6 +1693,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.con_id = "cpu_clk_div3",		.clk = &cpu_clk_div3},
 	{.con_id = "ahb_clk",			.clk = &ahb_clk},
 	{.con_id = "apb_clk",			.clk = &apb_clk},
+	{.dev_id = "smp_twd",			.clk = &smp_twd_clk},
 
 	/* synthesizers/prescaled clocks */
 	{.con_id = "c3_synth_clk",		.clk = &c3_synth_clk},
@@ -1721,6 +1748,7 @@ static struct clk_lookup spear1340_clk_lookups[] = {
 	{.dev_id = "uoc",			.clk = &uoc_clk},
 	{.dev_id = "i2c_designware.0",		.clk = &i2c0_clk},
 	{.dev_id = "i2c_designware.1",		.clk = &i2c1_clk},
+	{.con_id = "dmac_pclk",			.clk = &dma_pclk},
 	{.dev_id = "dw_dmac.0",			.clk = &dma0_clk},
 	{.dev_id = "dw_dmac.1",			.clk = &dma1_clk},
 	{.dev_id = "stmmaceth.0",		.clk = &gmac_clk},

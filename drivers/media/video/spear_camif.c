@@ -83,6 +83,21 @@
 #define CTRL_HS_POL_HI		BIT(6)
 #define CTRL_PCK_POL_HI		BIT(5)
 
+/* camif supported storage swappings */
+enum camif_transformation {
+	DISABLED = 0,
+	YUVCbYCrY,
+	YUVCrYCbY,
+	RGB888A,
+	BGR888A,
+	ARGB888,
+	ABGR888,
+	RGB565,
+	BGR565,
+	RGB888,
+	JPEG,
+};
+
 /* interrupt and dma mask register bits */
 #define IR_DUR_MASK_BREQ	BIT(15)
 #define IR_DUR_UNMASK_BREQ	(~BIT(15))
@@ -418,13 +433,13 @@ static void camif_prog_default_ctrl(struct camif *camif)
 {
 	u32 ctrl = 0, ctrl_save;
 	bool emb_synchro = 0;
-	bool eav_sel = 0;
+	bool eav_sel = 1;
 
 	ctrl_save = readl(camif->base + CAMIF_CTRL);
 
 	if (camif->pdata->config->sync_type == EMBEDDED_SYNC) {
 		emb_synchro = 1;
-		eav_sel = 1;
+		eav_sel = 0;
 		writel(ITU656_EMBED_EVEN_CODE, camif->base + CAMIF_EFEC);
 		writel(ITU656_EMBED_ODD_CODE, camif->base + CAMIF_OFEC);
 	}
@@ -433,7 +448,7 @@ static void camif_prog_default_ctrl(struct camif *camif)
 				camif->pdata->config->burst_size) |
 		CTRL_EAV_SEL(eav_sel) |
 		CTRL_IF_SYNC_TYPE(emb_synchro) |
-		CTRL_IF_TRANS(camif->pdata->config->transform) |
+		CTRL_IF_TRANS(DISABLED) |
 		CTRL_VS_POL(camif->pdata->config->vsync_polarity) |
 		CTRL_HS_POL(camif->pdata->config->hsync_polarity) |
 		CTRL_PCK_POL(camif->pdata->config->pclk_polarity) |
@@ -670,7 +685,6 @@ static void camif_do_idle(unsigned long arg)
 {
 	struct camif *camif = (struct camif *)arg;
 	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
@@ -689,7 +703,6 @@ static void camif_do_idle(unsigned long arg)
 
 		while (!list_empty(&camif->dma_queue)) {
 			vb = &camif->cur_frm->vb;
-			buf = container_of(vb, struct camif_buffer, vb);
 			vb->state = VIDEOBUF_ERROR;
 			do_gettimeofday(&vb->ts);
 
@@ -853,8 +866,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 	int status_reg;
 	unsigned long flags;
 	struct camif *camif = (struct camif *)dev_id;
-	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
 	if (!status_reg)
@@ -880,9 +891,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		camif->cur_frm =
 			list_first_entry(&camif->dma_queue,
 					struct camif_buffer, vb.queue);
-
-		vb = &camif->cur_frm->vb;
-		buf = container_of(vb, struct camif_buffer, vb);
 
 		/* mark state of the current frame to active */
 		camif->cur_frm->vb.state = VIDEOBUF_ACTIVE;
@@ -1525,6 +1533,7 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
 	int ret;
+	u32 ctrl;
 
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
@@ -1533,6 +1542,28 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 	}
 
 	v4l2_fill_mbus_format(&mf, pix, xlate->code);
+
+	ctrl = readl(camif->base + CAMIF_CTRL);
+	switch (xlate->code) {
+	case V4L2_MBUS_FMT_RGB888_2X8_LE:
+		ctrl |= CTRL_IF_TRANS(RGB888);
+		break;
+	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
+	case V4L2_MBUS_FMT_RGB565_2X8_BE:
+		ctrl |= CTRL_IF_TRANS(RGB565);
+		break;
+	case V4L2_MBUS_FMT_BGR565_2X8_BE:
+		ctrl |= CTRL_IF_TRANS(BGR565);
+		break;
+	case V4L2_MBUS_FMT_YUYV8_2X8:
+	case V4L2_MBUS_FMT_YVYU8_2X8:
+	case V4L2_MBUS_FMT_UYVY8_2X8:
+	case V4L2_MBUS_FMT_VYUY8_2X8:
+	default:
+		ctrl |= CTRL_IF_TRANS(YUVCbYCrY);
+		break;
+	}
+	writel(ctrl, camif->base + CAMIF_CTRL);
 
 	/* limit to sensor capabilities */
 	ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);

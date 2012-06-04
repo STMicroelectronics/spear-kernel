@@ -14,15 +14,18 @@
 #ifndef __MACH_GENERIC_H
 #define __MACH_GENERIC_H
 
+#include <linux/designware_i2s.h>
 #include <linux/dmaengine.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/amba/bus.h>
+#include <linux/usb/dwc_otg.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
 #include <asm/setup.h>
 #include <plat/padmux.h>
+#include <plat/plug_board.h>
 
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
@@ -219,6 +222,9 @@ extern struct pmx_dev spear1310_reva_pmx_rgmii;
 extern struct pmx_dev spear1310_reva_pmx_i2c1;
 extern struct pmx_dev spear1310_reva_pmx_smii_0_1_2;
 extern struct pmx_dev spear1310_reva_pmx_can;
+extern struct pmx_dev spear1310_pmx_sdhci;
+extern struct pmx_dev spear1310_pmx_cf;
+extern struct pmx_dev spear1310_pmx_xd;
 #endif
 
 #ifdef CONFIG_CPU_SPEAR1310
@@ -467,6 +473,7 @@ extern struct platform_device spear13xx_kbd_device;
 extern struct platform_device spear13xx_nand_device;
 extern struct platform_device spear13xx_ohci0_device;
 extern struct platform_device spear13xx_ohci1_device;
+extern struct platform_device spear13xx_pmu_device;
 extern struct platform_device spear13xx_pcie_gadget0_device;
 extern struct platform_device spear13xx_pcie_host0_device;
 extern struct platform_device spear13xx_pcm_device;
@@ -479,6 +486,7 @@ extern struct platform_device spear13xx_wdt_device;
 #if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
 			defined(CONFIG_CPU_SPEAR900) || \
 			defined(CONFIG_CPU_SPEAR1310)
+extern struct platform_device spear13xx_cpufreq_device;
 extern struct platform_device spear13xx_i2s0_device;
 extern struct platform_device spear13xx_i2s1_device;
 extern struct platform_device spear13xx_jpeg_device;
@@ -497,8 +505,11 @@ extern struct sys_timer spear13xx_timer;
 
 /* Add spear13xx structure declarations here */
 extern struct dw_dma_slave cf_dma_priv;
+extern struct dw_dma_slave nand_read_dma_priv;
+extern struct dw_dma_slave nand_write_dma_priv;
 
 /* Add spear13xx family function declarations here */
+int audio_clk_config(struct i2s_clk_config_data *config);
 bool dw_dma_filter(struct dma_chan *chan, void *slave);
 void __init spear13xx_clk_init(void);
 void __init i2c_register_default_devices(void);
@@ -571,6 +582,7 @@ extern struct platform_device spear1310_i2c4_device;
 extern struct platform_device spear1310_i2c5_device;
 extern struct platform_device spear1310_i2c6_device;
 extern struct platform_device spear1310_i2c7_device;
+extern struct platform_device spear1310_nand_device;
 extern struct platform_device spear1310_otg_device;
 extern struct platform_device spear1310_plgpio_device;
 extern struct platform_device spear1310_rs485_0_device;
@@ -599,6 +611,7 @@ extern struct platform_device spear1340_camif2_device;
 extern struct platform_device spear1340_camif3_device;
 extern struct platform_device spear1340_cec0_device;
 extern struct platform_device spear1340_cec1_device;
+extern struct platform_device spear1340_cpufreq_device;
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 extern struct platform_device spear1340_gpiokeys_device;
 #endif
@@ -623,6 +636,14 @@ extern struct spi_board_info spear1340_evb_spi_m25p80;
 extern struct spi_board_info spear1340_evb_spi_stmpe610;
 extern struct spi_board_info spear1340_evb_spi_spidev;
 
+/* Add spear1340 i2c devices structure declaration */
+extern struct i2c_dev_info spear1340_evb_i2c_l3g4200d_gyr;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom0;
+extern struct i2c_dev_info spear1340_evb_i2c_eeprom1;
+extern struct i2c_dev_info spear1340_evb_i2c_sta529;
+
+int __init spear1340_pb_init(struct plug_board_info *pb_info);
+
 /* Add spear1340 machine function declarations here */
 void __init spear1340_clk_init(void);
 void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
@@ -632,6 +653,12 @@ void __init spear1340_pcie_board_init(struct device *dev);
 void config_clcd_gpio_pads(bool);
 
 #endif /* CONFIG_CPU_SPEAR1340 */
+
+#if defined(CONFIG_CPU_SPEAR1310) || defined(CONFIG_CPU_SPEAR1340)
+void config_io_pads(struct pmx_dev **devs, u8 count, bool to_device);
+int otg_phy_init(void);
+int otg_param_init(struct core_params *params);
+#endif
 
 /* spear900 declarations */
 #ifdef CONFIG_CPU_SPEAR900

@@ -366,6 +366,14 @@ static struct clk gpt3_clk = {
 	.recalc = &follow_parent,
 };
 
+/* per-cpu local timer clock */
+static struct clk smp_twd_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &cpu_clk,
+	.div_factor = 2,
+	.recalc = &follow_parent,
+};
+
 /* watch dog timer clock */
 static struct clk wdt_clk = {
 	.flags = ALWAYS_ENABLED,
@@ -771,7 +779,7 @@ static struct pclk_info i2s_src_pclk_info[] = {
 		.pclk_val = SPEAR1310_I2S_SRC_PLL3_VAL,
 	}, {
 		.pclk = &i2s_src_pad_clk,
-		.pclk_val = SPEAR1310_I2S_SRC_PL_CLK1_VAL,
+		.pclk_val = SPEAR1310_I2S_SRC_PL_CLK0_VAL,
 	},
 };
 
@@ -811,7 +819,20 @@ static struct aux_clk_config i2s_prs1_config = {
 /* i2s prs1 aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_prs1_aux_rtbl[] = {
 	/* For parent clk = 49.152 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
+	{.xscale = 1, .yscale = 12, .eq = 0}, /* 2.048 MHz, smp freq = 8Khz */
+	{.xscale = 11, .yscale = 96, .eq = 0}, /* 2.816 MHz, smp freq = 11Khz */
+	{.xscale = 1, .yscale = 6, .eq = 0}, /* 4.096 MHz, smp freq = 16Khz */
+	{.xscale = 11, .yscale = 48, .eq = 0}, /* 5.632 MHz, smp freq = 22Khz */
+
+	/*
+	 * with parent clk = 49.152, freq gen is 8.192 MHz, smp freq = 32Khz
+	 * with parent clk = 12.288, freq gen is 2.048 MHz, smp freq = 8Khz
+	 */
+	{.xscale = 1, .yscale = 3, .eq = 0},
+
+	/* For parent clk = 49.152 MHz */
+	{.xscale = 17, .yscale = 37, .eq = 0}, /* 11.289 MHz, smp freq = 44Khz*/
+	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz, smp freq = 48Khz*/
 };
 
 /* i2s prs1 clock */
@@ -821,7 +842,7 @@ static struct clk i2s_prs1_clk = {
 	.calc_rate = &aux_calc_rate,
 	.recalc = &aux_clk_recalc,
 	.set_rate = &aux_clk_set_rate,
-	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 0},
+	.rate_config = {i2s_prs1_aux_rtbl, ARRAY_SIZE(i2s_prs1_aux_rtbl), 6},
 	.private_data = &i2s_prs1_config,
 };
 
@@ -908,17 +929,22 @@ static struct clk i2c_clk = {
 };
 
 /* dma clock */
-static struct clk dma0_clk = {
+static struct clk dma_pclk = {
 	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_DMA0_CLK_ENB,
+	.en_reg_bit = SPEAR1310_DMA_CLK_ENB,
 	.pclk = &ahb_clk,
 	.recalc = &follow_parent,
 };
 
+static struct clk dma0_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
+	.recalc = &follow_parent,
+};
+
 static struct clk dma1_clk = {
-	.en_reg = VA_SPEAR1310_PERIP1_CLK_ENB,
-	.en_reg_bit = SPEAR1310_DMA1_CLK_ENB,
-	.pclk = &ahb_clk,
+	.flags = ALWAYS_ENABLED,
+	.pclk = &dma_pclk,
 	.recalc = &follow_parent,
 };
 
@@ -1391,28 +1417,28 @@ static struct clk can1_clk = {
 
 static struct clk smii_ras0_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII0_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII0_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk smii_ras1_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII1_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII1_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk smii_ras2_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_SMII2_CLK_ENB,
+	.en_reg_bit = SPEAR1310_MII2_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
 
 static struct clk rgmii_ras_clk = {
 	.en_reg = IOMEM(IO_ADDRESS(SPEAR1310_RAS_SW_CLK_CTRL)),
-	.en_reg_bit = SPEAR1310_RGMII_CLK_ENB,
+	.en_reg_bit = SPEAR1310_GMII_CLK_ENB,
 	.pclk = &ras_aclk_clk,
 	.recalc = &follow_parent,
 };
@@ -1666,6 +1692,13 @@ static struct clk pci_clk = {
 	.recalc = &follow_parent,
 };
 
+/* PLGPIO clock */
+static struct clk plgpio_clk = {
+	.flags = ALWAYS_ENABLED,
+	.pclk = &ras_aclk_clk,
+	.recalc = &follow_parent,
+};
+
 /* ssp1 parents */
 static struct pclk_info ssp1_pclk_info[] = {
 	{
@@ -1812,12 +1845,16 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "gpt3",			.clk = &gpt3_clk},
 	{.dev_id = "uart",			.clk = &uart_clk},
 
+	/* clock derived from cpu clk */
+	{.dev_id = "smp_twd",			.clk = &smp_twd_clk},
+
 	/* clock derived from ahb clk */
 	{.dev_id = "smi",			.clk = &smi_clk},
 	{.con_id = "usbh.0_clk",		.clk = &uhci0_clk},
 	{.con_id = "usbh.1_clk",		.clk = &uhci1_clk},
 	{.dev_id = "uoc",			.clk = &uoc_clk},
 	{.dev_id = "i2c_designware.0",		.clk = &i2c_clk},
+	{.con_id = "dmac_pclk",			.clk = &dma_pclk},
 	{.dev_id = "dw_dmac.0",			.clk = &dma0_clk},
 	{.dev_id = "dw_dmac.1",			.clk = &dma1_clk},
 	{.dev_id = "jpeg-designware",		.clk = &jpeg_clk},
@@ -1846,7 +1883,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	/* clock derived from apb clk */
 	{.dev_id = "designware-i2s.0",		.clk = &i2s0_clk},
 	{.dev_id = "designware-i2s.1",		.clk = &i2s1_clk},
-	{.dev_id = "ssp-pl022.0",		.clk = &ssp_clk},
+	{.dev_id = "ssp-pl022",			.clk = &ssp_clk},
 	{.dev_id = "gpio0",			.clk = &gpio0_clk},
 	{.dev_id = "gpio1",			.clk = &gpio1_clk},
 	{.dev_id = "keyboard",			.clk = &kbd_clk},
@@ -1875,6 +1912,7 @@ static struct clk_lookup spear1310_clk_lookups[] = {
 	{.dev_id = "i2c_designware.6",		.clk = &i2c6_clk},
 	{.dev_id = "i2c_designware.7",		.clk = &i2c7_clk},
 	{.dev_id = "pci",			.clk = &pci_clk},
+	{.dev_id = "plgpio",			.clk = &plgpio_clk},
 	{.dev_id = "spear_thermal",		.clk = &thermal_clk},
 	{.dev_id = "ssp-pl022.1",		.clk = &ssp1_clk},
 	{.con_id = "tdm_hdlc.0",		.clk = &tdm1_clk},

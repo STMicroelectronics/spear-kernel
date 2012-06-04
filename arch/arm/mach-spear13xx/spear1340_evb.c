@@ -30,20 +30,15 @@
 #include <plat/fsmc.h>
 #include <plat/i2c.h>
 #include <plat/keyboard.h>
+#include <plat/plug_board.h>
 #include <plat/smi.h>
 #include <plat/spi.h>
 #include <mach/generic.h>
 #include <mach/gpio.h>
 #include <mach/hardware.h>
-#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
-
-#ifdef CONFIG_SPEAR1340_PLUG_BOARDS
-/* Variable specifying which plug boards are requested */
-extern char spear1340_plug_board[50];
-#endif
 
 #if 0
 /* fsmc nor partition info */
@@ -181,7 +176,7 @@ static struct pmx_mux_reg pmx_plgpios_mux[] = {
 		.value = 0x0,
 	}, {
 		.address = SPEAR1340_PAD_FUNCTION_EN_8,
-		.mask = 0x0,
+		.mask = 0x1000000,
 		.value = 0x0,
 	},
 };
@@ -288,17 +283,12 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear13xx_ehci1_device,
 	&spear13xx_eth_device,
 	&spear13xx_i2c_device,
-	&spear1340_nand_device,
-	&spear1340_i2s_play_device,
-	&spear1340_i2s_record_device,
 	&spear13xx_ohci0_device,
 	&spear13xx_ohci1_device,
 	&spear13xx_pcm_device,
 	&spear13xx_rtc_device,
 	&spear13xx_sdhci_device,
 	&spear13xx_smi_device,
-	&spear1340_spdif_in_device,
-	&spear1340_spdif_out_device,
 	&spear13xx_wdt_device,
 
 	/* spear1340 specific devices */
@@ -306,19 +296,25 @@ static struct platform_device *plat_devs[] __initdata = {
 	&spear1340_cam3_sensor_device,
 	&spear1340_cec0_device,
 	&spear1340_cec1_device,
+	&spear1340_cpufreq_device,
+#ifdef CONFIG_DRM_MALI
+	&spear1340_device_mali_drm,
+#endif
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	&spear1340_gpiokeys_device,
 #endif
 	&spear1340_i2c1_device,
-	&spear1340_pwm_device,
+	&spear1340_i2s_play_device,
+	&spear1340_i2s_record_device,
+	&spear1340_nand_device,
+	&spear1340_otg_device,
 	&spear1340_phy0_device,
 	&spear1340_plgpio_device,
-	&spear1340_otg_device,
+	&spear1340_pwm_device,
 	&spear1340_sata0_device,
+	&spear1340_spdif_in_device,
+	&spear1340_spdif_out_device,
 	&spear1340_thermal_device,
-#ifdef CONFIG_DRM_MALI
-	&spear1340_device_mali_drm,
-#endif
 	&spear1340_video_dec_device,
 };
 
@@ -339,6 +335,7 @@ static struct kbd_platform_data kbd_data = {
 	.keymap = &keymap_data,
 	.rep = 1,
 	.mode = KEYPAD_2x2,
+	.suspended_rate = 2000000,
 };
 
 /* Ethernet specific plat data */
@@ -397,6 +394,7 @@ static struct lsm303dlh_platform_data lsm303dlh_a_pdata = {
 	.axis_map_x = 0,
 	.axis_map_y = 1,
 	.axis_map_z = 2,
+	.input_poll_dev = 1,
 	.name_a = "lsm303dlh_a",
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 	.irq_a1 = PLGPIO_71,
@@ -624,7 +622,7 @@ static void __init spear1340_evb_init(void)
 	/* set nand device's plat data */
 	/* set nand device's plat data */
 	fsmc_nand_set_plat_data(&spear1340_nand_device, NULL, 0,
-			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL);
+			NAND_SKIP_BBTSCAN, FSMC_NAND_BW8, NULL, 1);
 	nand_mach_init(FSMC_NAND_BW8);
 
 #if 0
@@ -642,7 +640,7 @@ static void __init spear1340_evb_init(void)
 
 #ifdef CONFIG_SPEAR1340_PLUG_BOARDS
 	/* Check if plug boards are requested or not */
-	if (spear1340_plug_board[0] != '\0') {
+	if (spear_pb_present()) {
 		struct plug_board_info pb_info;
 		int ret;
 

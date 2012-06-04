@@ -3,8 +3,8 @@
  *
  * CPU Frequency Scaling for SPEAr platform
  *
- * Copyright (C) 2010 ST Microelectronics
- * Deepak Sikri<deepak.sikri@st.com>
+ * Copyright (C) 2010-2012 ST Microelectronics
+ * Deepak Sikri <deepak.sikri@st.com>
  *
  *
  * This file is licensed under the terms of the GNU General Public
@@ -12,75 +12,39 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/sched.h>
+#include <linux/clk.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
-#include <linux/init.h>
 #include <linux/err.h>
-#include <linux/clk.h>
+#include <linux/init.h>
 #include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/platform_device.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/types.h>
 #include <asm/system.h>
+#include <plat/cpufreq.h>
 #include <mach/hardware.h>
 #include <mach/system.h>
 
-#define CPU_CLK_MAX_STEP	10
-
-#ifdef CONFIG_ARCH_SPEAR13XX
-#if defined(CONFIG_CPU_SPEAR1300) || defined(CONFIG_CPU_SPEAR1310_REVA) || \
-	defined (CONFIG_CPU_SPEAR900)
-#define SPEAR13XX_MIN_CPU_FREQ	200000
-#define SPEAR13XX_MAX_CPU_FREQ	500000
-
-static u32 spear13xx_cpu_freq[] = {
-	200000, /* 200 MHZ */
-	250000, /* 250 MHZ */
-	332000, /* 332 MHZ */
-	400000, /* 400 MHZ */
-	500000, /* 500 MHZ */
-};
-#endif /* CONFIG_ARCH_SPEAR13XX and !CONFIG_CPU_SPEAR1340 */
-
-#ifdef CONFIG_CPU_SPEAR1340
-#define SPEAR1340_MIN_CPU_FREQ	166000
-#define SPEAR1340_MAX_CPU_FREQ	600000
-
-static u32 spear1340_cpu_freq[] = {
-	166000, /* 166 MHZ */
-	200000, /* 200 MHZ */
-	250000, /* 250 MHZ */
-	332000, /* 332 MHZ */
-	400000, /* 400 MHZ */
-	500000, /* 500 MHZ */
-	600000, /* 600 MHZ */
-};
-
-#endif /* CONFIG_CPU_SPEAR1340 */
-#endif /* CONFIG_ARCH_SPEAR13XX */
-
-#if defined(CONFIG_ARCH_SPEAR6XX) || defined(CONFIG_ARCH_SPEAR3XX)
-#define MIN_CPU_FREQ	166000
-#define MAX_CPU_FREQ	332000
-
-static u32 spear_cpu_freq[] = {
-	166000, /* 166 MHZ */
-	266000, /* 266 MHZ */
-	332000, /* 332 MHZ */
-};
-#endif
-
-static struct cpufreq_frequency_table spear_freq_tbl[CPU_CLK_MAX_STEP];
-static struct clk *cpu_clk;
+struct {
+	struct clk *cpu_clk;
+	struct cpufreq_frequency_table *freq_tbl;
+	u32 freq_tbl_len;
+	unsigned int min_freq;
+	unsigned int max_freq;
+	unsigned int transition_latency;
+} spear_cpufreq;
 
 int spear_cpufreq_verify(struct cpufreq_policy *policy)
 {
-	return cpufreq_frequency_table_verify(policy, spear_freq_tbl);
+	return cpufreq_frequency_table_verify(policy, spear_cpufreq.freq_tbl);
 }
 
 static unsigned int spear_cpufreq_get(unsigned int cpu)
 {
-	return cpu ? 0 : clk_get_rate(cpu_clk) / 1000;
+	return cpu ? 0 : clk_get_rate(spear_cpufreq.cpu_clk) / 1000;
 }
 
 static struct clk *spear1340_cpu_get_possible_parent(unsigned long newfreq)
@@ -118,13 +82,12 @@ static struct clk *spear1340_cpu_get_possible_parent(unsigned long newfreq)
 	return sys_pclk;
 }
 
-static int spear1340_set_cpu_rate(struct clk *cpu_clk, struct clk *sys_pclk,
-		unsigned long newfreq)
+static int spear1340_set_cpu_rate(struct clk *sys_pclk, unsigned long newfreq)
 {
 	struct clk *sys_clk;
 	int ret = 0;
 
-	sys_clk = clk_get_parent(cpu_clk);
+	sys_clk = clk_get_parent(spear_cpufreq.cpu_clk);
 	if (IS_ERR(sys_clk)) {
 		pr_err("failed to get cpu's parent (sys) clock\n");
 		return PTR_ERR(sys_clk);
@@ -188,7 +151,7 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	if (policy->cpu != 0)
 		return -EINVAL;
 
-	if (cpufreq_frequency_table_target(policy, spear_freq_tbl,
+	if (cpufreq_frequency_table_target(policy, spear_cpufreq.freq_tbl,
 				target_freq, relation, &index))
 		return -EINVAL;
 
@@ -198,7 +161,7 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	if (freqs.old == target_freq)
 		return 0;
 
-	newfreq = spear_freq_tbl[index].frequency * 1000;
+	newfreq = spear_cpufreq.freq_tbl[index].frequency * 1000;
 	if (cpu_is_spear1340()) {
 		/*
 		 * SPEAr1340 is special in the sense that due to the
@@ -221,7 +184,7 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 		 * Rest: src clock to be altered is ancestor of cpu
 		 * clock. Hence we can directly work on cpu clk
 		 */
-		srcclk = cpu_clk;
+		srcclk = spear_cpufreq.cpu_clk;
 		srcfreq = newfreq;
 	}
 
@@ -252,14 +215,14 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	}
 
 	if (cpu_is_spear1340())
-		ret = spear1340_set_cpu_rate(cpu_clk, srcclk, srcfreq);
+		ret = spear1340_set_cpu_rate(srcclk, srcfreq);
 	else
-		ret = clk_set_rate(cpu_clk, srcfreq);
+		ret = clk_set_rate(spear_cpufreq.cpu_clk, srcfreq);
 
 	/* Get current rate after clk_set_rate, in case of failure */
 	if (ret) {
 		pr_err("CPU Freq: cpu clk_set_rate failed: %d\n", ret);
-		freqs.new = clk_get_rate(cpu_clk) / 1000;
+		freqs.new = clk_get_rate(spear_cpufreq.cpu_clk) / 1000;
 	}
 
 	/* Now switch back to normal mode */
@@ -290,63 +253,20 @@ static int spear_cpufreq_resume(struct cpufreq_policy *policy)
 
 static int spear_cpufreq_init(struct cpufreq_policy *policy)
 {
-	int i = 0, table_len = 0;
-	u32 *cpu_freq_table;
-
 	if (policy->cpu != 0)
 		return -EINVAL;
 
-	cpu_clk = clk_get(NULL, "cpu_clk");
-	if (IS_ERR(cpu_clk))
-		return PTR_ERR(cpu_clk);
-
-	if (cpu_is_spear1340()) {
-#ifdef CONFIG_CPU_SPEAR1340
-		policy->cpuinfo.min_freq = SPEAR1340_MIN_CPU_FREQ;
-		policy->cpuinfo.max_freq = SPEAR1340_MAX_CPU_FREQ;
-		cpu_freq_table = spear1340_cpu_freq;
-		table_len = ARRAY_SIZE(spear1340_cpu_freq);
-#endif
-	} else if (arch_is_spear13xx()) {
-#ifdef CONFIG_ARCH_SPEAR13XX
-		policy->cpuinfo.min_freq = SPEAR13XX_MIN_CPU_FREQ;
-		policy->cpuinfo.max_freq = SPEAR13XX_MAX_CPU_FREQ;
-		cpu_freq_table = spear13xx_cpu_freq;
-		table_len = ARRAY_SIZE(spear13xx_cpu_freq);
-#endif
-	} else if (arch_is_spear3xx() || arch_is_spear6xx()) {
-#if defined(CONFIG_ARCH_SPEAR3XX) || defined(CONFIG_ARCH_SPEAR6XX)
-		policy->cpuinfo.min_freq = MIN_CPU_FREQ;
-		policy->cpuinfo.max_freq = MAX_CPU_FREQ;
-		cpu_freq_table = spear_cpu_freq;
-		table_len = ARRAY_SIZE(spear_cpu_freq);
-#endif
-	} else {
-		pr_err("Error: No valid cpu found\n");
-		return -EINVAL;
-	}
+	policy->cpuinfo.min_freq = spear_cpufreq.min_freq;
+	policy->cpuinfo.max_freq = spear_cpufreq.max_freq;
 
 	policy->cur = policy->min = policy->max = spear_cpufreq_get(0);
 
-	for (i = 0; i < table_len; i++) {
-		spear_freq_tbl[i].index = i;
-		spear_freq_tbl[i].frequency = cpu_freq_table[i];
-	}
-
-	spear_freq_tbl[i].index = i;
-	spear_freq_tbl[i].frequency = CPUFREQ_TABLE_END;
-	if (!cpufreq_frequency_table_cpuinfo(policy, spear_freq_tbl))
-		cpufreq_frequency_table_get_attr(spear_freq_tbl,
+	if (!cpufreq_frequency_table_cpuinfo(policy, spear_cpufreq.freq_tbl))
+		cpufreq_frequency_table_get_attr(spear_cpufreq.freq_tbl,
 				policy->cpu);
 
-	policy->cpuinfo.transition_latency = 300*1000; /*300 us*/
+	policy->cpuinfo.transition_latency = spear_cpufreq.transition_latency;
 
-	return 0;
-}
-
-static int spear_cpufreq_exit(struct cpufreq_policy *policy)
-{
-	clk_put(cpu_clk);
 	return 0;
 }
 
@@ -355,13 +275,12 @@ static struct freq_attr *spear_cpufreq_attr[] = {
 	 NULL,
 };
 
-static struct cpufreq_driver spear_driver = {
+static struct cpufreq_driver spear_cpufreq_driver = {
 	.flags		= CPUFREQ_STICKY,
 	.verify		= spear_cpufreq_verify,
 	.target		= spear_cpufreq_target,
 	.get		= spear_cpufreq_get,
 	.init		= spear_cpufreq_init,
-	.exit		= spear_cpufreq_exit,
 	.name		= "spear_cpufreq",
 	.attr		= spear_cpufreq_attr,
 #ifdef CONFIG_PM
@@ -370,9 +289,63 @@ static struct cpufreq_driver spear_driver = {
 #endif
 };
 
-static int __init spear_cpufreq_register(void)
+static int __init spear_cpufreq_probe(struct platform_device *pdev)
 {
-	return cpufreq_register_driver(&spear_driver);
+	struct spear_cpufreq_pdata *pdata = dev_get_platdata(&pdev->dev);
+	int i;
+
+	if (!pdata || !pdata->cpu_freq_table)
+		return -EINVAL;
+
+	spear_cpufreq.freq_tbl = kmalloc(sizeof(*spear_cpufreq.freq_tbl) *
+			(pdata->tbl_len + 1), GFP_KERNEL);
+	if (!spear_cpufreq.freq_tbl) {
+		dev_err(&pdev->dev, "kzalloc fail\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < pdata->tbl_len; i++) {
+		spear_cpufreq.freq_tbl[i].index = i;
+		spear_cpufreq.freq_tbl[i].frequency = pdata->cpu_freq_table[i];
+	}
+
+	spear_cpufreq.min_freq = spear_cpufreq.freq_tbl[0].frequency;
+	spear_cpufreq.max_freq = spear_cpufreq.freq_tbl[i-1].frequency;
+	spear_cpufreq.freq_tbl[i].index = i;
+	spear_cpufreq.freq_tbl[i].frequency = CPUFREQ_TABLE_END;
+	spear_cpufreq.transition_latency = pdata->transition_latency;
+	if (pdata->transition_latency)
+		spear_cpufreq.transition_latency = pdata->transition_latency;
+	else
+		spear_cpufreq.transition_latency = 300 * 1000; /*300 us*/
+
+	spear_cpufreq.cpu_clk = clk_get(NULL, "cpu_clk");
+	if (IS_ERR(spear_cpufreq.cpu_clk)) {
+		dev_err(&pdev->dev, "Unable to get CPU clock\n");
+		return PTR_ERR(spear_cpufreq.cpu_clk);
+	}
+
+	return cpufreq_register_driver(&spear_cpufreq_driver);
 }
 
+static int __exit spear_cpufreq_remove(struct platform_device *pdev)
+{
+	clk_put(spear_cpufreq.cpu_clk);
+
+	return cpufreq_unregister_driver(&spear_cpufreq_driver);
+}
+
+static struct platform_driver spear_cpufreq_pdrv = {
+	.probe = spear_cpufreq_probe,
+	.remove = __exit_p(spear_cpufreq_remove),
+	.driver = {
+		.name	 = "cpufreq-spear",
+		.owner	 = THIS_MODULE,
+	},
+};
+
+static int __init spear_cpufreq_register(void)
+{
+	return platform_driver_register(&spear_cpufreq_pdrv);
+}
 arch_initcall(spear_cpufreq_register);

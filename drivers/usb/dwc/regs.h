@@ -520,7 +520,7 @@
 #define DWC_DCFG_P_FRM_INTRVL_WR(reg, x)	\
 	(((reg) & (~((u32)0x03 << 11))) | ((x) << 11))
 #define DWC_DCFG_DEV_ADDR_WR(reg, x)	\
-	(((reg) & (~((u32)0x3f << 04))) | ((x) << 04))
+	(((reg) & (~((u32)0x7f << 04))) | ((x) << 04))
 #define DWC_DCFG_NGL_STS_OUT_WR(reg, x)	\
 	(((reg) & (~((u32)0x1 << 2)))   | ((x) << 2))
 #define DWC_DCFG_DEV_SPEED_WR(reg, x)	\

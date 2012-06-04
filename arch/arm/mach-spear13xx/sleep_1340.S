@@ -37,67 +37,6 @@ ENTRY(spear1340_sleep_mode)
 	ldr	r0, [r6, #0x200]
 	stmia	r8!, {r0}
 
-	/* Store Context ID, User R/W thread, secure or NS VBAR */
-	mrc	p15, 0, r2, c10, c2, 0
-	mrc	p15, 0, r3, c13, c0, 1
-	mrc	p15, 0, r4, c13, c1, 2
-	mrc	p15, 0, r5, c13, c2, 3
-	mrc	p15, 0, r6, c13, c3, 4
-	mrc	p15, 0, r7, c12, c0, 0
-	stmia	r8!, {r2-r7}
-
-	/* Store the Current CPSR */
-	mrs	r0, cpsr
-	stmia	r8!, {r0}
-
-	/* Move to IRQ Mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_IRQ_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-
-	/* Saving FIQ stack pointer on to Stack in DDR */
-	stmia	r8!, {r1, r13, r14}
-
-	/* Move to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r8!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to ABT mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_ABT_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r8!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to undefined mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_UND_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r8!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to sys_32 mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SYS_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r8!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move back to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-
 	/* Latch the physical address of cpu_resume on to SRAM */
 	io_v2p	r0, r10, r1
 	stmia	r8!, {r0}
@@ -448,58 +387,6 @@ wait_for_srefresh_exit_r1:
 	ldr	r0, [r6, #0x438]
 	tst	r0, #0x2000
 	beq	wait_for_srefresh_exit_r1
-
-	/* Store Context ID, User R/W thread, secure or NS VBAR */
-	ldmia	r8!, {r2-r7}
-	mcr	p15, 0, r2, c10, c2, 0
-	mcr	p15, 0, r3, c13, c0, 1
-	mcr	p15, 0, r4, c13, c1, 2
-	mcr	p15, 0, r5, c13, c2, 3
-	mcr	p15, 0, r6, c13, c3, 4
-	mcr	p15, 0, r7, c12, c0, 0
-
-	ldmia	r8!, {r4}
-	msr	cpsr, r4
-	mov	r0, r4
-
-	/* Move to IRQ mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_IRQ_32)
-	msr	cpsr_c, r1
-	ldmia	r8!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-	ldmia	r8!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to ABT mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_ABT_32)
-	msr	cpsr_c, r1
-	ldmia	r8!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to undefined mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_UND_32)
-	msr	cpsr_c, r1
-	ldmia	r8!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to sys_32 mode */
-	orr	r1, r0, #(MODE_SYS_32)
-	msr	cpsr_c, r1
-	ldmia	r8!, {r0, r13, r14}
-	msr	spsr_cxsf, r0
-
 	/* Check for the SPEAr revision */
 #ifdef GPIO_DDR_ISOLATE
 	ldr	r7, =GPIO_START_UPD_PA
@@ -545,17 +432,6 @@ srefresh_end_rev_0:
 	orr	r0, r0, #0x50
 	str	r0, [r7, #0x038]
 #endif
-	/*
-	 * Invalidate all instruction caches to PoU
-	 */
-	mov	r0, #0
-	mcr	p15, 0, r0, c7, c5, 0
-	mcr	p15, 0, r0, c7, c5, 6	@ Invalidate branch predictor array
-	mcr	p15, 0, r0, c7, c5, 7
-	mcr	p15, 0, r0, c8, c5, 0	@ Invalidate instruction TLB
-	mcr	p15, 0, r0, c8, c6, 0	@ Invalidate data TLB
-
-	msr	cpsr, r4
 	ldmia	r8!, {r0}
 	mov	pc, r0
 	nop

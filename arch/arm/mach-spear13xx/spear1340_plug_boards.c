@@ -13,14 +13,7 @@
 #define pr_fmt(fmt) "spear1340_pb: " fmt
 
 /*
- * Plug boards allow the different standard test and debug procedures on the
- * same physical interface without the need to develop a specific board and use
- * a different manufacturer’s chips. They are connected to the main board
- * through small high speed shielded connectors to avoid quality degradation of
- * the signals. Each plug has the interface connectors on different positions to
- * prevent any insertions errors.
- *
- * Following are the plug boards available:
+ * Following are the plug boards available with SPEAr1340:
  * - gmii: gmii interface present for ethernet
  * - rgmii: rgmii interface present for ethernet
  * - etm: etm trace module
@@ -35,24 +28,6 @@
  *
  * Plug boards details can be found at:
  * https://codex.cro.st.com/plugins/docman/?group_id=1309&action=show&id=164214
- *
- * The philosophy picked for maintaining them in software is as follows. Firstly
- * device arrays will be prepared in 1340_evb file and these will be passed to
- * plug board init routine, if plug boards are passed from bootargs. This
- * routine may:
- * - override the padmux settings done earlier by evb board
- * - skip registeration of some devices passed from evb_init()
- * - add new amba/plat devs, etc devices
- * - If multiple boards are passed from bootargs, then boards will be
- *   initialized in the order they are mentioned in bootargs.
- *
- * Passing param from bootargs
- * ---------------------------
- * "pb=" must be used to pass plug boards request from bootargs. This variable
- * can contain string values mentioned above in board descriptions"
- *
- * More than one board can be requested by passing ',' separated board list, eg:
- * bootargs: console=ttyAMA0,115200 pb=rgmii,hdmi_tx,cam0
  */
 
 #include <linux/ad9889b.h>
@@ -66,61 +41,15 @@
 #include <linux/spi/spi.h>
 #include <linux/stmmac.h>
 #include <video/db9000fb.h>
+#include <sound/pcm.h>
+#include <plat/plug_board.h>
 #include <media/soc_camera.h>
 #include <media/vip.h>
 #include <plat/i2c.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
-#include <mach/plug_board.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
-
-/* name of an individual plug-board is limited to 10 chars */
-#define PB_NAME_LIMIT	10
-
-/* max plug-boards which can be requested via bootargs is limited to 50 */
-#define MAX_REQ_PB	50
-
-#define DEBUG 1
-#define INIT_PB(pb_name, pb)						\
-	do {								\
-		if (strlen(#pb_name) > PB_NAME_LIMIT) {			\
-			pr_err("Error: name choosen for plug board is "	\
-				"more than 10 chars, use a smaller "	\
-				"name instead\n");			\
-			continue;					\
-		}							\
-									\
-		pb = kmalloc(sizeof(struct plug_board), GFP_KERNEL);	\
-		if (!pb) {						\
-			pr_err("Error allocating memory for pb: %s\n",	\
-				#pb_name);				\
-			continue;					\
-		}							\
-									\
-		strcpy(pb->name, #pb_name);				\
-		pb->pmx_devs = (struct pmx_dev **) pb_name##_pb_pmx_devs;		\
-		pb->rm_adevs = (struct amba_device **) pb_name##_pb_rm_adevs;		\
-		pb->add_adevs = (struct amba_device **) pb_name##_pb_add_adevs;		\
-		pb->rm_pdevs = (struct platform_device **) pb_name##_pb_rm_pdevs;	\
-		pb->add_pdevs = (struct platform_device **) pb_name##_pb_add_pdevs;	\
-		pb->rm_spi_devs = (struct spi_board_info **) pb_name##_pb_rm_spi_devs;	\
-		pb->add_spi_devs = (struct spi_board_info **) pb_name##_pb_add_spi_devs;\
-		pb->rm_i2c_devs = (struct i2c_dev_info **) pb_name##_pb_rm_i2c_devs;	\
-		pb->add_i2c_devs = (struct i2c_dev_info **) pb_name##_pb_add_i2c_devs;	\
-		pb->pmx_cnt = ARRAY_SIZE(pb_name##_pb_pmx_devs);	\
-		pb->rm_acnt = ARRAY_SIZE(pb_name##_pb_rm_adevs);	\
-		pb->add_acnt = ARRAY_SIZE(pb_name##_pb_add_adevs);	\
-		pb->rm_pcnt = ARRAY_SIZE(pb_name##_pb_rm_pdevs);	\
-		pb->add_pcnt = ARRAY_SIZE(pb_name##_pb_add_pdevs);	\
-		pb->rm_spi_cnt = ARRAY_SIZE(pb_name##_pb_rm_spi_devs);	\
-		pb->add_spi_cnt = ARRAY_SIZE(pb_name##_pb_add_spi_devs); \
-		pb->rm_i2c_cnt = ARRAY_SIZE(pb_name##_pb_rm_i2c_devs);	\
-		pb->add_i2c_cnt = ARRAY_SIZE(pb_name##_pb_add_i2c_devs); \
-		pb->pb_init = pb_name##_pb_init;			\
-									\
-		pr_info("Adding plug board: %s\n", #pb_name);		\
-	} while (0)
 
 /*
  * FIXME: Update this later when the HDMI receiver chip driver is available:
@@ -145,41 +74,6 @@
 				V4L2_DV_1080I60 | V4L2_DV_1080P24 |	\
 				V4L2_DV_1080P25 | V4L2_DV_1080P30 |	\
 				V4L2_DV_1080P50 | V4L2_DV_1080P60)
-
-struct plug_board {
-	struct pmx_dev **pmx_devs;
-	struct amba_device **rm_adevs;
-	struct amba_device **add_adevs;
-	struct platform_device **rm_pdevs;
-	struct platform_device **add_pdevs;
-	struct spi_board_info **rm_spi_devs;
-	struct spi_board_info **add_spi_devs;
-	struct i2c_dev_info **rm_i2c_devs;
-	struct i2c_dev_info **add_i2c_devs;
-	u32 pmx_cnt;
-	u32 rm_acnt;
-	u32 add_acnt;
-	u32 rm_pcnt;
-	u32 add_pcnt;
-	u32 rm_spi_cnt;
-	u32 add_spi_cnt;
-	u32 rm_i2c_cnt;
-	u32 add_i2c_cnt;
-	void (*pb_init)(void);
-
-	struct list_head node;
-	char name[PB_NAME_LIMIT];
-};
-
-enum skip_device_type {
-	SKIP_AMBA_DEVICE,
-	SKIP_PLAT_DEVICE,
-	SKIP_SPI_DEVICE,
-	SKIP_I2C_DEVICE
-};
-
-/* string specifying which plug boards are requested */
-char spear1340_plug_board[MAX_REQ_PB] = {'\0', };
 static char pb_empty_array[] __initdata = {};
 
 
@@ -390,25 +284,10 @@ static void __init hdmi_tx_pb_init(void)
 		= spear1340_pb_i2c_board_hdmi_tx.platform_data;
 
 	if (ad9889b_pdata->ain == HDMI_AUDIO_IN_I2S) {
-		struct clk *i2s_sclk_clk;
 		struct i2s_platform_data *i2s_pdata
 			= dev_get_platdata(&spear1340_i2s_play_device.dev);
 
-		i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-		if (IS_ERR(i2s_sclk_clk))
-			pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
-
-		if (clk_set_rate(i2s_sclk_clk, 3070000)) {
-			pr_err("%s:couldn't set i2s_sclk_clk rate\n", __func__);
-			clk_put(i2s_sclk_clk);
-		}
-
-		if (clk_enable(i2s_sclk_clk)) {
-			pr_err("%s:enabling i2s_sclk_clk\n", __func__);
-			clk_put(i2s_sclk_clk);
-		}
-
-		i2s_pdata->swidth = 32;
+		i2s_pdata->snd_fmts = SNDRV_PCM_FMTBIT_S32_LE;
 	}
 }
 
@@ -502,23 +381,12 @@ static void __init pcie_pb_init(void)
 #endif
 }
 
-static int __init spear1340_pb_select(char *boards)
-{
-	strcpy(spear1340_plug_board, boards);
-
-	return 0;
-}
-__setup("pb=", spear1340_pb_select);
-
 static int make_pb_list(struct list_head *pb_list)
 {
 	char *pb_name;
 	struct plug_board *pb = NULL;
-	char *str = spear1340_plug_board;
 
-	pr_debug("%s: Plug board string passed from bootargs: %s\n", __func__,
-			spear1340_plug_board);
-	while ((pb_name = strsep(&str, ",")) != NULL) {
+	while ((pb_name = get_spear_pb()) != NULL) {
 		if (!strcmp(pb_name, "gmii")) {
 			INIT_PB(gmii, pb);
 		} else if (!strcmp(pb_name, "rgmii")) {
@@ -562,179 +430,7 @@ release_pb:
 	return -EINVAL;
 }
 
-static bool skip_device(struct list_head *pb_list, void *dev,
-		enum skip_device_type skip)
-{
-	struct plug_board *pb;
-	int i;
-
-	list_for_each_entry(pb, pb_list, node) {
-		switch (skip) {
-		case SKIP_PLAT_DEVICE:
-			for (i = 0; i < pb->rm_pcnt; i++) {
-				if (dev == pb->rm_pdevs[i]) {
-					pr_debug("%s: skip %s.%d\n",
-						pb->name, pb->rm_pdevs[i]->name,
-						pb->rm_pdevs[i]->id == -1 ? 0 :
-						pb->rm_pdevs[i]->id);
-					return true;
-				}
-			}
-			break;
-		case SKIP_AMBA_DEVICE:
-			for (i = 0; i < pb->rm_acnt; i++) {
-				if (dev == pb->rm_adevs[i]) {
-					pr_debug("%s: skip %s\n", pb->name,
-						pb->rm_adevs[i]->dev.init_name);
-					return true;
-				}
-			}
-			break;
-		case SKIP_SPI_DEVICE:
-			for (i = 0; i < pb->rm_spi_cnt; i++) {
-				if (dev == pb->rm_spi_devs[i]) {
-					pr_debug("%s: skip %s\n", pb->name,
-						pb->rm_spi_devs[i]->modalias);
-					return true;
-				}
-			}
-			break;
-		case SKIP_I2C_DEVICE:
-			for (i = 0; i < pb->rm_i2c_cnt; i++) {
-				if (dev == pb->rm_i2c_devs[i]) {
-					pr_debug("%s: skip %s\n", pb->name,
-					pb->rm_i2c_devs[i]->board->type);
-					return true;
-				}
-			}
-			break;
-
-		default:
-			return false;
-		}
-	}
-
-	return false;
-}
-
 int __init spear1340_pb_init(struct plug_board_info *pb_info)
 {
-	struct platform_device **pdevs;
-	struct amba_device **adevs;
-	struct plug_board *pb;
-	struct spi_board_info **spi_devs;
-	struct i2c_dev_info **i2c_devs;
-	int ret, i;
-	u8 pcnt, acnt, spi_cnt, i2c_cnt;
-	LIST_HEAD(pb_list);
-
-	if (!pb_info)
-		return -EINVAL;
-
-	pdevs = pb_info->pdevs;
-	pcnt = pb_info->pcnt;
-	adevs = pb_info->adevs;
-	acnt = pb_info->acnt;
-	spi_devs = pb_info->spi_devs;
-	spi_cnt = pb_info->spi_cnt;
-	i2c_devs = pb_info->i2c_devs;
-	i2c_cnt = pb_info->i2c_cnt;
-
-	ret = make_pb_list(&pb_list);
-	if (ret) {
-		pr_err("Error creating pb_list: %d\n", ret);
-		return ret;
-	}
-
-	/* Call board specific init routine */
-	list_for_each_entry(pb, &pb_list, node) {
-		pr_debug("%s: Initializing plug board\n", pb->name);
-
-		if (pb->pb_init)
-			pb->pb_init();
-	}
-
-	list_for_each_entry(pb, &pb_list, node) {
-		if (!pb->pmx_cnt)
-			continue;
-
-		ret = pmx_devs_enable(pb->pmx_devs, pb->pmx_cnt);
-		if (ret)
-			pr_err("padmux: Failed adding pmx devs: %d\n", ret);
-
-		pr_debug("%s: Added %d pmx devices\n", pb->name, pb->pmx_cnt);
-	}
-
-	/* Add SPI Devices passed from evb.c */
-	for (i = 0; i < spi_cnt; i++) {
-		if (skip_device(&pb_list, spi_devs[i], SKIP_SPI_DEVICE))
-			continue;
-
-		spi_register_board_info(spi_devs[i], 1);
-	}
-
-	/* Add SPI Devices requested by plug boards */
-	list_for_each_entry(pb, &pb_list, node) {
-		for (i = 0; i < pb->add_spi_cnt; i++)
-			spi_register_board_info(pb->add_spi_devs[i], 1);
-
-		pr_debug("%s: Added %d SPI devices\n",
-				pb->name, pb->add_spi_cnt);
-	}
-
-	/* Add I2C Devices passed from evb.c */
-	for (i = 0; i < i2c_cnt; i++) {
-		if (skip_device(&pb_list, i2c_devs[i], SKIP_I2C_DEVICE))
-			continue;
-
-		i2c_register_board_info(i2c_devs[i]->busnum,
-				i2c_devs[i]->board, 1);
-	}
-
-	/* Add I2C Devices requested by plug boards */
-	list_for_each_entry(pb, &pb_list, node) {
-		for (i = 0; i < pb->add_i2c_cnt; i++)
-			i2c_register_board_info(pb->add_i2c_devs[i]->busnum,
-				pb->add_i2c_devs[i]->board, 1);
-
-		pr_debug("%s: Added %d I2C devices\n",
-				pb->name, pb->add_i2c_cnt);
-	}
-
-	/* Add Amba Devices passed from evb.c */
-	for (i = 0; i < acnt; i++) {
-		if (skip_device(&pb_list, adevs[i], SKIP_AMBA_DEVICE))
-			continue;
-
-		amba_device_register(adevs[i], &iomem_resource);
-	}
-
-	/* Add Amba Devices requested by plug boards */
-	list_for_each_entry(pb, &pb_list, node) {
-		for (i = 0; i < pb->add_acnt; i++)
-			amba_device_register(pb->add_adevs[i], &iomem_resource);
-
-		pr_debug("%s: Added %d amba devices\n", pb->name, pb->add_acnt);
-	}
-
-	/* Add Platform Devices passed from evb.c */
-	for (i = 0; i < pcnt; i++) {
-		if (skip_device(&pb_list, pdevs[i], SKIP_PLAT_DEVICE))
-			continue;
-
-		platform_device_register(pdevs[i]);
-	}
-
-	/* Add Platform Devices requested by plug boards */
-	list_for_each_entry(pb, &pb_list, node) {
-		for (i = 0; i < pb->add_pcnt; i++)
-			platform_device_register(pb->add_pdevs[i]);
-
-		pr_debug("%s: Added %d plat devices\n", pb->name, pb->add_pcnt);
-	}
-
-	list_for_each_entry(pb, &pb_list, node)
-		kfree(pb);
-
-	return 0;
+	return spear_pb_init(pb_info, make_pb_list);
 }

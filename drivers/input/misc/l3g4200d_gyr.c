@@ -662,6 +662,7 @@ static int l3g4200d_input_init(struct l3g4200d_data *gyro)
 	input_set_abs_params(input, ABS_Z, -FS_MAX, FS_MAX, FUZZ, FLAT);
 
 	input->name = L3G4200D_DEV_NAME;
+	input->phys = L3G4200D_DEV_NAME "/input0";
 
 	err = input_register_polled_device(gyro->input_poll_dev);
 	if (err) {

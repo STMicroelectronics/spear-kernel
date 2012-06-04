@@ -26,7 +26,9 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
+#include <linux/gpio.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -102,6 +104,88 @@ static int i2c_device_uevent(struct device *dev, struct kobj_uevent_env *env)
 #else
 #define i2c_device_uevent	NULL
 #endif	/* CONFIG_HOTPLUG */
+
+/* i2c bus recovery routines */
+static int i2c_gpio_recover_bus(struct i2c_adapter *adap)
+{
+	struct i2c_bus_recovery_info *bri = adap->bus_recovery_info;
+	unsigned long delay = 1000000;
+	int i, ret, val = 1;
+
+	if (bri->get_gpio)
+		bri->get_gpio(bri->scl_gpio);
+
+	ret = gpio_request_one(bri->scl_gpio, bri->scl_gpio_flags, "i2c-scl");
+	if (ret < 0) {
+		dev_warn(&adap->dev, "gpio request fail: %d\n", bri->scl_gpio);
+		return ret;
+	}
+
+	if (!bri->skip_sda_polling) {
+		if (bri->get_gpio)
+			bri->get_gpio(bri->sda_gpio);
+
+		ret = gpio_request_one(bri->sda_gpio, bri->sda_gpio_flags,
+				"i2c-sda");
+		if (ret < 0) {
+			/* work without sda polling */
+			dev_warn(&adap->dev,
+				"sda_gpio request fail: %d. Skip sda polling\n",
+				bri->scl_gpio);
+			bri->skip_sda_polling = true;
+			if (bri->put_gpio)
+				bri->put_gpio(bri->sda_gpio);
+		}
+	}
+
+	delay /= bri->clock_rate_khz * 2;
+
+	for (i = 0; i < bri->clock_cnt * 2; i++, val = !val) {
+		ndelay(delay);
+		gpio_set_value(bri->scl_gpio, val);
+
+		/* break if sda got high, check only when scl line is high */
+		if (!bri->skip_sda_polling && val)
+			if (gpio_get_value(bri->sda_gpio))
+				break;
+	}
+
+	gpio_free(bri->scl_gpio);
+
+	if (bri->put_gpio)
+		bri->put_gpio(bri->scl_gpio);
+
+	if (!bri->skip_sda_polling) {
+		gpio_free(bri->sda_gpio);
+
+		if (bri->put_gpio)
+			bri->put_gpio(bri->sda_gpio);
+	}
+
+	return 0;
+}
+
+static int i2c_scl_recover_bus(struct i2c_adapter *adap)
+{
+	struct i2c_bus_recovery_info *bri = adap->bus_recovery_info;
+	int i, val = 0;
+	unsigned long delay = 1000000;
+
+	delay /= bri->clock_rate_khz * 2;
+
+	for (i = 0; i < bri->clock_cnt * 2; i++,
+			val = !val) {
+		bri->set_scl(adap, val);
+		ndelay(delay);
+
+		/* break if sda got high, check only when scl line is high */
+		if (!bri->skip_sda_polling && val)
+			if (bri->get_sda(adap))
+				break;
+	}
+
+	return 0;
+}
 
 static int i2c_device_probe(struct device *dev)
 {
@@ -885,6 +969,47 @@ static int i2c_register_adapter(struct i2c_adapter *adap)
 			 "Failed to create compatibility class link\n");
 #endif
 
+	/* bus recovery specific initialization */
+	if (adap->bus_recovery_info) {
+		struct i2c_bus_recovery_info *bri = adap->bus_recovery_info;
+
+		if (bri->recover_bus) {
+			dev_info(&adap->dev,
+				"registered for non-generic bus recovery\n");
+		} else {
+			/* Use generic recovery routines */
+			if (!bri->clock_rate_khz) {
+				dev_warn(&adap->dev,
+					"doesn't have valid recovery clock rate\n");
+				goto exit_recovery;
+			}
+
+			/* Most controller need 9 clocks at max */
+			if (!bri->clock_cnt)
+				bri->clock_cnt = 9;
+
+			if (bri->is_gpio_recovery) {
+				bri->recover_bus = i2c_gpio_recover_bus;
+				dev_info(&adap->dev,
+					"registered for gpio bus recovery\n");
+			} else if (bri->set_scl) {
+				if (!bri->skip_sda_polling && !bri->get_sda) {
+					dev_warn(&adap->dev,
+						"!get_sda. skip sda polling\n");
+					bri->skip_sda_polling = true;
+				}
+
+				bri->recover_bus = i2c_scl_recover_bus;
+				dev_info(&adap->dev,
+					"registered for scl bus recovery\n");
+			} else {
+				dev_warn(&adap->dev,
+					"doesn't have valid recovery type\n");
+			}
+		}
+	}
+
+exit_recovery:
 	/* create pre-declared device nodes */
 	if (adap->nr < __i2c_first_dynamic_bus_num)
 		i2c_scan_static_board_info(adap);
@@ -1021,6 +1146,14 @@ static int i2c_do_del_adapter(struct i2c_driver *driver,
 static int __unregister_client(struct device *dev, void *dummy)
 {
 	struct i2c_client *client = i2c_verify_client(dev);
+	if (client && strcmp(client->name, "dummy"))
+		i2c_unregister_device(client);
+	return 0;
+}
+
+static int __unregister_dummy(struct device *dev, void *dummy)
+{
+	struct i2c_client *client = i2c_verify_client(dev);
 	if (client)
 		i2c_unregister_device(client);
 	return 0;
@@ -1075,8 +1208,12 @@ int i2c_del_adapter(struct i2c_adapter *adap)
 	mutex_unlock(&adap->userspace_clients_lock);
 
 	/* Detach any active clients. This can't fail, thus we do not
-	   checking the returned value. */
+	 * check the returned value. This is a two-pass process, because
+	 * we can't remove the dummy devices during the first pass: they
+	 * could have been instantiated by real devices wishing to clean
+	 * them up properly, so we give them a chance to do that first. */
 	res = device_for_each_child(&adap->dev, NULL, __unregister_client);
+	res = device_for_each_child(&adap->dev, NULL, __unregister_dummy);
 
 #ifdef CONFIG_I2C_COMPAT
 	class_compat_remove_link(i2c_adapter_compat_class, &adap->dev,

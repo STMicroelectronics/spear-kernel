@@ -86,7 +86,9 @@
 #define	NUM_BYTE_INVALID_LWORD(x)	(((x) >> 1) & 3)
 #define	JPEG_RESET			(1 << 30)
 #define	NUM_LLI(x)			(((x) & 0x7FFF) << 3)
+#define SPEAR1310_NUM_LLI(x)		(((x) & 0x7FFF) << 4)
 #define	MAX_LLI				0x7FFF
+#define LAST_XFER_WORDS(x)		(((x-1) & 0xF) << 20)
 #define	END_OF_CONVERSION		(1 << 31)
 
 /*burst count before interrupt reg*/
@@ -249,7 +251,10 @@ static inline void jpeg_reset(struct jpeg_regs *regs)
 	 * jpeg completely.
 	 */
 #ifdef CONFIG_ARCH_SPEAR13XX
-	addr = VA_PERIP1_SW_RST;
+	if (cpu_is_spear1310())
+		addr = VA_SPEAR1310_PERIP1_SW_RST;
+	else
+		addr = VA_PERIP1_SW_RST;
 #else
 	addr = VA_PERIP1_SOF_RST;
 #endif
