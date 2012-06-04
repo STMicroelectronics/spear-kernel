@@ -159,6 +159,8 @@ static int ad9889b_check_edid_status(struct ad9889b_state *state)
 	struct ad9889b_pdata *pdata = dev_get_platdata(&client->dev);
 	int ret = 0, i;
 
+	memset(&screen, 0, sizeof(struct fb_var_screeninfo));
+
 	msleep(500);
 
 	dev_dbg(&client->dev, "EDID READY = %x\n", (edidRdy & 0x10));
