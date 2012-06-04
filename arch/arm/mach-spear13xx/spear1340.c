@@ -35,9 +35,11 @@
 #include <mach/dw_pcie.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
+#include <mach/misc_regs.h>
 #include <mach/spdif.h>
 #include <mach/spear1340_misc_regs.h>
 #include <mach/spear_pcie.h>
+#include <mach/system.h>
 #include <media/vip.h>
 #include <sound/pcm.h>
 
@@ -2354,7 +2356,7 @@ struct platform_device spear1340_video_dec_device = {
 
 static int spear1340_sys_clk_init(void)
 {
-	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk;
+	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk, *ahb_cpudiv3_clk;
 	int ret = 0;
 	const char *sys_clk_src[] = {
 		"sys_synth_clk",
@@ -2380,7 +2382,7 @@ static int spear1340_sys_clk_init(void)
 	 * impacted by this. The possibility is to use an external
 	 * oscillator (not preset on board as of now) for I2S.
 	 */
-	sys_pclk = clk_get(NULL, sys_clk_src[3]);
+	sys_pclk = clk_get(NULL, sys_clk_src[1]);
 	if (IS_ERR(sys_pclk)) {
 		ret = PTR_ERR(sys_pclk);
 		goto fail_get_sys_pclk;
@@ -2393,6 +2395,12 @@ static int spear1340_sys_clk_init(void)
 		goto fail_get_ahb_pclk;
 	}
 
+	/* Get the amba synthesizer as the clock source for ahb clock */
+	ahb_cpudiv3_clk = clk_get(NULL, ahb_clk_src[1]);
+	if (IS_ERR(ahb_cpudiv3_clk)) {
+		ret = PTR_ERR(ahb_cpudiv3_clk);
+		goto fail_get_ahb_cpudiv3_clk;
+	}
 	/* Get the system clock */
 	sys_clk = clk_get(NULL, "sys_clk");
 	if (IS_ERR(sys_clk)) {
@@ -2407,33 +2415,39 @@ static int spear1340_sys_clk_init(void)
 		goto fail_get_ahb_clk;
 	}
 
+	/* change mode to switch pll1 ferq to 1.2 GHz */
+	ret = arch_change_mode(SYS_MODE_SLOW);
+	if (ret) {
+		pr_err("couldn't cange system to slow mode\n");
+		goto fail_sys_set_rate;
+	}
+
+	if (clk_set_parent(ahb_clk, ahb_cpudiv3_clk)) {
+		pr_err("SPEAr1340: Failed to set AHB parent\n");
+		ret = -EPERM;
+		goto fail_set_parent;
+	}
+
 	if (clk_set_rate(sys_pclk, 1200000000)) {
 		ret = -EPERM;
 		pr_err("SPEAr1340: Failed to set system clock rate\n");
-		goto fail_sys_set_rate;
+		goto fail_set_parent;
 	}
 
 	if (clk_set_rate(ahb_pclk, 166000000)) {
 		ret = -EPERM;
 		pr_err("SPEAr1340: Failed to set AHB rate\n");
-		goto fail_sys_set_rate;
+		goto fail_set_parent;
 	}
 
 	if (clk_enable(sys_pclk)) {
 		ret = -ENODEV;
-		goto fail_sys_set_rate;
+		goto fail_set_parent;
 	}
 
 	if (clk_enable(ahb_pclk)) {
 		ret = -ENODEV;
 		goto fail_en_sys_clk;
-	}
-
-	/* Set the amba synth as parent for ahb clk */
-	if (clk_set_parent(ahb_clk, ahb_pclk)) {
-		ret = -EPERM;
-		pr_err("SPEAr1340: Failed to set AHB parent\n");
-		goto fail_ahb_set_parent;
 	}
 
 	/* Set the sys synth as parent for sys clk */
@@ -2443,19 +2457,37 @@ static int spear1340_sys_clk_init(void)
 		goto fail_sys_set_parent;
 	}
 
+	/* Back to normal mode after changing pll1 frquency */
+	ret = arch_change_mode(SYS_MODE_NORMAL);
+	if (ret) {
+		pr_err("Couldnot change back to normal mode\n");
+		BUG();
+	}
+
+	/* Set the amba synth as parent for ahb clk */
+	if (clk_set_parent(ahb_clk, ahb_pclk)) {
+		ret = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB parent\n");
+		goto fail_ahb_set_parent;
+	}
+
 	/* put back all the clocks */
 	goto fail_sys_set_rate;
 
-fail_sys_set_parent:
 fail_ahb_set_parent:
+fail_sys_set_parent:
 	clk_disable(ahb_pclk);
 fail_en_sys_clk:
 	clk_disable(sys_pclk);
+fail_set_parent:
+	arch_change_mode(SYS_MODE_NORMAL);
 fail_sys_set_rate:
 	clk_put(ahb_clk);
 fail_get_ahb_clk:
 	clk_put(sys_clk);
 fail_get_sysclk:
+	clk_put(ahb_cpudiv3_clk);
+fail_get_ahb_cpudiv3_clk:
 	clk_put(ahb_pclk);
 fail_get_ahb_pclk:
 	clk_put(sys_pclk);
