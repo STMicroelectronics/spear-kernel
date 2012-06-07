@@ -2354,6 +2354,24 @@ struct platform_device spear1340_video_dec_device = {
 	.resource = spear1340_video_dec_resources,
 };
 
+static struct resource spear1340_video_enc_resources[] = {
+	{
+		.start = SPEAR1340_VIDEO_ENC_BASE,
+		.end =  SPEAR1340_VIDEO_ENC_BASE + (4*100),
+		.flags = IORESOURCE_MEM,
+	}, {
+		.start = SPEAR1340_IRQ_VIDEO_ENC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device spear1340_video_enc_device = {
+	.name = "video_enc",
+	.id   = -1,
+	.num_resources = ARRAY_SIZE(spear1340_video_enc_resources),
+	.resource = spear1340_video_enc_resources,
+};
+
 static int spear1340_sys_clk_init(void)
 {
 	struct clk *sys_pclk, *ahb_pclk, *sys_clk, *ahb_clk, *ahb_cpudiv3_clk;

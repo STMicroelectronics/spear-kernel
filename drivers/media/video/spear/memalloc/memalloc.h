@@ -33,7 +33,7 @@
  */
 
 #undef PDEBUG   /* undef it, just in case */
-#ifdef CONFIG_VIDEO_SPEAR_VIDEODEC_MEMALLOC_DEBUG
+#ifdef CONFIG_VIDEO_SPEAR_HWVIDEO_MEMALLOC_DEBUG
 #  ifdef __KERNEL__
 	/* This one if debugging is on, and kernel space */
 #	define PDEBUG(fmt, args...) printk(KERN_INFO "memalloc: " fmt, ## args)
