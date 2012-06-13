@@ -100,7 +100,7 @@ static struct soc_camera_link vs6725_cam3_sensor_iclink = {
 	.module_name = "vs6725",
 };
 
-static struct platform_device spear1340_cam3_sensor_device = {
+struct platform_device spear1340_cam3_sensor_device = {
 	.name = "soc-camera-pdrv",
 	.id = -1,
 	.dev = {

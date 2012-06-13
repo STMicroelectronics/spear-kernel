@@ -19,7 +19,7 @@
  * - etm: etm trace module
  * - hdmi_rx: hdmi receiver
  * - hdmi_tx: hdmi transmitter
- * - cam0: camera sensor connected to camera device 0 of SoC
+ * - camif: camera sensor connected to camera device 0 of SoC
  * - vga:
  * - sata: It is not a separate physical plug board but a board
  *   configuration
@@ -33,6 +33,7 @@
 #include <linux/ad9889b.h>
 #include <linux/bug.h>
 #include <linux/i2c.h>
+#include <linux/i2c/pca954x.h>
 #include <linux/init.h>
 #include <linux/designware_i2s.h>
 #include <linux/list.h>
@@ -291,19 +292,168 @@ static void __init hdmi_tx_pb_init(void)
 	}
 }
 
+/* Definitaion specific to pca954x plug board device */
+static struct pca954x_platform_mode i2cmux_pmodes[] = {
+	{
+		.adap_id = 2,
+		.deselect_on_exit = 1,
+	}, {
+		.adap_id = 3,
+		.deselect_on_exit = 1,
+	}, {
+		.adap_id = 4,
+		.deselect_on_exit = 1,
+	}, {
+		.adap_id = 5,
+		.deselect_on_exit = 1,
+	}
+};
+
+static struct pca954x_platform_data i2cmux_pdata = {
+		.modes = i2cmux_pmodes,
+		.num_modes = ARRAY_SIZE(i2cmux_pmodes),
+};
+static struct i2c_board_info i2cmux_board_info = {
+		.type = "pca9546",
+		.addr = 0x70,
+		.platform_data = &i2cmux_pdata,
+};
+
+static struct i2c_dev_info i2cmux_dev_info = {
+	.board = &i2cmux_board_info,
+	.busnum = 0,
+};
+
+/* I2C devices to be added */
+static struct i2c_dev_info *camif_pb_add_i2c_devs[] __initdata = {
+	&i2cmux_dev_info,
+};
 
 /* Definitions specific to CAM plug board with single sensor mounted */
-#define cam0_pb_pmx_devs		pb_empty_array
-#define cam0_pb_rm_adevs		pb_empty_array
-#define cam0_pb_rm_pdevs		pb_empty_array
-#define cam0_pb_add_adevs		pb_empty_array
-#define cam0_pb_add_pdevs		pb_empty_array
-#define cam0_pb_rm_spi_devs		pb_empty_array
-#define cam0_pb_add_spi_devs		pb_empty_array
-#define cam0_pb_rm_i2c_devs		pb_empty_array
-#define cam0_pb_add_i2c_devs		pb_empty_array
-#define cam0_pb_init			NULL
+#define camif_pb_rm_adevs		pb_empty_array
+#define camif_pb_add_adevs		pb_empty_array
+#define camif_pb_rm_spi_devs		pb_empty_array
+#define camif_pb_rm_i2c_devs		pb_empty_array
+#define camif_pb_add_spi_devs		pb_empty_array
+#define camif_pb_init		NULL
 
+static struct platform_device *camif_pb_rm_pdevs[] __initdata = {
+	&spear1340_camif3_device,
+	&spear1340_cam3_sensor_device,
+};
+
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info = {
+	I2C_BOARD_INFO("vs6725", 0x10),
+};
+
+/* Camera power: default is ON */
+static int vs6725_cam_power(struct device *dev, int val)
+{
+	int ret = 0;
+	static bool gpio_avail;
+	static int users;
+
+	if (!gpio_avail) {
+
+		ret = gpio_request(STMPE801_GPIO_6, "vs6725-power");
+		if (!ret) {
+			gpio_direction_output(STMPE801_GPIO_6, 0);
+		} else {
+			pr_err("gpio request fail for STMPE801_GPIO_6\n");
+			goto out;
+		}
+
+		gpio_avail = true;
+	}
+
+	/* turn on/off the CE pin for camera sensor */
+	if (val) {
+		users++;
+		gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+	} else {
+		if (!--users)
+			gpio_set_value_cansleep(STMPE801_GPIO_6, val);
+	}
+
+out:
+	return ret;
+}
+
+/* padmux devices to enable */
+static struct pmx_dev *camif_pb_pmx_devs[] = {
+	&spear1340_pmx_cam0,
+	&spear1340_pmx_cam1,
+	&spear1340_pmx_cam2,
+	&spear1340_pmx_cam3,
+};
+
+static struct soc_camera_link vs6725_cam_sensor_iclink[] = {
+	{
+		.bus_id = 0,
+		.i2c_adapter_id = 2,
+		.board_info = &vs6725_camera_sensor_info,
+		.power = vs6725_cam_power,
+		.module_name = "vs6725",
+	}, {
+		.bus_id = 1,
+		.i2c_adapter_id = 3,
+		.board_info = &vs6725_camera_sensor_info,
+		.power = vs6725_cam_power,
+		.module_name = "vs6725",
+	}, {
+		.bus_id = 2,
+		.i2c_adapter_id = 4,
+		.board_info = &vs6725_camera_sensor_info,
+		.power = vs6725_cam_power,
+		.module_name = "vs6725",
+	}, {
+		.bus_id = 3,
+		.i2c_adapter_id = 5,
+		.board_info = &vs6725_camera_sensor_info,
+		.power = vs6725_cam_power,
+		.module_name = "vs6725",
+	},
+};
+
+static struct platform_device spear1340_camif_sensor_device[] = {
+	{
+		.name = "soc-camera-pdrv",
+		.id = 0,
+		.dev = {
+			.platform_data = &vs6725_cam_sensor_iclink[0],
+		},
+	}, {
+		.name = "soc-camera-pdrv",
+		.id = 1,
+		.dev = {
+			.platform_data = &vs6725_cam_sensor_iclink[1],
+		},
+	}, {
+		.name = "soc-camera-pdrv",
+		.id = 2,
+		.dev = {
+			.platform_data = &vs6725_cam_sensor_iclink[2],
+		},
+	}, {
+		.name = "soc-camera-pdrv",
+		.id = 3,
+		.dev = {
+			.platform_data = &vs6725_cam_sensor_iclink[3],
+		},
+	}
+};
+
+static struct platform_device *camif_pb_add_pdevs[] __initdata = {
+	&spear1340_camif0_device,
+	&spear1340_camif1_device,
+	&spear1340_camif2_device,
+	&spear1340_camif3_device,
+	&spear1340_camif_sensor_device[0],
+	&spear1340_camif_sensor_device[1],
+	&spear1340_camif_sensor_device[2],
+	&spear1340_camif_sensor_device[3],
+};
 
 /* Definitions specific to VGA plug board */
 #define vga_pb_pmx_devs			pb_empty_array
@@ -397,8 +547,8 @@ static int make_pb_list(struct list_head *pb_list)
 			INIT_PB(hdmi_rx, pb);
 		} else if (!strcmp(pb_name, "hdmi_tx")) {
 			INIT_PB(hdmi_tx, pb);
-		} else if (!strcmp(pb_name, "cam0")) {
-			INIT_PB(cam0, pb);
+		} else if (!strcmp(pb_name, "camif")) {
+			INIT_PB(camif, pb);
 		} else if (!strcmp(pb_name, "vga")) {
 			INIT_PB(vga, pb);
 		} else if (!strcmp(pb_name, "sata")) {
