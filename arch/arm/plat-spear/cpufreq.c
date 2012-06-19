@@ -66,10 +66,12 @@ static struct clk *spear1340_cpu_get_possible_parent(unsigned long newfreq)
 	 * As sys clk can have multiple source with their own range
 	 * limitation so we choose possible sources accordingly
 	 */
-	if (newfreq <= 250000000)
+	if (newfreq <= 300000000)
 		pclk = 0; /* src is sys_synth_clk */
-	else if (newfreq <= 600000000)
+	else if (newfreq > 300000000 && newfreq <= 500000000)
 		pclk = 3; /* src is pll3_clk */
+	else if (newfreq == 600000000)
+		pclk = 1; /* src is pll1_clk */
 	else
 		return ERR_PTR(-EINVAL);
 
@@ -80,6 +82,48 @@ static struct clk *spear1340_cpu_get_possible_parent(unsigned long newfreq)
 				sys_clk_src[pclk]);
 
 	return sys_pclk;
+}
+
+/*
+ * This function is to switch ahb_clk parent to cpu_clk_div3 while moving cpu in
+ * slow mode and re-configure its parent to ahb_synth_clk while moving back to
+ * normal mode.
+ */
+static int spear1340_switch_ahb_parent(int slow_mode)
+{
+	struct clk *ahb_pclk, *ahb_clk;
+	int err = 0;
+	const char *ahb_clk_src[] = {
+		"amba_synth_clk",
+		"cpu_clk_div3",
+	};
+
+	/* Get parent to ahb clock */
+	ahb_pclk = clk_get(NULL, ahb_clk_src[slow_mode]);
+	if (IS_ERR(ahb_pclk)) {
+		pr_err("SPEAr1340: Failed to get %s clock\n",
+				ahb_clk_src[slow_mode]);
+		return PTR_ERR(ahb_pclk);
+	}
+
+	/* Get the ahb clock */
+	ahb_clk = clk_get(NULL, "ahb_clk");
+	if (IS_ERR(ahb_clk)) {
+		err = PTR_ERR(ahb_clk);
+		goto fail_get_ahb_clk;
+	}
+
+	if (clk_set_parent(ahb_clk, ahb_pclk)) {
+		err = -EPERM;
+		pr_err("SPEAr1340: Failed to set AHB parent\n");
+		goto fail_ahb_set_parent;
+	}
+
+fail_ahb_set_parent:
+	clk_put(ahb_clk);
+fail_get_ahb_clk:
+	clk_put(ahb_pclk);
+	return err;
 }
 
 static int spear1340_set_cpu_rate(struct clk *sys_pclk, unsigned long newfreq)
@@ -212,6 +256,19 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 			pr_err("couldn't cange system to slow mode\n");
 			return ret;
 		}
+
+		/*
+		 * For SPEAr1340: switch ahb_clk parent to cpu_clk_div3 when
+		 * system is in slow_mode
+		 */
+		if (cpu_is_spear1340()) {
+			ret = spear1340_switch_ahb_parent(slow_mode);
+			if (ret) {
+				pr_err("couldn't change ahb_clk parent in slow \
+						mode\n");
+				return ret;
+			}
+		}
 	}
 
 	if (cpu_is_spear1340())
@@ -231,6 +288,18 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 		if (ret) {
 			pr_err("Couldnot change back to normal mode\n");
 			BUG();
+		}
+		/*
+		 * For spear1340: switch ahb_clk parent to ahb_synht_clk when
+		 * cpu is in normal_mode
+		 */
+		if (cpu_is_spear1340()) {
+			ret = spear1340_switch_ahb_parent(0);
+			if (ret) {
+				pr_err("couldn't change ahb_clk parent in \
+						normal mode\n");
+				BUG();
+			}
 		}
 	}
 
