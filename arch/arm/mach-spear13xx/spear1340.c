@@ -2671,13 +2671,13 @@ void __init spear1340_init(struct pmx_mode *pmx_mode, struct pmx_dev **pmx_devs,
 {
 	int ret;
 
-	/* call spear13xx family common init function */
-	spear13xx_init();
-
 	/* call spear1340 system clock init function */
 	ret = spear1340_sys_clk_init();
 	if (ret)
 		pr_err("SPEAr1340: sysclock init failed, err no: %d\n", ret);
+
+	/* call spear13xx family common init function */
+	spear13xx_init();
 
 #ifdef CONFIG_SND_SPEAR_SPDIF_IN
 	/* call spdif in clock init */
