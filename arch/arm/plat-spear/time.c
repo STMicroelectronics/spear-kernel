@@ -108,6 +108,24 @@ static struct clocksource clksrc = {
 
 };
 
+/*
+ * Override the global weak sched_clock symbol with this
+ * local implementation which uses the clocksource to get some
+ * better resolution when scheduling the kernel. We accept that
+ * this wraps around for now, since it is just a relative time
+ * stamp.
+ */
+unsigned long long notrace sched_clock(void)
+{
+	if (!clksrc.mult || !clksrc.shift)
+		return 0;
+
+	return clocksource_cyc2ns(clksrc.read(
+				  &clksrc),
+				  clksrc.mult,
+				  clksrc.shift);
+}
+
 static void spear_clocksource_init(void)
 {
 	u32 tick_rate;
