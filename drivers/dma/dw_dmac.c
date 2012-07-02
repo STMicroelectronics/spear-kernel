@@ -369,7 +369,7 @@ static void dwc_scan_descriptors(struct dw_dma *dw, struct dw_dma_chan *dwc)
 		spin_lock_irqsave(&dwc->lock, flags);
 	}
 
-	dev_err(chan2dev(&dwc->chan),
+	dev_dbg(chan2dev(&dwc->chan),
 		"BUG: All descriptors done, but channel not idle!\n");
 
 	/* Try to continue after resetting the channel... */
