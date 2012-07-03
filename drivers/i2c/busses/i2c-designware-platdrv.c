@@ -33,6 +33,7 @@
 #include <linux/errno.h>
 #include <linux/sched.h>
 #include <linux/err.h>
+#include <linux/i2c/i2c-designware.h>
 #include <linux/interrupt.h>
 #include <linux/of_i2c.h>
 #include <linux/platform_device.h>
@@ -55,6 +56,8 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	struct dw_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
+	struct i2c_dw_pdata *pdata;
+	struct i2c_bus_recovery_info *dw_recovery_info = NULL;
 	int irq, r;
 
 	/* NOTE: driver uses the static register mapping */
@@ -114,6 +117,9 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		r = -EBUSY;
 		goto err_unuse_clocks;
 	}
+
+	pdata = dev_get_platdata(&pdev->dev);
+
 	{
 		u32 param1 = i2c_dw_read_comp_param(dev);
 
@@ -142,6 +148,30 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	adap->dev.of_node = pdev->dev.of_node;
 
 	adap->nr = pdev->id;
+	if (pdata) {
+		dw_recovery_info =
+			kzalloc(sizeof(*dw_recovery_info), GFP_KERNEL);
+		if (!dw_recovery_info) {
+			r = -ENOMEM;
+			goto err_iounmap;
+		}
+		dw_recovery_info->get_gpio = pdata->get_gpio;
+		dw_recovery_info->put_gpio = pdata->put_gpio;
+		dw_recovery_info->scl_gpio = pdata->scl_gpio;
+		dw_recovery_info->scl_gpio_flags = pdata->scl_gpio_flags;
+		dw_recovery_info->recover_bus = pdata->recover_bus;
+		dw_recovery_info->is_gpio_recovery = pdata->is_gpio_recovery;
+		dw_recovery_info->clock_rate_khz =
+			clk_get_rate(dev->clk) / 1000;
+
+		if (!pdata->skip_sda_polling) {
+			dw_recovery_info->sda_gpio = pdata->sda_gpio;
+			dw_recovery_info->sda_gpio_flags =
+				pdata->sda_gpio_flags;
+		}
+		adap->bus_recovery_info = dw_recovery_info;
+	}
+
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(&pdev->dev, "failure adding adapter\n");
@@ -152,6 +182,8 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	return 0;
 
 err_free_irq:
+	if (pdata)
+		kfree(dw_recovery_info);
 	free_irq(dev->irq, dev);
 err_iounmap:
 	iounmap(dev->base);
@@ -172,8 +204,12 @@ err_release_region:
 static int __devexit dw_i2c_remove(struct platform_device *pdev)
 {
 	struct dw_i2c_dev *dev = platform_get_drvdata(pdev);
+	struct i2c_dw_pdata *pdata;
 	struct resource *mem;
 
+	pdata = dev_get_platdata(&pdev->dev);
+	if (pdata)
+		kfree(dev->adapter.bus_recovery_info);
 	platform_set_drvdata(pdev, NULL);
 	i2c_del_adapter(&dev->adapter);
 	put_device(&pdev->dev);

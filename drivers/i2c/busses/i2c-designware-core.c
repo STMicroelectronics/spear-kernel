@@ -553,6 +553,15 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = wait_for_completion_interruptible_timeout(&dev->cmd_complete, HZ);
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
+		/* disable controller */
+		writew(0, dev->base + DW_IC_ENABLE);
+		clk_disable(dev->clk);
+		if (adap->bus_recovery_info &&
+				adap->bus_recovery_info->recover_bus) {
+			dev_dbg(dev->dev, "try i2c bus recovery\n");
+			adap->bus_recovery_info->recover_bus(adap);
+		}
+		clk_enable(dev->clk);
 		i2c_dw_init(dev);
 		ret = -ETIMEDOUT;
 		goto done;
