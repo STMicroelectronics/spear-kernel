@@ -602,8 +602,6 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 	/* no error */
 	if (likely(!dev->cmd_err)) {
-		/* Disable the adapter */
-		dw_writel(dev, 0, DW_IC_ENABLE);
 		ret = num;
 		goto done;
 	}
@@ -616,6 +614,12 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	ret = -EIO;
 
 done:
+	/* Disable interrupts */
+	writew(0, dev->base + DW_IC_INTR_MASK);
+
+	/* Disable the adapter */
+	writew(0, dev->base + DW_IC_ENABLE);
+
 	pm_runtime_put(dev->dev);
 	mutex_unlock(&dev->lock);
 
