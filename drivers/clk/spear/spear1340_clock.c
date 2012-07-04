@@ -623,7 +623,7 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk, "uart1_mux_clk", NULL);
 
 	clk = clk_register_gate(NULL, "uart1_clk", "uart1_mux_clk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_UART1_CLK_ENB, 0,
+			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_UART1_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "b4100000.serial");
 
@@ -748,7 +748,7 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk, NULL, "e0280000.i2c");
 
 	clk = clk_register_gate(NULL, "i2c1_clk", "ahb_clk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_I2C1_CLK_ENB, 0,
+			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_I2C1_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "b4000000.i2c");
 
