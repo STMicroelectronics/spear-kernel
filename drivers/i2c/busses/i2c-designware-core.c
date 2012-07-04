@@ -45,6 +45,8 @@
 #define DW_IC_SS_SCL_LCNT	0x18
 #define DW_IC_FS_SCL_HCNT	0x1c
 #define DW_IC_FS_SCL_LCNT	0x20
+#define DW_IC_HS_SCL_HCNT       0x24
+#define DW_IC_HS_SCL_LCNT       0x28
 #define DW_IC_INTR_STAT		0x2c
 #define DW_IC_INTR_MASK		0x30
 #define DW_IC_RAW_INTR_STAT	0x34
@@ -307,6 +309,21 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 	dw_writel(dev, hcnt, DW_IC_FS_SCL_HCNT);
 	dw_writel(dev, lcnt, DW_IC_FS_SCL_LCNT);
 	dev_dbg(dev->dev, "Fast-mode HCNT:LCNT = %d:%d\n", hcnt, lcnt);
+
+	/* high speed-mode */
+	hcnt = i2c_dw_scl_hcnt(input_clock_khz,
+				14,	/* tHD;STA = 160 ns */
+				3,	/* tf = 0.3 us */
+				0,	/* 0: DW default, 1: Ideal */
+				0);	/* No offset */
+	lcnt = i2c_dw_scl_lcnt(input_clock_khz,
+				35,	/* tLOW = 160ns */
+				3,	/* tf = 0.3 us */
+				0);	/* No offset */
+	dw_writel(dev, hcnt, DW_IC_HS_SCL_HCNT);
+	dw_writel(dev, lcnt, DW_IC_HS_SCL_LCNT);
+	dev_dbg(dev->dev, "high speed HCNT:LCNT = %d:%d\n", hcnt, lcnt);
+
 
 	/* Configure Tx/Rx FIFO threshold levels */
 	dw_writel(dev, dev->tx_fifo_depth - 1, DW_IC_TX_TL);
