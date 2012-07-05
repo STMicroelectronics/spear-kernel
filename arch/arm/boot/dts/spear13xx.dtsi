@@ -64,6 +64,28 @@
 		bootargs = "console=ttyAMA0,115200";
 	};
 
+	cpufreq {
+		compatible = "st,cpufreq";
+		#address-cells = <0>;
+		#size-cells = <0>;
+		cpufreq_tbl = < 166000
+			200000
+			250000
+			300000
+			400000
+			500000
+			600000 >;
+		tbl_len = <7>;
+		status = "disable";
+	};
+
+	pcm {
+		compatible = "st,pcm-audio";
+		#address-cells = <0>;
+		#size-cells = <0>;
+		status = "disable";
+	};
+
 	ahb {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -113,6 +135,7 @@
 				      0 23 0x4>;
 			st,ale-off = <0x20000>;
 			st,cle-off = <0x10000>;
+			st,mode = <2>;
 			status = "disabled";
 		};
 
@@ -134,17 +157,11 @@
 			status = "disabled";
 		};
 
-		spi0: spi@e0100000 {
-			compatible = "arm,pl022", "arm,primecell";
-			reg = <0xe0100000 0x1000>;
-			interrupts = <0 31 0x4>;
-			status = "disabled";
-		};
-
 		ehci@e4800000 {
 			compatible = "st,spear600-ehci", "usb-ehci";
 			reg = <0xe4800000 0x1000>;
 			interrupts = <0 64 0x4>;
+			usbh0_id = <0>;
 			status = "disabled";
 		};
 
@@ -152,6 +169,7 @@
 			compatible = "st,spear600-ehci", "usb-ehci";
 			reg = <0xe5800000 0x1000>;
 			interrupts = <0 66 0x4>;
+			usbh1_id = <1>;
 			status = "disabled";
 		};
 
@@ -159,6 +177,7 @@
 			compatible = "st,spear600-ohci", "usb-ohci";
 			reg = <0xe4000000 0x1000>;
 			interrupts = <0 65 0x4>;
+			usbh0_id = <0>;
 			status = "disabled";
 		};
 
@@ -166,6 +185,62 @@
 			compatible = "st,spear600-ohci", "usb-ohci";
 			reg = <0xe5000000 0x1000>;
 			interrupts = <0 67 0x4>;
+			usbh1_id = <1>;
+			status = "disabled";
+		};
+
+		otg@e3800000 {
+			compatible = "st,usb-otg";
+			reg = <0xe3800000 0x40000>;
+			interrupts = <0 62 0x4>;
+			status = "disabled";
+		};
+
+		clcd@e1000000 {
+			compatible = "st,db9000-clcd";
+			reg = <0xe1000000 0x1000>;
+			interrupts = <0 13 0x4>;
+			status = "disabled";
+		};
+
+		pcie0@b1000000 {
+			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			reg = < 0xb1000000 0x4000
+				0x80000000 0x2000
+				0xeb800000 0x1000 >;
+			interrupts = <0 68 0x4>;
+			status = "disabled";
+		};
+
+		pcie1@b1800000 {
+			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			reg = < 0xb1800000 0x4000
+				0x90000000 0x2000
+				0xeb804000 0x1000 >;
+			interrupts = <0 69 0x4>;
+			status = "disabled";
+		};
+
+		pcie2@b4000000 {
+			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			reg = < 0xb4000000 0x4000
+				0xc0000000 0x2000
+				0xeb808000 0x1000 >;
+			interrupts = <0 70 0x4>;
+			status = "disabled";
+		};
+
+		c3@e1800000 {
+			compatible = "st,c3";
+			reg = <0xe1800000 0x1000>;
+			interrupts = <0 32 0x4>;
+			status = "disabled";
+		};
+
+		jpeg@b2000000 {
+			compatible = "st,designware-jpeg";
+			reg = <0xb2000000 0x2000>;
+			interrupts = <0 27 0x4>;
 			status = "disabled";
 		};
 
@@ -212,6 +287,48 @@
 				reg = <0xe0280000 0x1000>;
 				interrupts = <0 41 0x4>;
 				status = "disabled";
+
+				l3g4200d_gyro@60 {
+				compatible = "st,l3g4200d_gyro";
+				reg = <0x69>;
+				};
+
+				lsm303dlh_a@19 {
+				compatible = "st,lsm303dlh_a";
+				reg = <0x19>;
+				};
+
+				lsm303dlh_m@1e {
+				compatible = "st,lsm303dlh_m";
+				reg = <0x1e>;
+				};
+
+				eeprom0@50 {
+				compatible = "st,eeprom";
+				reg = <0x50>;
+				};
+
+				eeprom1@51 {
+				compatible = "st,eeprom";
+				reg = <0x51>;
+				};
+
+				sta529@1a {
+				compatible = "st,sta529";
+				reg = <0x29>;
+				};
+
+				ad9889_hdmi_tx@39 {
+				compatible = "st,ad9889_hdmi_tx";
+				reg = <0x39>;
+				};
+			};
+
+			spi0: spi@e0100000 {
+				compatible = "arm,pl022", "arm,primecell";
+				reg = <0xe0100000 0x1000>;
+				interrupts = <0 31 0x4>;
+				status = "disabled";
 			};
 
 			rtc@e0580000 {
@@ -225,6 +342,22 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0xe0000000 0x1000>;
 				interrupts = <0 36 0x4>;
+				status = "disabled";
+			};
+
+			i2s@e0180000 {
+				compatible = "st,designware-i2s";
+				reg = <0xe0180000 0x1000>;
+				interrupt-names = "play_irq", "record_irq";
+				interrupts = <0 10 11 0x4>;
+				status = "disabled";
+			};
+
+			i2s@e0200000 {
+				compatible = "st,designware-i2s";
+				reg = <0xe0200000 0x1000>;
+				interrupt-names = "play_irq", "record_irq";
+				interrupts = <0 26 53 0x4>;
 				status = "disabled";
 			};
 
@@ -245,6 +378,7 @@
 				compatible = "arm,cortex-a9-twd-timer";
 				reg = <0xec800600 0x20>;
 				interrupts = <1 13 0x301>;
+				status = "disabled";
 			};
 
 			wdt@ec800620 {
@@ -256,6 +390,7 @@
 			thermal@e07008c4 {
 				compatible = "st,thermal-spear1340";
 				reg = <0xe07008c4 0x4>;
+				thermal_flags = <0x7000>;
 			};
 		};
 	};
