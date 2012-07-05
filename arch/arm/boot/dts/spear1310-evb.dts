@@ -42,6 +42,10 @@
 					st,pins = "arm_gpio_grp";
 					st,function = "arm_gpio";
 				};
+				clcd {
+					st,pins = "clcd_grp" , "clcd_high_res";
+					st,function = "clcd";
+				};
 				eth {
 					st,pins = "gmii_grp";
 					st,function = "gmii";
@@ -75,9 +79,12 @@
 					st,function = "i2c_1_2";
 				};
 				pci {
-					st,pins = "pcie0_grp","pcie1_grp",
-						"pcie2_grp";
+					st,pins = "pcie1_grp", "pcie2_grp";
 					st,function = "pci";
+				};
+				sata {
+					st,pins = "sata0_grp";
+					st,function = "sata";
 				};
 				smii {
 					st,pins = "smii_0_1_2_grp";
@@ -109,6 +116,23 @@
 
 		fsmc: flash@b0000000 {
 			status = "okay";
+
+			partition@0 {
+				label = "xloader";
+				reg = <0x0 0x200000>;
+			};
+			partition@200000 {
+				label = "u-boot";
+				reg = <0x200000 0x300000>;
+			};
+			partition@500000 {
+				label = "linux";
+				reg = <0x500000 0xC00000>;
+			};
+			partition@1100000 {
+				label = "rootfs";
+				reg = <0x1100000 0x7EF00000>;
+			};
 		};
 
 		gmac0: eth@e2000000 {
@@ -148,10 +172,6 @@
 			};
 		};
 
-		spi0: spi@e0100000 {
-			status = "okay";
-		};
-
 		ehci@e4800000 {
 			status = "okay";
 		};
@@ -168,8 +188,36 @@
 			status = "okay";
 		};
 
+		otg@e3800000 {
+			status = "okay";
+		};
+
+		clcd@e1000000 {
+			status = "okay";
+		};
+
+		pcie1@b1800000 {
+			status = "okay";
+		};
+
+		pcie2@b4000000 {
+			status = "okay";
+		};
+
+		can0@5d5000000 {
+			status = "okay";
+		};
+
+		can1@5d6000000 {
+			status = "okay";
+		};
+
 		apb {
 			adc@e0080000 {
+				status = "okay";
+			};
+
+			spi0: spi@e0100000 {
 				status = "okay";
 			};
 
@@ -182,10 +230,6 @@
 			};
 
 			i2c0: i2c@e0280000 {
-			       status = "okay";
-			};
-
-			i2c1: i2c@5cd00000 {
 			       status = "okay";
 			};
 
