@@ -109,7 +109,7 @@ static int spear_kbd_open(struct input_dev *dev)
 
 	kbd->last_key = KEY_RESERVED;
 
-	error = clk_enable(kbd->clk);
+	error = clk_prepare_enable(kbd->clk);
 	if (error)
 		return error;
 
@@ -141,7 +141,7 @@ static void spear_kbd_close(struct input_dev *dev)
 	val &= ~MODE_CTL_START_SCAN;
 	writel_relaxed(val, kbd->io_base + MODE_CTL_REG);
 
-	clk_disable(kbd->clk);
+	clk_disable_unprepare(kbd->clk);
 
 	kbd->last_key = KEY_RESERVED;
 }
@@ -324,12 +324,14 @@ static int spear_kbd_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input;
-	unsigned int rate = 0, mode_ctl_reg, val;
+	unsigned int rate = 0, mode_ctl_reg, val, error;
 
 	mutex_lock(&input_dev->mutex);
 
 	/* explicitly enable clock as we may program device */
-	clk_enable(kbd->clk);
+	error = clk_prepare_enable(kbd->clk);
+	if (error)
+		return error;
 
 	mode_ctl_reg = readl_relaxed(kbd->io_base + MODE_CTL_REG);
 
@@ -354,7 +356,7 @@ static int spear_kbd_suspend(struct device *dev)
 		if (input_dev->users) {
 			writel_relaxed(mode_ctl_reg & ~MODE_CTL_START_SCAN,
 					kbd->io_base + MODE_CTL_REG);
-			clk_disable(kbd->clk);
+			clk_disable_unprepare(kbd->clk);
 		}
 	}
 
@@ -363,7 +365,7 @@ static int spear_kbd_suspend(struct device *dev)
 		kbd->mode_ctl_reg = mode_ctl_reg;
 
 	/* restore previous clk state */
-	clk_disable(kbd->clk);
+	clk_disable_unprepare(kbd->clk);
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -375,6 +377,7 @@ static int spear_kbd_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input;
+	int error;
 
 	mutex_lock(&input_dev->mutex);
 
@@ -384,8 +387,11 @@ static int spear_kbd_resume(struct device *dev)
 			disable_irq_wake(kbd->irq);
 		}
 	} else {
-		if (input_dev->users)
-			clk_enable(kbd->clk);
+		if (input_dev->users) {
+			error = clk_prepare_enable(kbd->clk);
+			if (error)
+				return error;
+		}
 	}
 
 	/* restore current configuration */
