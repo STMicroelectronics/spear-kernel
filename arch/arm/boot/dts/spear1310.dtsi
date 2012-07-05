@@ -70,10 +70,31 @@
 			status = "disabled";
 		};
 
-		spi1: spi@5d400000 {
-			compatible = "arm,pl022", "arm,primecell";
-			reg = <0x5d400000 0x1000>;
-			interrupts = <0 99 0x4>;
+		tdm_hdlc0@D8200000 {
+			compatible = "st,tdm_hdlc";
+			reg = <0xD8200000 0x1000>;
+			interrupts = <0 81 0x4>;
+			status = "disabled";
+		};
+
+		tdm_hdlc1@D8300000 {
+			compatible = "st,tdm_hdlc";
+			reg = <0xD8300000 0x1000>;
+			interrupts = <0 81 0x4>;
+			status = "disabled";
+		};
+
+		can0@5d5000000 {
+			compatible = "st,can";
+			reg = <0x5d500000 0x1000>;
+			interrupts = <0 76 0x4>;
+			status = "disabled";
+		};
+
+		can1@5d6000000 {
+			compatible = "st,can";
+			reg = <0x5d600000 0x1000>;
+			interrupts = <0 77 0x4>;
 			status = "disabled";
 		};
 
@@ -138,6 +159,13 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5d300000 0x1000>;
 				interrupts = <0 93 0x4>;
+				status = "disabled";
+			};
+
+			spi1: spi@5d400000 {
+				compatible = "arm,pl022", "arm,primecell";
+				reg = <0x5d400000 0x1000>;
+				interrupts = <0 99 0x4>;
 				status = "disabled";
 			};
 
