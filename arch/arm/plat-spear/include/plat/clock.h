@@ -116,9 +116,9 @@ struct clk {
 	struct list_head children;
 	struct list_head sibling;
 	void *private_data;
-#ifdef CONFIG_DEBUG_FS
 	struct list_head node;
 	struct clk_lookup *cl;
+#ifdef CONFIG_DEBUG_FS
 	struct dentry *dent;
 #endif
 };

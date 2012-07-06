@@ -28,9 +28,7 @@
 static struct clk *ddr_clk;
 static DEFINE_SPINLOCK(clocks_lock);
 static LIST_HEAD(root_clks);
-#ifdef CONFIG_DEBUG_FS
 static LIST_HEAD(clocks);
-#endif
 
 static void propagate_rate(struct clk *, int on_init);
 #ifdef CONFIG_DEBUG_FS
@@ -418,10 +416,8 @@ void clk_register(struct clk_lookup *cl)
 	 * structure. So if this clk is iterated once, then don't do following
 	 * steps next time.
 	 */
-#ifdef CONFIG_DEBUG_FS
 	if (clk->cl)
 		goto clkdev_add;
-#endif
 
 	spin_lock_irqsave(&clocks_lock, flags);
 
@@ -455,10 +451,8 @@ void clk_register(struct clk_lookup *cl)
 	spin_unlock_irqrestore(&clocks_lock, flags);
 
 	/* debugfs specific */
-#ifdef CONFIG_DEBUG_FS
 	list_add(&clk->node, &clocks);
 	clk->cl = cl;
-#endif
 
 clkdev_add:
 	/* add clock to arm clockdev framework */
