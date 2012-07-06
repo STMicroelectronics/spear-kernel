@@ -101,7 +101,6 @@ static struct pclk_info *pclk_info_get(struct clk *clk)
 static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 {
 	unsigned long flags;
-	struct clk *old_pclk = clk->pclk;
 
 	spin_lock_irqsave(&clocks_lock, flags);
 	list_del(&clk->sibling);
@@ -111,7 +110,7 @@ static void clk_reparent(struct clk *clk, struct pclk_info *pclk_info)
 	spin_unlock_irqrestore(&clocks_lock, flags);
 
 #ifdef CONFIG_DEBUG_FS
-	clk_debugfs_reparent(clk, old_pclk);
+	clk_debugfs_reparent(clk, clk->pclk);
 #endif
 }
 
