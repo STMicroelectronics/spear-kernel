@@ -142,8 +142,8 @@
 		gmac0: eth@e2000000 {
 			compatible = "st,spear600-gmac";
 			reg = <0xe2000000 0x8000>;
-			interrupts = <0 23 0x4
-				      0 24 0x4>;
+			interrupts = <0 33 0x4
+				      0 34 0x4>;
 			interrupt-names = "macirq", "eth_wake_irq";
 			status = "disabled";
 		};
