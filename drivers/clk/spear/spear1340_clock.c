@@ -25,7 +25,7 @@
 	#define SPEAR1340_HCLK_SRC_SEL_SHIFT	27
 	#define SPEAR1340_HCLK_SRC_SEL_MASK	1
 	#define SPEAR1340_SCLK_SRC_SEL_SHIFT	23
-	#define SPEAR1340_SCLK_SRC_SEL_MASK	3
+	#define SPEAR1340_SCLK_SRC_SEL_MASK	7
 
 /* PLL related registers and bit values */
 #define SPEAR1340_PLL_CFG			(VA_MISC_BASE + 0x210)
@@ -369,8 +369,8 @@ static struct frac_rate_tbl gen_rtbl[] = {
 
 /* clock parents */
 static const char *vco_parents[] = { "osc_24m_clk", "osc_25m_clk", };
-static const char *sys_parents[] = { "none", "pll1_clk", "none", "none",
-	"sys_synth_clk", "none", "pll2_clk", "pll3_clk", };
+static const char *sys_parents[] = { "pll1_clk", "pll1_clk", "pll1_clk",
+	"pll1_clk", "sys_synth_clk", "sys_synth_clk", "pll2_clk", "pll3_clk", };
 static const char *ahb_parents[] = { "cpu_div3_clk", "amba_synth_clk", };
 static const char *gpt_parents[] = { "osc_24m_clk", "apb_clk", };
 static const char *uart0_parents[] = { "pll5_clk", "osc_24m_clk",
