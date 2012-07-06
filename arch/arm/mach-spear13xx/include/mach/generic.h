@@ -15,6 +15,7 @@
 #define __MACH_GENERIC_H
 
 #include <linux/dmaengine.h>
+#include <linux/platform_device.h>
 #include <asm/mach/time.h>
 
 /* Add spear13xx structure declarations here */
@@ -31,6 +32,7 @@ void __init spear13xx_map_io(void);
 void __init spear13xx_dt_init_irq(void);
 void __init spear13xx_l2x0_init(void);
 bool dw_dma_filter(struct dma_chan *chan, void *slave);
+int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev);
 void spear_restart(char, const char *);
 void spear13xx_secondary_startup(void);
 

@@ -18,6 +18,9 @@
 #include <linux/dw_dmac.h>
 #include <linux/err.h>
 #include <linux/of_irq.h>
+#include <linux/phy.h>
+#include <linux/platform_device.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach/map.h>
@@ -79,6 +82,88 @@ struct dw_dma_platform_data dmac_plat_data = {
 	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
 	.chan_priority = CHAN_PRIORITY_DESCENDING,
 };
+
+/* Ethernet clock initialization */
+int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
+{
+	int ret;
+	struct clk *input_clk, *input_pclk, *phy_pclk, *phy_clk;
+	struct plat_stmmacenet_data *pdata = dev_get_platdata(&pdev->dev);
+	const char *phy_clk_src_name[] = {
+		"phy_input_mclk",
+		"phy_synth_gclk",
+	};
+	const char *input_clk_src_name[] = {
+		"pll2_clk",
+		"gmii_pad_clk",
+		"osc_25m_clk",
+	};
+	const char *phy_clk_name[] = {
+		"stmmacphy.0"
+	};
+
+	if (pdata == NULL)
+		return -EFAULT;
+
+	/* Get the Pll-2 Clock as parent for PHY Input Clock Source */
+	input_pclk = clk_get(NULL, input_clk_src_name[0]);
+	if (IS_ERR(input_pclk)) {
+		ret = PTR_ERR(input_pclk);
+		goto fail_get_input_pclk;
+	}
+
+	/*
+	 * Get the Phy Input clock source as parent for Phy clock. Default
+	 * selection is gmac_phy_input_clk. This selection would be driving both
+	 * the synthesizer and phy clock.
+	 */
+	input_clk = clk_get(NULL, phy_clk_src_name[0]);
+	if (IS_ERR(input_clk)) {
+		ret = PTR_ERR(input_clk);
+		goto fail_get_input_clk;
+	}
+
+	/* Fetch the phy clock */
+	phy_clk = clk_get(NULL, phy_clk_name[pdata->bus_id]);
+	if (IS_ERR(phy_clk)) {
+		ret = PTR_ERR(phy_clk);
+		goto fail_get_phy_clk;
+	}
+
+	/* Set the pll-2 to 125 MHz */
+	clk_set_rate(input_pclk, 125000000);
+
+	/* Set the Pll-2 as parent for gmac_phy_input_clk */
+	clk_set_parent(input_clk, input_pclk);
+
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
+		/*
+		 * For the rmii interface select gmac_phy_synth_clk
+		 * as the parent and set the clock to 50 Mhz
+		 */
+		phy_pclk = clk_get(NULL, phy_clk_src_name[1]);
+		clk_set_rate(phy_pclk, 50000000);
+	} else {
+		/*
+		 * Set the gmac_phy_input_clk as the parent,
+		 * and pll-2 is already running as parent of
+		 * gmac_phy_input_clk at 125 Mhz
+		 */
+		phy_pclk = input_clk;
+	}
+
+	/* Select the parent for phy clock */
+	clk_set_parent(phy_clk, phy_pclk);
+	ret = clk_prepare_enable(phy_clk);
+
+	return ret;
+fail_get_phy_clk:
+	clk_put(input_clk);
+fail_get_input_clk:
+	clk_put(input_pclk);
+fail_get_input_pclk:
+	return ret;
+}
 
 void __init spear13xx_l2x0_init(void)
 {

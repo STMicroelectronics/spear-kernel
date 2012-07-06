@@ -59,4 +59,7 @@
 #define SPEAR_DBG_UART_BASE			UART_BASE
 #define VA_SPEAR_DBG_UART_BASE			VA_UART_BASE
 
+/* Ethernet base address */
+#define SPEAR13XX_GETH_BASE			UL(0xE2000000)
+
 #endif /* __MACH_SPEAR13XX_H */
