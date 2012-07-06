@@ -621,7 +621,7 @@ void __init spear1310_clk_init(void)
 			ARRAY_SIZE(gmac_phy_parents), 0,
 			SPEAR1310_PERIP_CLK_CFG, SPEAR1310_GMAC_PHY_CLK_SHIFT,
 			SPEAR1310_GMAC_PHY_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "stmmacphy.0");
+	clk_register_clkdev(clk, "stmmacphy.0", NULL);
 
 	/* clcd */
 	clk = clk_register_mux(NULL, "clcd_synth_mux_clk", clcd_synth_parents,
@@ -922,15 +922,15 @@ void __init spear1310_clk_init(void)
 			SPEAR1310_RAS_CTRL_REG1,
 			SPEAR1310_SMII_RGMII_PHY_CLK_SHIFT,
 			SPEAR1310_PHY_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "stmmacphy.1");
-	clk_register_clkdev(clk, NULL, "stmmacphy.2");
-	clk_register_clkdev(clk, NULL, "stmmacphy.4");
+	clk_register_clkdev(clk, "stmmacphy.1", NULL);
+	clk_register_clkdev(clk, "stmmacphy.2", NULL);
+	clk_register_clkdev(clk, "stmmacphy.4", NULL);
 
 	clk = clk_register_mux(NULL, "rmii_phy_mux_clk", rmii_phy_parents,
 			ARRAY_SIZE(rmii_phy_parents), 0,
 			SPEAR1310_RAS_CTRL_REG1, SPEAR1310_RMII_PHY_CLK_SHIFT,
 			SPEAR1310_PHY_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "stmmacphy.3");
+	clk_register_clkdev(clk, "stmmacphy.3", NULL);
 
 	clk = clk_register_mux(NULL, "uart1_mux_clk", uart_parents,
 			ARRAY_SIZE(uart_parents), 0, SPEAR1310_RAS_CTRL_REG0,

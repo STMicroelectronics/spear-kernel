@@ -686,7 +686,7 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(gmac_phy_parents), 0,
 			SPEAR1340_PERIP_CLK_CFG, SPEAR1340_GMAC_PHY_CLK_SHIFT,
 			SPEAR1340_GMAC_PHY_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "stmmacphy.0");
+	clk_register_clkdev(clk, "stmmacphy.0", NULL);
 
 	/* clcd */
 	clk = clk_register_mux(NULL, "clcd_synth_mux_clk", clcd_synth_parents,
