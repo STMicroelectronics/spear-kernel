@@ -360,6 +360,9 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	if (!clk || !rate)
 		return -EFAULT;
 
+	if (clk->rate == rate)
+		return 0;
+
 	if (clk->set_rate) {
 		spin_lock_irqsave(&clocks_lock, flags);
 		ret = clk->set_rate(clk, rate);
