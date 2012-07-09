@@ -114,9 +114,10 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 			pr_err("%s: main dt probe failed", __func__);
 			goto out_unmap;
 		}
-	} else {
-		plat_dat = pdev->dev.platform_data;
 	}
+
+	if (pdev->dev.platform_data)
+		plat_dat = pdev->dev.platform_data;
 
 	/* Custom initialisation (if needed)*/
 	if (plat_dat->init) {
