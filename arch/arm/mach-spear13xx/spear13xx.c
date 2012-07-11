@@ -91,7 +91,7 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 	struct plat_stmmacenet_data *pdata = dev_get_platdata(&pdev->dev);
 	const char *phy_clk_src_name[] = {
 		"phy_input_mclk",
-		"phy_synth_gclk",
+		"phy_syn_gclk",
 	};
 	const char *input_clk_src_name[] = {
 		"pll2_clk",
@@ -102,8 +102,8 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 		"stmmacphy.0"
 	};
 
-	if (pdata == NULL)
-		return -EFAULT;
+	if (!pdata)
+		return -EINVAL;
 
 	/* Get the Pll-2 Clock as parent for PHY Input Clock Source */
 	input_pclk = clk_get(NULL, input_clk_src_name[0]);
@@ -131,18 +131,30 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 	}
 
 	/* Set the pll-2 to 125 MHz */
-	clk_set_rate(input_pclk, 125000000);
+	ret = clk_set_rate(input_pclk, 125000000);
+	if (IS_ERR_VALUE(ret)) {
+		pr_err("%s:couldn't set rate for input phy clk\n", __func__);
+		goto fail_set_rate;
+	}
 
 	/* Set the Pll-2 as parent for gmac_phy_input_clk */
-	clk_set_parent(input_clk, input_pclk);
-
+	ret = clk_set_parent(input_clk, input_pclk);
+	if (IS_ERR_VALUE(ret)) {
+		pr_err("%s:couldn't set parent for inout phy clk \n", __func__);
+		goto fail_set_rate;
+	}
 	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
 		/*
 		 * For the rmii interface select gmac_phy_synth_clk
 		 * as the parent and set the clock to 50 Mhz
 		 */
 		phy_pclk = clk_get(NULL, phy_clk_src_name[1]);
-		clk_set_rate(phy_pclk, 50000000);
+		ret = clk_set_rate(phy_pclk, 50000000);
+		if (IS_ERR_VALUE(ret)) {
+			pr_err("%s:couldn't set rate for phy synth clk\n",
+					__func__);
+			goto fail_set_rate;
+		}
 	} else {
 		/*
 		 * Set the gmac_phy_input_clk as the parent,
@@ -153,10 +165,17 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 	}
 
 	/* Select the parent for phy clock */
-	clk_set_parent(phy_clk, phy_pclk);
+	ret = clk_set_parent(phy_clk, phy_pclk);
+	if (IS_ERR_VALUE(ret)) {
+		pr_err("%s:couldn't set parent for phy clk \n", __func__);
+		goto fail_set_rate;
+	}
+
 	ret = clk_prepare_enable(phy_clk);
 
 	return ret;
+fail_set_rate:
+	clk_put(phy_clk);
 fail_get_phy_clk:
 	clk_put(input_clk);
 fail_get_input_clk:

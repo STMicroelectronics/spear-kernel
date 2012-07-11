@@ -46,6 +46,7 @@
 #define DMAC0_BASE				UL(0xEA800000)
 #define DMAC1_BASE				UL(0xEB000000)
 #define MCIF_CF_BASE				UL(0xB2800000)
+#define SPEAR13XX_GETH_BASE			UL(0xE2000000)
 
 /* Devices present in SPEAr1310 */
 #ifdef CONFIG_MACH_SPEAR1310
@@ -58,8 +59,5 @@
 /* Debug uart for linux, will be used for debug and uncompress messages */
 #define SPEAR_DBG_UART_BASE			UART_BASE
 #define VA_SPEAR_DBG_UART_BASE			VA_UART_BASE
-
-/* Ethernet base address */
-#define SPEAR13XX_GETH_BASE			UL(0xE2000000)
 
 #endif /* __MACH_SPEAR13XX_H */
