@@ -73,7 +73,7 @@
 		tdm_hdlc0@D8200000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xD8200000 0x1000>;
-			interrupts = <0 81 0x4>;
+			interrupts = <0 80 0x4>;
 			status = "disabled";
 		};
 
