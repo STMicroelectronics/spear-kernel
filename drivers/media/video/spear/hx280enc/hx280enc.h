@@ -33,7 +33,7 @@
  */
 
 #undef PDEBUG   /* undef it, just in case */
-#ifdef HX280ENC_DEBUG
+#ifdef CONFIG_VIDEO_SPEAR_VIDEOENC_DEBUG
 #ifdef __KERNEL__
     /* This one if debugging is on, and kernel space */
 #define PDEBUG(fmt, args...) printk(KERN_INFO "hmp4e: " fmt, ## args)
