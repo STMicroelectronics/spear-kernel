@@ -288,41 +288,6 @@
 				reg = <0xe0280000 0x1000>;
 				interrupts = <0 41 0x4>;
 				status = "disabled";
-
-				l3g4200d_gyro@60 {
-				compatible = "st,l3g4200d_gyro";
-				reg = <0x69>;
-				};
-
-				lsm303dlh_a@19 {
-				compatible = "st,lsm303dlh_a";
-				reg = <0x19>;
-				};
-
-				lsm303dlh_m@1e {
-				compatible = "st,lsm303dlh_m";
-				reg = <0x1e>;
-				};
-
-				eeprom0@50 {
-				compatible = "st,eeprom";
-				reg = <0x50>;
-				};
-
-				eeprom1@51 {
-				compatible = "st,eeprom";
-				reg = <0x51>;
-				};
-
-				sta529@1a {
-				compatible = "st,sta529";
-				reg = <0x29>;
-				};
-
-				ad9889_hdmi_tx@39 {
-				compatible = "st,ad9889_hdmi_tx";
-				reg = <0x39>;
-				};
 			};
 
 			spi0: spi@e0100000 {

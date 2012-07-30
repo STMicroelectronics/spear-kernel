@@ -161,11 +161,6 @@
 				reg = <0xb4000000 0x1000>;
 				interrupts = <0 104 0x4>;
 				status = "disabled";
-
-				stmpe801@41 {
-				compatible = "st,stmpe801";
-				reg = <0x41>;
-				};
 			};
 
 			serial@b4100000 {

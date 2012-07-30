@@ -305,10 +305,45 @@
 
 			i2c0: i2c@e0280000 {
 			       status = "okay";
+
+				l3g4200d_gyro@69 {
+				compatible = "st,l3g4200d_gyro";
+				reg = <0x69>;
+				};
+
+				lsm303dlh_a@19 {
+				compatible = "st,lsm303dlh_a";
+				reg = <0x19>;
+				};
+
+				lsm303dlh_m@1e {
+				compatible = "st,lsm303dlh_m";
+				reg = <0x1e>;
+				};
+
+				sta529@1a {
+				compatible = "st,sta529";
+				reg = <0x1a>;
+				};
+
+				ad9889_hdmi_tx@39 {
+				compatible = "st,ad9889_hdmi_tx";
+				reg = <0x39>;
+				};
 			};
 
 			i2c1: i2c@b4000000 {
 			       status = "okay";
+
+				eeprom0@56 {
+				compatible = "st,eeprom";
+				reg = <0x56>;
+				};
+
+				stmpe801@41 {
+				compatible = "st,stmpe801";
+				reg = <0x41>;
+				};
 			};
 
 			spi0: spi@e0100000 {
