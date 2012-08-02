@@ -47,11 +47,11 @@
 					st,pins = "uart0_grp", "uart0_enh_grp";
 					st,function = "uart0";
 				};
-				i2c0-pmx {
+				i2c0 {
 					st,pins = "i2c0_grp";
 					st,function = "i2c0";
 				};
-				i2c1-pmx {
+				i2c1 {
 					st,pins = "i2c1_grp";
 					st,function = "i2c1";
 				};
@@ -120,9 +120,9 @@
 					st,pins = "sata_grp";
 					st,function = "sata";
 				};
-				pci {
+				pcie {
 					st,pins = "pcie_grp";
-					st,function = "pci";
+					st,function = "pcie";
 				};
 
 			};
