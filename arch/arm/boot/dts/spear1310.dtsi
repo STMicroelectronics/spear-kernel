@@ -17,6 +17,11 @@
 	compatible = "st,spear1310";
 
 	ahb {
+		pinmux@e0700000{
+			compatible = "st,spear1310-pinmux";
+			reg = <0xe0700000 0x1000>;
+		};
+
 		ahci@b1000000 {
 			compatible = "snps,spear-ahci";
 			reg = <0xb1000000 0x10000>;
