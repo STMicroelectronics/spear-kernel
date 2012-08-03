@@ -20,6 +20,7 @@
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <plat/pl080.h>
+#include <plat/shirq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
 
@@ -120,6 +121,9 @@ struct sys_timer spear3xx_timer = {
 
 static const struct of_device_id vic_of_match[] __initconst = {
 	{ .compatible = "arm,pl190-vic", .data = vic_of_init, },
+	{ .compatible = "st,spear300-shirq", .data = spear3xx_shirq_of_init, },
+	{ .compatible = "st,spear310-shirq", .data = spear3xx_shirq_of_init, },
+	{ .compatible = "st,spear320-shirq", .data = spear3xx_shirq_of_init, },
 	{ /* Sentinel */ }
 };
 
