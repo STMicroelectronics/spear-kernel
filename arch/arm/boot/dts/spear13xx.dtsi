@@ -66,8 +66,6 @@
 
 	cpufreq {
 		compatible = "st,cpufreq";
-		#address-cells = <0>;
-		#size-cells = <0>;
 		cpufreq_tbl = < 166000
 			200000
 			250000
