@@ -345,7 +345,7 @@
 			timer@ec800600 {
 				compatible = "arm,cortex-a9-twd-timer";
 				reg = <0xec800600 0x20>;
-				interrupts = <1 13 0x301>;
+				interrupts = <1 13 0x4>;
 				status = "disabled";
 			};
 
