@@ -415,6 +415,31 @@ struct map_desc spear6xx_io_desc[] __initdata = {
 	},
 };
 
+/* AMBA clcd panel information */
+static struct clcd_panel samsung_LMS700 = {
+	.mode = {
+		.name = "Samsung LMS700",
+		.refresh = 0,
+		.xres = 800,
+		.yres = 480,
+		.pixclock = 48000,
+		.left_margin = 16,
+		.right_margin = 8,
+		.upper_margin = 6,
+		.lower_margin = 5,
+		.hsync_len = 3,
+		.vsync_len = 2,
+		.sync = 0,
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+	.width = -1,
+	.height = -1,
+	.tim2 = TIM2_CLKSEL,
+	.cntl = CNTL_LCDTFT | CNTL_BGR,
+	.caps= CLCD_CAP_5551 | CLCD_CAP_565 | CLCD_CAP_888,
+	.bpp = 32,
+};
+
 /* This will create static memory mapping for selected devices */
 void __init spear6xx_map_io(void)
 {
@@ -458,13 +483,21 @@ struct sys_timer spear6xx_timer = {
 struct of_dev_auxdata spear6xx_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl080", SPEAR6XX_ICM3_DMA_BASE, NULL,
 			&pl080_plat_data),
+	OF_DEV_AUXDATA("arm,pl110", SPEAR6XX_ICM3_CLCD_BASE, NULL,
+			&pl110_plat_data),
 	{}
 };
 
 static void __init spear600_dt_init(void)
 {
+	int ret;
 	of_platform_populate(NULL, of_default_bus_match_table,
 			spear6xx_auxdata_lookup, NULL);
+
+	/* clcd panel information */
+	ret = clcd_panel_setup(&samsung_LMS700);
+	if (ret)
+		pr_err("Error amba clcd panel configurtion\n");
 }
 
 static const char *spear600_dt_board_compat[] = {
