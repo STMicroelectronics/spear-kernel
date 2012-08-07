@@ -210,12 +210,8 @@ static void __init macb_get_hwaddr(struct macb *bp)
 	addr[4] = top & 0xff;
 	addr[5] = (top >> 8) & 0xff;
 
-	if (is_valid_ether_addr(addr)) {
+	if (is_valid_ether_addr(addr))
 		memcpy(bp->dev->dev_addr, addr, sizeof(addr));
-	} else {
-		dev_info(&bp->pdev->dev, "invalid hw address, using random\n");
-		random_ether_addr(bp->dev->dev_addr);
-	}
 }
 
 static int macb_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
@@ -1328,8 +1324,11 @@ static int macb_open(struct net_device *dev)
 		return -EAGAIN;
 #endif
 
-	if (!is_valid_ether_addr(dev->dev_addr))
-		return -EADDRNOTAVAIL;
+	if (!is_valid_ether_addr(dev->dev_addr)) {
+		dev_info(&bp->pdev->dev, "invalid hw address, using random\n");
+		random_ether_addr(bp->dev->dev_addr);
+	}
+
 	err = macb_alloc_consistent(bp);
 	if (err) {
 		dev_info(&bp->pdev->dev,
