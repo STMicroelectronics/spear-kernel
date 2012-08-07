@@ -29,6 +29,7 @@
 #define SPEAR320_SSP1_BASE		UL(0xA6000000)
 #define SPEAR320_MACB0_BASE		UL(0xAA000000)
 #define SPEAR320_MACB1_BASE		UL(0xAB000000)
+#define SPEAR320_CLCD_BASE		UL(0x90000000)
 
 void spear320_macb_plat_mdio_control(struct platform_device *pdev)
 {
@@ -310,6 +311,31 @@ static struct amba_pl011_data spear320_uart_data[] = {
 	},
 };
 
+/* AMBA clcd panel information */
+static struct clcd_panel et057010_640x480 = {
+	.mode = {
+		.name = "ET057010 640x480",
+		.refresh = 0,
+		.xres = 640,
+		.yres = 480,
+		.pixclock = 48000,
+		.left_margin = 144,
+		.right_margin = 16,
+		.upper_margin = 33,
+		.lower_margin = 10,
+		.hsync_len = 30,
+		.vsync_len = 3,
+		.sync = 0,
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+	.width = -1,
+	.height = -1,
+	.tim2 = TIM2_CLKSEL | TIM2_IPC,
+	.cntl = CNTL_LCDTFT | CNTL_BGR,
+	.caps= CLCD_CAP_5551 | CLCD_CAP_565 | CLCD_CAP_888,
+	.bpp = 32,
+};
+
 /* Add SPEAr320 HMI auxdata to pass platform data */
 static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
@@ -337,6 +363,8 @@ static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
 			&pl080_plat_data),
+	OF_DEV_AUXDATA("arm,clcd-pl110", SPEAR320_CLCD_BASE, NULL,
+			&pl110_plat_data),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP0_BASE, NULL,
 			&spear320_ssp_data[0]),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP1_BASE, NULL,
@@ -355,16 +383,20 @@ static void __init spear320_dt_init(void)
 	pl080_plat_data.slave_channels = spear320_dma_info;
 	pl080_plat_data.num_slave_channels = ARRAY_SIZE(spear320_dma_info);
 
-	if (of_machine_is_compatible("st,spear320-evb"))
+	if (of_machine_is_compatible("st,spear320-evb")) {
 		of_platform_populate(NULL, of_default_bus_match_table,
 				spear320_evb_auxdata_lookup, NULL);
-	else
+	} else if (of_machine_is_compatible("st,spear320-hmi")){
+		/* clcd panel information */
+		if (clcd_panel_setup(&et057010_640x480))
+			pr_err("Error amba clcd panel configurtion\n");
+
 		of_platform_populate(NULL, of_default_bus_match_table,
 				spear320_hmi_auxdata_lookup, NULL);
+	}
 
 	/* initialize macb related data in macb plat data */
 	spear320_macb_setup();
-
 }
 
 static const char * const spear320_dt_board_compat[] = {

@@ -20,6 +20,9 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 
+/* Base address of various IPs */
+#define SPEAR300_CLCD_BASE		UL(0x60000000)
+
 /* DMAC platform data's slave info */
 struct pl08x_channel_data spear300_dma_info[] = {
 	{
@@ -207,12 +210,39 @@ struct pl08x_channel_data spear300_dma_info[] = {
 	},
 };
 
+/* AMBA clcd panel information */
+static struct clcd_panel sharp_LQ043T1DG01 = {
+	.mode = {
+		.name = "Sharp LQ043T1DG01",
+		.refresh = 0,
+		.xres = 480,
+		.yres = 272,
+		.pixclock = 48000,
+		.left_margin = 2,
+		.right_margin = 2,
+		.upper_margin = 2,
+		.lower_margin = 2,
+		.hsync_len = 41,
+		.vsync_len = 11,
+		.sync = 0,/* FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT */
+		.vmode = FB_VMODE_NONINTERLACED,
+	},
+	.width = -1,
+	.height = -1,
+	.tim2 = TIM2_IOE | TIM2_CLKSEL | 3,
+	.cntl = CNTL_LCDTFT | CNTL_BGR,
+	.caps= CLCD_CAP_5551 | CLCD_CAP_565 | CLCD_CAP_888,
+	.bpp = 32,
+};
+
 /* Add SPEAr300 auxdata to pass platform data */
 static struct of_dev_auxdata spear300_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
 			&pl080_plat_data),
+	OF_DEV_AUXDATA("arm,pl110", SPEAR300_CLCD_BASE, NULL,
+			&pl110_plat_data),
 	{}
 };
 
@@ -223,6 +253,10 @@ static void __init spear300_dt_init(void)
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			spear300_auxdata_lookup, NULL);
+
+	/* clcd panel information */
+	if(clcd_panel_setup(&sharp_LQ043T1DG01))
+		pr_err("Error amba clcd panel configurtion\n");
 }
 
 static const char * const spear300_dt_board_compat[] = {

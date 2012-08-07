@@ -14,6 +14,8 @@
 #ifndef __MACH_GENERIC_H
 #define __MACH_GENERIC_H
 
+#include <linux/amba/bus.h>
+#include <linux/amba/clcd.h>
 #include <linux/amba/pl08x.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -25,12 +27,14 @@
 extern struct sys_timer spear3xx_timer;
 extern struct pl022_ssp_controller pl022_plat_data;
 extern struct pl08x_platform_data pl080_plat_data;
+extern struct clcd_board pl110_plat_data; /* amba clcd platform data */
 
 /* Add spear3xx family function declarations here */
 void __init spear_setup_of_timer(void);
 void __init spear3xx_clk_init(void);
 void __init spear3xx_map_io(void);
 void __init spear3xx_dt_init_irq(void);
+int clcd_panel_setup(struct clcd_panel *panel);
 
 void spear_restart(char, const char *);
 
