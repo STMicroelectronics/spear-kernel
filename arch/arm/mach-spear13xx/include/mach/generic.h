@@ -38,12 +38,14 @@ void spear13xx_secondary_startup(void);
 
 #ifdef CONFIG_MACH_SPEAR1310
 void __init spear1310_clk_init(void);
+int spear1310_otg_phy_init(void);
 #else
 static inline void spear1310_clk_init(void) {}
 #endif
 
 #ifdef CONFIG_MACH_SPEAR1340
 void __init spear1340_clk_init(void);
+int spear1340_otg_phy_init(void);
 #else
 static inline void spear1340_clk_init(void) {}
 #endif

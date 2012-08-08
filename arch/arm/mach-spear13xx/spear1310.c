@@ -13,11 +13,13 @@
 
 #define pr_fmt(fmt) "SPEAr1310: " fmt
 
+#include <linux/delay.h>
 #include <linux/amba/pl022.h>
 #include <linux/clk.h>
 #include <linux/of_platform.h>
 #include <linux/phy.h>
 #include <linux/stmmac.h>
+#include <linux/usb/dwc_otg.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -44,6 +46,16 @@
 #define SPEAR1310_PHY_RGMII_VAL		0x1
 #define SPEAR1310_PHY_RMII_VAL		0x4
 #define SPEAR1310_PHY_SMII_VAL		0x6
+
+#define VA_SPEAR1310_USBPHY_GEN_CFG		(VA_MISC_BASE + 0x394)
+	#define USBPLLLOCK			(1 << 24)
+	#define USBPHYRST			(1 << 15)
+	#define USBPRSNT			(1 << 13)
+	#define USBPHYPOR			(1 << 12)
+
+#define SPEAR1310_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x300)
+#define SPEAR1310_PERIP1_SW_RST			(VA_MISC_BASE + 0x308)
+#define SPEAR1310_UOC_RST_ENB			11
 
 static int spear1310_eth_phy_clk_cfg(struct platform_device *pdev)
 {
@@ -277,6 +289,61 @@ static struct pl022_ssp_controller ssp1_plat_data = {
 	.num_chipselect = 3,
 };
 
+int spear1310_otg_phy_init(void)
+{
+	u32 temp, msec = 1000;
+	void __iomem *usbphy_gen_cfg_reg, *perip1_clk_enb, *perip1_sw_rst;
+
+	usbphy_gen_cfg_reg = VA_SPEAR1310_USBPHY_GEN_CFG;
+	perip1_clk_enb = SPEAR1310_PERIP1_CLK_ENB;
+	perip1_sw_rst = SPEAR1310_PERIP1_SW_RST;
+
+	/* phy for deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp &= ~USBPHYPOR;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* phy clock enable */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPHYRST;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* wait for pll lock */
+	while (!(readl(usbphy_gen_cfg_reg) & USBPLLLOCK)) {
+		if (msec--) {
+			pr_err(" Problem with USB PHY PLL Lock\n");
+			return -ETIMEDOUT;
+		}
+		udelay(1);
+	}
+
+	/* otg prstnt deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPRSNT;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* OTG HCLK Disable */
+	temp = readl(perip1_clk_enb);
+	temp &= ~(1 << SPEAR1310_UOC_RST_ENB);
+	writel(temp, perip1_clk_enb);
+
+	/* OTG HRESET deassert */
+	temp = readl(perip1_sw_rst);
+	temp &= ~(1 << SPEAR1310_UOC_RST_ENB);
+	writel(temp, perip1_sw_rst);
+
+	/* OTG HCLK Enable */
+	temp = readl(perip1_clk_enb);
+	temp |= (1 << SPEAR1310_UOC_RST_ENB);
+	writel(temp, perip1_clk_enb);
+
+	return 0;
+}
+
+static struct dwc_otg_plat_data spear1310_otg_plat_data = {
+	.phy_init = spear1310_otg_phy_init,
+};
+
 /* Add SPEAr1310 auxdata to pass platform data */
 static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arasan,cf-spear1340", MCIF_CF_BASE, NULL, &cf_dma_priv),
@@ -295,6 +362,8 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 			&eth3_data),
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR1310_GETH4_BASE, NULL,
 			&eth4_data),
+	OF_DEV_AUXDATA("snps,usb-otg", SPEAR_UOC_BASE, NULL,
+			&spear1310_otg_plat_data),
 	{}
 };
 

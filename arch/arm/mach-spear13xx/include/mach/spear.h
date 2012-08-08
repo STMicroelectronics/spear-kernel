@@ -47,6 +47,7 @@
 #define DMAC1_BASE				UL(0xEB000000)
 #define MCIF_CF_BASE				UL(0xB2800000)
 #define SPEAR13XX_GETH_BASE			UL(0xE2000000)
+#define SPEAR_UOC_BASE				UL(0xE3800000)
 
 /* Devices present in SPEAr1310 */
 #ifdef CONFIG_MACH_SPEAR1310

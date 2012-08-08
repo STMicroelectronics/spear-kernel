@@ -21,6 +21,7 @@
 #include <linux/phy.h>
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
+#include <linux/usb/dwc_otg.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach/arch.h>
 #include <mach/dma.h>
@@ -39,6 +40,7 @@
 #define SPEAR1340_PERIP1_SW_RST			(VA_MISC_BASE + 0x318)
 #define SPEAR1340_PERIP2_SW_RST			(VA_MISC_BASE + 0x31C)
 #define SPEAR1340_PERIP3_SW_RST			(VA_MISC_BASE + 0x320)
+#define SPEAR1340_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x30C)
 
 /* PCIE - SATA configuration registers */
 #define SPEAR1340_PCIE_SATA_CFG			(VA_MISC_BASE + 0x424)
@@ -65,6 +67,13 @@
 			SPEAR1340_SATA_CFG_RX_CLK_EN | \
 			SPEAR1340_SATA_CFG_TX_CLK_EN)
 
+#define VA_SPEAR1340_USBPHY_GEN_CFG		(VA_MISC_BASE + 0x414)
+	#define USBPLLLOCK			(1 << 24)
+	#define USBPHYRST			(1 << 15)
+	#define USBPRSNT			(1 << 13)
+	#define USBPHYPOR			(1 << 12)
+
+
 #define SPEAR1340_PCIE_MIPHY_CFG		(VA_MISC_BASE + 0x428)
 	#define SPEAR1340_MIPHY_OSC_BYPASS_EXT		(1 << 31)
 	#define SPEAR1340_MIPHY_CLK_REF_DIV2		(1 << 27)
@@ -80,6 +89,8 @@
 	#define SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE \
 			(SPEAR1340_MIPHY_OSC_BYPASS_EXT | \
 			SPEAR1340_MIPHY_PLL_RATIO_TOP(25))
+
+#define SPEAR1340_UOC_RST_ENB                   11
 
 static struct dw_dma_slave uart1_dma_param[] = {
 	{
@@ -113,6 +124,61 @@ static struct stmmac_dma_cfg dma0_private_data = {
 	.pbl = 16,
 	.fixed_burst = 1,
 	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+int spear1340_otg_phy_init(void)
+{
+	u32 temp, msec = 1000;
+	void __iomem *usbphy_gen_cfg_reg, *perip1_clk_enb, *perip1_sw_rst;
+
+	usbphy_gen_cfg_reg = VA_SPEAR1340_USBPHY_GEN_CFG;
+	perip1_clk_enb = SPEAR1340_PERIP1_CLK_ENB;
+	perip1_sw_rst = SPEAR1340_PERIP1_SW_RST;
+
+	/* phy for deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp &= ~USBPHYPOR;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* phy clock enable */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPHYRST;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* wait for pll lock */
+	while (!(readl(usbphy_gen_cfg_reg) & USBPLLLOCK)) {
+		if (msec--) {
+			pr_err(" Problem with USB PHY PLL Lock\n");
+			return -ETIMEDOUT;
+		}
+		udelay(1);
+	}
+
+	/* otg prstnt deassert */
+	temp = readl(usbphy_gen_cfg_reg);
+	temp |= USBPRSNT;
+	writel(temp, usbphy_gen_cfg_reg);
+
+	/* OTG HCLK Disable */
+	temp = readl(perip1_clk_enb);
+	temp &= ~(1 << SPEAR1340_UOC_RST_ENB);
+	writel(temp, perip1_clk_enb);
+
+	/* OTG HRESET deassert */
+	temp = readl(perip1_sw_rst);
+	temp &= ~(1 << SPEAR1340_UOC_RST_ENB);
+	writel(temp, perip1_sw_rst);
+
+	/* OTG HCLK Enable */
+	temp = readl(perip1_clk_enb);
+	temp |= (1 << SPEAR1340_UOC_RST_ENB);
+	writel(temp, perip1_clk_enb);
+
+	return 0;
+}
+
+static struct dwc_otg_plat_data spear1340_otg_plat_data = {
+	.phy_init = spear1340_otg_phy_init,
 };
 
 static struct plat_stmmacenet_data eth_data = {
@@ -198,6 +264,8 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 			&sata_pdata),
 	OF_DEV_AUXDATA("arm,pl011", SPEAR1340_UART1_BASE, NULL, &uart1_data),
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR13XX_GETH_BASE, NULL, &eth_data),
+	OF_DEV_AUXDATA("snps,usb-otg", SPEAR_UOC_BASE, NULL,
+			&spear1340_otg_plat_data),
 	{}
 };
 
