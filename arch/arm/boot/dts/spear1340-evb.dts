@@ -260,6 +260,12 @@
 		};
 
 		otg@e3800000 {
+			dev_rx_fifo_size = <0x400>;
+			dev_nperio_tx_fifo_size = <0x300>;
+			fifo_number = <7>;
+			host_rx_fifo_size = <0x400>;
+			host_nperio_tx_fifo_size = <0x400>;
+			host_perio_tx_fifo_size = <0x400>;
 			status = "okay";
 		};
 

@@ -1,0 +1,34 @@
+SYNOPSYS OTG(DRD) controllers:
+-----------------------------
+
+USB-OTG:
+--------
+
+Required properties:
+ -compatible: "snps, usb-otg""
+ -interrupt-parent: Should be the phandle for the interrupt controller
+  that services interrupts for this device
+ -interrupts: Should contain the usb otg interrupt.
+  For passing paltform data:
+ -dev_rx_fifo_size: OTG Device rx fifo size.
+ -dev_nperio_tx_fifo_size : Non periodic OTG Device tx fifo size.
+ -fifo_number: Maximum number of fifo.
+ -host_rx_fifo_size: OTG host rx fifo size.
+ -host_nperio_tx_fifo_size : Non periodic OTG host tx fifo size.
+ -host_perio_tx_fifo_size : periodic OTG host tx fifo size.
+
+Example:
+
+otg@e3800000 {
+        compatible = "snps,usb-otg";
+        reg = <0xe3800000 0x40000>;
+        interrupts = <0 62 0x4>;
+        dev_rx_fifo_size = <0x400>;
+        dev_nperio_tx_fifo_size = <0x300>;
+        fifo_number = <7>;
+        host_rx_fifo_size = <0x400>;
+        host_nperio_tx_fifo_size = <0x400>;
+        host_perio_tx_fifo_size = <0x400>;
+        status = "okay";
+};
+

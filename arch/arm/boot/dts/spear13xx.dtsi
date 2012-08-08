@@ -188,7 +188,7 @@
 		};
 
 		otg@e3800000 {
-			compatible = "st,usb-otg";
+			compatible = "snps,usb-otg";
 			reg = <0xe3800000 0x40000>;
 			interrupts = <0 62 0x4>;
 			status = "disabled";
