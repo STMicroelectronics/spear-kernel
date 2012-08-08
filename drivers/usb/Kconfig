@@ -125,6 +125,8 @@ source "drivers/usb/core/Kconfig"
 
 source "drivers/usb/dwc3/Kconfig"
 
+source "drivers/usb/dwc/Kconfig"
+
 source "drivers/usb/mon/Kconfig"
 
 source "drivers/usb/wusbcore/Kconfig"
