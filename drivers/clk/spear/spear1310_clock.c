@@ -719,7 +719,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uoc_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_UOC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "uoc");
+	clk_register_clkdev(clk, NULL, "e3800000.otg");
 
 	clk = clk_register_gate(NULL, "pcie_sata_0_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_PCIE_SATA_0_CLK_ENB,
