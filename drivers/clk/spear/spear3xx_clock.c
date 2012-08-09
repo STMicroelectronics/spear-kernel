@@ -282,6 +282,14 @@ static void __init spear320_clk_init(void)
 			4);
 	clk_register_clkdev(clk, "i2s_sclk", NULL);
 
+	clk = clk_register_fixed_factor(NULL, "macb1_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "aa000000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb2_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "ab000000.eth");
+
 	clk = clk_register_mux(NULL, "rs485_clk", uartx_parents,
 			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
 			SPEAR320_RS485_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
