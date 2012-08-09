@@ -14,7 +14,10 @@
 #define pr_fmt(fmt) "SPEAr1310: " fmt
 
 #include <linux/amba/pl022.h>
+#include <linux/clk.h>
 #include <linux/of_platform.h>
+#include <linux/phy.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -22,10 +25,250 @@
 #include <mach/spear.h>
 
 /* Base addresses */
+#define SPEAR1310_GETH1_BASE			UL(0x6D000000)
+#define SPEAR1310_GETH2_BASE			UL(0x6D100000)
+#define SPEAR1310_GETH3_BASE			UL(0x6D200000)
+#define SPEAR1310_GETH4_BASE			UL(0x6D300000)
 #define SPEAR1310_SSP1_BASE			UL(0x5D400000)
 #define SPEAR1310_SATA0_BASE			UL(0xB1000000)
 #define SPEAR1310_SATA1_BASE			UL(0xB1800000)
 #define SPEAR1310_SATA2_BASE			UL(0xB4000000)
+
+/* RAS Area Control Register */
+#define VA_SPEAR1310_RAS_CTRL_REG1	(VA_SPEAR1310_RAS_BASE + 0x4)
+
+#define SPEAR1310_GETH1_PHY_INTF_MASK	(0x7 << 4)
+#define SPEAR1310_GETH2_PHY_INTF_MASK	(0x7 << 7)
+#define SPEAR1310_GETH3_PHY_INTF_MASK	(0x7 << 10)
+#define SPEAR1310_GETH4_PHY_INTF_MASK	(0x7 << 13)
+#define SPEAR1310_PHY_RGMII_VAL		0x1
+#define SPEAR1310_PHY_RMII_VAL		0x4
+#define SPEAR1310_PHY_SMII_VAL		0x6
+
+static int spear1310_eth_phy_clk_cfg(struct platform_device *pdev)
+{
+	struct plat_stmmacenet_data *pdata = dev_get_platdata(&pdev->dev);
+	void __iomem *addr = IOMEM(VA_SPEAR1310_RAS_CTRL_REG1);
+	struct clk *clk, *phy_clk = NULL;
+	u32 tmp;
+	int ret = 0;
+	char *pclk_name[] = {
+		"ras_pll2_clk",
+		"ras_tx125_clk",
+		"ras_tx50_clk",
+		"ras_syn0_clk",
+	};
+	const char *phy_clk_name[] = {
+		"stmmacphy.0",
+		"stmmacphy.1",
+		"stmmacphy.2",
+		"stmmacphy.3",
+		"stmmacphy.4",
+	};
+
+	phy_clk = clk_get(NULL, phy_clk_name[pdata->bus_id]);
+	if (IS_ERR(phy_clk)) {
+		ret = PTR_ERR(phy_clk);
+		goto fail_get_phy_clk;
+	}
+
+	tmp = (pdata->interface == PHY_INTERFACE_MODE_RMII) ? 3 : 0;
+	clk = clk_get(NULL, pclk_name[tmp]);
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		goto fail_get_pclk;
+	}
+
+	tmp = readl(addr);
+	switch (pdata->bus_id) {
+	case 1:
+		tmp &= (~SPEAR1310_GETH1_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_PHY_SMII_VAL << 4) :
+			(SPEAR1310_PHY_RMII_VAL << 4);
+		break;
+	case 2:
+		tmp &= (~SPEAR1310_GETH2_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_PHY_SMII_VAL << 7) :
+			(SPEAR1310_PHY_RMII_VAL << 7);
+		break;
+	case 3:
+		tmp &= (~SPEAR1310_GETH3_PHY_INTF_MASK);
+		tmp |= (pdata->interface == PHY_INTERFACE_MODE_MII) ?
+			(SPEAR1310_PHY_SMII_VAL << 10) :
+			(SPEAR1310_PHY_RMII_VAL << 10);
+		break;
+	case 4:
+		tmp &= (~SPEAR1310_GETH4_PHY_INTF_MASK);
+		tmp |= SPEAR1310_PHY_RGMII_VAL << 13;
+		break;
+	default:
+		goto fail_phy_cfg;
+	}
+
+	writel(tmp, addr);
+	ret = clk_set_parent(phy_clk, clk);
+	if (IS_ERR_VALUE(ret))
+		goto fail_phy_cfg;
+
+	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
+		ret = clk_set_rate(clk, 50000000);
+		if (IS_ERR_VALUE(ret))
+			goto fail_phy_cfg;
+	}
+
+	ret = clk_prepare_enable(phy_clk);
+
+	if (!(IS_ERR_VALUE(ret)))
+		return ret;
+fail_phy_cfg:
+	clk_put(clk);
+fail_get_pclk:
+	clk_put(phy_clk);
+fail_get_phy_clk:
+	return ret;
+}
+
+/* Ethernet GETH-0 device configuration */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth0_data = {
+	.bus_id = 0,
+	.phy_addr = 5,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe = STMMAC_RX_COE_TYPE2,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.init = spear13xx_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
+/* Ethernet GETH-1 device configuration */
+static struct stmmac_mdio_bus_data mdio1_private_data = {
+	.bus_id = 1,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma1_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth1_data = {
+	.bus_id = 1,
+	.phy_addr = 1,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.dma_cfg = &dma1_private_data,
+	.rx_coe = STMMAC_RX_COE_NONE,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio1_private_data,
+	.init = spear1310_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
+/* Ethernet GETH-2 device configuration */
+static struct stmmac_mdio_bus_data mdio2_private_data = {
+	.bus_id = 2,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma2_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth2_data = {
+	.bus_id = 2,
+	.phy_addr = 2,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.dma_cfg = &dma2_private_data,
+	.rx_coe = STMMAC_RX_COE_NONE,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio2_private_data,
+	.init = spear1310_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
+/* Ethernet GETH-3 device configuration */
+static struct stmmac_mdio_bus_data mdio3_private_data = {
+	.bus_id = 3,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma3_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth3_data = {
+	.bus_id = 3,
+	.phy_addr = 3,
+	.interface = PHY_INTERFACE_MODE_RMII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.dma_cfg = &dma3_private_data,
+	.rx_coe = STMMAC_RX_COE_NONE,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio3_private_data,
+	.init = spear1310_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
+/* Ethernet GETH-4 device configuration */
+static struct stmmac_mdio_bus_data mdio4_private_data = {
+	.bus_id = 4,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma4_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth4_data = {
+	.bus_id = 4,
+	.phy_addr = 4,
+	.interface = PHY_INTERFACE_MODE_RGMII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 0,
+	.dma_cfg = &dma4_private_data,
+	.rx_coe = STMMAC_RX_COE_NONE,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio4_private_data,
+	.init = spear1310_eth_phy_clk_cfg,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
 
 /* ssp device registration */
 static struct pl022_ssp_controller ssp1_plat_data = {
@@ -42,6 +285,16 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl022", SSP_BASE, NULL, &pl022_plat_data),
 
 	OF_DEV_AUXDATA("arm,pl022", SPEAR1310_SSP1_BASE, NULL, &ssp1_plat_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR13XX_GETH_BASE, NULL,
+			&eth0_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR1310_GETH1_BASE, NULL,
+			&eth1_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR1310_GETH2_BASE, NULL,
+			&eth2_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR1310_GETH3_BASE, NULL,
+			&eth3_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR1310_GETH4_BASE, NULL,
+			&eth4_data),
 	{}
 };
 
