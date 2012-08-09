@@ -24,6 +24,7 @@
   Maintainer: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
+#include <linux/of.h>
 #include <linux/mii.h>
 #include <linux/phy.h>
 #include <linux/slab.h>
@@ -33,6 +34,8 @@
 
 #define MII_BUSY 0x00000001
 #define MII_WRITE 0x00000002
+
+u32 *mac1_bus;
 
 static int stmmac_mdio_busy_wait(void __iomem *ioaddr, unsigned int mii_addr)
 {
@@ -62,26 +65,38 @@ static int stmmac_mdio_busy_wait(void __iomem *ioaddr, unsigned int mii_addr)
  */
 static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
-
 	int data;
-	u16 regValue = (((phyaddr << 11) & (0x0000F800)) |
+	u16 regValue;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	void __iomem *ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
+
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (of_machine_is_compatible("st,spear1310") && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	ioaddr = (void __iomem *)ndev->base_addr;
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
+
+	regValue = (((phyaddr << 11) & (0x0000F800)) |
 			((phyreg << 6) & (0x000007C0)));
 	regValue |= MII_BUSY | ((priv->clk_csr & 0xF) << 2);
 
-	if (stmmac_mdio_busy_wait(priv->ioaddr, mii_address))
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
 		return -EBUSY;
 
-	writel(regValue, priv->ioaddr + mii_address);
+	writel(regValue, ioaddr + mii_address);
 
-	if (stmmac_mdio_busy_wait(priv->ioaddr, mii_address))
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
 		return -EBUSY;
 
 	/* Read the data from the MII data register */
-	data = (int)readl(priv->ioaddr + mii_data);
+	data = (int)readl(ioaddr + mii_data);
 
 	return data;
 }
@@ -97,27 +112,39 @@ static int stmmac_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 			     u16 phydata)
 {
-	struct net_device *ndev = bus->priv;
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	unsigned int mii_address = priv->hw->mii.addr;
-	unsigned int mii_data = priv->hw->mii.data;
+	struct net_device *ndev;
+	struct stmmac_priv *priv;
+	void __iomem *ioaddr;
+	unsigned int mii_address;
+	unsigned int mii_data;
+	u16 value;
 
-	u16 value =
+	ndev = bus->priv;
+	priv = netdev_priv(ndev);
+
+	if (of_machine_is_compatible("st,spear1310") && mac1_bus)
+		ndev = (struct net_device *)mac1_bus;
+
+	mii_address = priv->hw->mii.addr;
+	mii_data = priv->hw->mii.data;
+	ioaddr = (void __iomem *)ndev->base_addr;
+
+	value =
 	    (((phyaddr << 11) & (0x0000F800)) | ((phyreg << 6) & (0x000007C0)))
 	    | MII_WRITE;
 
 	value |= MII_BUSY | ((priv->clk_csr & 0xF) << 2);
 
 	/* Wait until any existing MII operation is complete */
-	if (stmmac_mdio_busy_wait(priv->ioaddr, mii_address))
+	if (stmmac_mdio_busy_wait(ioaddr, mii_address))
 		return -EBUSY;
 
 	/* Set the MII address register to write */
-	writel(phydata, priv->ioaddr + mii_data);
-	writel(value, priv->ioaddr + mii_address);
+	writel(phydata, ioaddr + mii_data);
+	writel(value, ioaddr + mii_address);
 
 	/* Wait until any existing MII operation is complete */
-	return stmmac_mdio_busy_wait(priv->ioaddr, mii_address);
+	return stmmac_mdio_busy_wait(ioaddr, mii_address);
 }
 
 /**
@@ -182,6 +209,11 @@ int stmmac_mdio_register(struct net_device *ndev)
 	new_bus->irq = irqlist;
 	new_bus->phy_mask = mdio_bus_data->phy_mask;
 	new_bus->parent = priv->device;
+
+	if (of_machine_is_compatible("st,spear1310") &&
+			(priv->plat->bus_id == 0))
+		mac1_bus = (u32 *)ndev;
+
 	err = mdiobus_register(new_bus);
 	if (err != 0) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);

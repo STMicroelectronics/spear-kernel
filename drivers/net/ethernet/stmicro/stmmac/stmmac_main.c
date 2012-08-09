@@ -41,6 +41,7 @@
 #include <linux/if_vlan.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 #include <linux/prefetch.h>
 #ifdef CONFIG_STMMAC_DEBUG_FS
 #include <linux/debugfs.h>
@@ -1870,6 +1871,7 @@ static int stmmac_hw_init(struct stmmac_priv *priv)
  * Description: this is the main probe function used to
  * call the alloc_etherdev, allocate the priv structure.
  */
+struct clk *spear1310_sys_clk;
 struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 				     struct plat_stmmacenet_data *plat_dat,
 				     void __iomem *addr)
@@ -1935,6 +1937,20 @@ struct stmmac_priv *stmmac_dvr_probe(struct device *device,
 
 	if (stmmac_clk_get(priv))
 		pr_warning("%s: warning: cannot get CSR clock\n", __func__);
+
+	/*
+	 * Following hack has been provided as a sepcial case for
+	 * spear1310_reva ethernet interfaces where mdio lines of eth0 is
+	 * shared by the rest of ethernet interfaces, hence we have to
+	 * do following in order to ensure that clock is enabled for the
+	 * shared mdio lines
+	 */
+	if (of_machine_is_compatible("st,spear1310") &&
+			(spear1310_sys_clk == NULL) &&
+			(plat_dat->bus_id == 0)) {
+		spear1310_sys_clk = priv->stmmac_clk;
+		clk_prepare_enable(spear1310_sys_clk);
+	}
 
 	/* If a specific clk_csr value is passed from the platform
 	 * this means that the CSR Clock Range selection cannot be
