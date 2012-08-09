@@ -17,6 +17,7 @@
 #include <linux/amba/pl08x.h>
 #include <linux/amba/serial.h>
 #include <linux/of_platform.h>
+#include <linux/platform_data/macb.h>
 #include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <mach/generic.h>
@@ -26,6 +27,71 @@
 #define SPEAR320_UART2_BASE		UL(0xA4000000)
 #define SPEAR320_SSP0_BASE		UL(0xA5000000)
 #define SPEAR320_SSP1_BASE		UL(0xA6000000)
+#define SPEAR320_MACB0_BASE		UL(0xAA000000)
+#define SPEAR320_MACB1_BASE		UL(0xAB000000)
+
+void spear320_macb_plat_mdio_control(struct platform_device *pdev)
+{
+	u32 tmp, mask, shift;
+	void __iomem *reg;
+	struct macb_platform_data *pdata = dev_get_platdata(&pdev->dev);
+
+	reg = SPEAR320_CONTROL_REG;
+	mask = 0x1;
+	shift = SPEAR320_MDIO_SEL_SHIFT;
+
+	tmp = readl(reg);
+	tmp &= ~(mask << shift);
+	tmp |= pdata->bus_id << shift;
+	writel(tmp, reg);
+}
+
+void spear320_macb_setup(void)
+{
+	struct clk *amem_clk;
+
+	/* Enable memory Port-1 clock */
+	amem_clk = clk_get(NULL, "amem_clk");
+	if (IS_ERR(amem_clk)) {
+		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
+		return;
+	}
+
+	if (clk_prepare_enable(amem_clk)) {
+		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
+		clk_put(amem_clk);
+		return;
+	}
+
+}
+
+/* MACB platform data for SPEAr320 HMI board*/
+static struct macb_platform_data spear320_hmi_macb_data[] = {
+	{
+		.bus_id = 0,
+		.phy_mask = 0,
+		.phy_addr = 0x1,
+		.phy_irq_pin = -1,
+		.plat_mdio_control = spear320_macb_plat_mdio_control,
+	}, {
+		.bus_id = 1,
+		.phy_mask = 0,
+		.phy_addr = 0x0,
+		.phy_irq_pin = -1,
+		.plat_mdio_control = spear320_macb_plat_mdio_control,
+	},
+};
+
+/* MACB platform data for SPEAr320 Evaluation board*/
+static struct macb_platform_data spear320_macb_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+	.phy_addr = 0x2,
+#ifdef PLGPIO_320
+	.gpio_num = PLGPIO_76,
+#endif
+	.plat_mdio_control = spear320_macb_plat_mdio_control,
+};
 
 /* DMAC platform data's slave info */
 struct pl08x_channel_data spear320_dma_info[] = {
@@ -244,8 +310,8 @@ static struct amba_pl011_data spear320_uart_data[] = {
 	},
 };
 
-/* Add SPEAr310 auxdata to pass platform data */
-static struct of_dev_auxdata spear320_auxdata_lookup[] __initdata = {
+/* Add SPEAr320 HMI auxdata to pass platform data */
+static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
@@ -258,6 +324,29 @@ static struct of_dev_auxdata spear320_auxdata_lookup[] __initdata = {
 			&spear320_uart_data[0]),
 	OF_DEV_AUXDATA("arm,pl011", SPEAR320_UART2_BASE, NULL,
 			&spear320_uart_data[1]),
+	OF_DEV_AUXDATA("st,spear320-macb", SPEAR320_MACB0_BASE, NULL,
+			&spear320_hmi_macb_data[0]),
+	OF_DEV_AUXDATA("st,spear320-macb", SPEAR320_MACB1_BASE, NULL,
+			&spear320_hmi_macb_data[1]),
+	{}
+};
+
+/* Add SPEAr320 evb auxdata to pass platform data */
+static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
+			&pl022_plat_data),
+	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
+			&pl080_plat_data),
+	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP0_BASE, NULL,
+			&spear320_ssp_data[0]),
+	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP1_BASE, NULL,
+			&spear320_ssp_data[1]),
+	OF_DEV_AUXDATA("arm,pl011", SPEAR320_UART1_BASE, NULL,
+			&spear320_uart_data[0]),
+	OF_DEV_AUXDATA("arm,pl011", SPEAR320_UART2_BASE, NULL,
+			&spear320_uart_data[1]),
+	OF_DEV_AUXDATA("st,spear320-macb", SPEAR320_MACB1_BASE, NULL,
+			&spear320_macb_data),
 	{}
 };
 
@@ -266,8 +355,16 @@ static void __init spear320_dt_init(void)
 	pl080_plat_data.slave_channels = spear320_dma_info;
 	pl080_plat_data.num_slave_channels = ARRAY_SIZE(spear320_dma_info);
 
-	of_platform_populate(NULL, of_default_bus_match_table,
-			spear320_auxdata_lookup, NULL);
+	if (of_machine_is_compatible("st,spear320-evb"))
+		of_platform_populate(NULL, of_default_bus_match_table,
+				spear320_evb_auxdata_lookup, NULL);
+	else
+		of_platform_populate(NULL, of_default_bus_match_table,
+				spear320_hmi_auxdata_lookup, NULL);
+
+	/* initialize macb related data in macb plat data */
+	spear320_macb_setup();
+
 }
 
 static const char * const spear320_dt_board_compat[] = {
