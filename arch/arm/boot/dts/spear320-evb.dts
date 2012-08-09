@@ -102,6 +102,10 @@
 			status = "okay";
 		};
 
+		macb2: eth@ab000000 {
+			status = "okay";
+		};
+
 		sdhci@70000000 {
 			power-gpio = <&gpio0 2 1>;
 			power_always_enb;
