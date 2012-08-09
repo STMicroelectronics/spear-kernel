@@ -12,4 +12,4 @@ obj-$(CONFIG_MACH_SPEAR300) += spear300.o
 obj-$(CONFIG_MACH_SPEAR310) += spear310.o
 
 # spear320 specific files
-obj-$(CONFIG_MACH_SPEAR320) += spear320.o
+obj-$(CONFIG_MACH_SPEAR320) += spear320.o gpt.o
