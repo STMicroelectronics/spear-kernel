@@ -148,7 +148,7 @@ enum access_mode {
  * this may be set to NULL
  */
 struct fsmc_nand_platform_data {
-	struct fsmc_nand_timings *nand_timings;
+	struct fsmc_nand_timings nand_timings;
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
 	unsigned int		options;

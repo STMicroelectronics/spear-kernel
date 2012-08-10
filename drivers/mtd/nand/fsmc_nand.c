@@ -415,27 +415,13 @@ static void fsmc_nand_setup(void __iomem *regs, uint32_t bank,
 {
 	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
 	uint32_t tclr, tar, thiz, thold, twait, tset;
-	struct fsmc_nand_timings *tims;
-	struct fsmc_nand_timings default_timings = {
-		.tclr	= FSMC_TCLR_1,
-		.tar	= FSMC_TAR_1,
-		.thiz	= FSMC_THIZ_1,
-		.thold	= FSMC_THOLD_4,
-		.twait	= FSMC_TWAIT_6,
-		.tset	= FSMC_TSET_0,
-	};
 
-	if (timings)
-		tims = timings;
-	else
-		tims = &default_timings;
-
-	tclr = (tims->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
-	tar = (tims->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
-	thiz = (tims->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
-	thold = (tims->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
-	twait = (tims->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
-	tset = (tims->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
+	tclr = (timings->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
+	tar = (timings->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
+	thiz = (timings->thiz & FSMC_THIZ_MASK) << FSMC_THIZ_SHIFT;
+	thold = (timings->thold & FSMC_THOLD_MASK) << FSMC_THOLD_SHIFT;
+	twait = (timings->twait & FSMC_TWAIT_MASK) << FSMC_TWAIT_SHIFT;
+	tset = (timings->tset & FSMC_TSET_MASK) << FSMC_TSET_SHIFT;
 
 	if (busw)
 		writel(value | FSMC_DEVWID_16, FSMC_NAND_REG(regs, bank, PC));
@@ -876,6 +862,14 @@ static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 					       struct device_node *np)
 {
 	struct fsmc_nand_platform_data *pdata = dev_get_platdata(&pdev->dev);
+	struct fsmc_nand_timings default_timings = {
+		.tclr	= FSMC_TCLR_1,
+		.tar	= FSMC_TAR_1,
+		.thiz	= FSMC_THIZ_1,
+		.thold	= FSMC_THOLD_4,
+		.twait	= FSMC_TWAIT_6,
+		.tset	= FSMC_TSET_0,
+	};
 	u32 val;
 
 	/* Set default NAND width to 8 bits */
@@ -893,6 +887,29 @@ static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 	if (of_get_property(np, "nand-skip-bbtscan", NULL))
 		pdata->options = NAND_SKIP_BBTSCAN;
 	of_property_read_u32(np, "maxbanks", &pdata->max_banks);
+
+	if (of_property_read_bool(np, "nand-timings-enabled")) {
+		of_property_read_u32(np, "nand-timings,tclr", &val);
+		pdata->nand_timings.tclr = (uint8_t)val;
+
+		of_property_read_u32(np, "nand-timings,tar", &val);
+		pdata->nand_timings.tar = (uint8_t)val;
+
+		of_property_read_u32(np, "nand-timings,thiz", &val);
+		pdata->nand_timings.thiz = (uint8_t)val;
+
+		of_property_read_u32(np, "nand-timings,thold", &val);
+		pdata->nand_timings.thold = (uint8_t)val;
+
+		of_property_read_u32(np, "nand-timings,twait", &val);
+		pdata->nand_timings.twait = (uint8_t)val;
+
+		of_property_read_u32(np, "nand-timings,tset", &val);
+		pdata->nand_timings.tset = (uint8_t)val;
+	} else {
+		memcpy(&pdata->nand_timings, &default_timings,
+				sizeof(default_timings));
+	}
 
 	return 0;
 }
@@ -1031,7 +1048,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	host->partitions = pdata->partitions;
 	host->nr_partitions = pdata->nr_partitions;
 	host->dev = &pdev->dev;
-	host->dev_timings = pdata->nand_timings;
+	host->dev_timings = &pdata->nand_timings;
 	host->mode = pdata->mode;
 	host->max_banks = pdata->max_banks;
 

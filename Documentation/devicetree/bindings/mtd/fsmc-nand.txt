@@ -13,6 +13,18 @@ Optional properties:
   defaults to 1 byte
 - nand-skip-bbtscan: Indicates the the BBT scanning should be skipped
 
+- nand-timings-enabled: Indicates if the timing parameters are passed
+  via DT
+- nand-timings,tclr:
+- nand-timings,tar:
+- nand-timings,thiz:
+- nand-timings,thold:
+- nand-timings,twait:
+- nand-timings,tset: All these timing parameters come from the actual
+  nand device specification. Each of this represents a number of time
+  period of hclk ie a number 4 in thold with hclk = 166MHz means that
+  thold = (1000 / 166) * 4 ns = 24.09ns
+
 Example:
 
 	fsmc: flash@d1800000 {
@@ -25,6 +37,14 @@ Example:
 		st,ale-off = <0x20000>;
 		st,cle-off = <0x10000>;
 		maxbanks = <1>;
+
+		nand-timings-enabled;
+		nand-timings,tclr = <1>;
+		nand-timings,tar = <1>;
+		nand-timings,thiz = <1>;
+		nand-timings,thold = <4>;
+		nand-timings,twait = <6>;
+		nand-timings,tset = <0>;
 
 		bank-width = <1>;
 		nand-skip-bbtscan;
