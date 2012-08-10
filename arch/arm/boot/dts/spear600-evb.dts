@@ -62,6 +62,10 @@
 			};
 		};
 
+		clcd@fc200000 {
+			status = "okay";
+		};
+
 		apb {
 			serial@d0000000 {
 				status = "okay";
