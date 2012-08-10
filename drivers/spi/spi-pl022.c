@@ -755,10 +755,10 @@ static void *next_transfer(struct pl022 *pl022)
 static void unmap_free_dma_scatter(struct pl022 *pl022)
 {
 	/* Unmap and free the SG tables */
-	dma_unmap_sg(pl022->dma_tx_channel->device->dev, pl022->sgt_tx.sgl,
-		     pl022->sgt_tx.nents, DMA_TO_DEVICE);
 	dma_unmap_sg(pl022->dma_rx_channel->device->dev, pl022->sgt_rx.sgl,
 		     pl022->sgt_rx.nents, DMA_FROM_DEVICE);
+	dma_unmap_sg(pl022->dma_tx_channel->device->dev, pl022->sgt_tx.sgl,
+		     pl022->sgt_tx.nents, DMA_TO_DEVICE);
 	sg_free_table(&pl022->sgt_rx);
 	sg_free_table(&pl022->sgt_tx);
 }
@@ -1009,15 +1009,15 @@ static int configure_dma(struct pl022 *pl022)
 			  pl022->cur_transfer->len, &pl022->sgt_tx);
 
 	/* Map DMA buffers */
-	rx_sglen = dma_map_sg(rxchan->device->dev, pl022->sgt_rx.sgl,
-			   pl022->sgt_rx.nents, DMA_FROM_DEVICE);
-	if (!rx_sglen)
-		goto err_rx_sgmap;
-
 	tx_sglen = dma_map_sg(txchan->device->dev, pl022->sgt_tx.sgl,
 			   pl022->sgt_tx.nents, DMA_TO_DEVICE);
 	if (!tx_sglen)
 		goto err_tx_sgmap;
+
+	rx_sglen = dma_map_sg(rxchan->device->dev, pl022->sgt_rx.sgl,
+			   pl022->sgt_rx.nents, DMA_FROM_DEVICE);
+	if (!rx_sglen)
+		goto err_rx_sgmap;
 
 	/* Send both scatterlists */
 	rxdesc = dmaengine_prep_slave_sg(rxchan,
@@ -1053,12 +1053,12 @@ err_txdesc:
 	dmaengine_terminate_all(txchan);
 err_rxdesc:
 	dmaengine_terminate_all(rxchan);
-	dma_unmap_sg(txchan->device->dev, pl022->sgt_tx.sgl,
+	dma_unmap_sg(txchan->device->dev, pl022->sgt_rx.sgl,
+		     pl022->sgt_rx.nents, DMA_FROM_DEVICE);
+err_rx_sgmap:
+	dma_unmap_sg(rxchan->device->dev, pl022->sgt_tx.sgl,
 		     pl022->sgt_tx.nents, DMA_TO_DEVICE);
 err_tx_sgmap:
-	dma_unmap_sg(rxchan->device->dev, pl022->sgt_rx.sgl,
-		     pl022->sgt_tx.nents, DMA_FROM_DEVICE);
-err_rx_sgmap:
 	sg_free_table(&pl022->sgt_tx);
 err_alloc_tx_sg:
 	sg_free_table(&pl022->sgt_rx);
