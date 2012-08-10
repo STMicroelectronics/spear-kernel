@@ -86,10 +86,6 @@
 			};
 		};
 
-		clcd@90000000 {
-			status = "okay";
-		};
-
 		dma@fc400000 {
 			status = "okay";
 		};
