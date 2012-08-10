@@ -354,6 +354,8 @@ static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 			&spear320_hmi_macb_data[0]),
 	OF_DEV_AUXDATA("st,spear320-macb", SPEAR320_MACB1_BASE, NULL,
 			&spear320_hmi_macb_data[1]),
+	OF_DEV_AUXDATA("arm,pl110", SPEAR320_CLCD_BASE, NULL,
+			&pl110_plat_data),
 	{}
 };
 
@@ -363,8 +365,6 @@ static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
 			&pl080_plat_data),
-	OF_DEV_AUXDATA("arm,clcd-pl110", SPEAR320_CLCD_BASE, NULL,
-			&pl110_plat_data),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP0_BASE, NULL,
 			&spear320_ssp_data[0]),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR320_SSP1_BASE, NULL,
