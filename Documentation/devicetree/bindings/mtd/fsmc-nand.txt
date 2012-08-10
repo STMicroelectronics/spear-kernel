@@ -33,6 +33,7 @@ Optional properties:
 - nand-erasesize: Pass erasesize of the connected NAND device
 - nand-writesize: Pass writesize of the connected NAND device
 - nand-oobsize: Pass oobsize of the connected NAND device
+- nand-sw-ecc: boolean indicating whether s/w ecc is supported
 
 Example:
 

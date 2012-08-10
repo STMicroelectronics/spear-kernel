@@ -179,6 +179,9 @@ struct fsmc_nand_platform_data {
 	/* priv structures for dma accesses */
 	void			*read_dma_priv;
 	void			*write_dma_priv;
+
+	/* whether s/w ecc is supported */
+	bool			sw_ecc;
 };
 
 extern int __init fsmc_nor_init(struct platform_device *pdev,
