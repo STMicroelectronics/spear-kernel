@@ -96,6 +96,14 @@
 			status = "disabled";
 		};
 
+		usbd@e1100000 {
+			compatible = "snps,designware-udc";
+			reg = <0xe1100000 0x1000 	/* udc_csr_base */
+				0xe1200000 0x1000>;	/* udc_plug_base */
+			interrupts = <24>;
+			status = "disabled";
+		};
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
