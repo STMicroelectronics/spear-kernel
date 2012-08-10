@@ -500,7 +500,7 @@ void __init spear3xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "usbd_clk", "pll3_clk", 0, PERIP1_CLK_ENB,
 			USBD_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "designware_udc");
+	clk_register_clkdev(clk, NULL, "e1100000.usbd");
 
 	/* clock derived from ahb clk */
 	clk = clk_register_fixed_factor(NULL, "ahbmult2_clk", "ahb_clk", 0, 2,
