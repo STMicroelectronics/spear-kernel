@@ -30,6 +30,10 @@ Optional properties:
 - st,rb-gpios: When the st,ready-busy is defined as "rb-gpio", a gpio
   pin number is defined in this property
 
+- nand-erasesize: Pass erasesize of the connected NAND device
+- nand-writesize: Pass writesize of the connected NAND device
+- nand-oobsize: Pass oobsize of the connected NAND device
+
 Example:
 
 	fsmc: flash@d1800000 {

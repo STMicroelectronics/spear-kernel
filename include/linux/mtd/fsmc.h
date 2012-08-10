@@ -165,6 +165,9 @@ struct fsmc_nand_platform_data {
 	unsigned int		options;
 	unsigned int		width;
 	unsigned int		max_banks;
+	uint32_t		erasesize;
+	uint32_t		writesize;
+	uint32_t		oobsize;
 
 	/* CLE, ALE offsets */
 	unsigned int		cle_off;
