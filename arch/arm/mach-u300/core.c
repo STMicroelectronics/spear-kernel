@@ -1546,6 +1546,7 @@ static struct fsmc_nand_platform_data nand_platform_data = {
 	.width = FSMC_NAND_BW8,
 	.ale_off = PLAT_NAND_ALE,
 	.cle_off = PLAT_NAND_CLE,
+	.max_banks = 1,
 };
 
 static struct platform_device nand_device = {

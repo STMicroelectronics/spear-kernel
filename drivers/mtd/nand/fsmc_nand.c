@@ -298,6 +298,7 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  *			- Word access (CPU)
  *			- None (Use driver default ie bus width specific
  *			  CPU access)
+ * @max_banks:		Maximum number of banks supported
  * @select_chip:	Select a particular bank
  *
  * @data_pa:		NAND Physical port for Data
@@ -325,6 +326,7 @@ struct fsmc_nand_data {
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
 	enum access_mode	mode;
+	uint32_t		max_banks;
 	void			(*select_chip)(uint32_t bank, uint32_t busw);
 
 	/* Virtual/Physical addresses for CPU/DMA access */
@@ -343,6 +345,7 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
 
+	host->bank = chipnr;
 	switch (chipnr) {
 	case -1:
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0 | NAND_CTRL_CHANGE);
@@ -889,6 +892,7 @@ static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "st,cle-off", &pdata->cle_off);
 	if (of_get_property(np, "nand-skip-bbtscan", NULL))
 		pdata->options = NAND_SKIP_BBTSCAN;
+	of_property_read_u32(np, "maxbanks", &pdata->max_banks);
 
 	return 0;
 }
@@ -915,7 +919,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	struct resource *res;
 	dma_cap_mask_t mask;
 	int ret = 0;
-	u32 pid;
+	u32 pid, bank;
 	int i;
 
 	if (np) {
@@ -1023,13 +1027,13 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		 AMBA_PART_BITS(pid), AMBA_MANF_BITS(pid),
 		 AMBA_REV_BITS(pid), AMBA_CONFIG_BITS(pid));
 
-	host->bank = pdata->bank;
 	host->select_chip = pdata->select_bank;
 	host->partitions = pdata->partitions;
 	host->nr_partitions = pdata->nr_partitions;
 	host->dev = &pdev->dev;
 	host->dev_timings = pdata->nand_timings;
 	host->mode = pdata->mode;
+	host->max_banks = pdata->max_banks;
 
 	if (host->mode == USE_DMA_ACCESS)
 		init_completion(&host->dma_access_complete);
@@ -1083,9 +1087,10 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		break;
 	}
 
-	fsmc_nand_setup(host->regs_va, host->bank,
-			nand->options & NAND_BUSWIDTH_16,
-			host->dev_timings);
+	for (bank = 0; bank < host->max_banks; bank++)
+		fsmc_nand_setup(host->regs_va, bank,
+				nand->options & NAND_BUSWIDTH_16,
+				host->dev_timings);
 
 	if (AMBA_REV_BITS(host->pid) >= 8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -1230,11 +1235,16 @@ static int fsmc_nand_suspend(struct device *dev)
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
+	uint32_t bank;
+
 	if (host) {
 		clk_prepare_enable(host->clk);
-		fsmc_nand_setup(host->regs_va, host->bank,
-				host->nand.options & NAND_BUSWIDTH_16,
-				host->dev_timings);
+
+		for (bank = 0; bank < host->max_banks; bank++)
+			fsmc_nand_setup(host->regs_va, bank,
+					host->nand.options & NAND_BUSWIDTH_16,
+					host->dev_timings);
+
 	}
 	return 0;
 }

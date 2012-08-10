@@ -122,6 +122,7 @@
 			st,ale-off = <0x20000>;
 			st,cle-off = <0x10000>;
 			st,mode = <2>;
+			maxbanks = <1>;
 			status = "disabled";
 		};
 

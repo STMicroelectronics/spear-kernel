@@ -6,6 +6,7 @@ Required properties:
 - reg-names: Should contain the reg names "fsmc_regs" and "nand_data"
 - st,ale-off : Chip specific offset to ALE
 - st,cle-off : Chip specific offset to CLE
+- maxbanks: Number of banks supported by SoC
 
 Optional properties:
 - bank-width : Width (in bytes) of the device.  If not present, the width
@@ -23,6 +24,7 @@ Example:
 		reg-names = "fsmc_regs", "nand_data";
 		st,ale-off = <0x20000>;
 		st,cle-off = <0x10000>;
+		maxbanks = <1>;
 
 		bank-width = <1>;
 		nand-skip-bbtscan;

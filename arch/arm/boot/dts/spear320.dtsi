@@ -53,6 +53,7 @@
 			reg-names = "fsmc_regs", "nand_data";
 			st,ale-off = <0x20000>;
 			st,cle-off = <0x10000>;
+			maxbanks = <1>;
 			status = "disabled";
 		};
 
