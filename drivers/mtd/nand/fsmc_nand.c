@@ -323,6 +323,7 @@ struct fsmc_nand_data {
 	struct dma_chan		*read_dma_chan;
 	struct dma_chan		*write_dma_chan;
 	struct completion	dma_access_complete;
+	void			*dma_buf;
 
 	/* Recieved from plat data */
 	struct fsmc_rbpin	*rbpin;
@@ -675,7 +676,8 @@ static void fsmc_read_buf_dma(struct mtd_info *mtd, uint8_t *buf, int len)
 	struct fsmc_nand_data *host;
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
-	dma_xfer(host, buf, len, DMA_FROM_DEVICE);
+	dma_xfer(host, host->dma_buf, len, DMA_FROM_DEVICE);
+	memcpy(buf, (const void *)host->dma_buf, len);
 }
 
 /*
@@ -690,7 +692,8 @@ static void fsmc_write_buf_dma(struct mtd_info *mtd, const uint8_t *buf,
 	struct fsmc_nand_data *host;
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
-	dma_xfer(host, (void *)buf, len, DMA_TO_DEVICE);
+	memcpy(host->dma_buf, buf, len);
+	dma_xfer(host, host->dma_buf, len, DMA_TO_DEVICE);
 }
 
 /*
@@ -1133,6 +1136,13 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Unable to get write dma channel\n");
 			goto err_req_write_chnl;
 		}
+
+		host->dma_buf = kmalloc(NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE,
+				GFP_KERNEL);
+		if (!host->dma_buf) {
+			dev_err(&pdev->dev, "failed to allocate dma buffer\n");
+			goto err_req_dma_buf;
+		}
 		nand->read_buf = fsmc_read_buf_dma;
 		nand->write_buf = fsmc_write_buf_dma;
 		break;
@@ -1245,6 +1255,9 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 err_probe:
 err_scan_ident:
+	if (host->mode == USE_DMA_ACCESS)
+		kfree(host->dma_buf);
+err_req_dma_buf:
 	if (host->mode == USE_DMA_ACCESS)
 		dma_release_channel(host->write_dma_chan);
 err_req_write_chnl:
