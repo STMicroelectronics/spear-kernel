@@ -25,6 +25,11 @@ Optional properties:
   period of hclk ie a number 4 in thold with hclk = 166MHz means that
   thold = (1000 / 166) * 4 ns = 24.09ns
 
+- st,ready-busy: Should contain either of "rb-gpio" or "rb-wait". When
+  this property is not defined, the default is to use rb-wait.
+- st,rb-gpios: When the st,ready-busy is defined as "rb-gpio", a gpio
+  pin number is defined in this property
+
 Example:
 
 	fsmc: flash@d1800000 {

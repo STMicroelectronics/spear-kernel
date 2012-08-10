@@ -22,6 +22,7 @@
 #include <linux/dma-direction.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/resource.h>
@@ -32,6 +33,7 @@
 #include <linux/mtd/nand_ecc.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/mtd/partitions.h>
 #include <linux/io.h>
 #include <linux/slab.h>
@@ -289,6 +291,7 @@ static struct fsmc_eccplace fsmc_ecc4_sp_place = {
  * @write_dma_chan:	DMA channel for write access to NAND
  * @dma_access_complete: Completion structure
  *
+ * @rb_pin:		Ready/Busy data
  * @dev_timings:	Timings to be programmed in controller
  * @partitions:		Partition info for a NAND Flash
  * @nr_partitions:	Total number of partition of a NAND flash
@@ -322,6 +325,7 @@ struct fsmc_nand_data {
 	struct completion	dma_access_complete;
 
 	/* Recieved from plat data */
+	struct fsmc_rbpin	*rbpin;
 	struct fsmc_nand_timings *dev_timings;
 	struct mtd_partition	*partitions;
 	unsigned int		nr_partitions;
@@ -410,11 +414,15 @@ static void fsmc_cmd_ctrl(struct mtd_info *mtd, int cmd, unsigned int ctrl)
  * This routine initializes timing parameters related to NAND memory access in
  * FSMC registers
  */
-static void fsmc_nand_setup(void __iomem *regs, uint32_t bank,
-			   uint32_t busw, struct fsmc_nand_timings *timings)
+static void fsmc_nand_setup(void __iomem *regs, uint32_t bank, uint32_t busw,
+			   struct fsmc_nand_timings *timings,
+			   struct fsmc_rbpin *rbpin)
 {
-	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE | FSMC_WAITON;
+	uint32_t value = FSMC_DEVTYPE_NAND | FSMC_ENABLE;
 	uint32_t tclr, tar, thiz, thold, twait, tset;
+
+	if (!rbpin || (rbpin->use_pin == FSMC_RB_WAIT))
+		value |= FSMC_WAITON;
 
 	tclr = (timings->tclr & FSMC_TCLR_MASK) << FSMC_TCLR_SHIFT;
 	tar = (timings->tar & FSMC_TAR_MASK) << FSMC_TAR_SHIFT;
@@ -857,6 +865,14 @@ static bool filter(struct dma_chan *chan, void *slave)
 	return true;
 }
 
+static int fsmc_dev_ready(struct mtd_info *mtd)
+{
+	struct fsmc_nand_data *host = container_of(mtd,
+					struct fsmc_nand_data, mtd);
+
+	return !!gpio_get_value(host->rbpin->gpio_pin);
+}
+
 #ifdef CONFIG_OF
 static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 					       struct device_node *np)
@@ -870,7 +886,9 @@ static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 		.twait	= FSMC_TWAIT_6,
 		.tset	= FSMC_TSET_0,
 	};
+	const char *rb;
 	u32 val;
+	enum of_gpio_flags flags;
 
 	/* Set default NAND width to 8 bits */
 	pdata->width = 8;
@@ -910,6 +928,14 @@ static int __devinit fsmc_nand_probe_config_dt(struct platform_device *pdev,
 		memcpy(&pdata->nand_timings, &default_timings,
 				sizeof(default_timings));
 	}
+
+	if (!of_property_read_string(np, "st,ready-busy", &rb) &&
+			!strcmp(rb, "rb-gpio")) {
+		pdata->rbpin.use_pin = FSMC_RB_GPIO;
+		pdata->rbpin.gpio_pin =
+			of_get_named_gpio_flags(np, "st,rb-gpios", 0, &flags);
+	} else
+		pdata->rbpin.use_pin = FSMC_RB_WAIT;
 
 	return 0;
 }
@@ -1049,6 +1075,8 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	host->nr_partitions = pdata->nr_partitions;
 	host->dev = &pdev->dev;
 	host->dev_timings = &pdata->nand_timings;
+	host->rbpin = &pdata->rbpin;
+
 	host->mode = pdata->mode;
 	host->max_banks = pdata->max_banks;
 
@@ -1073,6 +1101,18 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	nand->options = pdata->options;
 	nand->select_chip = fsmc_select_chip;
 	nand->badblockbits = 7;
+
+	if (host->rbpin->use_pin != FSMC_RB_WAIT)
+		nand->dev_ready = fsmc_dev_ready;
+
+	if (host->rbpin->use_pin == FSMC_RB_GPIO) {
+		ret = gpio_request(host->rbpin->gpio_pin, "fsmc-rb");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "gpio request fail: %d\n",
+					host->rbpin->gpio_pin);
+			goto err_gpio_req;
+		}
+	}
 
 	if (pdata->width == FSMC_NAND_BW16)
 		nand->options |= NAND_BUSWIDTH_16;
@@ -1107,7 +1147,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	for (bank = 0; bank < host->max_banks; bank++)
 		fsmc_nand_setup(host->regs_va, bank,
 				nand->options & NAND_BUSWIDTH_16,
-				host->dev_timings);
+				host->dev_timings, host->rbpin);
 
 	if (AMBA_REV_BITS(host->pid) >= 8) {
 		nand->ecc.read_page = fsmc_read_page_hwecc;
@@ -1211,6 +1251,9 @@ err_req_write_chnl:
 	if (host->mode == USE_DMA_ACCESS)
 		dma_release_channel(host->read_dma_chan);
 err_req_read_chnl:
+	if (host->rbpin->use_pin == FSMC_RB_GPIO)
+		gpio_free(host->rbpin->gpio_pin);
+err_gpio_req:
 	clk_disable_unprepare(host->clk);
 err_clk_prepare_enable:
 	clk_put(host->clk);
@@ -1260,8 +1303,7 @@ static int fsmc_nand_resume(struct device *dev)
 		for (bank = 0; bank < host->max_banks; bank++)
 			fsmc_nand_setup(host->regs_va, bank,
 					host->nand.options & NAND_BUSWIDTH_16,
-					host->dev_timings);
-
+					host->dev_timings, host->rbpin);
 	}
 	return 0;
 }
