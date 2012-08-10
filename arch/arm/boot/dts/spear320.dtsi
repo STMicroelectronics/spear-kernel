@@ -36,7 +36,7 @@
 		};
 
 		clcd@90000000 {
-			compatible = "arm,clcd-pl110", "arm,primecell";
+			compatible = "arm,pl110", "arm,primecell";
 			reg = <0x90000000 0x1000>;
 			interrupts = <8>;
 			interrupt-parent = <&shirq>;
