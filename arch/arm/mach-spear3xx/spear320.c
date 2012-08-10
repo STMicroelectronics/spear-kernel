@@ -18,6 +18,8 @@
 #include <linux/amba/serial.h>
 #include <linux/of_platform.h>
 #include <linux/platform_data/macb.h>
+#include <linux/usb/ch9.h>
+#include <plat/udc.h>
 #include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <mach/generic.h>
@@ -336,6 +338,38 @@ static struct clcd_panel et057010_640x480 = {
 	.bpp = 32,
 };
 
+/* usbd plat data */
+#define EP(idx, nam, size, maxpkt, address)	\
+	[idx] = {				\
+		.name		= nam,		\
+		.fifo_size	= size,		\
+		.maxpacket	= maxpkt,	\
+		.addr		= address,	\
+	}
+
+struct udc_ep_data udc_ep[] = {
+	EP(0, "ep0-ctrl", 64/4 , 64 , 0),
+	EP(1, "ep1in"   , 512/4, 512, USB_DIR_IN  | 1),
+	EP(2, "ep2out"  , 512/4, 512, USB_DIR_OUT | 2),
+	EP(3, "ep3in"   , 512/4, 512, USB_DIR_IN  | 3),
+	EP(4, "ep4out"  , 512/4, 512, USB_DIR_OUT | 4),
+	EP(5, "ep5in"   , 512/4, 512, USB_DIR_IN  | 5),
+	EP(6, "ep6out"  , 512/4, 512, USB_DIR_OUT | 6),
+	EP(7, "ep7in"   , 512/4, 512, USB_DIR_IN  | 7),
+	EP(8, "ep8out"  , 512/4, 512, USB_DIR_OUT | 8),
+	EP(9, "ep9in"   , 512/4, 512, USB_DIR_IN  | 9),
+	EP(10, "ep10out"   , 512/4, 512, USB_DIR_OUT | 10),
+	EP(11, "ep11in"   , 512/4, 512, USB_DIR_IN  | 11),
+	EP(12, "ep12out"   , 512/4, 512, USB_DIR_OUT | 12),
+	EP(13, "ep13in"   , 512/4, 512, USB_DIR_IN  | 13),
+	EP(14, "ep14out"   , 512/4, 512, USB_DIR_OUT | 14),
+	EP(15, "ep15in"   , 512/4, 512, USB_DIR_IN  | 15),
+};
+
+struct udc_platform_data udc_plat_data = {
+	.num_ep = 16,
+	.ep = &udc_ep[0],
+};
 /* Add SPEAr320 HMI auxdata to pass platform data */
 static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
@@ -375,6 +409,8 @@ static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
 			&spear320_uart_data[1]),
 	OF_DEV_AUXDATA("st,spear320-macb", SPEAR320_MACB1_BASE, NULL,
 			&spear320_macb_data),
+	OF_DEV_AUXDATA("snps,designware-udc", SPEAR3XX_USBD_CSR_BASE, NULL,
+			&udc_plat_data),
 	{}
 };
 
