@@ -237,6 +237,7 @@
 			};
 
 			i2c0: i2c@e0280000 {
+			       stop-control;
 			       status = "okay";
 			};
 

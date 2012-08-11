@@ -114,6 +114,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5cd00000 0x1000>;
 				interrupts = <0 87 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -123,6 +124,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5ce00000 0x1000>;
 				interrupts = <0 88 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -132,6 +134,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5cf00000 0x1000>;
 				interrupts = <0 89 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -141,6 +144,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5d000000 0x1000>;
 				interrupts = <0 90 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -150,6 +154,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5d100000 0x1000>;
 				interrupts = <0 91 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -159,6 +164,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5d200000 0x1000>;
 				interrupts = <0 92 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
@@ -168,6 +174,7 @@
 				compatible = "snps,designware-i2c";
 				reg = <0x5d300000 0x1000>;
 				interrupts = <0 93 0x4>;
+				stop-control;
 				status = "disabled";
 			};
 
