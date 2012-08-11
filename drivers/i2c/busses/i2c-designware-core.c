@@ -265,8 +265,6 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 
 	input_clock_khz = dev->get_clk_rate_khz(dev);
 
-	dev->version = readl(dev->base + DW_IC_COMP_VERSION);
-
 	reg = dw_readl(dev, DW_IC_COMP_TYPE);
 	if (reg == ___constant_swab32(DW_IC_COMP_TYPE_VALUE)) {
 		/* Configure register endianess access */
@@ -435,16 +433,17 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 				temp = 0x100;
 
 				/*
-				 * IP version > 0x312A has a facility to control
-				 * stop bit geneartion. This will control with
-				 * the help of 9th bit of command reg. On
-				 * setting this bit, STOP is issued,
+				 * Controller configured with
+				 * 'IC_EMPTYFIFO_HOLD_MASTER_EN' option can
+				 * control stop bit geneartion. This will
+				 * control with the help of 9th bit of command
+				 * reg. On setting this bit, STOP is issued,
 				 * regardless of whether or not the Tx FIFO is
 				 * empty.
 				 */
 				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
 						buf_len == 1 &&
-						dev->version > 0x312A)
+						dev->stop_control)
 					temp |= 0x200;
 
 				writew(temp, dev->base + DW_IC_DATA_CMD);
@@ -454,7 +453,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 
 				if (dev->msg_write_idx == (dev->msgs_num - 1) &&
 						buf_len == 1 &&
-						dev->version > 0x312A)
+						dev->stop_control)
 					temp |= 0x200;
 
 				writel(temp, dev->base + DW_IC_DATA_CMD);

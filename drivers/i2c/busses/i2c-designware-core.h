@@ -89,7 +89,7 @@ struct dw_i2c_dev {
 	u32			master_cfg;
 	unsigned int		tx_fifo_depth;
 	unsigned int		rx_fifo_depth;
-	u32                     version;
+	bool			stop_control;
 };
 
 #define ACCESS_SWAP		0x00000001

@@ -53,6 +53,7 @@ static u32 i2c_dw_get_clk_rate_khz(struct dw_i2c_dev *dev)
 
 static int __devinit dw_i2c_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct dw_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *ioarea;
@@ -145,7 +146,12 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 			sizeof(adap->name));
 	adap->algo = &i2c_dw_algo;
 	adap->dev.parent = &pdev->dev;
-	adap->dev.of_node = pdev->dev.of_node;
+	adap->dev.of_node = np;
+
+	if (np) {
+		if (of_property_read_bool(np, "stop-control"))
+			dev->stop_control = true;
+	}
 
 	adap->nr = pdev->id;
 	if (pdata) {
