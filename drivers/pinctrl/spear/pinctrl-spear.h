@@ -12,9 +12,11 @@
 #ifndef __PINMUX_SPEAR_H__
 #define __PINMUX_SPEAR_H__
 
+#include <linux/gpio.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/types.h>
 
+extern struct gpio_chip *spear_plgpio_chip;
 struct platform_device;
 struct device;
 

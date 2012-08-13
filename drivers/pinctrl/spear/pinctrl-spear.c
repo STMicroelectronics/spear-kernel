@@ -368,6 +368,10 @@ int __devinit spear_pinctrl_probe(struct platform_device *pdev,
 	if (!machdata)
 		return -ENODEV;
 
+	/* plgpio chip should be up by now */
+	if (!spear_plgpio_chip)
+		return -EPROBE_DEFER;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
 		return -EINVAL;
@@ -422,6 +426,10 @@ int __devinit spear_pinctrl_probe(struct platform_device *pdev,
 				  * as presently no clean option exists
 				  */
 #endif
+	/* Following is a hack to take reference of gpio_chip in a global
+	 * variable to find out gpio base.
+	 */
+	machdata->ranges->base = spear_plgpio_chip->base;
 	pinctrl_add_gpio_range(pmx->pctl, machdata->ranges);
 
 	return 0;
