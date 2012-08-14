@@ -15,6 +15,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/irq.h>
+#include <linux/irqdomain.h>
 #include <linux/bitops.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
@@ -216,8 +217,30 @@ static void __init pl061_init_gc(struct pl061_gpio *chip, int irq_base)
 			       IRQ_GC_INIT_NESTED_LOCK, IRQ_NOREQUEST, 0);
 }
 
+static int pl061_allocate_irqs(struct amba_device *dev)
+{
+	int irq_base;
+
+	irq_base = irq_alloc_descs(-1, 0, PL061_GPIO_NR, 0);
+	if (IS_ERR_VALUE(irq_base)) {
+		/* we would not support irq for gpio */
+		dev_warn(&dev->dev, "couldn't allocate irq base\n");
+		return -ENXIO;
+	}
+
+	if(!irq_domain_add_legacy(&dev->dev.of_node, PL061_GPIO_NR,
+			irq_base, 0, &irq_domain_simple_ops, NULL)) {
+		dev_err(&dev->dev, "irq domain init failed\n");
+		irq_free_descs(irq_base, PL061_GPIO_NR);
+		return -ENXIO;
+	}
+
+	return irq_base;
+}
+
 static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 {
+	struct device_node *np = dev->dev.of_node;
 	struct pl061_platform_data *pdata;
 	struct pl061_gpio *chip;
 	int ret, irq, i;
@@ -232,7 +255,7 @@ static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 		chip->irq_base = pdata->irq_base;
 	} else if (dev->dev.of_node) {
 		chip->gc.base = -1;
-		chip->irq_base = 0;
+		chip->irq_base = pl061_allocate_irqs(dev);
 	} else {
 		ret = -ENODEV;
 		goto free_mem;
