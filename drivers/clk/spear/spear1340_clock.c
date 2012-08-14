@@ -921,7 +921,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "plgpio_clk", "plgpio_mclk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_PLGPIO_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "plgpio");
+	clk_register_clkdev(clk, NULL, "e2800000.gpio");
 
 	clk = clk_register_gate(NULL, "video_dec_clk", "video_dec_mclk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_VIDEO_DEC_CLK_ENB,
