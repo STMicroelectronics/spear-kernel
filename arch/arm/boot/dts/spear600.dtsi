@@ -147,6 +147,8 @@
 				reg = <0xf0100000 0x1000>;
 				interrupt-parent = <&vic0>;
 				interrupts = <18>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
 			};
 
 			/* basic GPIO */
@@ -157,6 +159,8 @@
 				reg = <0xfc980000 0x1000>;
 				interrupt-parent = <&vic1>;
 				interrupts = <19>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
 			};
 
 			/* appl GPIO */
@@ -167,6 +171,8 @@
 				reg = <0xd8100000 0x1000>;
 				interrupt-parent = <&vic1>;
 				interrupts = <4>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
 			};
 
 			i2c@d0200000 {
