@@ -16,4 +16,6 @@
 
 #include <plat/gpio.h>
 
+#define ARCH_NR_GPIOS		300
+
 #endif /* __MACH_GPIO_H */
