@@ -14,7 +14,6 @@
 #ifndef __MACH_IRQS_H
 #define __MACH_IRQS_H
 
-#define IRQ_GIC_END			160
-#define NR_IRQS				IRQ_GIC_END
+#define NR_IRQS				512
 
 #endif /* __MACH_IRQS_H */
