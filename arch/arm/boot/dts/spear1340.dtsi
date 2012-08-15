@@ -88,11 +88,6 @@
 			status = "disable";
 		};
 
-		gpio-keys {
-			compatible = "st,gpio-keys";
-			status = "disable";
-		};
-
 		cam0@d02000000 {
 			compatible = "st,camif";
 			reg = <0xd0200000 0x1000>;
