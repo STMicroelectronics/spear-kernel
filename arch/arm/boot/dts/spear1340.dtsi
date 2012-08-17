@@ -30,11 +30,6 @@
 			status = "disabled";
 		};
 
-		pinmux@e0700000 {
-			compatible = "st,spear1340-pinmux";
-			reg = <0xe0700000 0x1000>;
-		};
-
 		spi1: spi@5d400000 {
 			compatible = "arm,pl022", "arm,primecell";
 			reg = <0x5d400000 0x1000>;
