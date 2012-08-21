@@ -420,6 +420,7 @@
 						 0x08080052 >;
 			       autorepeat;
 			       st,mode = <0>;
+			       suspended_rate = <2000000>;
 			       status = "okay";
 			};
 
