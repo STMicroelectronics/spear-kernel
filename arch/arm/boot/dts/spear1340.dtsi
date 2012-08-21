@@ -122,16 +122,16 @@
 			status = "disabled";
 		};
 
-		video-dec@ebc000000 {
+		video-dec@ebd000000 {
 			compatible = "st,video-dec";
-			reg = <0xebc00000 0x1000>;
+			reg = <0xebd00000 0x1000>;
 			interrupts = <0 81 0x4>;
 			status = "disabled";
 		};
 
-		video-enc@ebd000000 {
+		video-enc@ebc000000 {
 			compatible = "st,video-enc";
-			reg = <0xebd00000 0x1000>;
+			reg = <0xebc00000 0x1000>;
 			interrupts = <0 82 0x4>;
 			status = "disabled";
 		};
