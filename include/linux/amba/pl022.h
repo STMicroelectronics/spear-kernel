@@ -243,6 +243,7 @@ struct dma_chan;
  *     indicates no delay and the device will be suspended immediately.
  * @rt: indicates the controller should run the message pump with realtime
  *     priority to minimise the transfer latency on the bus.
+ * @chipselects: list of <num_chipselects> chip select gpios
  */
 struct pl022_ssp_controller {
 	u16 bus_id;
@@ -253,6 +254,7 @@ struct pl022_ssp_controller {
 	void *dma_tx_param;
 	int autosuspend_delay;
 	bool rt;
+	int *chipselects;
 };
 
 /**
