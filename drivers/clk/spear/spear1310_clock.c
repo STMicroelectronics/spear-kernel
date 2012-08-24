@@ -406,7 +406,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "rtc-spear", "osc_32k_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_RTC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "fc900000.rtc");
+	clk_register_clkdev(clk, NULL, "e0580000.rtc");
 
 	/* clock derived from 24 or 25 MHz osc clk */
 	/* vco-pll */
