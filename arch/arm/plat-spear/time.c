@@ -22,6 +22,7 @@
 #include <linux/of_address.h>
 #include <linux/time.h>
 #include <linux/irq.h>
+#include <asm/sched_clock.h>
 #include <asm/mach/time.h>
 #include <mach/generic.h>
 
@@ -65,12 +66,51 @@
 
 static __iomem void *gpt_base;
 static struct clk *gpt_clk;
+static u16 gpt_ctrl_reg;
 
 static void clockevent_set_mode(enum clock_event_mode mode,
 				struct clock_event_device *clk_event_dev);
 static int clockevent_next_event(unsigned long evt,
 				 struct clock_event_device *clk_event_dev);
 
+static cycle_t clocksource_read_cycles(struct clocksource *cs)
+{
+	return (cycle_t) readw_relaxed(gpt_base + COUNT(CLKSRC));
+}
+
+static void spear_clocksource_suspend(struct clocksource *cs)
+{
+	/* latch the control register */
+	gpt_ctrl_reg = readw(gpt_base + CR(CLKSRC));
+	gpt_ctrl_reg &= ~CTRL_ENABLE ;
+	/* Stop the timer */
+	writew(gpt_ctrl_reg, gpt_base + CR(CLKSRC));
+}
+
+static void spear_clocksource_resume(struct clocksource *cs)
+{
+	writew(0xffff, gpt_base + LOAD(CLKSRC));
+	gpt_ctrl_reg |= CTRL_ENABLE;
+	/* Restore the control register and start the timer */
+	writew(gpt_ctrl_reg, gpt_base + CR(CLKSRC));
+
+}
+
+static u32 notrace spear_read_sched_clock(void)
+{
+	return (u32)(clocksource_read_cycles(NULL) & 0xFFFFFFFF);
+}
+
+static struct clocksource clksrc = {
+	.name = "tmr1",
+	.rating = 200,
+	.read = clocksource_read_cycles,
+	.mask = CLOCKSOURCE_MASK(16),
+	.flags = CLOCK_SOURCE_IS_CONTINUOUS,
+	.suspend = spear_clocksource_suspend,
+	.resume = spear_clocksource_resume,
+
+};
 static void spear_clocksource_init(void)
 {
 	u32 tick_rate;
@@ -91,8 +131,10 @@ static void spear_clocksource_init(void)
 	writew(val, gpt_base + CR(CLKSRC));
 
 	/* register the clocksource */
-	clocksource_mmio_init(gpt_base + COUNT(CLKSRC), "tmr1", tick_rate,
-		200, 16, clocksource_mmio_readw_up);
+	if (clocksource_register_hz(&clksrc, tick_rate))
+		pr_err("clock source register failed\n");
+
+	setup_sched_clock(spear_read_sched_clock, 16, tick_rate);
 }
 
 static struct clock_event_device clkevt = {
