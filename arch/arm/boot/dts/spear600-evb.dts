@@ -94,6 +94,10 @@
 				pinctrl-0 = <>;
 			};
 
+			rtc@fc900000 {
+			       status = "okay";
+			};
+
 			i2c@d0200000 {
 				clock-frequency = <400000>;
 				status = "okay";
