@@ -17,6 +17,7 @@
 #include <linux/clk.h>
 #include <linux/dw_dmac.h>
 #include <linux/err.h>
+#include <linux/irq.h>
 #include <linux/of_irq.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
@@ -246,6 +247,11 @@ void __init spear13xx_map_io(void)
 	iotable_init(spear13xx_io_desc, ARRAY_SIZE(spear13xx_io_desc));
 }
 
+static int spear13xx_set_wake(struct irq_data *d, unsigned int on)
+{
+	return 0;
+}
+
 static void __init spear13xx_clk_init(void)
 {
 	if (of_machine_is_compatible("st,spear1310"))
@@ -299,5 +305,6 @@ static const struct of_device_id gic_of_match[] __initconst = {
 
 void __init spear13xx_dt_init_irq(void)
 {
+	gic_arch_extn.irq_set_wake = spear13xx_set_wake;
 	of_irq_init(gic_of_match);
 }
