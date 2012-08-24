@@ -220,6 +220,7 @@ static void __init pl061_init_gc(struct pl061_gpio *chip, int irq_base)
 	chip->irq_gc = irq_alloc_generic_chip("gpio-pl061", 1, irq_base,
 					      chip->base, handle_simple_irq);
 	chip->irq_gc->private = chip;
+	chip->irq_gc->wake_enabled = IRQ_MSK(PL061_GPIO_NR);
 
 	ct = chip->irq_gc->chip_types;
 	ct->chip.irq_mask = irq_gc_mask_clr_bit;
