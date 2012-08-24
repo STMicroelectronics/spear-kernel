@@ -48,8 +48,10 @@ static inline void spear1310_clk_init(void) {}
 #ifdef CONFIG_MACH_SPEAR1340
 void __init spear1340_clk_init(void);
 int spear1340_otg_phy_init(void);
+int __init spear1340_sys_clk_init(void);
 #else
 static inline void spear1340_clk_init(void) {}
+static inline int spear1340_sys_clk_init(void) {}
 #endif
 
 #endif /* __MACH_GENERIC_H */

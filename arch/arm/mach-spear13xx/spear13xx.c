@@ -250,8 +250,10 @@ static void __init spear13xx_clk_init(void)
 {
 	if (of_machine_is_compatible("st,spear1310"))
 		spear1310_clk_init();
-	else if (of_machine_is_compatible("st,spear1340"))
+	else if (of_machine_is_compatible("st,spear1340")) {
 		spear1340_clk_init();
+		spear1340_sys_clk_init();
+	}
 	else
 		pr_err("%s: Unknown machine\n", __func__);
 }
