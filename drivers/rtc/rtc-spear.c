@@ -383,7 +383,7 @@ static int __devinit spear_rtc_probe(struct platform_device *pdev)
 		goto err_kfree;
 	}
 
-	status = clk_enable(config->clk);
+	status = clk_prepare_enable(config->clk);
 	if (status < 0)
 		goto err_clk_put;
 
@@ -432,7 +432,7 @@ err_clear_platdata:
 err_iounmap:
 	iounmap(config->ioaddr);
 err_disable_clock:
-	clk_disable(config->clk);
+	clk_disable_unprepare(config->clk);
 err_clk_put:
 	clk_put(config->clk);
 err_kfree:
@@ -455,7 +455,7 @@ static int __devexit spear_rtc_remove(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	if (irq)
 		free_irq(irq, pdev);
-	clk_disable(config->clk);
+	clk_disable_unprepare(config->clk);
 	clk_put(config->clk);
 	iounmap(config->ioaddr);
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -481,7 +481,7 @@ static int spear_rtc_suspend(struct platform_device *pdev, pm_message_t state)
 			config->irq_wake = 1;
 	} else {
 		spear_rtc_disable_interrupt(config);
-		clk_disable(config->clk);
+		clk_disable_unprepare(config->clk);
 	}
 
 	return 0;
@@ -500,7 +500,7 @@ static int spear_rtc_resume(struct platform_device *pdev)
 			config->irq_wake = 0;
 		}
 	} else {
-		clk_enable(config->clk);
+		clk_prepare_enable(config->clk);
 		spear_rtc_enable_interrupt(config);
 	}
 
@@ -517,7 +517,7 @@ static void spear_rtc_shutdown(struct platform_device *pdev)
 	struct spear_rtc_config *config = platform_get_drvdata(pdev);
 
 	spear_rtc_disable_interrupt(config);
-	clk_disable(config->clk);
+	clk_disable_unprepare(config->clk);
 }
 
 #ifdef CONFIG_OF
