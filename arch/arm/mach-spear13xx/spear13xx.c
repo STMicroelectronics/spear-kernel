@@ -18,6 +18,7 @@
 #include <linux/dw_dmac.h>
 #include <linux/err.h>
 #include <linux/irq.h>
+#include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
@@ -205,7 +206,10 @@ void __init spear13xx_l2x0_init(void)
 	 */
 	writel_relaxed(0x221, VA_L2CC_BASE + L2X0_TAG_LATENCY_CTRL);
 	writel_relaxed(0x441, VA_L2CC_BASE + L2X0_DATA_LATENCY_CTRL);
-	l2x0_init(VA_L2CC_BASE, 0x70A60001, 0xfe00ffff);
+	if (of_have_populated_dt())
+		l2x0_of_init(0x70A60001, 0xfe00ffff);
+	else
+		l2x0_init(VA_L2CC_BASE, 0x70A60001, 0xfe00ffff);
 #endif
 }
 
