@@ -64,61 +64,77 @@
 
 #define to_clk_vco(_hw) container_of(_hw, struct clk_vco, hw)
 #define to_clk_pll(_hw) container_of(_hw, struct clk_pll, hw)
+static inline unsigned long vco_calc_rate(struct clk_hw *hw,
+		unsigned long parent_rate, int index);
 
-/* Calculates pll clk rate for specific value of mode, m, n and p */
-static unsigned long pll_calc_rate(struct pll_rate_tbl *rtbl,
-		unsigned long prate, int index, unsigned long *pll_rate)
-{
-	unsigned long rate = prate;
-	unsigned int mode;
-
-	mode = rtbl[index].mode ? 256 : 1;
-	rate = (((2 * rate / 10000) * rtbl[index].m) / (mode * rtbl[index].n));
-
-	if (pll_rate)
-		*pll_rate = (rate / (1 << rtbl[index].p)) * 10000;
-
-	return rate * 10000;
-}
-
-static long clk_pll_round_rate_index(struct clk_hw *hw, unsigned long drate,
-				unsigned long *prate, int *index)
+static inline unsigned long pll_calc_rate(struct clk_hw *hw,
+		unsigned long parent_rate, int index)
 {
 	struct clk_pll *pll = to_clk_pll(hw);
-	unsigned long prev_rate, vco_prev_rate, rate = 0;
-	unsigned long vco_parent_rate =
-		__clk_get_rate(__clk_get_parent(__clk_get_parent(hw->clk)));
 
-	if (!prate) {
-		pr_err("%s: prate is must for pll clk\n", __func__);
-		return -EINVAL;
-	}
-
-	for (*index = 0; *index < pll->vco->rtbl_cnt; (*index)++) {
-		prev_rate = rate;
-		vco_prev_rate = *prate;
-		*prate = pll_calc_rate(pll->vco->rtbl, vco_parent_rate, *index,
-				&rate);
-		if (drate < rate) {
-			/* previous clock was best */
-			if (*index) {
-				rate = prev_rate;
-				*prate = vco_prev_rate;
-				(*index)--;
-			}
-			break;
-		}
-	}
-
-	return rate;
+	return (parent_rate / (1 << pll->rtbl[index].p));
 }
 
 static long clk_pll_round_rate(struct clk_hw *hw, unsigned long drate,
-				unsigned long *prate)
+				unsigned long *parent_rate)
 {
-	int unused;
+	struct clk_pll *pll = to_clk_pll(hw);
+	struct clk_vco *vco = pll->vco;
+	unsigned long prate = *parent_rate;
+	unsigned long rate = 0;
+	unsigned long vco_parent_rate;
+	int i, unused;
+	struct {
+		unsigned long desired_prate;
+		unsigned long rate;
+	} *clk_table;
 
-	return clk_pll_round_rate_index(hw, drate, prate, &unused);
+	rate = clk_round_rate_index(hw, drate, prate, pll_calc_rate,
+			pll->rtbl_cnt, &unused);
+
+	if (rate == drate)
+		return rate;
+
+	vco_parent_rate =
+		__clk_get_rate(__clk_get_parent(__clk_get_parent(hw->clk)));
+
+	clk_table = kzalloc(sizeof(*clk_table) * vco->rtbl_cnt, GFP_KERNEL);
+	if (!clk_table) {
+		pr_err("not able to allocate clk table\n");
+		return -ENOMEM;
+	}
+
+	/* iterate over each vco output to see if it can provide the
+	 * required pll clk
+	 */
+	for (i = 0; i < vco->rtbl_cnt; i++) {
+		prate = vco_calc_rate(&vco->hw, vco_parent_rate, i);
+		rate = clk_round_rate_index(hw, drate, prate,
+				pll_calc_rate, pll->rtbl_cnt, &unused);
+		if (rate == drate)
+			break;
+
+		/* store the outcomes to be parsed later for best clock */
+		clk_table[i].desired_prate = prate;
+		clk_table[i].rate = rate;
+	}
+
+	if (rate == drate) {
+		*parent_rate = prate;
+		goto out;
+	}
+
+	rate = 0;
+	for (i = 0; i < vco->rtbl_cnt; i++) {
+		if ((drate - clk_table[i].rate) < (drate - rate)) {
+			rate = clk_table[i].rate;
+			*parent_rate = clk_table[i].desired_prate;
+		}
+	}
+
+out:
+	kfree(clk_table);
+	return rate;
 }
 
 static unsigned long clk_pll_recalc_rate(struct clk_hw *hw, unsigned long
@@ -142,14 +158,15 @@ static unsigned long clk_pll_recalc_rate(struct clk_hw *hw, unsigned long
 }
 
 static int clk_pll_set_rate(struct clk_hw *hw, unsigned long drate,
-				unsigned long prate)
+				unsigned long parent_rate)
 {
 	struct clk_pll *pll = to_clk_pll(hw);
-	struct pll_rate_tbl *rtbl = pll->vco->rtbl;
+	struct pll_rate_tbl *rtbl = pll->rtbl;
 	unsigned long flags = 0, val;
-	int i;
+	int i = 0;
 
-	clk_pll_round_rate_index(hw, drate, NULL, &i);
+	clk_round_rate_index(hw, drate, parent_rate, pll_calc_rate,
+			pll->rtbl_cnt, &i);
 
 	if (pll->vco->lock)
 		spin_lock_irqsave(pll->vco->lock, flags);
@@ -172,11 +189,17 @@ static struct clk_ops clk_pll_ops = {
 };
 
 static inline unsigned long vco_calc_rate(struct clk_hw *hw,
-		unsigned long prate, int index)
+		unsigned long parent_rate, int index)
 {
 	struct clk_vco *vco = to_clk_vco(hw);
+	unsigned long rate;
+	unsigned int mode;
 
-	return pll_calc_rate(vco->rtbl, prate, index, NULL);
+	mode = vco->rtbl[index].mode ? 256 : 1;
+	rate = (((2 * parent_rate / 10000) * vco->rtbl[index].m) /
+			(mode * vco->rtbl[index].n));
+
+	return rate * 10000;
 }
 
 static long clk_vco_round_rate(struct clk_hw *hw, unsigned long drate,
@@ -231,13 +254,12 @@ static int clk_vco_set_rate(struct clk_hw *hw, unsigned long drate,
 				unsigned long prate)
 {
 	struct clk_vco *vco = to_clk_vco(hw);
-	struct pll_rate_tbl *rtbl = vco->rtbl;
+	struct vco_rate_tbl *rtbl = vco->rtbl;
 	unsigned long flags = 0, val;
 	int i;
 
-	clk_round_rate_index(hw, drate, prate, vco_calc_rate, vco->rtbl_cnt,
-			&i);
-
+	clk_round_rate_index(hw, drate, prate, vco_calc_rate,
+			vco->rtbl_cnt, &i);
 	if (vco->lock)
 		spin_lock_irqsave(vco->lock, flags);
 
@@ -275,7 +297,8 @@ static struct clk_ops clk_vco_ops = {
 struct clk *clk_register_vco_pll(const char *vco_name, const char *pll_name,
 		const char *vco_gate_name, const char *parent_name,
 		unsigned long flags, void __iomem *mode_reg, void __iomem
-		*cfg_reg, struct pll_rate_tbl *rtbl, u8 rtbl_cnt,
+		*cfg_reg, struct vco_rate_tbl *vco_rtbl, u8 vco_rtbl_cnt,
+		struct pll_rate_tbl *pll_rtbl, u8 pll_rtbl_cnt,
 		spinlock_t *lock, struct clk **pll_clk,
 		struct clk **vco_gate_clk)
 {
@@ -286,7 +309,8 @@ struct clk *clk_register_vco_pll(const char *vco_name, const char *pll_name,
 	const char **vco_parent_name;
 
 	if (!vco_name || !pll_name || !parent_name || !mode_reg || !cfg_reg ||
-			!rtbl || !rtbl_cnt) {
+			!vco_rtbl || !vco_rtbl_cnt ||
+			!pll_rtbl || !pll_rtbl_cnt) {
 		pr_err("Invalid arguments passed");
 		return ERR_PTR(-EINVAL);
 	}
@@ -306,12 +330,14 @@ struct clk *clk_register_vco_pll(const char *vco_name, const char *pll_name,
 	/* struct clk_vco assignments */
 	vco->mode_reg = mode_reg;
 	vco->cfg_reg = cfg_reg;
-	vco->rtbl = rtbl;
-	vco->rtbl_cnt = rtbl_cnt;
+	vco->rtbl = vco_rtbl;
+	vco->rtbl_cnt = vco_rtbl_cnt;
 	vco->lock = lock;
 	vco->hw.init = &vco_init;
 
 	pll->vco = vco;
+	pll->rtbl = pll_rtbl;
+	pll->rtbl_cnt = pll_rtbl_cnt;
 	pll->hw.init = &pll_init;
 
 	if (vco_gate_name) {

@@ -98,10 +98,18 @@ static DEFINE_SPINLOCK(_lock);
 #define GEN3_CLK_SYNT			(MISC_BASE + 0x078)
 
 /* pll rate configuration table, in ascending order of rates */
+static struct vco_rate_tbl vco_rtbl[] = {
+	/* parent clk (osc) = 24 MHz
+	 * vco o/p = parent (24) * 2 * m / n
+	 */
+	{.mode = 0, .m = 0x53, .n = 0x0C}, /* vco 332 */
+	{.mode = 0, .m = 0x85, .n = 0x0C}, /* vco 532 */
+	{.mode = 0, .m = 0xA6, .n = 0x0C}, /* vco 664 */
+};
 static struct pll_rate_tbl pll_rtbl[] = {
-	{.mode = 0, .m = 0x53, .n = 0x0C, .p = 0x1}, /* vco 332 & pll 166 MHz */
-	{.mode = 0, .m = 0x85, .n = 0x0C, .p = 0x1}, /* vco 532 & pll 266 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x0C, .p = 0x1}, /* vco 664 & pll 332 MHz */
+	/* o/p clk = parent clk (vco) / 2^p */
+	{p = 0x1},
+	{p = 0x0},
 };
 
 /* aux rate configuration table, in ascending order of rates */
@@ -376,14 +384,16 @@ void __init spear3xx_clk_init(void)
 	clk_register_clkdev(clk, NULL, "fc880000.wdt");
 
 	clk = clk_register_vco_pll("vco1_clk", "pll1_clk", NULL,
-			"osc_24m_clk", 0, PLL1_CTR, PLL1_FRQ, pll_rtbl,
-			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
+			"osc_24m_clk", 0, PLL1_CTR, PLL1_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl, ARRAY_SIZE(pll_rtbl),
+			&_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco1_clk", NULL);
 	clk_register_clkdev(clk1, "pll1_clk", NULL);
 
 	clk = clk_register_vco_pll("vco2_clk", "pll2_clk", NULL,
-			"osc_24m_clk", 0, PLL2_CTR, PLL2_FRQ, pll_rtbl,
-			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
+			"osc_24m_clk", 0, PLL2_CTR, PLL2_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl, ARRAY_SIZE(pll_rtbl),
+			&_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco2_clk", NULL);
 	clk_register_clkdev(clk1, "pll2_clk", NULL);
 

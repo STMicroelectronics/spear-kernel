@@ -165,24 +165,27 @@
 static DEFINE_SPINLOCK(_lock);
 
 /* pll rate configuration table, in ascending order of rates */
-static struct pll_rate_tbl pll_rtbl[] = {
-	/* PCLK 24MHz */
-	{.mode = 0, .m = 0x83, .n = 0x04, .p = 0x5}, /* vco 1572, pll 49.125 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x3}, /* vco 1000, pll 125 MHz */
-	{.mode = 0, .m = 0x64, .n = 0x06, .p = 0x1}, /* vco 800, pll 400 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x1}, /* vco 1000, pll 500 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x1}, /* vco 1328, pll 664 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x1}, /* vco 1600, pll 800 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x0}, /* vco 1, pll 1 GHz */
-	{.mode = 0, .m = 0x96, .n = 0x06, .p = 0x0}, /* vco 1200, pll 1200 MHz */
+static struct vco_rate_tbl vco_rtbl[] = {
+	/* PCLK 24MHz
+	 * vco o/p = parent (24) * 2 * m / n */
+	{.mode = 0, .m = 0x64, .n = 0x06}, /* vco 800 */
+	{.mode = 0, .m = 0x7D, .n = 0x06}, /* vco 1000 */
+	{.mode = 0, .m = 0x96, .n = 0x06}, /* vco 1200 */
+	{.mode = 0, .m = 0xA6, .n = 0x06}, /* vco 1328 */
+	{.mode = 0, .m = 0x83, .n = 0x04}, /* vco 1572 */
+	{.mode = 0, .m = 0xC8, .n = 0x06}, /* vco 1600 */
 };
 
-/* vco-pll4 rate configuration table, in ascending order of rates */
-static struct pll_rate_tbl pll4_rtbl[] = {
-	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x2}, /* vco 1000, pll 250 MHz */
-	{.mode = 0, .m = 0xA6, .n = 0x06, .p = 0x2}, /* vco 1328, pll 332 MHz */
-	{.mode = 0, .m = 0xC8, .n = 0x06, .p = 0x2}, /* vco 1600, pll 400 MHz */
-	{.mode = 0, .m = 0x7D, .n = 0x06, .p = 0x0}, /* vco 1, pll 1 GHz */
+/* pll rate configuration table, in ascending order of rates */
+static struct pll_rate_tbl pll_rtbl[] = {
+	/* pll o/p = vco (parent) / 2^p */
+	{.p = 0x6},
+	{.p = 0x5},
+	{.p = 0x4},
+	{.p = 0x3},
+	{.p = 0x2},
+	{.p = 0x1},
+	{.p = 0x0},
 };
 
 /*
@@ -435,8 +438,9 @@ void __init spear1340_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "vco1_mclk", NULL);
 	clk = clk_register_vco_pll("vco1_clk", "pll1_clk", NULL, "vco1_mclk", 0,
-			SPEAR1340_PLL1_CTR, SPEAR1340_PLL1_FRQ, pll_rtbl,
-			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
+			SPEAR1340_PLL1_CTR, SPEAR1340_PLL1_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl, ARRAY_SIZE(pll_rtbl),
+			&_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco1_clk", NULL);
 	clk_register_clkdev(clk1, "pll1_clk", NULL);
 
@@ -446,7 +450,8 @@ void __init spear1340_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "vco2_mclk", NULL);
 	clk = clk_register_vco_pll("vco2_clk", "pll2_clk", NULL, "vco2_mclk", 0,
-			SPEAR1340_PLL2_CTR, SPEAR1340_PLL2_FRQ, pll_rtbl,
+			SPEAR1340_PLL2_CTR, SPEAR1340_PLL2_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl,
 			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco2_clk", NULL);
 	clk_register_clkdev(clk1, "pll2_clk", NULL);
@@ -457,14 +462,16 @@ void __init spear1340_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "vco3_mclk", NULL);
 	clk = clk_register_vco_pll("vco3_clk", "pll3_clk", NULL, "vco3_mclk", 0,
-			SPEAR1340_PLL3_CTR, SPEAR1340_PLL3_FRQ, pll_rtbl,
+			SPEAR1340_PLL3_CTR, SPEAR1340_PLL3_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl,
 			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco3_clk", NULL);
 	clk_register_clkdev(clk1, "pll3_clk", NULL);
 
 	clk = clk_register_vco_pll("vco4_clk", "pll4_clk", NULL, "osc_24m_clk",
-			0, SPEAR1340_PLL4_CTR, SPEAR1340_PLL4_FRQ, pll4_rtbl,
-			ARRAY_SIZE(pll4_rtbl), &_lock, &clk1, NULL);
+			0, SPEAR1340_PLL4_CTR, SPEAR1340_PLL4_FRQ, vco_rtbl,
+			ARRAY_SIZE(vco_rtbl), pll_rtbl,
+			ARRAY_SIZE(pll_rtbl), &_lock, &clk1, NULL);
 	clk_register_clkdev(clk, "vco4_clk", NULL);
 	clk_register_clkdev(clk1, "pll4_clk", NULL);
 

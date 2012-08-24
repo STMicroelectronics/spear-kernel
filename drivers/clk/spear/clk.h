@@ -82,11 +82,15 @@ struct clk_gpt {
 	spinlock_t		*lock;
 };
 
-/* VCO-PLL clk */
-struct pll_rate_tbl {
+/* VCO clk table */
+struct vco_rate_tbl {
 	u8 mode;
 	u16 m;
 	u8 n;
+};
+
+/* PLL clk table */
+struct pll_rate_tbl {
 	u8 p;
 };
 
@@ -94,7 +98,7 @@ struct clk_vco {
 	struct			clk_hw hw;
 	void __iomem		*mode_reg;
 	void __iomem		*cfg_reg;
-	struct pll_rate_tbl	*rtbl;
+	struct vco_rate_tbl	*rtbl;
 	u8			rtbl_cnt;
 	spinlock_t		*lock;
 };
@@ -103,6 +107,8 @@ struct clk_pll {
 	struct			clk_hw hw;
 	struct clk_vco		*vco;
 	const char		*parent[1];
+	struct pll_rate_tbl	*rtbl;
+	u8			rtbl_cnt;
 	spinlock_t		*lock;
 };
 
@@ -123,7 +129,8 @@ struct clk *clk_register_gpt(const char *name, const char *parent_name, unsigned
 struct clk *clk_register_vco_pll(const char *vco_name, const char *pll_name,
 		const char *vco_gate_name, const char *parent_name,
 		unsigned long flags, void __iomem *mode_reg, void __iomem
-		*cfg_reg, struct pll_rate_tbl *rtbl, u8 rtbl_cnt,
+		*cfg_reg, struct vco_rate_tbl *vco_rtbl, u8 vco_rtbl_cnt,
+		struct pll_rate_tbl *pll_rtbl, u8 pll_rate_tbl,
 		spinlock_t *lock, struct clk **pll_clk,
 		struct clk **vco_gate_clk);
 
