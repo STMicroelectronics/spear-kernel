@@ -53,11 +53,6 @@
 					st,pins = "fsmc_8bit_grp";
 					st,function = "fsmc";
 				};
-				kbd {
-					st,pins = "keyboard_row_col_grp",
-						"keyboard_col5_grp";
-					st,function = "keyboard";
-				};
 				uart0 {
 					st,pins = "uart0_grp", "uart0_enh_grp";
 					st,function = "uart0";
@@ -235,11 +230,11 @@
 			#size-cells = <0>;
 
 			button@1 {
-				debounce_interval = <20>;
-				wakeup = <1>;
-				linux,code = <2>;
 				label = "wakeup";
+				linux,code = <0x100>;
 				gpios = <&gpio1 1 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
 			};
 		};
 

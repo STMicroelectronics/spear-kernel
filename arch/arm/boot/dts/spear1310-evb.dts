@@ -141,6 +141,20 @@
 			};
 		};
 
+		gpio_keys {
+			compatible = "gpio-keys";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			button@1 {
+				label = "wakeup";
+				linux,code = <0x100>;
+				gpios = <&gpio0 7 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
+			};
+		};
+
 		gmac0: eth@e2000000 {
 			phy-mode = "gmii";
 			status = "okay";
