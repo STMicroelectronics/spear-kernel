@@ -332,6 +332,8 @@ struct dwc_pcd {
 struct dwc_hcd {
 	spinlock_t lock;
 
+	struct tasklet_struct del_con_timer;
+
 	/* DWC OTG Core Interface Layer */
 	struct core_if *core_if;
 

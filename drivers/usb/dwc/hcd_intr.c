@@ -35,6 +35,7 @@
  *
  */
 
+#include <linux/sched.h>
 #include "hcd.h"
 
 /* This file contains the implementation of the HCD Interrupt handlers.	*/
@@ -246,7 +247,7 @@ static int dwc_otg_hcd_handle_port_intr(struct dwc_hcd *hcd)
 		hprt0_modify = DWC_HPRT0_PRT_CONN_DET_RW(hprt0_modify, 1);
 
 		/* B-Device has connected, Delete the connection timer. */
-		del_timer_sync(&hcd->conn_timer);
+		tasklet_schedule(&hcd->del_con_timer);
 
 		/*
 		 * The Hub driver asserts a reset when it sees port connect
