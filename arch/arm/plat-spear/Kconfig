@@ -16,6 +16,7 @@ config ARCH_SPEAR13XX
 	select HAVE_SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	select PINCTRL
+	select ARM_CPU_SUSPEND if PM
 	help
 	  Supports for ARM's SPEAR13XX family
 
@@ -25,6 +26,7 @@ config ARCH_SPEAR3XX
 	select CPU_ARM926T
 	select USE_OF
 	select PINCTRL
+	select ARM_CPU_SUSPEND if PM
 	help
 	  Supports for ARM's SPEAR3XX family
 
@@ -32,6 +34,7 @@ config ARCH_SPEAR6XX
 	bool "SPEAr6XX"
 	select ARM_VIC
 	select CPU_ARM926T
+	select ARM_CPU_SUSPEND if PM
 	help
 	  Supports for ARM's SPEAR6XX family
 
