@@ -193,6 +193,7 @@ static struct pll_rate_tbl pll_rtbl[] = {
  * different values of vco1div2
  */
 static struct frac_rate_tbl amba_synth_rtbl[] = {
+	{.div = 0x073A8}, /* for vco1div2 = 600 MHz */
 	{.div = 0x06062}, /* for vco1div2 = 500 MHz */
 	{.div = 0x04D1B}, /* for vco1div2 = 400 MHz */
 	{.div = 0x04000}, /* for vco1div2 = 332 MHz */
@@ -223,6 +224,12 @@ static struct frac_rate_tbl amba_synth_rtbl[] = {
  * 500			400		200			0x02800
  * 500			500		250			0x02000
  * --------------------------------------------------------------------
+ * 600			200		100			0x06000
+ * 600			250		125			0x04CCE
+ * 600			332		166			0x039D5
+ * 600			400		200			0x03000
+ * 600			500		250			0x02666
+ * --------------------------------------------------------------------
  * 664			200		100			0x06a38
  * 664			250		125			0x054FD
  * 664			332		166			0x04000
@@ -241,28 +248,50 @@ static struct frac_rate_tbl sys_synth_rtbl[] = {
 	{.div = 0x08000},
 	{.div = 0x06a38},
 	{.div = 0x06666},
+	{.div = 0x06000},
 	{.div = 0x054FD},
 	{.div = 0x05000},
 	{.div = 0x04D18},
+	{.div = 0x04CCE},
 	{.div = 0x04000},
+	{.div = 0x039D5},
 	{.div = 0x0351E},
 	{.div = 0x03333},
 	{.div = 0x03031},
+	{.div = 0x03000},
 	{.div = 0x02A7E},
 	{.div = 0x02800},
 	{.div = 0x0268D},
+	{.div = 0x02666},
 	{.div = 0x02000},
 };
 
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
-	/* For VCO1div2 = 500 MHz */
-	{.xscale = 10, .yscale = 204, .eq = 0}, /* 12.29 MHz */
-	{.xscale = 4, .yscale = 21, .eq = 0}, /* 48 MHz */
-	{.xscale = 2, .yscale = 6, .eq = 0}, /* 83 MHz */
-	{.xscale = 2, .yscale = 4, .eq = 0}, /* 125 MHz */
-	{.xscale = 1, .yscale = 3, .eq = 1}, /* 166 MHz */
-	{.xscale = 1, .yscale = 2, .eq = 1}, /* 250 MHz */
+	/* 12.29MHz for vic1div2=600MHz and 10.24MHz for VCO1div2=500MHz */
+	{.xscale = 5, .yscale = 122, .eq = 0},
+	/* 14.70MHz for vic1div2=600MHz and 12.29MHz for VCO1div2=500MHz */
+	{.xscale = 10, .yscale = 204, .eq = 0},
+	/* 48MHz for vic1div2=600MHz and 40 MHz for VCO1div2=500MHz */
+	{.xscale = 4, .yscale = 25, .eq = 0},
+	/* 57.14MHz for vic1div2=600MHz and 48 MHz for VCO1div2=500MHz */
+	{.xscale = 4, .yscale = 21, .eq = 0},
+	/* 83.33MHz for vic1div2=600MHz and 69.44MHz for VCO1div2=500MHz */
+	{.xscale = 5, .yscale = 18, .eq = 0},
+	/* 100MHz for vic1div2=600MHz and 83.33 MHz for VCO1div2=500MHz */
+	{.xscale = 2, .yscale = 6, .eq = 0},
+	/* 125MHz for vic1div2=600MHz and 104.1MHz for VCO1div2=500MHz */
+	{.xscale = 5, .yscale = 12, .eq = 0},
+	/* 150MHz for vic1div2=600MHz and 125MHz for VCO1div2=500MHz */
+	{.xscale = 2, .yscale = 4, .eq = 0},
+	/* 166MHz for vic1div2=600MHz and 138.88MHz for VCO1div2=500MHz */
+	{.xscale = 5, .yscale = 18, .eq = 1},
+	/* 200MHz for vic1div2=600MHz and 166MHz for VCO1div2=500MHz */
+	{.xscale = 1, .yscale = 3, .eq = 1},
+	/* 250MHz for vic1div2=600MHz and 208.33MHz for VCO1div2=500MHz */
+	{.xscale = 5, .yscale = 12, .eq = 1},
+	/* 300MHz for vic1div2=600MHz and 250MHz for VCO1div2=500MHz */
+	{.xscale = 1, .yscale = 2, .eq = 1},
 };
 
 /* gmac rate configuration table, in ascending order of rates */
