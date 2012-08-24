@@ -20,6 +20,20 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 
+    cpus {
+        cpu@0 {
+            operating-freqs = <
+                /* kHz */
+                200000
+                250000
+                332000
+                400000
+                500000
+            >;
+           clock-latency = <250000>;
+        };
+    };
+
 	memory {
 		reg = <0 0x40000000>;
 	};

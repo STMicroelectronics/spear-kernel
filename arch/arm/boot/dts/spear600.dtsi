@@ -17,6 +17,13 @@
 	cpus {
 		cpu@0 {
 			compatible = "arm,arm926ejs";
+            operating-freqs = <
+                /* kHz */
+                166000
+                266000
+                332000
+            >;
+           clock-latency = <250000>;
 		};
 	};
 

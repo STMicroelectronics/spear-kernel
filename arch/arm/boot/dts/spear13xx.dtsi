@@ -64,19 +64,6 @@
 		bootargs = "console=ttyAMA0,115200";
 	};
 
-	cpufreq {
-		compatible = "st,cpufreq";
-		cpufreq_tbl = < 166000
-			200000
-			250000
-			300000
-			400000
-			500000
-			600000 >;
-		tbl_len = <7>;
-		status = "disable";
-	};
-
 	pcm {
 		compatible = "st,pcm-audio";
 		#address-cells = <0>;

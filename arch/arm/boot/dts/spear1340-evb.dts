@@ -19,7 +19,22 @@
 	compatible = "st,spear1340-evb", "st,spear1340";
 	#address-cells = <1>;
 	#size-cells = <1>;
-
+    
+    cpus {
+        cpu@0 {
+            operating-freqs = <
+                /* kHz */
+                166000
+                200000
+                250000
+                300000
+                400000
+                500000
+                600000
+            >;
+           clock-latency = <250000>;
+        };
+    };
 	memory {
 		reg = <0 0x40000000>;
 	};
