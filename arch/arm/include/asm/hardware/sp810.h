@@ -15,9 +15,23 @@
 #define __ASM_ARM_SP810_H
 
 #include <linux/io.h>
+#include <linux/delay.h>
+#include <linux/jiffies.h>
 
 /* sysctl registers offset */
 #define SCCTRL			0x000
+	#define SYS_MODE_STS_MASK		(0xF << 3)
+	#define SYS_MODE_STS_SLEEP		(0x0 << 3)
+	#define SYS_MODE_STS_DOZE		(0x1 << 3)
+	#define SYS_MODE_STS_SLOW		(0x2 << 3)
+	#define SYS_MODE_STS_NORMAL		(0x4 << 3)
+
+	#define SYS_MODE_MASK			(0x7 << 0)
+	#define SYS_MODE_SLEEP			(0x0 << 0)
+	#define SYS_MODE_DOZE			(0x1 << 0)
+	#define SYS_MODE_SLOW			(0x2 << 0)
+	#define SYS_MODE_NORMAL			(0x4 << 0)
+
 #define SCSYSSTAT		0x004
 #define SCIMCTRL		0x008
 #define SCIMSTAT		0x00C
@@ -63,6 +77,47 @@ static inline void sysctl_soft_reset(void __iomem *base)
 
 	/* writing any value to SCSYSSTAT reg will reset system */
 	writel(0, base + SCSYSSTAT);
+}
+
+static inline int sysctl_change_mode(void __iomem *base, int mode)
+{
+	u32 val, mode_sts;
+	unsigned long finish;
+
+	switch (mode) {
+	case SYS_MODE_SLEEP:
+		mode_sts = SYS_MODE_STS_SLEEP;
+		break;
+	case SYS_MODE_DOZE:
+		mode_sts = SYS_MODE_STS_DOZE;
+		break;
+	case SYS_MODE_SLOW:
+		mode_sts = SYS_MODE_STS_SLOW;
+		break;
+	case SYS_MODE_NORMAL:
+		mode_sts = SYS_MODE_STS_NORMAL;
+		break;
+	default:
+		pr_err("Wrong system mode\n");
+		return -EINVAL;
+	}
+
+	val = readl(base + SCCTRL);
+	if ((val & SYS_MODE_STS_MASK) == mode_sts)
+		return 0;
+
+	val &= ~SYS_MODE_MASK;
+	val |= mode;
+	writel(val, base + SCCTRL);
+
+	/* read back if mode is set */
+	finish = jiffies + 2 * HZ;
+	do {
+		val = readl(base + SCCTRL);
+		if ((val & SYS_MODE_STS_MASK) == mode_sts)
+			return 0;
+		udelay(1000);
+	} while (!time_after_eq(jiffies, finish));
 }
 
 #endif	/* __ASM_ARM_SP810_H */
