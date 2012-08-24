@@ -313,14 +313,14 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 
 	/* high speed-mode */
 	hcnt = i2c_dw_scl_hcnt(input_clock_khz,
-				14,	/* tHD;STA = 160 ns */
-				3,	/* tf = 0.3 us */
+				1,	/* tHD;STA = 160 ns */
+				0,	/* tf = 0.3 us */
 				0,	/* 0: DW default, 1: Ideal */
 				0);	/* No offset */
 	lcnt = i2c_dw_scl_lcnt(input_clock_khz,
-				35,	/* tLOW = 160ns */
-				3,	/* tf = 0.3 us */
-				0);	/* No offset */
+				1,	/* tLOW = 160ns */
+				0,	/* tf = 0.3 us */
+				19);	/*  offset */
 	dw_writel(dev, hcnt, DW_IC_HS_SCL_HCNT);
 	dw_writel(dev, lcnt, DW_IC_HS_SCL_LCNT);
 	dev_dbg(dev->dev, "high speed HCNT:LCNT = %d:%d\n", hcnt, lcnt);
