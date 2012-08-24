@@ -1293,6 +1293,19 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	struct dwc_hc *channel;
 	int retval = 0;
 
+	/* Set device flags indicating whether the HCD supports DMA. */
+	if (otg_dev->core_if->dma_enable) {
+		static u64 dummy_mask = DMA_BIT_MASK(32);
+
+		pr_info("Using DMA mode\n");
+		_dev->dma_mask = (void *)&dummy_mask;
+		_dev->coherent_dma_mask = ~0;
+	} else {
+		pr_info("Using Slave mode\n");
+		_dev->dma_mask = (void *)0;
+		_dev->coherent_dma_mask = 0;
+	}
+
 	/*
 	 * Allocate memory for the base HCD plus the DWC OTG HCD.
 	 * Initialize the base HCD.
@@ -1361,19 +1374,6 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	INIT_WORK(&dwc_hcd->core_if->usb_port_otg, NULL);
 	INIT_DELAYED_WORK(&dwc_hcd->core_if->usb_port_wakeup,
 			  port_wakeup_wqfunc);
-
-	/* Set device flags indicating whether the HCD supports DMA. */
-	if (otg_dev->core_if->dma_enable) {
-		static u64 dummy_mask = DMA_BIT_MASK(32);
-
-		pr_info("Using DMA mode\n");
-		_dev->dma_mask = (void *)&dummy_mask;
-		_dev->coherent_dma_mask = ~0;
-	} else {
-		pr_info("Using Slave mode\n");
-		_dev->dma_mask = (void *)0;
-		_dev->coherent_dma_mask = 0;
-	}
 
 	init_hcd_usecs(dwc_hcd);
 	/*
