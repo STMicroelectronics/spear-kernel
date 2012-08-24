@@ -391,7 +391,7 @@ static const char *spdif_in_parents[] = { "pll2_clk", "gen_syn3_clk", };
 
 static const char *gen_synth0_1_parents[] = { "vco1div4_clk", "vco3div2_clk",
 	"pll3_clk", };
-static const char *gen_synth2_3_parents[] = { "vco1div4_clk", "vco3div2_clk",
+static const char *gen_synth2_3_parents[] = { "vco1div4_clk", "vco2div2_clk",
 	"pll2_clk", };
 
 void __init spear1340_clk_init(void)
@@ -425,7 +425,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "rtc-spear", "osc_32k_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_RTC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "fc900000.rtc");
+	clk_register_clkdev(clk, NULL, "e0580000.rtc");
 
 	/* clock derived from 24 or 25 MHz osc clk */
 	/* vco-pll */
@@ -499,7 +499,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "thermal_gclk", "thermal_clk", 0,
 			SPEAR1340_PERIP2_CLK_ENB, SPEAR1340_THSENS_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "spear_thermal");
+	clk_register_clkdev(clk, NULL, "e07008c4.thermal");
 
 	/* clock derived from pll4 clk */
 	clk = clk_register_fixed_factor(NULL, "ddr_clk", "pll4_clk", 0, 1,
@@ -521,7 +521,7 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(sys_parents), 0, SPEAR1340_SYS_CLK_CTRL,
 			SPEAR1340_SCLK_SRC_SEL_SHIFT,
 			SPEAR1340_SCLK_SRC_SEL_MASK, 0, &_lock);
-	clk_register_clkdev(clk, "sys_clk", NULL);
+	clk_register_clkdev(clk, "sys_mclk", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "cpu_clk", "sys_mclk", 0, 1,
 			2);
@@ -663,7 +663,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_C3_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "c3");
+	clk_register_clkdev(clk, NULL, "e1800000.c3");
 
 	/* gmac */
 	clk = clk_register_mux(NULL, "phy_input_mclk", gmac_phy_input_parents,
@@ -701,7 +701,7 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(clcd_pixel_parents), 0,
 			SPEAR1340_PERIP_CLK_CFG, SPEAR1340_CLCD_CLK_SHIFT,
 			SPEAR1340_CLCD_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, "clcd_pixel_clk", NULL);
+	clk_register_clkdev(clk, "clcd_pixel_mclk", NULL);
 
 	clk = clk_register_gate(NULL, "clcd_clk", "clcd_pixel_mclk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_CLCD_CLK_ENB, 0,
@@ -713,7 +713,7 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(i2s_src_parents), 0, SPEAR1340_I2S_CLK_CFG,
 			SPEAR1340_I2S_SRC_CLK_SHIFT, SPEAR1340_I2S_SRC_CLK_MASK,
 			0, &_lock);
-	clk_register_clkdev(clk, "i2s_src_clk", NULL);
+	clk_register_clkdev(clk, "i2s_src_mclk", NULL);
 
 	clk = clk_register_aux("i2s_prs1_clk", NULL, "i2s_src_mclk", 0,
 			SPEAR1340_I2S_CLK_CFG, &i2s_prs1_masks, i2s_prs1_rtbl,
@@ -724,7 +724,7 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR1340_I2S_CLK_CFG,
 			SPEAR1340_I2S_REF_SHIFT, SPEAR1340_I2S_REF_SEL_MASK, 0,
 			&_lock);
-	clk_register_clkdev(clk, "i2s_ref_clk", NULL);
+	clk_register_clkdev(clk, "i2s_ref_mclk", NULL);
 
 	clk = clk_register_gate(NULL, "i2s_ref_pad_clk", "i2s_ref_mclk", 0,
 			SPEAR1340_PERIP2_CLK_ENB, SPEAR1340_I2S_REF_PAD_CLK_ENB,
@@ -810,7 +810,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "adc_clk", "adc_syn_gclk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_ADC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "adc_clk");
+	clk_register_clkdev(clk, NULL, "e0080000.adc");
 
 	/* clock derived from apb clk */
 	clk = clk_register_gate(NULL, "ssp_clk", "apb_clk", 0,
@@ -848,30 +848,30 @@ void __init spear1340_clk_init(void)
 			ARRAY_SIZE(gen_synth0_1_parents), 0, SPEAR1340_PLL_CFG,
 			SPEAR1340_GEN_SYNT0_1_CLK_SHIFT,
 			SPEAR1340_GEN_SYNT_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, "gen_syn0_1_clk", NULL);
+	clk_register_clkdev(clk, "gen_syn0_1_mclk", NULL);
 
 	clk = clk_register_mux(NULL, "gen_syn2_3_mclk", gen_synth2_3_parents,
 			ARRAY_SIZE(gen_synth2_3_parents), 0, SPEAR1340_PLL_CFG,
 			SPEAR1340_GEN_SYNT2_3_CLK_SHIFT,
 			SPEAR1340_GEN_SYNT_CLK_MASK, 0, &_lock);
-	clk_register_clkdev(clk, "gen_syn2_3_clk", NULL);
+	clk_register_clkdev(clk, "gen_syn2_3_mclk", NULL);
 
-	clk = clk_register_frac("gen_syn0_clk", "gen_syn0_1_clk", 0,
+	clk = clk_register_frac("gen_syn0_clk", "gen_syn0_1_mclk", 0,
 			SPEAR1340_GEN_CLK_SYNT0, gen_rtbl, ARRAY_SIZE(gen_rtbl),
 			&_lock);
 	clk_register_clkdev(clk, "gen_syn0_clk", NULL);
 
-	clk = clk_register_frac("gen_syn1_clk", "gen_syn0_1_clk", 0,
+	clk = clk_register_frac("gen_syn1_clk", "gen_syn0_1_mclk", 0,
 			SPEAR1340_GEN_CLK_SYNT1, gen_rtbl, ARRAY_SIZE(gen_rtbl),
 			&_lock);
 	clk_register_clkdev(clk, "gen_syn1_clk", NULL);
 
-	clk = clk_register_frac("gen_syn2_clk", "gen_syn2_3_clk", 0,
+	clk = clk_register_frac("gen_syn2_clk", "gen_syn2_3_mclk", 0,
 			SPEAR1340_GEN_CLK_SYNT2, gen_rtbl, ARRAY_SIZE(gen_rtbl),
 			&_lock);
 	clk_register_clkdev(clk, "gen_syn2_clk", NULL);
 
-	clk = clk_register_frac("gen_syn3_clk", "gen_syn2_3_clk", 0,
+	clk = clk_register_frac("gen_syn3_clk", "gen_syn2_3_mclk", 0,
 			SPEAR1340_GEN_CLK_SYNT3, gen_rtbl, ARRAY_SIZE(gen_rtbl),
 			&_lock);
 	clk_register_clkdev(clk, "gen_syn3_clk", NULL);
@@ -958,8 +958,8 @@ void __init spear1340_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, NULL, "spear_camif.3");
 
-	clk = clk_register_gate(NULL, "pwm_clk", "pwm_mclk", 0,
+	clk = clk_register_gate(NULL, "pwm_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_PWM_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "pwm");
+	clk_register_clkdev(clk, NULL, "e0180000.pwm");
 }
