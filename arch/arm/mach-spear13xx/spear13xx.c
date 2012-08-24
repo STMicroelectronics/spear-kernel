@@ -184,7 +184,7 @@ fail_get_input_pclk:
 	return ret;
 }
 
-void __init spear13xx_l2x0_init(void)
+void spear13xx_l2x0_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
 	/*
@@ -230,8 +230,13 @@ struct map_desc spear13xx_io_desc[] __initdata = {
 	}, {
 		.virtual	= VA_PERIP_GRP1_BASE,
 		.pfn		= __phys_to_pfn(PERIP_GRP1_BASE),
-		.length		= SZ_16M,
+		.length		= SZ_8M,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= VA_SYSRAM1_BASE,
+		.pfn		= __phys_to_pfn(SYSRAM1_BASE),
+		.length		= SZ_1M,
+		.type		= MT_MEMORY_NONCACHED
 	}, {
 		.virtual	= VA_A9SM_AND_MPMC_BASE,
 		.pfn		= __phys_to_pfn(A9SM_AND_MPMC_BASE),
