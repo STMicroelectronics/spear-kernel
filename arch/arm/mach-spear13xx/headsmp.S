@@ -13,7 +13,6 @@
 #include <linux/linkage.h>
 #include <linux/init.h>
 
-	__INIT
 
 /*
  * spear13xx specific entry point for secondary CPUs. This provides

@@ -30,6 +30,27 @@ static DEFINE_SPINLOCK(boot_lock);
 static void __iomem *scu_base = IOMEM(VA_SCU_BASE);
 extern void spear13xx_secondary_startup(void);
 
+static void wakeup_secondary(void)
+{
+	/* nobody is to be released from the pen yet */
+	pen_release = -1;
+	/*
+	 * Write the address of secondary startup into the system-wide
+	 * location (presently it is in SRAM). The BootMonitor waits
+	 * for this register to become non-zero.
+	 * We must also send an sev to wake it up
+	 */
+	__raw_writel(virt_to_phys(spear13xx_secondary_startup), SYS_LOCATION);
+
+	/* Make sure write buffer is drained */
+	mb();
+
+	/*
+	 * Send a 'sev' to wake the secondary core from WFE.
+	 */
+	sev();
+}
+
 void __cpuinit platform_secondary_init(unsigned int cpu)
 {
 	/*
@@ -57,6 +78,8 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 
+	scu_enable(scu_base);
+	wakeup_secondary();
 	/*
 	 * set synchronisation state between this boot processor
 	 * and the secondary one
@@ -72,6 +95,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * "cpu" is Linux's internal ID.
 	 */
 	pen_release = cpu;
+	smp_wmb();
 	flush_cache_all();
 	outer_flush_all();
 
@@ -117,11 +141,5 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 
 	scu_enable(scu_base);
-
-	/*
-	 * Write the address of secondary startup into the system-wide location
-	 * (presently it is in SRAM). The BootMonitor waits until it receives a
-	 * soft interrupt, and then the secondary CPU branches to this address.
-	 */
-	__raw_writel(virt_to_phys(spear13xx_secondary_startup), SYS_LOCATION);
+	wakeup_secondary();
 }
