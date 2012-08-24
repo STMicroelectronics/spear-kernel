@@ -143,6 +143,10 @@
 			       status = "okay";
 			};
 
+			timer@f0000000 {
+				status = "okay";
+			};
+
 			kbd@a0000000 {
 				linux,keymap = < 0x00000001
 						 0x00010002

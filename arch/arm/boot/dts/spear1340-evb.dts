@@ -573,6 +573,10 @@
 				status = "okay";
 			};
 
+			timer@e0380000 {
+				status = "okay";
+			};
+
 			wdt@ec800620 {
 			       status = "okay";
 			};

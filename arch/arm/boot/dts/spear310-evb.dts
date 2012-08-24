@@ -192,6 +192,10 @@
 				pinctrl-0 = <>;
 			};
 
+			timer@f0000000 {
+				status = "okay";
+			};
+
 			wdt@fc880000 {
 			       status = "okay";
 			};

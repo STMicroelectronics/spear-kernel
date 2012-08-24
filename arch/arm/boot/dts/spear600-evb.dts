@@ -102,6 +102,11 @@
 				clock-frequency = <400000>;
 				status = "okay";
 			};
+
+			timer@f0000000 {
+				status = "okay";
+			};
+
 		};
 	};
 };
