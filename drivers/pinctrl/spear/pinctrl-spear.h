@@ -13,12 +13,14 @@
 #define __PINMUX_SPEAR_H__
 
 #include <linux/gpio.h>
+#include <linux/io.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/types.h>
 
 extern struct gpio_chip *spear_plgpio_chip;
 struct platform_device;
 struct device;
+struct spear_pmx;
 
 /**
  * struct spear_pmx_mode - SPEAr pmx mode
@@ -137,6 +139,9 @@ struct spear_pinctrl_machdata {
 	unsigned ngroups;
 	struct pinctrl_gpio_range *ranges;
 	struct spear_gpio_pingroup *gpio_pingroups;
+	void (*gpio_request_endisable)(struct spear_pmx *pmx,
+			int offset,
+			bool enable);
 	unsigned ngpio_pingroups;
 
 	bool modes_supported;
@@ -167,6 +172,16 @@ pmx_init_gpio_pingroup_addr(struct spear_gpio_pingroup *gpio_pingroup,
 int __devinit spear_pinctrl_probe(struct platform_device *pdev,
 		struct spear_pinctrl_machdata *machdata);
 int __devexit spear_pinctrl_remove(struct platform_device *pdev);
+
+static inline u32 pmx_readl(struct spear_pmx *pmx, u32 reg)
+{
+	return readl_relaxed(pmx->vbase + reg);
+}
+
+static inline void pmx_writel(struct spear_pmx *pmx, u32 val, u32 reg)
+{
+	writel_relaxed(val, pmx->vbase + reg);
+}
 
 #define SPEAR_PIN_0_TO_101		\
 	PINCTRL_PIN(0, "PLGPIO0"),	\

@@ -1941,6 +1941,32 @@ static struct pinctrl_gpio_range spear1340_plgpio_range = {
 	.npins		= ARRAY_SIZE(spear1340_pins),
 };
 
+static void gpio_request_endisable(struct spear_pmx *pmx, int pin,
+		bool enable)
+{
+	unsigned long regoffset, regindex, bitoffset;
+	unsigned long val;
+
+	/* pin + 1 as gpio configuration starts from second bit of base
+	 * register
+	 */
+	regindex = (pin + 1) / 32;
+	if (regindex <= 3)
+		regoffset = PAD_FUNCTION_EN_1 + regindex * sizeof(int *);
+	else
+		regoffset = PAD_FUNCTION_EN_5 + (regindex - 4) * sizeof(int *);
+
+	bitoffset = ((pin + 1) % 32);
+
+	val = pmx_readl(pmx, regoffset);
+	if (enable)
+		val &= ~(0x1 << bitoffset);
+	else
+		val |= 0x1 << bitoffset;
+
+	pmx_writel(pmx, val, regoffset);
+}
+
 static struct spear_pinctrl_machdata spear1340_machdata = {
 	.pins = spear1340_pins,
 	.npins = ARRAY_SIZE(spear1340_pins),
@@ -1949,6 +1975,7 @@ static struct spear_pinctrl_machdata spear1340_machdata = {
 	.functions = spear1340_functions,
 	.nfunctions = ARRAY_SIZE(spear1340_functions),
 	.ranges = &spear1340_plgpio_range,
+	.gpio_request_endisable = gpio_request_endisable,
 	.modes_supported = false,
 };
 
