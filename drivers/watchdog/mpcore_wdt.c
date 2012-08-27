@@ -74,8 +74,7 @@ static irqreturn_t mpcore_wdt_fire(int irq, void *arg)
 
 	/* Check it really was our interrupt */
 	if (readl(wdt->base + TWD_WDOG_INTSTAT)) {
-		dev_printk(KERN_CRIT, wdt->dev,
-					"Triggered - Reboot ignored.\n");
+		dev_crit(wdt->dev, "Triggered - Reboot ignored.\n");
 		/* Clear the interrupt on the watchdog */
 		writel(1, wdt->base + TWD_WDOG_INTSTAT);
 		return IRQ_HANDLED;
@@ -126,7 +125,7 @@ static int mpcore_wdt_start(struct watchdog_device *wdd)
 {
 	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
 
-	dev_printk(KERN_INFO, wdt->dev, "enabling watchdog.\n");
+	dev_info(wdt->dev, "enabling watchdog.\n");
 
 	/* This loads the count register but does NOT start the count yet */
 	mpcore_wdt_ping(wdd);
@@ -195,7 +194,7 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 		ret = devm_request_irq(wdt->dev, wdt->irq, mpcore_wdt_fire, 0,
 				"mpcore_wdt", wdt);
 		if (ret) {
-			dev_printk(KERN_ERR, wdt->dev,
+			dev_err(wdt->dev,
 					"cannot register IRQ%d for watchdog\n",
 					wdt->irq);
 			return ret;
