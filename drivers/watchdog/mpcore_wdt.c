@@ -151,6 +151,7 @@ static int mpcore_wdt_set_heartbeat(struct watchdog_device *wdd, unsigned int t)
 static const struct watchdog_info mpcore_wdt_info = {
 	.options		= WDIOF_SETTIMEOUT |
 				  WDIOF_KEEPALIVEPING |
+				  WDIOF_CARDRESET |
 				  WDIOF_MAGICCLOSE,
 	.identity		= "MPcore Watchdog",
 };
@@ -215,6 +216,9 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 	watchdog_set_nowayout(&wdt->wdd, nowayout);
 	platform_set_drvdata(pdev, wdt);
 	watchdog_set_drvdata(&wdt->wdd, wdt);
+
+	wdt->wdd.bootstatus = (readl_relaxed(wdt->base + TWD_WDOG_RESETSTAT) &
+			TWD_WDOG_RESETSTAT_MASK) ? WDIOF_CARDRESET : 0;
 
 	mpcore_wdt_stop(&wdt->wdd);
 
