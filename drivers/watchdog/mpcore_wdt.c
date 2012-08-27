@@ -26,6 +26,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -259,27 +260,27 @@ static int __devexit mpcore_wdt_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int mpcore_wdt_suspend(struct platform_device *pdev, pm_message_t msg)
+static int mpcore_wdt_suspend(struct device *dev)
 {
-	struct mpcore_wdt *wdt = platform_get_drvdata(pdev);
+	struct mpcore_wdt *wdt = dev_get_drvdata(dev);
 	mpcore_wdt_stop(&wdt->wdd);	/* Turn the WDT off */
 
 	return 0;
 }
 
-static int mpcore_wdt_resume(struct platform_device *pdev)
+static int mpcore_wdt_resume(struct device *dev)
 {
-	struct mpcore_wdt *wdt = platform_get_drvdata(pdev);
+	struct mpcore_wdt *wdt = dev_get_drvdata(dev);
 
 	if (watchdog_active(&wdt->wdd))
 		mpcore_wdt_start(&wdt->wdd);
 
 	return 0;
 }
-#else
-#define mpcore_wdt_suspend	NULL
-#define mpcore_wdt_resume	NULL
 #endif
+
+static SIMPLE_DEV_PM_OPS(mpcore_wdt_dev_pm_ops, mpcore_wdt_suspend,
+		mpcore_wdt_resume);
 
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:mpcore_wdt");
@@ -287,12 +288,11 @@ MODULE_ALIAS("platform:mpcore_wdt");
 static struct platform_driver mpcore_wdt_driver = {
 	.probe		= mpcore_wdt_probe,
 	.remove		= __devexit_p(mpcore_wdt_remove),
-	.suspend	= mpcore_wdt_suspend,
-	.resume		= mpcore_wdt_resume,
 	.shutdown	= mpcore_wdt_shutdown,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= "mpcore_wdt",
+		.pm	= &mpcore_wdt_dev_pm_ops,
 	},
 };
 
