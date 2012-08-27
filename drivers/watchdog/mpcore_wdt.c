@@ -263,7 +263,9 @@ static int __devexit mpcore_wdt_remove(struct platform_device *pdev)
 static int mpcore_wdt_suspend(struct device *dev)
 {
 	struct mpcore_wdt *wdt = dev_get_drvdata(dev);
-	mpcore_wdt_stop(&wdt->wdd);	/* Turn the WDT off */
+
+	if (watchdog_active(&wdt->wdd))
+		mpcore_wdt_stop(&wdt->wdd);	/* Turn the WDT off */
 
 	return 0;
 }
