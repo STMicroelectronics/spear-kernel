@@ -42,7 +42,10 @@ struct mpcore_wdt {
 	void __iomem	*base;
 	spinlock_t	lock;
 	struct clk	*clk;
+	unsigned long	clk_rate;	/* In Hz */
 	int		irq;
+	unsigned int	prescale;
+	unsigned int	load_val;
 	unsigned int	perturb;
 };
 
@@ -60,6 +63,11 @@ module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout,
 	"Watchdog cannot be stopped once started (default="
 				__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
+
+static int clk_rate;
+module_param(clk_rate, int, 0);
+MODULE_PARM_DESC(clk_rate,
+	"Watchdog clock rate in Hz, required if clk_get() fails");
 
 #define ONLY_TESTING	0
 static int mpcore_noboot = ONLY_TESTING;
@@ -96,17 +104,10 @@ static irqreturn_t mpcore_wdt_fire(int irq, void *arg)
 static int mpcore_wdt_ping(struct watchdog_device *wdd)
 {
 	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
-	unsigned long count;
 
 	spin_lock(&wdt->lock);
-	/* Assume prescale is set to 256 */
-	count = readl_relaxed(wdt->base + TWD_WDOG_COUNTER);
-	count = (0xFFFFFFFFU - count) * (HZ / 5);
-	count = (count / 256) * mpcore_margin;
-
-	/* Reload the counter */
-	writel_relaxed(count + wdt->perturb, wdt->base + TWD_WDOG_LOAD);
-	wdt->perturb = wdt->perturb ? 0 : 1;
+	writel_relaxed(wdt->load_val + wdt->perturb, wdt->base + TWD_WDOG_LOAD);
+	wdt->perturb = !wdt->perturb;
 	spin_unlock(&wdt->lock);
 
 	return 0;
@@ -138,6 +139,7 @@ static int mpcore_wdt_stop(struct watchdog_device *wdd)
 static int mpcore_wdt_start(struct watchdog_device *wdd)
 {
 	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
+	u32 val, mode;
 	int ret;
 
 	dev_info(wdt->dev, "enabling watchdog.\n");
@@ -160,20 +162,70 @@ static int mpcore_wdt_start(struct watchdog_device *wdd)
 	/* This loads the count register but does NOT start the count yet */
 	mpcore_wdt_ping(wdd);
 
-	if (mpcore_noboot) {
-		/* Enable watchdog - prescale=256, watchdog mode=0, enable=1 */
-		writel_relaxed(0x0000FF01, wdt->base + TWD_WDOG_CONTROL);
-	} else {
-		/* Enable watchdog - prescale=256, watchdog mode=1, enable=1 */
-		writel_relaxed(0x0000FF09, wdt->base + TWD_WDOG_CONTROL);
-	}
+	if (mpcore_noboot)
+		mode = 0;
+	else
+		mode = TWD_WDOG_CONTROL_WDT_MODE;
+
+	spin_lock(&wdt->lock);
+
+	val = TWD_WDOG_CONTROL_WDT_PRESCALE(wdt->prescale) |
+		TWD_WDOG_CONTROL_ENABLE | mode;
+	writel_relaxed(val, wdt->base + TWD_WDOG_CONTROL);
+
+	spin_unlock(&wdt->lock);
 
 	return 0;
 }
 
-static int mpcore_wdt_set_heartbeat(struct watchdog_device *wdd, unsigned int t)
+/* binary search */
+static inline void bsearch(u32 *var, u32 var_start, u32 var_end,
+		const u64 param, const u32 timeout, u32 rate)
 {
-	mpcore_margin = t;
+	u64 tmp = 0;
+
+	/* get the lowest var value that can satisfy our requirement */
+	while (var_start < var_end) {
+		tmp = var_start;
+		tmp += var_end;
+		tmp = div_u64(tmp, 2);
+		if (timeout > div_u64((param + 1) * (tmp + 1), rate)) {
+			if (var_start == tmp)
+				break;
+			else
+				var_start = tmp;
+		} else {
+			if (var_end == tmp)
+				break;
+			else
+				var_end = tmp;
+		}
+	}
+	*var = tmp;
+}
+
+static int
+mpcore_wdt_set_heartbeat(struct watchdog_device *wdd, unsigned int timeout)
+{
+	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
+	unsigned int psc, rate = wdt->clk_rate;
+	u64 load = 0;
+
+	/* get appropriate value of psc and load */
+	bsearch(&psc, TWD_WDOG_CONTROL_PRESCALE_MIN,
+			TWD_WDOG_CONTROL_PRESCALE_MAX, TWD_WDOG_LOAD_MAX,
+			timeout, rate);
+	bsearch((u32 *)&load, TWD_WDOG_LOAD_MIN, TWD_WDOG_LOAD_MAX, psc,
+			timeout, rate);
+
+	spin_lock(&wdt->lock);
+	wdt->prescale = psc;
+	wdt->load_val = load;
+
+	/* roundup timeout to closest positive integer value */
+	mpcore_margin = div_u64((psc + 1) * (load + 1) + (rate / 2), rate);
+	spin_unlock(&wdt->lock);
+
 	return 0;
 }
 
@@ -249,7 +301,10 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 	wdt->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(wdt->clk)) {
 		dev_warn(&pdev->dev, "Clock not found\n");
+		wdt->clk_rate = clk_rate;
 	} else {
+		wdt->clk_rate = clk_get_rate(wdt->clk);
+
 		ret = clk_prepare(wdt->clk);
 		if (ret) {
 			dev_err(wdt->dev, "clock prepare fail");
@@ -269,6 +324,12 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 
 	mpcore_wdt_stop(&wdt->wdd);
 
+	if (!wdt->clk_rate) {
+		dev_err(&pdev->dev, "Clock rate can't be zero\n");
+		ret = -EINVAL;
+		goto err_put_clk;
+	}
+
 	ret = watchdog_register_device(&wdt->wdd);
 	if (ret) {
 		dev_err(wdt->dev, "watchdog_register_device() failed: %d\n",
@@ -286,7 +347,7 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 			TIMER_MARGIN);
 	}
 
-	mpcore_wdt_set_heartbeat(NULL, mpcore_margin);
+	mpcore_wdt_set_heartbeat(&wdt->wdd, mpcore_margin);
 	dev_info(wdt->dev, "MPcore Watchdog Timer: 0.1. mpcore_noboot=%d "
 			"mpcore_margin=%d sec (nowayout= %d)\n", mpcore_noboot,
 			mpcore_margin, nowayout);
