@@ -1,23 +1,21 @@
 /*
- *	Watchdog driver for the mpcore watchdog timer
+ * Watchdog driver for the mpcore watchdog timer
  *
- *	(c) Copyright 2004 ARM Limited
+ * (c) Copyright 2004 ARM Limited
  *
- *	Based on the SoftDog driver:
- *	(c) Copyright 1996 Alan Cox <alan@lxorguk.ukuu.org.uk>,
- *						All Rights Reserved.
+ * Based on the SoftDog driver:
+ * (c) Copyright 1996 Alan Cox <alan@lxorguk.ukuu.org.uk>, All Rights Reserved.
  *
- *	This program is free software; you can redistribute it and/or
- *	modify it under the terms of the GNU General Public License
- *	as published by the Free Software Foundation; either version
- *	2 of the License, or (at your option) any later version.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version
+ * 2 of the License, or (at your option) any later version.
  *
- *	Neither Alan Cox nor CymruNet Ltd. admit liability nor provide
- *	warranty for any of this software. This material is provided
- *	"AS-IS" and at no charge.
+ * Neither Alan Cox nor CymruNet Ltd. admit liability nor provide
+ * warranty for any of this software. This material is provided
+ * "AS-IS" and at no charge.
  *
- *	(c) Copyright 1995    Alan Cox <alan@lxorguk.ukuu.org.uk>
- *
+ * (c) Copyright 1995    Alan Cox <alan@lxorguk.ukuu.org.uk>
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -67,8 +65,8 @@ MODULE_PARM_DESC(mpcore_noboot, "MPcore watchdog action, "
 					__MODULE_STRING(ONLY_TESTING) ")");
 
 /*
- *	This is the interrupt handler.  Note that we only use this
- *	in testing mode, so don't actually do a reboot here.
+ * This is the interrupt handler.  Note that we only use this
+ * in testing mode, so don't actually do a reboot here.
  */
 static irqreturn_t mpcore_wdt_fire(int irq, void *arg)
 {
@@ -86,11 +84,11 @@ static irqreturn_t mpcore_wdt_fire(int irq, void *arg)
 }
 
 /*
- *	mpcore_wdt_ping - reload the timer
+ * mpcore_wdt_ping - reload the timer
  *
- *	Note that the spec says a DIFFERENT value must be written to the reload
- *	register each time.  The "perturb" variable deals with this by adding 1
- *	to the count every other time the function is called.
+ * Note that the spec says a DIFFERENT value must be written to the reload
+ * register each time.  The "perturb" variable deals with this by adding 1 to
+ * the count every other time the function is called.
  */
 static int mpcore_wdt_ping(struct watchdog_device *wdd)
 {
@@ -166,8 +164,8 @@ static const struct watchdog_ops mpcore_wdt_ops = {
 };
 
 /*
- *	System shutdown handler.  Turn off the watchdog if we're
- *	restarting or halting the system.
+ * System shutdown handler.  Turn off the watchdog if we're restarting or
+ * halting the system.
  */
 static void mpcore_wdt_shutdown(struct platform_device *pdev)
 {
