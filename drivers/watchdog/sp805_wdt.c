@@ -250,6 +250,7 @@ sp805_wdt_probe(struct amba_device *adev, const struct amba_id *id)
 	wdt->wdd.ops = &wdt_ops;
 
 	spin_lock_init(&wdt->lock);
+	watchdog_set_drvdata(&wdt->wdd, wdt);
 	watchdog_set_nowayout(&wdt->wdd, nowayout);
 	watchdog_set_drvdata(&wdt->wdd, wdt);
 	wdt_setload(&wdt->wdd, DEFAULT_TIMEOUT);
