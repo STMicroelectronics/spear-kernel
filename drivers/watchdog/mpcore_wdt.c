@@ -20,6 +20,8 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -39,6 +41,7 @@ struct mpcore_wdt {
 	struct device	*dev;
 	void __iomem	*base;
 	spinlock_t	lock;
+	struct clk	*clk;
 	int		irq;
 	unsigned int	perturb;
 };
@@ -109,15 +112,25 @@ static int mpcore_wdt_ping(struct watchdog_device *wdd)
 	return 0;
 }
 
-static int mpcore_wdt_stop(struct watchdog_device *wdd)
+static void __mpcore_wdt_stop(struct mpcore_wdt *wdt)
 {
-	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
-
 	spin_lock(&wdt->lock);
 	writel_relaxed(0x12345678, wdt->base + TWD_WDOG_DISABLE);
 	writel_relaxed(0x87654321, wdt->base + TWD_WDOG_DISABLE);
 	writel_relaxed(0x0, wdt->base + TWD_WDOG_CONTROL);
 	spin_unlock(&wdt->lock);
+}
+
+static int mpcore_wdt_stop(struct watchdog_device *wdd)
+{
+	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
+
+	__mpcore_wdt_stop(wdt);
+
+	if (!IS_ERR(wdt->clk)) {
+		clk_disable(wdt->clk);
+		clk_unprepare(wdt->clk);
+	}
 
 	return 0;
 }
@@ -125,8 +138,24 @@ static int mpcore_wdt_stop(struct watchdog_device *wdd)
 static int mpcore_wdt_start(struct watchdog_device *wdd)
 {
 	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
+	int ret;
 
 	dev_info(wdt->dev, "enabling watchdog.\n");
+
+	if (!IS_ERR(wdt->clk)) {
+		ret = clk_prepare(wdt->clk);
+		if (ret) {
+			dev_err(wdt->dev, "clock prepare fail");
+			return ret;
+		}
+
+		ret = clk_enable(wdt->clk);
+		if (ret) {
+			dev_err(wdt->dev, "Clock enable failed\n");
+			clk_unprepare(wdt->clk);
+			return ret;
+		}
+	}
 
 	/* This loads the count register but does NOT start the count yet */
 	mpcore_wdt_ping(wdd);
@@ -173,7 +202,7 @@ static void mpcore_wdt_shutdown(struct platform_device *pdev)
 	struct mpcore_wdt *wdt = platform_get_drvdata(pdev);
 
 	if (system_state == SYSTEM_RESTART || system_state == SYSTEM_HALT)
-		mpcore_wdt_stop(&wdt->wdd);
+		__mpcore_wdt_stop(wdt);
 }
 
 static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
@@ -217,6 +246,24 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, wdt);
 	watchdog_set_drvdata(&wdt->wdd, wdt);
 
+	wdt->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(wdt->clk)) {
+		dev_warn(&pdev->dev, "Clock not found\n");
+	} else {
+		ret = clk_prepare(wdt->clk);
+		if (ret) {
+			dev_err(wdt->dev, "clock prepare fail");
+			goto err_put_clk;
+		}
+
+		ret = clk_enable(wdt->clk);
+		if (ret) {
+			dev_err(&pdev->dev, "Clock enable failed\n");
+			clk_unprepare(wdt->clk);
+			goto err_put_clk;
+		}
+	}
+
 	wdt->wdd.bootstatus = (readl_relaxed(wdt->base + TWD_WDOG_RESETSTAT) &
 			TWD_WDOG_RESETSTAT_MASK) ? WDIOF_CARDRESET : 0;
 
@@ -226,7 +273,7 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(wdt->dev, "watchdog_register_device() failed: %d\n",
 				ret);
-		goto err_register;
+		goto err_put_clk;
 	}
 
 	/*
@@ -246,7 +293,10 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_register:
+err_put_clk:
+	if (!IS_ERR(wdt->clk))
+		clk_put(wdt->clk);
+
 	platform_set_drvdata(pdev, NULL);
 	watchdog_set_drvdata(&wdt->wdd, NULL);
 
@@ -269,7 +319,7 @@ static int mpcore_wdt_suspend(struct device *dev)
 	struct mpcore_wdt *wdt = dev_get_drvdata(dev);
 
 	if (watchdog_active(&wdt->wdd))
-		mpcore_wdt_stop(&wdt->wdd);	/* Turn the WDT off */
+		return mpcore_wdt_stop(&wdt->wdd);	/* Turn the WDT off */
 
 	return 0;
 }
@@ -279,7 +329,7 @@ static int mpcore_wdt_resume(struct device *dev)
 	struct mpcore_wdt *wdt = dev_get_drvdata(dev);
 
 	if (watchdog_active(&wdt->wdd))
-		mpcore_wdt_start(&wdt->wdd);
+		return mpcore_wdt_start(&wdt->wdd);
 
 	return 0;
 }
