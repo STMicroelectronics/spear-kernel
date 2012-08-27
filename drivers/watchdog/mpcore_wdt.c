@@ -34,7 +34,29 @@
 #include <linux/types.h>
 #include <linux/watchdog.h>
 
-#include <asm/smp_twd.h>
+/*
+ * TWD_WDOG is at offset 0x20 from TWD base address. Following register offsets
+ * doesn't contain this extra 0x20 offset, i.e. users of TWD_WDOG must pass base
+ * address of WDOG to WDOG driver instead of TWD module.
+ */
+#define TWD_WDOG_LOAD				0x00
+#define TWD_WDOG_COUNTER			0x04
+#define TWD_WDOG_CONTROL			0x08
+#define TWD_WDOG_INTSTAT			0x0C
+#define TWD_WDOG_RESETSTAT			0x10
+#define TWD_WDOG_DISABLE			0x14
+
+#define TWD_WDOG_LOAD_MIN			0x00000000
+#define TWD_WDOG_LOAD_MAX			0xFFFFFFFF
+
+#define TWD_WDOG_CONTROL_ENABLE			(1 << 0)
+#define TWD_WDOG_CONTROL_IRQ_ENABLE		(1 << 2)
+#define TWD_WDOG_CONTROL_WDT_MODE		(1 << 3)
+#define TWD_WDOG_CONTROL_WDT_PRESCALE(x)	((x) << 8)
+#define TWD_WDOG_CONTROL_PRESCALE_MIN		0x00
+#define TWD_WDOG_CONTROL_PRESCALE_MAX		0xFF
+
+#define TWD_WDOG_RESETSTAT_MASK			0x1
 
 struct mpcore_wdt {
 	struct watchdog_device wdd;
