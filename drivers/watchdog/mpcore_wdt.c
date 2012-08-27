@@ -74,10 +74,10 @@ static irqreturn_t mpcore_wdt_fire(int irq, void *arg)
 	struct mpcore_wdt *wdt = arg;
 
 	/* Check it really was our interrupt */
-	if (readl(wdt->base + TWD_WDOG_INTSTAT)) {
+	if (readl_relaxed(wdt->base + TWD_WDOG_INTSTAT)) {
 		dev_crit(wdt->dev, "Triggered - Reboot ignored.\n");
 		/* Clear the interrupt on the watchdog */
-		writel(1, wdt->base + TWD_WDOG_INTSTAT);
+		writel_relaxed(1, wdt->base + TWD_WDOG_INTSTAT);
 		return IRQ_HANDLED;
 	}
 	return IRQ_NONE;
@@ -97,12 +97,12 @@ static int mpcore_wdt_ping(struct watchdog_device *wdd)
 
 	spin_lock(&wdt->lock);
 	/* Assume prescale is set to 256 */
-	count =  __raw_readl(wdt->base + TWD_WDOG_COUNTER);
+	count = readl_relaxed(wdt->base + TWD_WDOG_COUNTER);
 	count = (0xFFFFFFFFU - count) * (HZ / 5);
 	count = (count / 256) * mpcore_margin;
 
 	/* Reload the counter */
-	writel(count + wdt->perturb, wdt->base + TWD_WDOG_LOAD);
+	writel_relaxed(count + wdt->perturb, wdt->base + TWD_WDOG_LOAD);
 	wdt->perturb = wdt->perturb ? 0 : 1;
 	spin_unlock(&wdt->lock);
 
@@ -114,9 +114,9 @@ static int mpcore_wdt_stop(struct watchdog_device *wdd)
 	struct mpcore_wdt *wdt = watchdog_get_drvdata(wdd);
 
 	spin_lock(&wdt->lock);
-	writel(0x12345678, wdt->base + TWD_WDOG_DISABLE);
-	writel(0x87654321, wdt->base + TWD_WDOG_DISABLE);
-	writel(0x0, wdt->base + TWD_WDOG_CONTROL);
+	writel_relaxed(0x12345678, wdt->base + TWD_WDOG_DISABLE);
+	writel_relaxed(0x87654321, wdt->base + TWD_WDOG_DISABLE);
+	writel_relaxed(0x0, wdt->base + TWD_WDOG_CONTROL);
 	spin_unlock(&wdt->lock);
 
 	return 0;
@@ -133,10 +133,10 @@ static int mpcore_wdt_start(struct watchdog_device *wdd)
 
 	if (mpcore_noboot) {
 		/* Enable watchdog - prescale=256, watchdog mode=0, enable=1 */
-		writel(0x0000FF01, wdt->base + TWD_WDOG_CONTROL);
+		writel_relaxed(0x0000FF01, wdt->base + TWD_WDOG_CONTROL);
 	} else {
 		/* Enable watchdog - prescale=256, watchdog mode=1, enable=1 */
-		writel(0x0000FF09, wdt->base + TWD_WDOG_CONTROL);
+		writel_relaxed(0x0000FF09, wdt->base + TWD_WDOG_CONTROL);
 	}
 
 	return 0;
