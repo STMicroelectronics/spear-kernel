@@ -490,21 +490,21 @@ static struct pinctrl_gpio_range spear3xx_plgpio_range = {
 };
 
 static struct spear_gpio_pingroup spear3xx_gpio_pingroup[] = {
-	GPIO_PINGROUP(firda_pins, 0, 0, PMX_FIRDA_MASK, 1),
-	GPIO_PINGROUP(i2c_pins, 0, 0, PMX_I2C_MASK, 1),
-	GPIO_PINGROUP(ssp_cs_pins, 0, 0, PMX_SSP_CS_MASK, 1),
-	GPIO_PINGROUP(ssp_pins, 0, 0, PMX_SSP_MASK, 1),
-	GPIO_PINGROUP(mii_pins, 0, 0, PMX_MII_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin0_pins, 0, 0, PMX_GPIO_PIN0_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin1_pins, 0, 0, PMX_GPIO_PIN1_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin2_pins, 0, 0, PMX_GPIO_PIN2_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin3_pins, 0, 0, PMX_GPIO_PIN3_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin4_pins, 0, 0, PMX_GPIO_PIN4_MASK, 1),
-	GPIO_PINGROUP(gpio0_pin5_pins, 0, 0, PMX_GPIO_PIN5_MASK, 1),
-	GPIO_PINGROUP(uart0_ext_pins, 0, 0, PMX_UART0_MODEM_MASK, 1),
-	GPIO_PINGROUP(uart0_pins, 0, 0, PMX_UART0_MASK, 1),
-	GPIO_PINGROUP(timer_0_1_pins, 0, 0, PMX_TIMER_0_1_MASK, 1),
-	GPIO_PINGROUP(timer_2_3_pins, 0, 0, PMX_TIMER_2_3_MASK, 1),
+	GPIO_PINGROUP(firda_pins, 0, 0, PMX_FIRDA_MASK, 0),
+	GPIO_PINGROUP(i2c_pins, 0, 0, PMX_I2C_MASK, 0),
+	GPIO_PINGROUP(ssp_cs_pins, 0, 0, PMX_SSP_CS_MASK, 0),
+	GPIO_PINGROUP(ssp_pins, 0, 0, PMX_SSP_MASK, 0),
+	GPIO_PINGROUP(mii_pins, 0, 0, PMX_MII_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin0_pins, 0, 0, PMX_GPIO_PIN0_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin1_pins, 0, 0, PMX_GPIO_PIN1_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin2_pins, 0, 0, PMX_GPIO_PIN2_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin3_pins, 0, 0, PMX_GPIO_PIN3_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin4_pins, 0, 0, PMX_GPIO_PIN4_MASK, 0),
+	GPIO_PINGROUP(gpio0_pin5_pins, 0, 0, PMX_GPIO_PIN5_MASK, 0),
+	GPIO_PINGROUP(uart0_ext_pins, 0, 0, PMX_UART0_MODEM_MASK, 0),
+	GPIO_PINGROUP(uart0_pins, 0, 0, PMX_UART0_MASK, 0),
+	GPIO_PINGROUP(timer_0_1_pins, 0, 0, PMX_TIMER_0_1_MASK, 0),
+	GPIO_PINGROUP(timer_2_3_pins, 0, 0, PMX_TIMER_2_3_MASK, 0),
 };
 
 struct spear_pinctrl_machdata spear3xx_machdata = {
