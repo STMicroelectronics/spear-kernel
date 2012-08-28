@@ -54,16 +54,22 @@ struct spear_gpio_pingroup {
 	const unsigned *pins;
 	unsigned npins;
 	struct spear_muxreg muxreg;
+	struct spear_muxreg enbreg;
 };
 
-#define GPIO_PINGROUP(__pins, __reg, __mask, __set_to_enb)	\
+#define GPIO_PINGROUP(__pins, __muxreg, __enbreg, __mask, __set_to_enb)	\
 	{							\
 		.pins = __pins,					\
 		.npins = ARRAY_SIZE(__pins),			\
 		.muxreg = {					\
-			.reg = __reg,				\
+			.reg = __muxreg,			\
 			.mask = __mask,				\
 			.val = __set_to_enb ? __mask : 0,	\
+		},						\
+		.enbreg = {					\
+			.reg = __enbreg,			\
+			.mask = __mask,				\
+			.val = __mask,				\
 		},						\
 	}
 

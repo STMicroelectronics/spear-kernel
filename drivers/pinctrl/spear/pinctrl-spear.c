@@ -34,6 +34,9 @@ static void muxreg_endisable(struct spear_pmx *pmx, struct spear_muxreg *muxreg,
 {
 	u32 val, temp;
 
+	if (!muxreg->reg)
+		return;
+
 	val = pmx_readl(pmx, muxreg->reg);
 	val &= ~muxreg->mask;
 
@@ -311,10 +314,15 @@ static int gpio_request_endisable(struct pinctrl_dev *pctldev,
 	 */
 	gpio_pingroup = get_gpio_pingroup(pmx, offset);
 	if (gpio_pingroup) {
-		struct spear_muxreg *muxreg;
+		struct spear_muxreg *reg;
 
-		muxreg = &gpio_pingroup->muxreg;
-		muxreg_endisable(pmx, muxreg, enable);
+		/* first program the required mux */
+		reg = &gpio_pingroup->muxreg;
+		muxreg_endisable(pmx, reg, enable);
+
+		/* and then enable the pad */
+		reg = &gpio_pingroup->enbreg;
+		muxreg_endisable(pmx, reg, enable);
 	}
 
 	/* SoC may need some extra configurations, or configurations for
