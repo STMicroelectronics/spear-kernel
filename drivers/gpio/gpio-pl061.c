@@ -228,7 +228,7 @@ static int pl061_allocate_irqs(struct amba_device *dev)
 		return -ENXIO;
 	}
 
-	if(!irq_domain_add_legacy(&dev->dev.of_node, PL061_GPIO_NR,
+	if(!irq_domain_add_legacy(dev->dev.of_node, PL061_GPIO_NR,
 			irq_base, 0, &irq_domain_simple_ops, NULL)) {
 		dev_err(&dev->dev, "irq domain init failed\n");
 		irq_free_descs(irq_base, PL061_GPIO_NR);
@@ -240,7 +240,6 @@ static int pl061_allocate_irqs(struct amba_device *dev)
 
 static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 {
-	struct device_node *np = dev->dev.of_node;
 	struct pl061_platform_data *pdata;
 	struct pl061_gpio *chip;
 	int ret, irq, i;
