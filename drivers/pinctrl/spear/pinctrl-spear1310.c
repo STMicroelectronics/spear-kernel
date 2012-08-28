@@ -2408,13 +2408,6 @@ static struct spear_function *spear1310_functions[] = {
 	&gpt64_function,
 };
 
-static struct pinctrl_gpio_range spear1310_plgpio_range = {
-	.name		= "SPEAr1310 PLGPIO",
-	.id		= 0,
-	.pin_base	= 0,
-	.npins		= ARRAY_SIZE(spear1310_pins),
-};
-
 static const unsigned pin18[] = { 18, };
 static const unsigned pin19[] = { 19, };
 static const unsigned pin20[] = { 20, };
@@ -2592,7 +2585,6 @@ static struct spear_pinctrl_machdata spear1310_machdata = {
 	.ngroups = ARRAY_SIZE(spear1310_pingroups),
 	.functions = spear1310_functions,
 	.nfunctions = ARRAY_SIZE(spear1310_functions),
-	.ranges = &spear1310_plgpio_range,
 	.gpio_pingroups = spear1310_gpio_pingroup,
 	.ngpio_pingroups = ARRAY_SIZE(spear1310_gpio_pingroup),
 	.modes_supported = false,

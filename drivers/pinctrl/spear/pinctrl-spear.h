@@ -17,7 +17,6 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/types.h>
 
-extern struct gpio_chip *spear_plgpio_chip;
 struct platform_device;
 struct device;
 struct spear_pmx;
@@ -127,7 +126,6 @@ struct spear_function {
  * @nfunctions: The numbmer of entries in @functions.
  * @groups: An array describing all pin groups the pin SoC supports.
  * @ngroups: The numbmer of entries in @groups.
- * @ranges: PLGPIO ranges for the machine
  * @gpio_pingroups: gpio pingroups
  * @ngpio_pingroups: gpio pingroups count
  *
@@ -143,7 +141,6 @@ struct spear_pinctrl_machdata {
 	unsigned nfunctions;
 	struct spear_pingroup **groups;
 	unsigned ngroups;
-	struct pinctrl_gpio_range *ranges;
 	struct spear_gpio_pingroup *gpio_pingroups;
 	void (*gpio_request_endisable)(struct spear_pmx *pmx,
 			int offset,

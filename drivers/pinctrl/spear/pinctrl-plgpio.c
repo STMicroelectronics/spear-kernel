@@ -80,11 +80,6 @@ struct plgpio {
 #endif
 };
 
-/* Following, would be point to actual gpio_chip and would be referenced
- * by pinctrl-spear to obtain gpio base.
- */
-struct gpio_chip *spear_plgpio_chip;
-
 /* register manipulation inline functions */
 static inline u32 is_plgpio_set(void __iomem *base, u32 pin, u32 reg)
 {
@@ -593,8 +588,6 @@ static int __devinit plgpio_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "unable to add gpio chip\n");
 		return ret;
 	}
-
-	spear_plgpio_chip = &plgpio->chip;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {

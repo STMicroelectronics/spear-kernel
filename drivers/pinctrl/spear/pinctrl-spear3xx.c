@@ -481,14 +481,6 @@ struct spear_function spear3xx_timer_2_3_function = {
 	.ngroups = ARRAY_SIZE(timer_2_3_grps),
 };
 
-/* plgpio */
-static struct pinctrl_gpio_range spear3xx_plgpio_range = {
-	.name		= "SPEAr3xx PLGPIO",
-	.id		= 0,
-	.pin_base	= 0,
-	.npins		= ARRAY_SIZE(spear3xx_pins),
-};
-
 static struct spear_gpio_pingroup spear3xx_gpio_pingroup[] = {
 	GPIO_PINGROUP(firda_pins, 0, 0, PMX_FIRDA_MASK, 0),
 	GPIO_PINGROUP(i2c_pins, 0, 0, PMX_I2C_MASK, 0),
@@ -510,7 +502,6 @@ static struct spear_gpio_pingroup spear3xx_gpio_pingroup[] = {
 struct spear_pinctrl_machdata spear3xx_machdata = {
 	.pins = spear3xx_pins,
 	.npins = ARRAY_SIZE(spear3xx_pins),
-	.ranges = &spear3xx_plgpio_range,
 	.gpio_pingroups = spear3xx_gpio_pingroup,
 	.ngpio_pingroups = ARRAY_SIZE(spear3xx_gpio_pingroup),
 };
