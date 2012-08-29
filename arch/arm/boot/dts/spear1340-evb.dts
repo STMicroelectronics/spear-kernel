@@ -341,11 +341,23 @@
 				lsm303dlh_a@19 {
 				compatible = "st,lsm303dlh_a";
 				reg = <0x19>;
+				axis_map_x = <0>;
+				axis_map_y = <1>;
+				axis_map_z = <2>;
+				input_poll_dev = <1>;
+				name_a = "lsm303dlh_a";
+				irq_a1 = <&gpiopinctrl 71 0>;
+				irq_a2 = <&gpiopinctrl 75 0>;
 				};
 
 				lsm303dlh_m@1e {
 				compatible = "st,lsm303dlh_m";
 				reg = <0x1e>;
+				axis_map_x = <0>;
+				axis_map_y = <1>;
+				axis_map_z = <2>;
+				name_m = "lsm303dlh_m";
+				irq_m = <&gpiopinctrl 70 0>;
 				};
 
 				sta529@1a {
