@@ -2108,7 +2108,7 @@ pl022_probe(struct amba_device *adev, const struct amba_id *id)
 	pl022->adev = adev;
 	pl022->vendor = id->data;
 	/* Point chipselects to allocated memory beyond the main struct */
-	pl022->chipselects = (int *) pl022 + sizeof(struct pl022);
+	pl022->chipselects = (int *) &pl022[1];
 
 	/*
 	 * Bus Number Which has been Assigned to this SSP controller
