@@ -68,6 +68,8 @@
 			reg = <0xa5000000 0x1000>;
 			interrupts = <15>;
 			interrupt-parent = <&shirq>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 
@@ -76,6 +78,8 @@
 			reg = <0xa6000000 0x1000>;
 			interrupts = <16>;
 			interrupt-parent = <&shirq>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 

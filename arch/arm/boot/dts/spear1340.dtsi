@@ -34,6 +34,8 @@
 		spi1: spi@5d400000 {
 			compatible = "arm,pl022", "arm,primecell";
 			reg = <0x5d400000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			interrupts = <0 99 0x4>;
 			status = "disabled";
 		};

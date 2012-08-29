@@ -291,6 +291,8 @@
 			spi0: spi@e0100000 {
 				compatible = "arm,pl022", "arm,primecell";
 				reg = <0xe0100000 0x1000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
 				interrupts = <0 31 0x4>;
 				status = "disabled";
 			};
