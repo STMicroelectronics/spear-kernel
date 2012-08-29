@@ -739,7 +739,7 @@ static int __init plgpio_init(void)
 {
 	return platform_driver_register(&plgpio_driver);
 }
-arch_initcall(plgpio_init);
+subsys_initcall(plgpio_init);
 
 MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
 MODULE_DESCRIPTION("ST Microlectronics SPEAr PLGPIO driver");
