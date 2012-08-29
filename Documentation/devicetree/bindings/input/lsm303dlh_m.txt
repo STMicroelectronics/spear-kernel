@@ -1,0 +1,25 @@
+* ST LSM303DLH Magnetometer
+
+Required properties:
+- compatible : "st,lsm303dlh_m".
+- reg: the I2C address of LSM303DLH Magnetometer.
+- name_m : Magnetometer name (name of device for regulator).
+- axis_map_x, _y,_z : Orientation of Magnetometer about reference x, y, z.
+  axis. The value should be betwwen 0 to 2.
+- irq_m : Interrupt line of LSM303DLH Magnetometer.
+
+Optional properties:
+- negative_x, _y, _z : Orientation of Magnetometer about negative reference x,
+  y, z axis. The value should be between 0 and 1.
+
+Example:
+
+magnetometer: lsm303dlh_m@0x1e {
+	compatible = "st,lsm303dlh_m";
+	reg = <0x1e>;
+	name_a = "lsm303dlh_m";
+	axis_map_x = <0>;
+	axis_map_y = <1>;
+	axis_map_z = <2>;
+	irq_m  = <&gpiocontrol 70 0>;
+};

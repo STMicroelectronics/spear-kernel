@@ -1,0 +1,28 @@
+* ST LSM303DLH 3-Axis Accelerometer
+
+Required properties:
+- compatible : "st,lsm303dlh_a".
+- reg: the I2C address of LSM303DLH Accelerometer.
+- name_a : Acelerometer name (name of device for regulator).
+- axis_map_x, _y,_z : Orientation of Acceleremeter about reference x, y, z
+  axis. The value should be betwwen 0 to 2.
+- input_poll_dev : Input device for polling.
+- irq_a1, _a2 : Interrupt line 1 and 2 of LSM303DLH Accelerometer.
+
+Optional properties:
+- negative_x, _y, _z : Orientation of Acceleremeter about negative reference x,
+  y, z axis. The value should be between 0 and 1.
+
+Example:
+
+accelerometer: lsm303dlh_a@0x19 {
+	compatible = "st,lsm303dlh_a";
+	reg = <0x19>;
+	name_a = "lsm303dlh_a";
+	axis_map_x = <0>;
+	axis_map_y = <1>;
+	axis_map_z = <2>;
+	input_poll_dev = <1>;
+	irq_a1 = <&gpiocontrol 71 0>;
+	irq_a2 = <&gpiocontrol 75 0>;;
+};
