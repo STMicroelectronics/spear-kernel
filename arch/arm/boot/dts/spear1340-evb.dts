@@ -331,6 +331,11 @@
 				l3g4200d_gyro@69 {
 				compatible = "st,l3g4200d_gyro";
 				reg = <0x69>;
+				poll_interval = <5>;
+				min_interval = <2>;
+				axis_map_x = <0>;
+				axis_map_y = <1>;
+				axis_map_z = <2>;
 				};
 
 				lsm303dlh_a@19 {
