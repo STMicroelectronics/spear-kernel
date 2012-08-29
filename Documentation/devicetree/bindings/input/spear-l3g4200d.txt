@@ -1,0 +1,30 @@
+* STMicroelectronics L3G4200D Gyroscope
+
+Required properties:
+- compatible : "st,l3g4200d_gyro"
+- reg : the I2C address of L3G4200D
+- poll_interval : The polling interval (in ms)
+- min_interval : Minimum permitted polling interval
+  The value for minimum poll interval should be 2.
+- axis_map_x : Used to map the x axis to some other plane of reference.
+  The value shall be between 0 to 2.
+- axis_map_y : Used to map the x axis to some other plane of reference
+  The value shall be between 0 to 2.
+- axis_map_z : Used to map the x axis to some other plane of reference
+  The value shall be between 0 to 2.
+
+Optional properties:
+- negate_x, _y, _z: flags to negate the output of x, y, z registers.
+  Only 0 and 1 is allowed for negation boolean flag.
+
+Example:
+
+Gyroscope:l3g4200d_gyro@69 {
+			compatible = "st,l3g4200d_gyro";
+			reg = <0x69>;
+			poll_interval = <5>;
+			min_interval = <2>;
+			axis_map_x = <0>;
+			axis_map_y = <1>;
+			axis_map_z = <2>;
+};
