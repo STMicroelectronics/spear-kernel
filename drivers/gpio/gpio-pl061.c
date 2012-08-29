@@ -23,6 +23,7 @@
 #include <linux/amba/bus.h>
 #include <linux/amba/pl061.h>
 #include <linux/slab.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <asm/mach/irq.h>
 
@@ -65,6 +66,20 @@ struct pl061_gpio {
 	struct pl061_context_save_regs csave_regs;
 #endif
 };
+
+static int pl061_request(struct gpio_chip *chip, unsigned offset)
+{
+	/* Don't consider error returned as SoCs may not have
+	 * implemented pinctrl subsystem
+	 */
+	pinctrl_request_gpio(chip->base + offset);
+	return 0;
+}
+
+static void pl061_free(struct gpio_chip *chip, unsigned offset)
+{
+	pinctrl_free_gpio(chip->base + offset);
+}
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
 {
@@ -276,6 +291,8 @@ static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 
 	chip->gc.direction_input = pl061_direction_input;
 	chip->gc.direction_output = pl061_direction_output;
+	chip->gc.request = pl061_request,
+	chip->gc.free = pl061_free,
 	chip->gc.get = pl061_get_value;
 	chip->gc.set = pl061_set_value;
 	chip->gc.to_irq = pl061_to_irq;
