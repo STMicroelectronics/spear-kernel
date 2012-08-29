@@ -284,9 +284,7 @@ static struct plat_stmmacenet_data eth4_data = {
 
 /* ssp device registration */
 static struct pl022_ssp_controller ssp1_plat_data = {
-	.bus_id = 0,
 	.enable_dma = 0,
-	.num_chipselect = 3,
 };
 
 int spear1310_otg_phy_init(void)
