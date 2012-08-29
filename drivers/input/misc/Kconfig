@@ -466,6 +466,29 @@ config INPUT_GYRO_L3G4200
 	  The gyroscope data is readable via sysfs. This driver can also be
 	  built as module.
 
+config INPUT_ST_LSM303DLH
+        tristate "ST LSM303DLH 3-axis accelerometer and 3-axis magnetometer"
+        depends on I2C
+        default n
+        help
+          This driver provides support for the LSM303DLH chip which includes a
+          3-axis accelerometer and a 3-axis magnetometer.
+
+          This driver can also be built as modules.  If so, the module for
+          accelerometer will be called lsm303dlh_a and for magnetometer it will
+          be called lsm303dlh_m.
+
+          Say Y here if you have a device containing lsm303dlh chip.
+
+config INPUT_ST_LSM303DLH_INPUT_DEVICE
+        bool "ST LSM303DLH INPUT DEVICE"
+        depends on INPUT_ST_LSM303DLH
+        default n
+        help
+          This driver allows device to be used as an input device with
+          interrupts, need to be enabled only when input device support
+          is required.
+
 config INPUT_RB532_BUTTON
 	tristate "Mikrotik Routerboard 532 button interface"
 	depends on MIKROTIK_RB532
