@@ -22,9 +22,10 @@
 			  0xb0000000 0xb0000000 0x10000000
 			  0xd0000000 0xd0000000 0x30000000>;
 
-		pinmux@b4000000 {
+		pinmux: pinmux@b4000000 {
 			compatible = "st,spear310-pinmux";
 			reg = <0xb4000000 0x1000>;
+			#gpio-range-cells = <2>;
 		};
 
 		shirq: interrupt-controller@0xb4000000 {
@@ -102,6 +103,7 @@
 				interrupt-controller;
 				gpio-controller;
 				#gpio-cells = <2>;
+				gpio-ranges = <&pinmux 0 102>;
 				status = "disabled";
 
 				st-plgpio,ngpio = <102>;

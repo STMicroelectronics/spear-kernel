@@ -17,9 +17,10 @@
 	compatible = "st,spear1310";
 
 	ahb {
-		pinmux@e0700000{
+		pinmux: pinmux@e0700000{
 			compatible = "st,spear1310-pinmux";
 			reg = <0xe0700000 0x1000>;
+			#gpio-range-cells = <2>;
 		};
 
 		ahci@b1000000 {
@@ -232,6 +233,7 @@
 				interrupt-controller;
 				gpio-controller;
 				#gpio-cells = <2>;
+				gpio-ranges = <&pinmux 0 246>;
 				status = "disabled";
 
 				st-plgpio,ngpio = <246>;
