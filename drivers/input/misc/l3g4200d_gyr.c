@@ -22,6 +22,7 @@
 #include <linux/input-polldev.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 
 /* Maximum polled-device-reported rot speed value value in dps */
@@ -685,12 +686,50 @@ static void l3g4200d_input_cleanup(struct l3g4200d_data *gyro)
 	input_unregister_polled_device(gyro->input_poll_dev);
 }
 
+#ifdef CONFIG_OF
+static int __devinit l3g4200d_gyr_probe_config_dt(
+		struct l3g4200d_gyr_platform_data *pdata,
+		struct device_node *np)
+{
+	if (of_property_read_u32(np, "poll_interval",
+				&pdata->poll_interval))
+		pr_warn("unable to get poll_interval.");
+	if (of_property_read_u32(np, "min_interval", &pdata->min_interval))
+		pr_warn("unable to get minimum poll interval.");
+	if (of_property_read_u32(np, "axis_map_x", &pdata->axis_map_x))
+		pr_warn("unable to get axis_map_x value.");
+	if (of_property_read_u32(np, "axis_map_y", &pdata->axis_map_y))
+		pr_warn("unable to get axis_map_y");
+	if (of_property_read_u32(np, "axis_map_z", &pdata->axis_map_z))
+		pr_warn("unable to get axis_map_z");
+	if (of_property_read_u32(np, "negate_x", &pdata->negate_x))
+		pr_warn("unable to get negate_x, default to %d\n",
+				pdata->negate_x);
+	if (of_property_read_u32(np, "negate_y", &pdata->negate_y))
+		pr_warn("unable to get negate_x, default to %d\n",
+				pdata->negate_y);
+	if (of_property_read_u32(np, "negate_z", &pdata->negate_z))
+		pr_warn("unable to get negate_x, default to %d\n",
+				pdata->negate_z);
+	return 0;
+}
+#else
+static int __devinit l3g4200d_gyr_probe_config_dt(
+		struct l3g4200d_gyr_platform_data *pdata,
+		struct device_node *np)
+{
+	return -ENOSYS;
+}
+#endif
+
 static int
 l3g4200d_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 {
 	struct l3g4200d_data *gyro;
+	struct device_node *np = client->dev.of_node;
 	int err = -EIO;
 	u8 dummy_reg;
+	int ret;
 
 	dev_dbg(&client->dev, "%s: probe start.\n", L3G4200D_DEV_NAME);
 
@@ -700,7 +739,7 @@ l3g4200d_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 		return -EINVAL;
 	}
 
-	if (client->dev.platform_data == NULL) {
+	if (!client->dev.platform_data && !np) {
 		dev_err(&client->dev, "platform data is NULL. Exiting.\n");
 		return -ENODEV;
 	}
@@ -728,15 +767,22 @@ l3g4200d_probe(struct i2c_client *client, const struct i2c_device_id *devid)
 	mutex_init(&gyro->lock);
 	mutex_lock(&gyro->lock);
 	gyro->client = client;
-
-	gyro->pdata = kmalloc(sizeof(*gyro->pdata), GFP_KERNEL);
+	gyro->pdata = kzalloc(sizeof(*gyro->pdata), GFP_KERNEL);
 	if (gyro->pdata == NULL) {
 		dev_err(&client->dev,
 			"failed to allocate memory for pdata: %d\n", err);
 		goto err_malloc_failed;
 	}
 
-	memcpy(gyro->pdata, client->dev.platform_data, sizeof(*gyro->pdata));
+	if (np) {
+		ret = l3g4200d_gyr_probe_config_dt(gyro->pdata, np);
+		if (ret) {
+			dev_err(&client->dev, "no platform data\n");
+			return -ENODEV;
+		}
+	} else
+		memcpy(gyro->pdata, client->dev.platform_data,
+				sizeof(*gyro->pdata));
 
 	err = l3g4200d_validate_pdata(gyro);
 	if (err < 0) {
@@ -864,10 +910,22 @@ static const struct i2c_device_id l3g4200d_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, l3g4200d_id);
 
+#ifdef CONFIG_OF
+static const struct of_device_id l3g4200d_gyro_of_match[] = {
+	{.compatible = "st,l3g4200d_gyro",},
+	{}
+};
+
+MODULE_DEVICE_TABLE(of, l3g4200d_gyro_of_match);
+#endif
+
 static struct i2c_driver l3g4200d_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = L3G4200D_DEV_NAME,
+#ifdef CONFIG_OF
+		.of_match_table = l3g4200d_gyro_of_match,
+#endif
 #ifdef CONFIG_PM
 		.pm = &l3g4200d_pm,
 #endif
