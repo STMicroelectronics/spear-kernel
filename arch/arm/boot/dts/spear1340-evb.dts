@@ -280,6 +280,8 @@
 
 		clcd@e1000000 {
 			status = "okay";
+			st,mode = "1024x768-32@60";
+			ignore_cpufreq_notification;
 		};
 
 		pci0@b1000000 {

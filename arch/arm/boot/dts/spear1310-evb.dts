@@ -193,6 +193,8 @@
 
 		clcd@e1000000 {
 			status = "okay";
+			st,mode = "480x272-32@0";
+			ignore_cpufreq_notification = <0>;
 		};
 
 		pcie1@b1800000 {
