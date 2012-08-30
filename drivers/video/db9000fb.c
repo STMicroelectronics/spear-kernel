@@ -47,6 +47,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <video/db9000fb.h>
@@ -949,12 +950,25 @@ static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
 
 static void db9000fb_setup_gpio(struct db9000fb_info *fbi, bool on)
 {
-	/* Temp comment out this code */
-#if 0
-	/* gpio or clcd pad selection */
-	if (fbi->setup_gpio)
-		fbi->setup_gpio(on);
-#endif
+	int ret;
+
+	if (on) {
+		if (!IS_ERR(fbi->pins_default)) {
+			ret = pinctrl_select_state(fbi->pinctrl,
+					fbi->pins_default);
+			if (ret)
+				dev_err(&fbi->pdev->dev,
+					"could not set default pins\n");
+		}
+	} else {
+		if (!IS_ERR(fbi->pins_sleep)) {
+			ret = pinctrl_select_state(fbi->pinctrl,
+					fbi->pins_sleep);
+			if (ret)
+				dev_err(&fbi->pdev->dev,
+					"could not set pins to sleep state\n");
+		}
+	}
 }
 
 static void db9000fb_enable_controller(struct db9000fb_info *fbi)
@@ -1766,6 +1780,21 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to init framebuffer device\n");
 		return -ENOMEM;
 	}
+
+	fbi->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(fbi->pinctrl)) {
+		ret = PTR_ERR(fbi->pinctrl);
+	}
+
+	fbi->pins_default = pinctrl_lookup_state(fbi->pinctrl,
+			PINCTRL_STATE_DEFAULT);
+	if (IS_ERR(fbi->pins_default))
+		dev_err(&pdev->dev, "could not get default pinstate\n");
+
+	fbi->pins_sleep = pinctrl_lookup_state(fbi->pinctrl,
+			PINCTRL_STATE_SLEEP);
+	if (IS_ERR(fbi->pins_sleep))
+		dev_dbg(&pdev->dev, "could not get sleep pinstate\n");
 
 	fbi->mmio_base = ioremap(r->start, resource_size(r));
 	if (!fbi->mmio_base) {

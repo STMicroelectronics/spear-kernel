@@ -386,7 +386,6 @@ struct db9000fb_mach_info {
 			cmap_static:1,
 			acceleration_enabled:1,
 			unused:28;
-	void (*clcd_mux_selection) (bool);
 	int (*clcd_plat_conf) (struct db9000fb_mach_info *data);
 	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
 	bool ignore_cpufreq_notification;
@@ -400,6 +399,9 @@ struct db9000fb_info {
 	struct clk		*bus_clk;
 	struct clk		*pixel_clk;
 
+	struct pinctrl		*pinctrl;
+	struct pinctrl_state	*pins_default;
+	struct pinctrl_state	*pins_sleep;
 	unsigned long		frame_base;
 	bool			clk_enabled;
 
@@ -452,7 +454,6 @@ struct db9000fb_info {
 	struct completion	disable_done;
 	/* Completion - for PAN display alignment with VSYNC/BAU event */
 	struct completion vsync_notifier;
-	void (*setup_gpio)(bool);
 
 	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
 	bool ignore_cpufreq_notification;
