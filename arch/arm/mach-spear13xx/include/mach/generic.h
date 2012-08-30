@@ -25,6 +25,7 @@ extern struct dw_dma_platform_data dmac_plat_data;
 extern struct dw_dma_slave cf_dma_priv;
 extern struct dw_dma_slave nand_read_dma_priv;
 extern struct dw_dma_slave nand_write_dma_priv;
+extern struct db9000fb_mach_info clcd_plat_info;
 
 /* Add spear13xx family function declarations here */
 void __init spear_setup_of_timer(void);
@@ -35,6 +36,7 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave);
 int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev);
 void spear_restart(char, const char *);
 void spear13xx_secondary_startup(void);
+void spear13xx_reserve_mem(void);
 
 #ifdef CONFIG_MACH_SPEAR1310
 void __init spear1310_clk_init(void);

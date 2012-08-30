@@ -362,6 +362,8 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 			&eth4_data),
 	OF_DEV_AUXDATA("snps,usb-otg", SPEAR_UOC_BASE, NULL,
 			&spear1310_otg_plat_data),
+	OF_DEV_AUXDATA("st,db9000-clcd", SPEAR13XX_CLCD_BASE, NULL,
+			&clcd_plat_info),
 	{}
 };
 
@@ -400,6 +402,7 @@ static void __init spear1310_map_io(void)
 
 DT_MACHINE_START(SPEAR1310_DT, "ST SPEAr1310 SoC with Flattened Device Tree")
 	.map_io		=	spear1310_map_io,
+	.reserve	=	spear13xx_reserve_mem,
 	.init_irq	=	spear13xx_dt_init_irq,
 	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,

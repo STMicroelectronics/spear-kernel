@@ -1,7 +1,7 @@
 #
 # Makefile for SPEAr13XX machine series
 #
-
+obj-y				+= db9000fb_lcd.o
 obj-$(CONFIG_SMP)		+= headsmp.o platsmp.o
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
 

@@ -266,6 +266,8 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR13XX_GETH_BASE, NULL, &eth_data),
 	OF_DEV_AUXDATA("snps,usb-otg", SPEAR_UOC_BASE, NULL,
 			&spear1340_otg_plat_data),
+	OF_DEV_AUXDATA("st,db9000-clcd", SPEAR13XX_CLCD_BASE, NULL,
+			&clcd_plat_info),
 	{}
 };
 
@@ -285,6 +287,7 @@ static const char * const spear1340_dt_board_compat[] = {
 DT_MACHINE_START(SPEAR1340_DT, "ST SPEAr1340 SoC with Flattened Device Tree")
 	.map_io		=	spear13xx_map_io,
 	.init_irq	=	spear13xx_dt_init_irq,
+	.reserve	=	spear13xx_reserve_mem,
 	.handle_irq	=	gic_handle_irq,
 	.timer		=	&spear13xx_timer,
 	.init_machine	=	spear1340_dt_init,
