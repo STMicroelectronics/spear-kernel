@@ -143,7 +143,7 @@ static int pl061_to_irq(struct gpio_chip *gc, unsigned offset)
 {
 	struct pl061_gpio *chip = container_of(gc, struct pl061_gpio, gc);
 
-	if (chip->irq_base <= 0)
+	if (chip->irq_base < 0)
 		return -EINVAL;
 
 	return chip->irq_base + offset;
