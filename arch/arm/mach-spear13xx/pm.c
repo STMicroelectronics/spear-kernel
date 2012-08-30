@@ -168,6 +168,35 @@ static struct platform_suspend_ops spear_pm_ops = {
 	.valid		= spear_pm_valid_state,
 };
 
+#ifdef CONFIG_HIBERNATION
+static void spear_power_off(void)
+{
+	while (1)
+		;
+}
+
+static int empty_enter(void)
+{
+	return 0;
+}
+
+static void empty_exit(void)
+{
+}
+
+static struct platform_hibernation_ops spear_hiber_ops = {
+	.begin = empty_enter,
+	.end = empty_exit,
+	.pre_snapshot = empty_enter,
+	.finish = empty_exit,
+	.prepare = empty_enter,
+	.enter = empty_enter,
+	.leave = empty_exit,
+	.pre_restore = empty_enter,
+	.restore_cleanup = empty_exit,
+};
+#endif
+
 static int __init spear_pm_init(void)
 {
 	void *sram_dest = (void *)SRAM_START_VA;
@@ -225,6 +254,10 @@ static int __init spear_pm_init(void)
 	/* Setup the pm ops */
 	suspend_set_ops(&spear_pm_ops);
 
+#ifdef CONFIG_HIBERNATION
+	pm_power_off = spear_power_off;
+	hibernation_set_ops(&spear_hiber_ops);
+#endif
 	return 0;
 }
 arch_initcall(spear_pm_init);
