@@ -121,10 +121,6 @@
 					st,pins = "sdhci_grp";
 					st,function = "sdhci";
 				};
-				clcd {
-					st,pins = "clcd_grp";
-					st,function = "clcd";
-				};
 				sata {
 					st,pins = "sata_grp";
 					st,function = "sata";
@@ -134,6 +130,18 @@
 					st,function = "pcie";
 				};
 
+			};
+			clcd_sleep: clcd-sleep {
+				clcd-sleep {
+					st,pins = "clcd_sleep_grp";
+					st,function = "clcd";
+				};
+			};
+			clcd_default: clcd-default {
+				clcd-default {
+					st,pins = "clcd_grp";
+					st,function = "clcd";
+				};
 			};
 		};
 
@@ -289,6 +297,9 @@
 		};
 
 		clcd@e1000000 {
+			pinctrl-names = "default", "sleep";
+			pinctrl-0 = <&clcd_default>;
+			pinctrl-1 = <&clcd_sleep>;
 			status = "okay";
 			st,mode = "1024x768-32@60";
 			ignore_cpufreq_notification;
