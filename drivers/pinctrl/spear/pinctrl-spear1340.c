@@ -1692,7 +1692,39 @@ static struct spear_pingroup clcd_pingroup = {
 	.nmodemuxs = ARRAY_SIZE(clcd_modemux),
 };
 
-static const char *const clcd_grps[] = { "clcd_grp" };
+/* Disable cld runtime to save panel damage */
+static struct spear_muxreg clcd_sleep_muxreg[] = {
+	{
+		.reg = PAD_FUNCTION_EN_5,
+		.mask = CLCD_REG4_MASK | CLCD_AND_ARM_TRACE_REG4_MASK,
+		.val = 0x0,
+	}, {
+		.reg = PAD_FUNCTION_EN_6,
+		.mask = CLCD_AND_ARM_TRACE_REG5_MASK,
+		.val = 0x0,
+	}, {
+		.reg = PAD_FUNCTION_EN_7,
+		.mask = CLCD_AND_ARM_TRACE_REG6_MASK,
+		.val = 0x0,
+	},
+};
+
+static struct spear_modemux clcd_sleep_modemux[] = {
+	{
+		.muxregs = clcd_sleep_muxreg,
+		.nmuxregs = ARRAY_SIZE(clcd_sleep_muxreg),
+	},
+};
+
+static struct spear_pingroup clcd_sleep_pingroup = {
+	.name = "clcd_sleep_grp",
+	.pins = clcd_pins,
+	.npins = ARRAY_SIZE(clcd_pins),
+	.modemuxs = clcd_sleep_modemux,
+	.nmodemuxs = ARRAY_SIZE(clcd_sleep_modemux),
+};
+
+static const char *const clcd_grps[] = { "clcd_grp", "clcd_sleep_grp" };
 static struct spear_function clcd_function = {
 	.name = "clcd",
 	.groups = clcd_grps,
@@ -1893,6 +1925,7 @@ static struct spear_pingroup *spear1340_pingroups[] = {
 	&sdhci_pingroup,
 	&cf_pingroup,
 	&xd_pingroup,
+	&clcd_sleep_pingroup,
 	&clcd_pingroup,
 	&arm_trace_pingroup,
 	&miphy_dbg_pingroup,
