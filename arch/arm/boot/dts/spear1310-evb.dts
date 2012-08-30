@@ -43,7 +43,7 @@
 					st,function = "arm_gpio";
 				};
 				clcd {
-					st,pins = "clcd_grp" , "clcd_high_res";
+					st,pins = "clcd_grp" , "clcd_high_res_grp";
 					st,function = "clcd";
 				};
 				eth {
