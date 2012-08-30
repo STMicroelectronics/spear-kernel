@@ -396,6 +396,8 @@
 
 			serial@e0000000 {
 			       status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <>;
 			};
 
 			wdt@ec800620 {
