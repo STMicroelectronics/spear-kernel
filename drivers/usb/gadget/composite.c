@@ -20,6 +20,7 @@
 
 #include <linux/usb/composite.h>
 #include <asm/unaligned.h>
+#include "designware_udc.h"
 
 /*
  * The code in this file is utility code, used to build a gadget driver
@@ -629,7 +630,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	/* Initialize all interfaces by setting them to altsetting zero. */
 	for (tmp = 0; tmp < MAX_CONFIG_INTERFACES; tmp++) {
 		struct usb_function	*f = c->interface[tmp];
-		struct usb_descriptor_header **descriptors;
+		struct usb_descriptor_header **descriptors, **desc;
 
 		if (!f)
 			break;
@@ -651,6 +652,7 @@ static int set_config(struct usb_composite_dev *cdev,
 			descriptors = f->descriptors;
 		}
 
+		desc = descriptors;
 		for (; *descriptors; ++descriptors) {
 			struct usb_endpoint_descriptor *ep;
 			int addr;
@@ -681,6 +683,9 @@ static int set_config(struct usb_composite_dev *cdev,
 			DBG(cdev, "delayed_status count %d\n",
 					cdev->delayed_status);
 		}
+
+		usb_gadget_ioctl(gadget, UDC_SET_CONFIG,
+				(unsigned long)(desc));
 	}
 
 	/* when we return, be sure our power usage is valid */
