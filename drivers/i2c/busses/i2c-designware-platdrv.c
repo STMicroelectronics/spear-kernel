@@ -35,6 +35,7 @@
 #include <linux/err.h>
 #include <linux/i2c/i2c-designware.h>
 #include <linux/interrupt.h>
+#include <linux/of_gpio.h>
 #include <linux/of_i2c.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
@@ -49,6 +50,48 @@ static struct i2c_algorithm i2c_dw_algo = {
 static u32 i2c_dw_get_clk_rate_khz(struct dw_i2c_dev *dev)
 {
 	return clk_get_rate(dev->clk)/1000;
+}
+
+static int __devinit dw_i2c_parse_dt(struct platform_device *pdev,
+		struct dw_i2c_dev *dev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct i2c_adapter *adap = &dev->adapter;
+	struct i2c_bus_recovery_info *dw_recovery_info;
+	enum of_gpio_flags flags;
+
+	if (!np) {
+		dev_err(&pdev->dev, "Missing DT data\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_bool(np, "stop-control"))
+		dev->stop_control = true;
+
+	dw_recovery_info = adap->bus_recovery_info;
+
+	if (of_property_read_bool(np, "recovery,gpio"))
+		dw_recovery_info->is_gpio_recovery = true;
+	else
+		return -EINVAL;
+
+	dw_recovery_info->scl_gpio = of_get_named_gpio_flags(np,
+			"recovery,scl-gpio", 0, &flags);
+	dw_recovery_info->scl_gpio_flags = flags;
+
+	if (of_property_read_bool(np, "recovery,skip-sda-poll"))
+		dw_recovery_info->skip_sda_polling = true;
+
+	if (!dw_recovery_info->skip_sda_polling) {
+		dw_recovery_info->sda_gpio = of_get_named_gpio_flags(np,
+				"recovery,sda-gpio", 0, &flags);
+		dw_recovery_info->sda_gpio_flags = flags;
+	}
+
+	dw_recovery_info->clock_rate_khz =
+		clk_get_rate(dev->clk) / 1000;
+
+	return 0;
 }
 
 static int __devinit dw_i2c_probe(struct platform_device *pdev)
@@ -148,19 +191,17 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 	adap->dev.of_node = np;
 
-	if (np) {
-		if (of_property_read_bool(np, "stop-control"))
-			dev->stop_control = true;
+	adap->nr = pdev->id;
+
+	dw_recovery_info =
+		kzalloc(sizeof(*dw_recovery_info), GFP_KERNEL);
+	if (!dw_recovery_info) {
+		r = -ENOMEM;
+		goto err_free_irq;
 	}
 
-	adap->nr = pdev->id;
+	adap->bus_recovery_info = dw_recovery_info;
 	if (pdata) {
-		dw_recovery_info =
-			kzalloc(sizeof(*dw_recovery_info), GFP_KERNEL);
-		if (!dw_recovery_info) {
-			r = -ENOMEM;
-			goto err_iounmap;
-		}
 		dw_recovery_info->get_gpio = pdata->get_gpio;
 		dw_recovery_info->put_gpio = pdata->put_gpio;
 		dw_recovery_info->scl_gpio = pdata->scl_gpio;
@@ -175,21 +216,26 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 			dw_recovery_info->sda_gpio_flags =
 				pdata->sda_gpio_flags;
 		}
-		adap->bus_recovery_info = dw_recovery_info;
+	} else {
+		r = dw_i2c_parse_dt(pdev, dev);
+		if (r) {
+			kfree(dw_recovery_info);
+			adap->bus_recovery_info = NULL;
+		}
 	}
 
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(&pdev->dev, "failure adding adapter\n");
-		goto err_free_irq;
+		goto err_free_recovery;
 	}
 	of_i2c_register_devices(adap);
 
 	return 0;
 
+err_free_recovery:
+	kfree(dw_recovery_info);
 err_free_irq:
-	if (pdata)
-		kfree(dw_recovery_info);
 	free_irq(dev->irq, dev);
 err_iounmap:
 	iounmap(dev->base);
