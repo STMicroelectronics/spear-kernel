@@ -283,6 +283,7 @@
 					pl022,ctrl-len = <0x11>;
 					pl022,wait-state = <0>;
 					pl022,duplex = <0>;
+				};
 			};
 
 			gpio0: gpio@e0600000 {
