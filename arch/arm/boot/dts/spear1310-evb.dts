@@ -78,14 +78,6 @@
 					st,pins = "i2c_1_2_grp";
 					st,function = "i2c_1_2";
 				};
-				pcie {
-					st,pins = "pcie1_grp", "pcie2_grp";
-					st,function = "pcie";
-				};
-				sata {
-					st,pins = "sata0_grp";
-					st,function = "sata";
-				};
 				smii {
 					st,pins = "smii_0_1_2_grp";
 					st,function = "smii_0_1_2";
