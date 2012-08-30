@@ -59,7 +59,7 @@ static void idmap_add_pud(pgd_t *pgd, unsigned long addr, unsigned long end,
 	} while (pud++, addr = next, addr != end);
 }
 
-static void identity_mapping_add(pgd_t *pgd, unsigned long addr, unsigned long end)
+void identity_mapping_add(pgd_t *pgd, unsigned long addr, unsigned long end)
 {
 	unsigned long prot, next;
 
@@ -95,6 +95,45 @@ static int __init init_static_idmap(void)
 	return 0;
 }
 early_initcall(init_static_idmap);
+
+#ifdef CONFIG_SMP
+static void idmap_del_pmd(pud_t *pud, unsigned long addr, unsigned long end)
+{
+	pmd_t *pmd = pmd_offset(pud, addr);
+	pmd_clear(pmd);
+}
+
+static void idmap_del_pud(pgd_t *pgd, unsigned long addr,
+		unsigned long end)
+{
+	pud_t *pud = pud_offset(pgd, addr);
+	unsigned long next;
+
+	do {
+		next = pud_addr_end(addr, end);
+		idmap_del_pmd(pud, addr, next);
+	} while (pud++, addr = next, addr != end);
+}
+
+void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
+{
+	unsigned long next;
+
+	pgd += pgd_index(addr);
+
+	do {
+		next = pgd_addr_end(addr, end);
+		idmap_del_pud(pgd, addr, next);
+	} while (pgd++, addr = next, addr != end);
+
+}
+
+#else
+void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
+{
+}
+
+#endif
 
 /*
  * In order to soft-boot, we need to switch to a 1:1 mapping for the
