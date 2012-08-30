@@ -706,7 +706,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "clcd_clk", "clcd_pixel_mclk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_CLCD_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, "clcd_clk", NULL);
+	clk_register_clkdev(clk, NULL, "e1000000.clcd");
 
 	/* i2s */
 	clk = clk_register_mux(NULL, "i2s_src_mclk", i2s_src_parents,
