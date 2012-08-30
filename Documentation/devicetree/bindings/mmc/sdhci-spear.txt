@@ -1,7 +1,7 @@
 * SPEAr SDHCI Controller
 
 Required properties:
-- compatible : "st,spear300-sdhci"
+- compatible : "st,spear-sdhci"
 - reg : Address range of the sdhci registers
 - interrupt-parent: Should be the phandle for the interrupt controller
   that services interrupts for this device
@@ -20,7 +20,7 @@ Optional Properties:
 Example:
 
 	sdhci@fc000000 {
-		compatible = "st,spear300-sdhci";
+		compatible = "st,spear-sdhci";
 		reg = <0xfc000000 0x1000>;
 
 		power-gpio = <&gpio0 5 0>

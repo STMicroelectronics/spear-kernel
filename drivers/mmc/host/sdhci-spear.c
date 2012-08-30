@@ -94,6 +94,8 @@ sdhci_probe_config_dt(struct platform_device *pdev)
 			dev_err(&pdev->dev, "DT: kzalloc failed\n");
 			return ERR_PTR(-ENOMEM);
 		}
+	} else {
+		return NULL;
 	}
 
 	/* if power gpio is supported */
@@ -162,10 +164,8 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 
 	if (np) {
 		sdhci->data = sdhci_probe_config_dt(pdev);
-		if (IS_ERR(sdhci->data)) {
-			dev_err(&pdev->dev, "DT: Failed to get pdata\n");
-			return -ENODEV;
-		}
+		if (IS_ERR(sdhci->data))
+			dev_info(&pdev->dev, "DT: Failed to get pdata\n");
 	} else {
 		sdhci->data = dev_get_platdata(&pdev->dev);
 	}
@@ -336,7 +336,7 @@ static SIMPLE_DEV_PM_OPS(sdhci_pm_ops, sdhci_suspend, sdhci_resume);
 
 #ifdef CONFIG_OF
 static const struct of_device_id sdhci_spear_id_table[] = {
-	{ .compatible = "st,spear300-sdhci" },
+	{ .compatible = "st,sdhci-spear" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, sdhci_spear_id_table);
