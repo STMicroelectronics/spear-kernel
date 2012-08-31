@@ -93,8 +93,8 @@ static struct vco_rate_tbl vco_rtbl[] = {
 };
 static struct pll_rate_tbl pll_rtbl[] = {
 	/* o/p clk = parent clk (vco) / 2^p */
-	{p = 0x1},
-	{p = 0x0},
+	{.p = 0x1},
+	{.p = 0x0},
 };
 
 /* aux rate configuration table, in ascending order of rates */
