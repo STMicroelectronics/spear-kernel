@@ -62,6 +62,21 @@
 			};
 		};
 
+		ehci@e1800000 {
+			status = "okay";
+		};
+
+		ehci@e2000000 {
+			status = "okay";
+		};
+
+		ohci@e1900000 {
+			status = "okay";
+		};
+
+		ohci@e2100000 {
+			status = "okay";
+		};
 		clcd@fc200000 {
 			status = "okay";
 		};

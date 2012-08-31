@@ -498,7 +498,9 @@ void __init spear3xx_clk_init(void)
 	/* clock derived from pll3 clk */
 	clk = clk_register_gate(NULL, "usbh_clk", "pll3_clk", 0, PERIP1_CLK_ENB,
 			USBH_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, "usbh_clk", NULL);
+	clk_register_clkdev(clk, NULL, "e1800000.ehci");
+	clk_register_clkdev(clk, NULL, "e1900000.ohci");
+	clk_register_clkdev(clk, NULL, "e2100000.ohci");
 
 	clk = clk_register_fixed_factor(NULL, "usbh.0_clk", "usbh_clk", 0, 1,
 			1);

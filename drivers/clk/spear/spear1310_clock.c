@@ -718,12 +718,14 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "usbh0_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_UHC0_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, "usbh.0_clk", NULL);
+	clk_register_clkdev(clk, NULL, "e4000000.ohci");
+	clk_register_clkdev(clk, NULL, "e4800000.ehci");
 
 	clk = clk_register_gate(NULL, "usbh1_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_UHC1_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, "usbh.1_clk", NULL);
+	clk_register_clkdev(clk, NULL, "e5000000.ohci");
+	clk_register_clkdev(clk, NULL, "e5800000.ehci");
 
 	clk = clk_register_gate(NULL, "uoc_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_UOC_CLK_ENB, 0,
