@@ -1993,6 +1993,12 @@ config BACKLIGHT_DB9000_LCD
         ---help---
           Say Y here if you want to control the backlight of your display.
 
+config FB_AD9889B_HDMI
+         tristate "AD9889B HDMI controller support"
+         depends on FB_DB9000
+         ---help---
+          Analog Devices AD9889B HDMI TX Controller.
+
 config FB_MBX
 	tristate "2700G LCD framebuffer support"
 	depends on FB && ARCH_PXA
