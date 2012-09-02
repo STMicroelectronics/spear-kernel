@@ -211,7 +211,7 @@ static int ehrpwm_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	unsigned long period_cycles, duty_cycles;
 	unsigned short ps_divval, tb_divval;
 
-	if (period_ns < 0 || duty_ns < 0 || period_ns > NSEC_PER_SEC)
+	if (period_ns > NSEC_PER_SEC)
 		return -ERANGE;
 
 	c = pc->clk_rate;
