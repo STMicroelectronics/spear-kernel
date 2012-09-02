@@ -158,6 +158,12 @@
 		};
 
 		apb {
+			i2c0: i2c@e0280000 {
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 134 0>;
+				recovery,sda-gpio = <&gpiopinctrl 133 1>;
+			};
+
 			i2c1: i2c@b4000000 {
 				#address-cells = <1>;
 				#size-cells = <0>;

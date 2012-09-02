@@ -109,6 +109,13 @@
 		};
 
 		apb {
+			i2c0: i2c@e0280000 {
+				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 103 0>;
+				recovery,sda-gpio = <&gpiopinctrl 102 1>;
+			};
+
 			i2c1: i2c@5cd00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -116,6 +123,9 @@
 				reg = <0x5cd00000 0x1000>;
 				interrupts = <0 87 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 139 0>;
+				recovery,sda-gpio = <&gpiopinctrl 138 1>;
 				status = "disabled";
 			};
 
@@ -126,6 +136,9 @@
 				reg = <0x5ce00000 0x1000>;
 				interrupts = <0 88 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 141 0>;
+				recovery,sda-gpio = <&gpiopinctrl 140 1>;
 				status = "disabled";
 			};
 
@@ -136,6 +149,9 @@
 				reg = <0x5cf00000 0x1000>;
 				interrupts = <0 89 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 153 0>;
+				recovery,sda-gpio = <&gpiopinctrl 142 1>;
 				status = "disabled";
 			};
 
@@ -146,6 +162,9 @@
 				reg = <0x5d000000 0x1000>;
 				interrupts = <0 90 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 155 0>;
+				recovery,sda-gpio = <&gpiopinctrl 154 1>;
 				status = "disabled";
 			};
 
@@ -156,6 +175,9 @@
 				reg = <0x5d100000 0x1000>;
 				interrupts = <0 91 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 157 0>;
+				recovery,sda-gpio = <&gpiopinctrl 156 1>;
 				status = "disabled";
 			};
 
@@ -166,6 +188,9 @@
 				reg = <0x5d200000 0x1000>;
 				interrupts = <0 92 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 208 0>;
+				recovery,sda-gpio = <&gpiopinctrl 207 1>;
 				status = "disabled";
 			};
 
@@ -176,6 +201,9 @@
 				reg = <0x5d300000 0x1000>;
 				interrupts = <0 93 0x4>;
 				stop-control;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 210 0>;
+				recovery,sda-gpio = <&gpiopinctrl 209 1>;
 				status = "disabled";
 			};
 
