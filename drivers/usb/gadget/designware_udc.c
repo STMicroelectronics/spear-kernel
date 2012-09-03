@@ -43,10 +43,7 @@ static const char driver_name[] = "designware-udc";
 static void show_queues(struct dw_udc_ep *ep)
 {
 	struct dw_udc_request *req;
-	unsigned size;
 	int t = ep->addr;
-
-	size = PAGE_SIZE;
 
 	DW_UDC_DBG(DBG_QUEUES, "%s (ep%d %s)\n",
 			ep->ep.name, t, (t & USB_DIR_IN) ? "in" : "out");
@@ -326,12 +323,10 @@ static void udc_config_ep(struct dw_udc_dev *udev, struct dw_udc_ep *ep)
 {
 	struct dw_udc_epin_regs *in_regs;
 	struct dw_udc_epout_regs *out_regs;
-	struct dw_udc_glob_regs *glob;
 	u32 tmp;
 
 	in_regs = ep->in_regs;
 	out_regs = ep->out_regs;
-	glob = ep->udev->glob_base;
 
 	switch (ep->attrib) {
 	case USB_ENDPOINT_XFER_CONTROL:
@@ -496,12 +491,10 @@ static int udc_ep0_disable(struct dw_udc_ep *ep)
 {
 	struct dw_udc_dev *udev;
 	struct dw_udc_glob_regs *glob;
-	struct dw_udc_epin_regs *epregs;
 	unsigned int tmp;
 
 	udev = ep->udev;
 	glob = udev->glob_base;
-	epregs = ep->in_regs;
 
 	udc_put_descrs(udev, ep->setup_ptr);
 	writel(0, &ep->out_regs->setup_ptr);
@@ -591,10 +584,8 @@ static void udc_enable(struct dw_udc_dev *udev)
 	u32 val;
 #endif
 	struct dw_udc_glob_regs *glob = udev->glob_base;
-	struct usb_gadget_driver *driver;
 
 	udev->gadget.speed = USB_SPEED_UNKNOWN;
-	driver = (struct usb_gadget_driver *)udev->driver;
 
 	writel(~0, &glob->dev_int_mask);
 	writel(~0, &glob->endp_int_mask);
@@ -1139,7 +1130,6 @@ static int dw_ep_queue(struct usb_ep *_ep,
 		struct usb_request *_req, gfp_t gfp_flags)
 {
 	struct dw_udc_epout_regs *out_regs;
-	struct dw_udc_epin_regs *in_regs;
 	struct dw_udc_glob_regs *glob;
 	struct dw_udc_dev *udev;
 	struct dw_udc_request *req;
@@ -1152,7 +1142,6 @@ static int dw_ep_queue(struct usb_ep *_ep,
 	req = container_of(_req, struct dw_udc_request, req);
 	ep = container_of(_ep, struct dw_udc_ep, ep);
 
-	in_regs = ep->in_regs;
 	out_regs = ep->out_regs;
 	is_in = is_ep_in(ep);
 	udev = ep->udev;
@@ -1278,7 +1267,6 @@ static int dw_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	struct dw_udc_ep *ep;
 	unsigned long flags;
 	struct dw_udc_request *req;
-	struct dw_udc_request *request;
 	struct dw_udc_dev *udev;
 	u32 tmp;
 
@@ -1286,7 +1274,6 @@ static int dw_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 		return -EINVAL;
 
 	ep = container_of(_ep, struct dw_udc_ep, ep);
-	request = container_of(_req, struct dw_udc_request, req);
 
 	if (!_ep || ep->ep.name == driver_name)
 		return -EINVAL;
@@ -1395,13 +1382,11 @@ static int dw_ep_fifo_status(struct usb_ep *_ep)
 static void dw_ep_fifo_flush(struct usb_ep *_ep)
 {
 	struct dw_udc_epin_regs *regs;
-	struct dw_udc_dev *udev;
 	struct dw_udc_ep *ep;
 	u32 tmp;
 
 	ep = container_of(_ep, struct dw_udc_ep, ep);
 
-	udev = ep->udev;
 	regs = ep->in_regs;
 
 	if (is_ep_in(ep)) {
@@ -2842,11 +2827,9 @@ err_release_csr_region:
 
 static int __devexit dw_udc_remove(struct platform_device *pdev)
 {
-	struct udc_platform_data *pdata;
 	struct dw_udc_dev *udev = platform_get_drvdata(pdev);
 	int irq;
 
-	pdata = dev_get_platdata(&pdev->dev);
 	irq = platform_get_irq(pdev, 0);
 
 	/* Donot forget to disable endpoint 0 */
