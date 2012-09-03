@@ -95,10 +95,10 @@ static void show_global(struct dw_udc_dev *udev)
 
 	DW_UDC_DBG(DBG_REGISTERS, "Global registers:\n");
 	DW_UDC_DBG(DBG_REGISTERS, "Config:%08x Control:%08x Status:%08x\n",
-			readl(&glob->udev_conf),
-			readl(&glob->udev_control), readl(&glob->udev_status));
+			readl(&glob->dev_conf),
+			readl(&glob->dev_control), readl(&glob->dev_status));
 	DW_UDC_DBG(DBG_REGISTERS, "D.Int:%08x mask=%08x E.Int:%08x mask=%08x\n",
-			readl(&glob->udev_int), readl(&glob->udev_int_mask),
+			readl(&glob->dev_int), readl(&glob->dev_int_mask),
 			readl(&glob->endp_int), readl(&glob->endp_int_mask));
 }
 
