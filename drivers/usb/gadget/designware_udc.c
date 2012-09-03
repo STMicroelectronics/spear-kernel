@@ -76,9 +76,8 @@ static void show_chain(struct dw_udc_ep *ep)
 		tmp_desc = ep->desc_out_ptr;
 
 	while (tmp_desc != 0x0) {
-		DW_UDC_DBG(DBG_REGISTERS, "%08x %08x %08x %08x\n",
+		DW_UDC_DBG(DBG_REGISTERS, "%08x %08x %08x\n",
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
@@ -163,7 +162,6 @@ static inline void desc_init(struct dw_udc_bulkd *desc, dma_addr_t dma)
 	desc->dma_addr = dma;
 	desc->status = cpu_to_le32(DMAUSB_HOSTRDY);
 	desc->bufp = 0x0;
-	desc->reserved = cpu_to_le32(0xf0cacc1a);
 	wmb();
 	INIT_LIST_HEAD(&desc->desc_list);
 }
@@ -2583,9 +2581,8 @@ dw_udc_proc_out_chain(char *page, char **start, off_t off, int count,
 	tmp_desc = ep->desc_out_ptr;
 	while (tmp_desc != 0x0) {
 
-		t = scnprintf(next, size, "%08x %08x %08x %08x\n",
+		t = scnprintf(next, size, "%08x %08x %08x\n",
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
@@ -2632,10 +2629,9 @@ dw_udc_proc_in_chain(char *page, char **start, off_t off, int count,
 	tmp_desc = ep->curr_chain_in;
 	while (tmp_desc != 0x0) {
 
-		t = scnprintf(next, size, "%08x %08x %08x %08x %08x\n",
+		t = scnprintf(next, size, "%08x %08x %08x %08x\n",
 				tmp_desc->dma_addr,
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
