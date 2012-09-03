@@ -407,8 +407,8 @@ static int mdio_bus_restore(struct device *dev)
 static struct dev_pm_ops mdio_bus_pm_ops = {
 	.suspend = mdio_bus_suspend,
 	.resume = mdio_bus_resume,
-	.freeze = mdio_bus_suspend,
-	.thaw = mdio_bus_resume,
+	.freeze_noirq = mdio_bus_suspend,
+	.thaw_noirq = mdio_bus_resume,
 	.restore = mdio_bus_restore,
 };
 
