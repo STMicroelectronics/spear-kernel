@@ -1327,7 +1327,8 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit)
 
 		/* read the status of the incoming frame */
 		status = (priv->hw->desc->rx_status(&priv->dev->stats,
-						    &priv->xstats, p));
+					&priv->xstats, p, priv->plat->rx_coe,
+					priv->synopsys_id));
 		if (unlikely(status == discard_frame))
 			priv->dev->stats.rx_errors++;
 		else {

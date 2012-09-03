@@ -73,7 +73,7 @@ static int ndesc_get_tx_len(struct dma_desc *p)
  * In case of success, it returns good_frame because the GMAC device
  * is supposed to be able to compute the csum in HW. */
 static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
-			       struct dma_desc *p)
+			       struct dma_desc *p, int rx_coe_type, u32 mac_id)
 {
 	int ret = good_frame;
 	struct net_device_stats *stats = (struct net_device_stats *)data;
@@ -104,8 +104,10 @@ static int ndesc_get_rx_status(void *data, struct stmmac_extra_stats *x,
 		}
 		ret = discard_frame;
 	}
-	if (unlikely(p->des01.rx.dribbling))
+	if (unlikely(p->des01.rx.dribbling)) {
 		x->dribbling_bit++;
+		ret = discard_frame;
+	}
 
 	if (unlikely(p->des01.rx.length_error)) {
 		x->rx_length++;

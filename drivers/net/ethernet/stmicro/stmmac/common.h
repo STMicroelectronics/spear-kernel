@@ -48,6 +48,9 @@
 #undef FRAME_FILTER_DEBUG
 /* #define FRAME_FILTER_DEBUG */
 
+/* Synopsys Core versions */
+#define	DWMAC_CORE_3_40	34
+
 struct stmmac_extra_stats {
 	/* Transmit errors */
 	unsigned long tx_underflow ____cacheline_aligned;
@@ -242,7 +245,7 @@ struct stmmac_desc_ops {
 	int (*get_rx_frame_len) (struct dma_desc *p, int rx_coe_type);
 	/* Return the reception status looking at the RDES1 */
 	int (*rx_status) (void *data, struct stmmac_extra_stats *x,
-			  struct dma_desc *p);
+			  struct dma_desc *p, int rx_coe_type, u32 mac_id);
 };
 
 struct stmmac_dma_ops {
