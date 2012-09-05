@@ -11,14 +11,13 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/suspend.h>
-#include <linux/module.h>
-#include <linux/io.h>
-#include <asm/cacheflush.h>
 #include <asm/suspend.h>
+#include <linux/io.h>
+#include <linux/module.h>
+#include <linux/suspend.h>
 #include <mach/suspend.h>
 
-static void (*spear_sram_sleep)(unsigned long *saveblk);
+static void (*spear_sram_sleep)(unsigned long *resum_addr);
 
 static int spear_sys_suspend(unsigned long arg)
 {
@@ -41,7 +40,7 @@ static int spear_pm_enter(suspend_state_t state)
 	return 0;
 }
 
-static struct platform_suspend_ops spear_pm_ops = {
+static const struct platform_suspend_ops spear_pm_ops = {
 	.enter		= spear_pm_enter,
 	.valid		= suspend_valid_only_mem,
 };
@@ -58,8 +57,6 @@ static int __init spear_pm_init(void)
 
 	/* Copy the Sleep code on to the SRAM*/
 	spear_sram_sleep = memcpy(dest, src, size);
-	flush_icache_range((unsigned long)dest, (unsigned long)(dest + size));
-
 	suspend_set_ops(&spear_pm_ops);
 	return 0;
 }
