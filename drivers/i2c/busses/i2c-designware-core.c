@@ -446,7 +446,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 						dev->stop_control)
 					temp |= 0x200;
 
-				writew(temp, dev->base + DW_IC_DATA_CMD);
+				dw_writel(dev, temp, DW_IC_DATA_CMD);
 				rx_limit--;
 			} else {
 				temp = *buf++;
@@ -456,7 +456,7 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 						dev->stop_control)
 					temp |= 0x200;
 
-				writel(temp, dev->base + DW_IC_DATA_CMD);
+				dw_writel(dev, temp, DW_IC_DATA_CMD);
 			}
 			tx_limit--; buf_len--;
 		}
@@ -580,7 +580,7 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
 		/* disable controller */
-		writew(0, dev->base + DW_IC_ENABLE);
+		dw_writel(dev, 0, DW_IC_ENABLE);
 		clk_disable(dev->clk);
 		if (adap->bus_recovery_info &&
 				adap->bus_recovery_info->recover_bus) {
@@ -614,10 +614,10 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 
 done:
 	/* Disable interrupts */
-	writew(0, dev->base + DW_IC_INTR_MASK);
+	dw_writel(dev, 0, DW_IC_INTR_MASK);
 
 	/* Disable the adapter */
-	writew(0, dev->base + DW_IC_ENABLE);
+	dw_writel(dev, 0, DW_IC_ENABLE);
 
 	pm_runtime_put(dev->dev);
 	mutex_unlock(&dev->lock);
