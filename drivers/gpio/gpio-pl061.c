@@ -310,7 +310,7 @@ static int pl061_probe(struct amba_device *dev, const struct amba_id *id)
 	 * irq_chip support
 	 */
 
-	if (chip->irq_base <= 0)
+	if (chip->irq_base < 0)
 		return 0;
 
 	pl061_init_gc(chip, chip->irq_base);
