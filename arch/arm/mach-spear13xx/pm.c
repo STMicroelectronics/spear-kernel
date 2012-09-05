@@ -23,15 +23,16 @@
 #include <mach/generic.h>
 #include <mach/suspend.h>
 
-static void (*spear_sram_sleep)(suspend_state_t state, unsigned long *saveblk);
+static void (*spear_sram_sleep)(suspend_state_t state,
+		unsigned long *resum_addr);
 static int pcm_set_cfg;
 
-static void memcpy_decr_ptr(void *dest, void *src, u32 len)
+static void memcpy_decr_ptr(int *dest, int *src, u32 len)
 {
 	int i;
 
 	for (i = 0; i < len ; i++)
-		*((u32 *)(dest - (i<<2))) = *((u32 *)(src + (i<<2)));
+		*(dest--) = *(src++);
 }
 
 static int spear_pm_on(void)
@@ -161,7 +162,7 @@ static int spear_pm_valid_state(suspend_state_t state)
 	}
 }
 
-static struct platform_suspend_ops spear_pm_ops = {
+static const struct platform_suspend_ops spear_pm_ops = {
 	.prepare	= spear_pm_prepare,
 	.enter		= spear_pm_enter,
 	.finish		= spear_pm_finish,
@@ -184,7 +185,7 @@ static void empty_exit(void)
 {
 }
 
-static struct platform_hibernation_ops spear_hiber_ops = {
+static const struct platform_hibernation_ops spear_hiber_ops = {
 	.begin = empty_enter,
 	.end = empty_exit,
 	.pre_snapshot = empty_enter,
@@ -248,8 +249,9 @@ static int __init spear_pm_init(void)
 	spear_sram_sleep = memcpy(sram_dest, (void *)spear_sleep_fn_addr,
 			spear_sleep_mode_sz);
 	/* Copy in the MPMC registers at the end of SRAM */
-	mpmc_regs_base = ioremap(A9SM_AND_MPMC_BASE, 1024);
-	memcpy_decr_ptr(sram_limit_va , mpmc_regs_base, MPMC_REG_CNT);
+	mpmc_regs_base = ioremap(A9SM_AND_MPMC_BASE, SZ_1K);
+	memcpy_decr_ptr((int *)sram_limit_va , (int *)mpmc_regs_base,
+			MPMC_REG_CNT);
 	iounmap(mpmc_regs_base);
 	/* Setup the pm ops */
 	suspend_set_ops(&spear_pm_ops);
