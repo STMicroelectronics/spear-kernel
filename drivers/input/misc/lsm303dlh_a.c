@@ -947,10 +947,10 @@ static int __devinit lsm303dlh_a_probe_config_dt(
 	if (of_property_read_string(np, "name_a", &pdata->name_a))
 		pr_debug("unable to get name_a.");
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-	pdata->irq_a1 = of_get_named_gpio(np, "irq_a1", 0);
+	pdata->irq_a1 = of_get_named_gpio(np, "irq1-gpios", 0);
 	if (!pdata->irq_a1)
 		pr_debug("unable to get irq_a1 from %s.", __func__);
-	pdata->irq_a2 = of_get_named_gpio(np, "irq_a2", 0);
+	pdata->irq_a2 = of_get_named_gpio(np, "irq2-gpios", 0);
 	if (!pdata->irq_a2)
 		pr_debug("unable to get irq_a2 from %s.", __func__);
 #endif

@@ -599,7 +599,7 @@ static int __devinit lsm303dlh_m_probe_config_dt(
 	if (of_property_read_string(np, "name_m", &pdata->name_m))
 		pr_debug("unable to get name_m from %s.", __func__);
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
-	pdata->irq_m = of_get_named_gpio(np, "irq_m", 0);
+	pdata->irq_m = of_get_named_gpio(np, "irq-gpios", 0);
 	if (!pdata->irq_m)
 		pr_debug("unable to get irq_m from %s.", __func__);
 #endif
@@ -713,7 +713,8 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	/* register interrupt */
 	ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_m), NULL,
 		lsm303dlh_m_gpio_irq,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "lsm303dlh_m",
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+		IRQF_ONESHOT, "lsm303dlh_m",
 		ddata);
 	if (ret) {
 		dev_err(&client->dev, "request irq EGPIO_PIN_1 failed\n");
