@@ -105,8 +105,10 @@ void __cpuinit platform_cpu_die(unsigned int cpu)
 	 */
 	cpu_leave_lowpower();
 
+#if 0
 	if (spurious)
 		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
+#endif
 }
 
 int platform_cpu_disable(unsigned int cpu)
