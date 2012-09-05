@@ -376,8 +376,11 @@
 				};
 
 				ad9889_hdmi_tx@39 {
-				compatible = "st,ad9889_hdmi_tx";
-				reg = <0x39>;
+					compatible = "st,ad9889_hdmi_tx";
+					reg = <0x39>;
+					gpios = <&stmpegpio 7 0>;
+					fb = <0>;
+					ain = <1>;
 				};
 			};
 
@@ -390,8 +393,22 @@
 				};
 
 				stmpe801@41 {
-				compatible = "st,stmpe801";
-				reg = <0x41>;
+					compatible = "st,stmpe801";
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0x41>;
+					irq_over_gpio;
+					irq-gpios = <&gpio0 4 0x4>;
+					id = <0>;
+					blocks = <1>;
+					irq_trigger = <0x2>;
+
+					stmpegpio: stmpe-gpio {
+						compatible = "stmpe,gpio";
+						reg = <0>;
+						gpio-controller;
+						#gpio-cells = <2>;
+					};
 				};
 			};
 
@@ -433,20 +450,27 @@
 					pl022,ctrl-len = <0x7>;
 					pl022,wait-state = <0>;
 					pl022,duplex = <0>;
-					ts,sample_time = <4>;
-					ts,mod_12b = <1>;
-					ts,ref_sel = <0>;
-					ts,adc_freq = <1>;
-					ts,ave_ctrl = <1>;
-					ts,touch_det_delay = <2>;
-					ts,settling = <2>;
-					ts,fraction_z = <7>;
-					ts,i_drive = <1>;
 					irq_over_gpio;
-					gpio-irq = <&gpiopinctrl 100 0>;
+					irq-gpios = <&gpiopinctrl 100 0>;
 					id = <0>;
 					blocks = <4>;
 					irq_trigger = <0x2>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					stmpe610-ts {
+						compatible = "stmpe,ts";
+						reg = <0>;
+						ts,sample_time = <4>;
+						ts,mod_12b = <1>;
+						ts,ref_sel = <0>;
+						ts,adc_freq = <1>;
+						ts,ave_ctrl = <1>;
+						ts,touch_det_delay = <2>;
+						ts,settling = <2>;
+						ts,fraction_z = <7>;
+						ts,i_drive = <1>;
+					};
 				};
 				spidev@2 {
 					status = "okay";
