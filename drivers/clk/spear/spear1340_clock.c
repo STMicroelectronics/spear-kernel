@@ -384,20 +384,31 @@ static struct aux_rate_tbl adc_rtbl[] = {
 
 /* General synth rate configuration table, in ascending order of rates */
 static struct frac_rate_tbl gen_rtbl[] = {
-	/* For vco1div4 = 250 MHz */
-	{.div = 0x1624E}, /* 22.5792 MHz */
-	{.div = 0x14585}, /* 24.576 MHz */
-	{.div = 0x14000}, /* 25 MHz */
-	{.div = 0x0B127}, /* 45.1584 MHz */
-	{.div = 0x0A000}, /* 50 MHz */
-	{.div = 0x061A8}, /* 81.92 MHz */
-	{.div = 0x05000}, /* 100 MHz */
-	{.div = 0x02800}, /* 200 MHz */
-	{.div = 0x02620}, /* 210 MHz */
-	{.div = 0x02460}, /* 220 MHz */
-	{.div = 0x022C0}, /* 230 MHz */
-	{.div = 0x02160}, /* 240 MHz */
-	{.div = 0x02000}, /* 250 MHz */
+	{.div = 0x1A92B}, /* 22.5792 MHz for vco1div4=300 MHz*/
+	{.div = 0x186A0}, /* 24.576 MHz for vco1div4=300 MHz*/
+	{.div = 0x18000}, /* 25 MHz for vco1div4=300 MHz*/
+	{.div = 0x1624E}, /* 22.5792 MHz for vco1div4=250 MHz*/
+	{.div = 0x14585}, /* 24.576 MHz for vco1div4=250 MHz*/
+	{.div = 0x14000}, /* 25 MHz for vco1div4=250 MHz*/
+	{.div = 0x0D495}, /* 45.1584 MHz for vco1div4=300 MHz*/
+	{.div = 0x0C000}, /* 50 MHz for vco1div4=300 MHz*/
+	{.div = 0x0B127}, /* 45.1584 MHz for vco1div4=250 MHz*/
+	{.div = 0x0A000}, /* 50 MHz for vco1div4=250 MHz*/
+	{.div = 0x07530}, /* 81.92 MHz for vco1div4=300 MHz*/
+	{.div = 0x061A8}, /* 81.92 MHz for vco1div4=250 MHz*/
+	{.div = 0x06000}, /* 100 MHz for vco1div4=300 MHz*/
+	{.div = 0x05000}, /* 100 MHz for vco1div4=250 MHz*/
+	{.div = 0x03000}, /* 200 MHz for vco1div4=300 MHz*/
+	{.div = 0x02DB6}, /* 210 MHz for vco1div4=300 MHz*/
+	{.div = 0x02BA2}, /* 220 MHz for vco1div4=300 MHz*/
+	{.div = 0x029BD}, /* 230 MHz for vco1div4=300 MHz*/
+	{.div = 0x02800}, /* 200 MHz for vco1div4=250 MHz*/
+	{.div = 0x02666}, /* 250 MHz for vco1div4=300 MHz*/
+	{.div = 0x02620}, /* 210 MHz for vco1div4=250 MHz*/
+	{.div = 0x02460}, /* 220 MHz for vco1div4=250 MHz*/
+	{.div = 0x022C0}, /* 230 MHz for vco1div4=250 MHz*/
+	{.div = 0x02160}, /* 240 MHz for vco1div4=250 MHz*/
+	{.div = 0x02000}, /* 250 MHz for vco1div4=250 MHz*/
 };
 
 /* clock parents */
