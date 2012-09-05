@@ -7,7 +7,7 @@ Required properties:
 - axis_map_x, _y,_z : Orientation of Acceleremeter about reference x, y, z
   axis. The value should be betwwen 0 to 2.
 - input_poll_dev : Input device for polling.
-- irq_a1, _a2 : Interrupt line 1 and 2 of LSM303DLH Accelerometer.
+- irq1-gpios, irq2-gpios : Interrupt line 1 and 2 of LSM303DLH Accelerometer.
 
 Optional properties:
 - negative_x, _y, _z : Orientation of Acceleremeter about negative reference x,
@@ -23,6 +23,6 @@ accelerometer: lsm303dlh_a@0x19 {
 	axis_map_y = <1>;
 	axis_map_z = <2>;
 	input_poll_dev = <1>;
-	irq_a1 = <&gpiocontrol 71 0>;
-	irq_a2 = <&gpiocontrol 75 0>;;
+	irq1-gpios = <&gpiocontrol 71 0>;
+	irq2-gpios = <&gpiocontrol 75 0>;
 };

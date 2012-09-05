@@ -6,7 +6,7 @@ Required properties:
 - name_m : Magnetometer name (name of device for regulator).
 - axis_map_x, _y,_z : Orientation of Magnetometer about reference x, y, z.
   axis. The value should be betwwen 0 to 2.
-- irq_m : Interrupt line of LSM303DLH Magnetometer.
+- irq-gpios : Interrupt line of LSM303DLH Magnetometer.
 
 Optional properties:
 - negative_x, _y, _z : Orientation of Magnetometer about negative reference x,
@@ -21,5 +21,5 @@ magnetometer: lsm303dlh_m@0x1e {
 	axis_map_x = <0>;
 	axis_map_y = <1>;
 	axis_map_z = <2>;
-	irq_m  = <&gpiocontrol 70 0>;
+	irq-gpios  = <&gpiocontrol 70 0>;
 };
