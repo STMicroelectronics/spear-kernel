@@ -14,6 +14,8 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/acpi.h>
+#include <linux/of_device.h>
+#include <linux/of_irq.h>
 #include <linux/mfd/core.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -132,6 +134,9 @@ static int mfd_add_device(struct device *parent, int id,
 	ret = platform_device_add_resources(pdev, res, cell->num_resources);
 	if (ret)
 		goto fail_res;
+
+	if (cell->of_node)
+		pdev->dev.of_node = cell->of_node;
 
 	ret = platform_device_add(pdev);
 	if (ret)

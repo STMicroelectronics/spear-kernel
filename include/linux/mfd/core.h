@@ -52,6 +52,7 @@ struct mfd_cell {
 	 * pm_runtime_no_callbacks().
 	 */
 	bool			pm_runtime_no_callbacks;
+	struct device_node	*of_node;
 };
 
 /*
