@@ -68,6 +68,9 @@ static int __devinit dw_i2c_parse_dt(struct platform_device *pdev,
 	if (of_property_read_bool(np, "stop-control"))
 		dev->stop_control = true;
 
+	if (of_property_read_bool(np, "write-16bit"))
+		dev->accessor_flags |= ACCESS_WRITE_16BIT;
+
 	dw_recovery_info = adap->bus_recovery_info;
 
 	if (of_property_read_bool(np, "recovery,gpio"))

@@ -189,6 +189,8 @@ void dw_writel(struct dw_i2c_dev *dev, u32 b, int offset)
 	if (dev->accessor_flags & ACCESS_16BIT) {
 		writew((u16)b, dev->base + offset);
 		writew((u16)(b >> 16), dev->base + offset + 2);
+	} else if (dev->accessor_flags & ACCESS_WRITE_16BIT) {
+		writew((u16)b, dev->base + offset);
 	} else {
 		writel(b, dev->base + offset);
 	}
