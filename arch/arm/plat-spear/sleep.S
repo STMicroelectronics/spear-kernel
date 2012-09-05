@@ -17,20 +17,9 @@
 #include <mach/suspend.h>
 
 #define DISABLE_I_C_M_V	0x1805
-#define MISC_PLL_OFFS	0x214
-#define MPMC_REG_END	0xffc
 #define PLL_VAL1	0x060a
 #define PLL_VAL2	0x060e
 #define PLL_VAL3	0x0606
-#define ASSOC_MASK	0x3ff
-#define NUMSET_MASK	0x7fff
-
-#define	MODE_IRQ_32	0x12
-#define	MODE_SVC_32	0x13
-#define	MODE_ABT_32	0x17
-#define	MODE_UND_32	0x1B
-#define	MODE_SYS_32	0x1F
-#define	MODE_BITS	0x1F
 
 .text
 ENTRY(spear_sleep_mode)
