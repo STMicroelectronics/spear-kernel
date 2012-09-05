@@ -21,17 +21,10 @@
 #ifndef __ASSEMBLER__
 extern void spear1340_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear1340_sleep_mode_sz;
-extern void spear13xx_sleep_mode(suspend_state_t state, unsigned long *saveblk);
-extern unsigned int spear13xx_sleep_mode_sz;
 extern void spear1310_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear1310_sleep_mode_sz;
 extern void spear_wakeup(void);
 extern unsigned int spear_wakeup_sz;
-extern int spear_cpu_suspend(suspend_state_t, long);
-extern void spear_clocksource_resume(void);
-extern void spear_clocksource_suspend(void);
-extern int spear_pcie_suspend(void);
-extern int spear_pcie_resume(void);
 #endif
 
 #define PCM_SET_WAKEUP_CFG	0xfffff
@@ -69,21 +62,13 @@ extern int spear_pcie_resume(void);
 #define VA_PCM_WKUP_CFG		(VA_MISC_BASE + 0x104)
 #define VA_SWITCH_CTR		(VA_MISC_BASE + 0x108)
 
-
-#define DISABLE_I_C_M_V	0x1805
-#define MISC_PLL_OFFS	0x214
-#define MPMC_REG_END	0xff0
-#define SRAM_SCR_REG	0xffc
-#define PLL_VAL1	0x060a
-#define PLL_VAL2	0x060e
-#define PLL_VAL3	0x0606
-
-#define	MODE_IRQ_32	0x12
-#define	MODE_SVC_32	0x13
-#define	MODE_ABT_32	0x17
-#define	MODE_UND_32	0x1B
-#define	MODE_SYS_32	0x1F
-#define	MODE_BITS	0x1F
+#define DISABLE_I_C_M_V		0x1805
+#define MISC_PLL_OFFS		0x214
+#define MPMC_REG_END		0xff0
+#define SRAM_SCR_REG		0xffc
+#define PLL_VAL1		0x060a
+#define PLL_VAL2		0x060e
+#define PLL_VAL3		0x0606
 
 #ifdef __ASSEMBLER__
 .macro	io_v2p, pa, va, tmp
@@ -125,7 +110,7 @@ extern int spear_pcie_resume(void);
 	mcr	p15, 0, \rc, c1, c0, 0
 .endm
 
-.macro ddr_in_srefresh, rc, misc_b, mpmc_b , misc_off
+.macro put_ddr_to_srefresh, rc, misc_b, mpmc_b , misc_off
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	\rc, [\mpmc_b, #0x2C]
 	/* Set srefresh_enter bit(2) */
@@ -138,7 +123,7 @@ wait_till_srefresh_on_r0:
 	bne	wait_till_srefresh_on_r0
 .endm
 
-.macro system_slow_mode, rc, misc_b
+.macro put_system_to_slow_mode, rc, misc_b
 	/* Put the system in slow mode */
 	ldr	\rc, [\misc_b, #0x200]
 	bic	\rc, \rc, #0x7
@@ -226,7 +211,7 @@ pll_lock_1_3:
 	bne	swon_pll_1_3
 .endm
 
-.macro system_normal_mode, rc, misc_b
+.macro put_system_to_normal_mode, rc, misc_b
 	/* Put the system in normal mode */
 	ldr	\rc, [\misc_b, #0x200]
 	bic	\rc, \rc, #0x7
