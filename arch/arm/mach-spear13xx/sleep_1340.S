@@ -50,7 +50,7 @@ mmu_off:
 	/* Program the Status check offset in misc space */
 	ldr	r1, =0x438
 	/* Move DDR into self-refresh */
-	ddr_in_srefresh r0, r6, r7, r1
+	put_ddr_to_srefresh r0, r6, r7, r1
 
 	/* Enable XGPIO clk */
 	ldr	r0, [r6, #0x314]
@@ -82,7 +82,7 @@ mmu_off:
 	str	r1, [r6, #0x310]
 
 	/* Put the system in slow mode */
-	system_slow_mode	r0, r6
+	put_system_to_slow_mode	r0, r6
 
 	/* Move the ahb clock control to cpu/3 */
 	ldr	r0, [r6, #0x200]
@@ -179,7 +179,7 @@ spear_sleep_restore:
 	str	r0, [r6, #0x200]
 
 	/* Move the system into normal mode */
-	system_normal_mode r0, r6
+	put_system_to_normal_mode r0, r6
 
 	ldr	r7, =MISC_BASE
 	/* Enable the MPMC clock */

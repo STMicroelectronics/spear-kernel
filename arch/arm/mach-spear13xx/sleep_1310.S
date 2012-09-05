@@ -47,7 +47,7 @@ mmu_off:
 	/* Program the Status check offset in misc space */
 	ldr	r1, =0x3DC
 	/* Move DDR into self-refresh */
-	ddr_in_srefresh r0, r6, r7, r1
+	put_ddr_to_srefresh r0, r6, r7, r1
 
 	/* enable gpio clock */
 	ldr	r0, [r6, #0x300]
@@ -81,7 +81,7 @@ mmu_off:
 	str	r1, [r6, #0x304]
 
 	/* Move the system into slow mode */
-	system_slow_mode	r0, r6
+	put_system_to_slow_mode	r0, r6
 
 	/* Switch off the system pll's */
 	switch_off_sys_plls  r0, r2, r6, r1
@@ -153,7 +153,7 @@ spear_sleep_restore:
 	switch_on_pll_1_to_3 r0, r2, r6, r1
 
 	/* Move the system into normal mode */
-	system_normal_mode r0, r6
+	put_system_to_normal_mode r0, r6
 
 	ldr	r7, =MISC_BASE
 	/* Enable the MPMC clock */
