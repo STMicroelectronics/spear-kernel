@@ -19,7 +19,7 @@
 	compatible = "st,spear1340-evb", "st,spear1340";
 	#address-cells = <1>;
 	#size-cells = <1>;
-    
+
     cpus {
         cpu@0 {
             operating-freqs = <
@@ -356,8 +356,8 @@
 				axis_map_z = <2>;
 				input_poll_dev = <1>;
 				name_a = "lsm303dlh_a";
-				irq_a1 = <&gpiopinctrl 71 0>;
-				irq_a2 = <&gpiopinctrl 75 0>;
+				irq1-gpios = <&gpiopinctrl 71 0>;
+				irq2-gpios = <&gpiopinctrl 75 0>;
 				};
 
 				lsm303dlh_m@1e {
@@ -367,7 +367,7 @@
 				axis_map_y = <1>;
 				axis_map_z = <2>;
 				name_m = "lsm303dlh_m";
-				irq_m = <&gpiopinctrl 70 0>;
+				irq-gpios = <&gpiopinctrl 70 0>;
 				};
 
 				sta529@1a {
