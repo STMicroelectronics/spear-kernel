@@ -173,7 +173,7 @@ static void dwc_initialize(struct dw_dma_chan *dwc)
 		 * We need controller-specific data to set up slave
 		 * transfers.
 		 */
-		BUG_ON(!dws->dma_dev || dws->dma_dev != dw->dma.dev);
+		BUG_ON(dws->dma_master_id != dw->dma.dev_id);
 
 		cfghi = dws->cfg_hi;
 		cfglo |= dws->cfg_lo & ~DWC_CFGL_CH_PRIOR_MASK;
@@ -1492,6 +1492,7 @@ static int __init dw_probe(struct platform_device *pdev)
 	if (pdata->is_private)
 		dma_cap_set(DMA_PRIVATE, dw->dma.cap_mask);
 	dw->dma.dev = &pdev->dev;
+	dw->dma.dev_id = pdata->dev_id;
 	dw->dma.device_alloc_chan_resources = dwc_alloc_chan_resources;
 	dw->dma.device_free_chan_resources = dwc_free_chan_resources;
 
