@@ -54,7 +54,7 @@
 					st,function = "fsmc";
 				};
 				uart0 {
-					st,pins = "uart0_grp", "uart0_enh_grp";
+					st,pins = "uart0_grp";
 					st,function = "uart0";
 				};
 				i2c0 {
