@@ -30,6 +30,7 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <plat/adc.h>
 
 /* common dw_dma filter routine to be used by peripherals */
 bool dw_dma_filter(struct dma_chan *chan, void *slave)
@@ -66,6 +67,23 @@ struct pl022_ssp_controller pl022_plat_data = {
 	.dma_filter = dw_dma_filter,
 	.dma_rx_param = &ssp_dma_param[1],
 	.dma_tx_param = &ssp_dma_param[0],
+};
+
+/* adc device registeration */
+static struct dw_dma_slave adc_dma_param[] = {
+	{
+		.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_ADC),
+		.cfg_lo = 0,
+		.src_master = DMA_MASTER_ADC,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+struct adc_plat_data adc_pdata = {
+	.dma_filter = dw_dma_filter,
+	.dma_data = &adc_dma_param,
+	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
+		NORMAL_RESOLUTION, 14000000, 0},
 };
 
 /* CF device registration */
@@ -140,7 +158,7 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 	/* Set the Pll-2 as parent for gmac_phy_input_clk */
 	ret = clk_set_parent(input_clk, input_pclk);
 	if (IS_ERR_VALUE(ret)) {
-		pr_err("%s:couldn't set parent for inout phy clk \n", __func__);
+		pr_err("%s:couldn't set parent for inout phy clk\n", __func__);
 		goto fail_set_rate;
 	}
 	if (pdata->interface == PHY_INTERFACE_MODE_RMII) {
@@ -167,7 +185,7 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev)
 	/* Select the parent for phy clock */
 	ret = clk_set_parent(phy_clk, phy_pclk);
 	if (IS_ERR_VALUE(ret)) {
-		pr_err("%s:couldn't set parent for phy clk \n", __func__);
+		pr_err("%s:couldn't set parent for phy clk\n", __func__);
 		goto fail_set_rate;
 	}
 
