@@ -15,6 +15,18 @@ config DEVKMEM
 	  kind of kernel debugging operations.
 	  When in doubt, say "N".
 
+config SPEAR_ADC
+	tristate "ST SPEAr ADC"
+	depends on PLAT_SPEAR
+	help
+	  This is a driver for the ADC devices found on ST's SPEAr Platforms.
+
+config SPEAR_ADC_DMA_IF
+	bool "ST SPEAr ADC DMA Interface"
+	depends on SPEAR_ADC
+	help
+	  This enables DMA transfers on ADC Channel 0
+
 config STALDRV
 	bool "Stallion multiport serial support"
 	depends on SERIAL_NONSTANDARD
