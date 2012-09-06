@@ -19,6 +19,7 @@
  * @nr_channels: Number of channels supported by hardware (max 8)
  * @is_private: The device channels should be marked as private and not for
  *	by the general purpose DMA channel allocator.
+ * @dev_id: DMA device instance.
  */
 struct dw_dma_platform_data {
 	unsigned int	nr_channels;
@@ -29,6 +30,7 @@ struct dw_dma_platform_data {
 #define CHAN_PRIORITY_ASCENDING		0	/* chan0 highest */
 #define CHAN_PRIORITY_DESCENDING	1	/* chan7 highest */
 	unsigned char	chan_priority;
+	unsigned char	dev_id;
 };
 
 /* bursts size */
@@ -51,6 +53,7 @@ enum dw_dma_msize {
  * @cfg_lo: Platform-specific initializer for the CFG_LO register
  * @src_master: src master for transfers on allocated channel.
  * @dst_master: dest master for transfers on allocated channel.
+ * @dma_master_id: ID of the DMA Master associated with the device
  */
 struct dw_dma_slave {
 	struct device		*dma_dev;
@@ -58,6 +61,7 @@ struct dw_dma_slave {
 	u32			cfg_lo;
 	u8			src_master;
 	u8			dst_master;
+	u8			dma_master_id;
 };
 
 /* Platform-configurable bits in CFG_HI */
