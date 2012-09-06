@@ -319,9 +319,9 @@
 			};
 
 			adc@e0080000 {
-				compatible = "st,spear600-adc";
+				compatible = "st,spear-adc";
 				reg = <0xe0080000 0x1000>;
-				interrupts = <0 44 0x4>;
+				interrupts = <0 12 0x4>;
 				status = "disabled";
 			};
 
