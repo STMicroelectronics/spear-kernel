@@ -37,7 +37,7 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 {
 	struct dw_dma_slave *dws = (struct dw_dma_slave *)slave;
 
-	if (chan->device->dev == dws->dma_dev) {
+	if (chan->dev->dev_id == dws->dma_master_id) {
 		chan->private = slave;
 		return true;
 	} else {
@@ -49,12 +49,14 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 static struct dw_dma_slave ssp_dma_param[] = {
 	{
 		/* Tx */
+		.dma_master_id = 0,
 		.cfg_hi = DWC_CFGH_DST_PER(DMA_REQ_SSP0_TX),
 		.cfg_lo = 0,
 		.src_master = DMA_MASTER_MEMORY,
 		.dst_master = DMA_MASTER_SSP0,
 	}, {
 		/* Rx */
+		.dma_master_id = 0,
 		.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_SSP0_RX),
 		.cfg_lo = 0,
 		.src_master = DMA_MASTER_SSP0,
@@ -88,6 +90,7 @@ struct adc_plat_data adc_pdata = {
 
 /* CF device registration */
 struct dw_dma_slave cf_dma_priv = {
+	.dma_master_id = 0,
 	.cfg_hi = 0,
 	.cfg_lo = 0,
 	.src_master = 0,
@@ -95,10 +98,18 @@ struct dw_dma_slave cf_dma_priv = {
 };
 
 /* dmac device registeration */
-struct dw_dma_platform_data dmac_plat_data = {
+struct dw_dma_platform_data dmac_plat_data0 = {
 	.nr_channels = 8,
 	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
 	.chan_priority = CHAN_PRIORITY_DESCENDING,
+	.dev_id = 0,
+};
+
+struct dw_dma_platform_data dmac_plat_data1 = {
+	.nr_channels = 8,
+	.chan_allocation_order = CHAN_ALLOCATION_DESCENDING,
+	.chan_priority = CHAN_PRIORITY_DESCENDING,
+	.dev_id = 1,
 };
 
 /* Ethernet clock initialization */
