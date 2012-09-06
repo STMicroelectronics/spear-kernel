@@ -20,6 +20,7 @@
 
 /* Add spear13xx structure declarations here */
 extern struct sys_timer spear13xx_timer;
+extern struct adc_plat_data adc_pdata;
 extern struct pl022_ssp_controller pl022_plat_data;
 extern struct dw_dma_platform_data dmac_plat_data;
 extern struct dw_dma_slave cf_dma_priv;
