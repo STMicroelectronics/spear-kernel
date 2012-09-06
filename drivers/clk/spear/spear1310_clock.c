@@ -766,10 +766,11 @@ void __init spear1310_clk_init(void)
 	clk_register_clkdev(clk, "adc_syn_clk", NULL);
 	clk_register_clkdev(clk1, "adc_syn_gclk", NULL);
 
-	clk = clk_register_gate(NULL, "adc_clk", "adc_syn_gclk", 0,
+	clk = clk_register_gate(NULL, "adc_clk", "adc_syn_gclk",
+			CLK_SET_RATE_PARENT,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_ADC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "adc_clk");
+	clk_register_clkdev(clk, NULL, "e0080000.adc");
 
 	/* clock derived from apb clk */
 	clk = clk_register_gate(NULL, "ssp0_clk", "apb_clk", 0,
