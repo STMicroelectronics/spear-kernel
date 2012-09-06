@@ -306,16 +306,23 @@ static struct aux_rate_tbl gmac_rtbl[] = {
 
 /* clcd rate configuration table, in ascending order of rates */
 static struct frac_rate_tbl clcd_rtbl[] = {
+	{.div = 0x18000}, /* 25 Mhz , for vc01div4 = 300 MHz*/
+	{.div = 0x1638E}, /* 27 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x14000}, /* 25 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x1284B}, /* 27 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
 	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
+	{.div = 0x0A584}, /* 58 Mhz , for vco1div4 = 300 MHz */
+	{.div = 0x093B1}, /* 65 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x081BA}, /* 74 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x07BA0}, /* 65 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
 	{.div = 0x06c1B}, /* 74 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x058E3}, /* 108 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x04A12}, /* 108 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x040A5}, /* 148.5 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x0378E}, /* 144 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x0360D}, /* 148 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x035E0}, /* 148.5 MHz, for vc01div4 = 250 MHz*/
