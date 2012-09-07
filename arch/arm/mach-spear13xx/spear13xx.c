@@ -72,13 +72,12 @@ struct pl022_ssp_controller pl022_plat_data = {
 };
 
 /* adc device registeration */
-static struct dw_dma_slave adc_dma_param[] = {
-	{
-		.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_ADC),
-		.cfg_lo = 0,
-		.src_master = DMA_MASTER_ADC,
-		.dst_master = DMA_MASTER_MEMORY,
-	}
+static struct dw_dma_slave adc_dma_param = {
+	.dma_master_id = 0,
+	.cfg_hi = DWC_CFGH_SRC_PER(DMA_REQ_ADC),
+	.cfg_lo = 0,
+	.src_master = DMA_MASTER_ADC,
+	.dst_master = DMA_MASTER_MEMORY,
 };
 
 struct adc_plat_data adc_pdata = {
