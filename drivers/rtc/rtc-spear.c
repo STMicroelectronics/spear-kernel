@@ -405,7 +405,7 @@ static int __devinit spear_rtc_probe(struct platform_device *pdev)
 		status = PTR_ERR(config->rtc);
 		goto err_iounmap;
 	}
-
+	config->rtc->uie_unsupported = 1;
 	/* alarm irqs */
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
