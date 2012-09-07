@@ -74,7 +74,7 @@
 					st,function = "spdif_out";
 				};
 				ssp0 {
-					st,pins = "ssp0_grp";
+					st,pins = "ssp0_grp", "ssp0_cs1_grp", "ssp0_cs2_grp", "ssp0_cs3_grp";
 					st,function = "ssp0";
 				};
 				pwm {
