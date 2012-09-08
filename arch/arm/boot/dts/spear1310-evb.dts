@@ -254,9 +254,11 @@
 				stmpe610@0 {
 					status = "okay";
 					compatible = "st,stmpe610";
+					reg = <0>;
+					#address-cells = <1>;
+					#size-cells = <0>;
 					spi-max-frequency = <1000000>;
 					spi-cpha;
-					reg = <0>;
 					pl022,hierarchy = <0>;
 					pl022,interface = <0>;
 					pl022,slave-tx-disable;
@@ -266,20 +268,25 @@
 					pl022,ctrl-len = <0x7>;
 					pl022,wait-state = <0>;
 					pl022,duplex = <0>;
-					ts,sample_time = <4>;
-					ts,mod_12b = <1>;
-					ts,ref_sel = <0>;
-					ts,adc_freq = <1>;
-					ts,ave_ctrl = <1>;
-					ts,touch_det_delay = <2>;
-					ts,settling = <2>;
-					ts,fraction_z = <7>;
-					ts,i_drive = <1>;
-					irq_over_gpio;
-					gpio-irq = <&gpio1 6 0x4>;
 					id = <0>;
 					blocks = <4>;
+					irq_over_gpio;
+					irq-gpios = <&gpio1 6 0x4>;
 					irq_trigger = <0x2>;
+
+					stmpe610-ts {
+						compatible = "stmpe,ts";
+						reg = <0>;
+						ts,sample_time = <4>;
+						ts,mod_12b = <1>;
+						ts,ref_sel = <0>;
+						ts,adc_freq = <1>;
+						ts,ave_ctrl = <1>;
+						ts,touch_det_delay = <2>;
+						ts,settling = <2>;
+						ts,fraction_z = <7>;
+						ts,i_drive = <1>;
+					};
 				};
 				m25p80@1 {
 					status = "okay";
