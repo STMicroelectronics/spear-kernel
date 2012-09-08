@@ -736,19 +736,19 @@ void __init spear1310_clk_init(void)
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_PCIE_SATA_0_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "dw_pcie.0");
-	clk_register_clkdev(clk, NULL, "ahci.0");
+	clk_register_clkdev(clk, NULL, "b1000000.ahci");
 
 	clk = clk_register_gate(NULL, "pcie_sata_1_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_PCIE_SATA_1_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "dw_pcie.1");
-	clk_register_clkdev(clk, NULL, "ahci.1");
+	clk_register_clkdev(clk, NULL, "b1800000.ahci");
 
 	clk = clk_register_gate(NULL, "pcie_sata_2_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_PCIE_SATA_2_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "dw_pcie.2");
-	clk_register_clkdev(clk, NULL, "ahci.2");
+	clk_register_clkdev(clk, NULL, "b4000000.ahci");
 
 	clk = clk_register_gate(NULL, "sysram0_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_SYSRAM0_CLK_ENB, 0,
