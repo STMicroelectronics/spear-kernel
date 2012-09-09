@@ -85,6 +85,16 @@ config PWM_SAMSUNG
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-samsung.
 
+config PWM_SPEAR
+	tristate "STMicroelectronics SPEAR PWM support"
+	depends on PLAT_SPEAR
+	help
+	  Generic PWM framework driver for the PWM controller on ST
+	  SPEAr SoCs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-st.
+
 config PWM_TEGRA
 	tristate "NVIDIA Tegra PWM support"
 	depends on ARCH_TEGRA
