@@ -259,6 +259,7 @@
 
 		soc-camera {
 			status = "okay";
+			gpios = <&stmpegpio 6 0>;
 		};
 
 		gpio_keys {
