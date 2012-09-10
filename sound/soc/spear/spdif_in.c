@@ -204,7 +204,7 @@ static int spdif_in_probe(struct platform_device *pdev)
 	if (!res)
 		return -EINVAL;
 
-	res_fifo = platform_get_resource(pdev, IORESOURCE_IO, 0);
+	res_fifo = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res_fifo)
 		return -EINVAL;
 
