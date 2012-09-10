@@ -422,6 +422,11 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		goto err_set_drvdata;
 	}
 
+	if (pdata) {
+		if (pdata->clk_init)
+			pdata->clk_init();
+	}
+
 	return 0;
 
 err_set_drvdata:
