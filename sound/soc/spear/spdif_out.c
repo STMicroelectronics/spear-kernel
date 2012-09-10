@@ -369,6 +369,12 @@ static SIMPLE_DEV_PM_OPS(spdif_out_dev_pm_ops, spdif_out_suspend, \
 
 #endif
 
+static const struct of_device_id spdif_out_of_match[]  = {
+	{ .compatible = "st,spdif-out", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_out_of_match);
+
 static struct platform_driver spdif_out_driver = {
 	.probe		= spdif_out_probe,
 	.remove		= spdif_out_remove,
@@ -376,6 +382,7 @@ static struct platform_driver spdif_out_driver = {
 		.name	= "spdif-out",
 		.owner	= THIS_MODULE,
 		.pm	= SPDIF_OUT_DEV_PM_OPS,
+		.of_match_table = spdif_out_of_match,
 	},
 };
 
