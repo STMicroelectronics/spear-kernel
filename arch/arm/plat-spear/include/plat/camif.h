@@ -101,6 +101,7 @@ struct camif_config_data {
  * @config: configuration parameter for this camif instance
  */
 struct camif_controller {
+	int id;
 	bool (*dma_filter)(struct dma_chan *chan, void *filter_param);
 	void *dma_even_param;
 	void *dma_odd_param;

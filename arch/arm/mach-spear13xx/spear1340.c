@@ -472,6 +472,7 @@ static struct dw_dma_slave camif0_dma_param[] = {
 };
 
 static struct camif_controller camif0_platform_data = {
+	.id = 0,
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif0_dma_param[0],
 	.dma_even_param = &camif0_dma_param[1],
@@ -509,6 +510,7 @@ static struct dw_dma_slave camif1_dma_param[] = {
 };
 
 static struct camif_controller camif1_platform_data = {
+	.id = 1,
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif1_dma_param[0],
 	.dma_even_param = &camif1_dma_param[1],
@@ -546,6 +548,7 @@ static struct dw_dma_slave camif2_dma_param[] = {
 };
 
 static struct camif_controller camif2_platform_data = {
+	.id = 2,
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif2_dma_param[0],
 	.dma_even_param = &camif2_dma_param[1],
@@ -584,6 +587,7 @@ static struct dw_dma_slave camif3_dma_param[] = {
 };
 
 static struct camif_controller camif3_platform_data = {
+	.id = 3,
 	.dma_filter = dw_dma_filter,
 	.dma_odd_param = &camif3_dma_param[0],
 	.dma_even_param = &camif3_dma_param[1],

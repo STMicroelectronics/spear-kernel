@@ -1998,7 +1998,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->frm_start_end_irq = frm_start_end_irq;
 	camif->line_irq = line_irq;
 	camif->pdata = pdev->dev.platform_data;
-	camif->id = pdev->id;
+	camif->id = camif->pdata->id;
 
 	ret = request_irq(camif->line_irq, camif_line_int, 0,
 				"camif_line", camif);
@@ -2028,7 +2028,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif_configure_interrupts(camif, DISABLE_ALL);
 
 	camif->ici.v4l2_dev.dev = &pdev->dev;
-	camif->ici.nr = pdev->id;
+	camif->ici.nr = camif->pdata->id;
 	camif->ici.priv = camif;
 	camif->ici.drv_name = "spear_camif";
 	camif->ici.ops = &camif_soc_camera_host_ops;
