@@ -39,6 +39,12 @@ static struct snd_soc_dai_driver dir_stub_dai = {
 	},
 };
 
+static const struct of_device_id spdif_dir_of_match[] = {
+	{ .compatible = "dummy,dir-hifi", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_dir_of_match);
+
 static int spdif_dir_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev, &soc_codec_spdif_dir,
@@ -57,6 +63,7 @@ static struct platform_driver spdif_dir_driver = {
 	.driver		= {
 		.name	= "spdif-dir",
 		.owner	= THIS_MODULE,
+		.of_match_table = spdif_dir_of_match,
 	},
 };
 
