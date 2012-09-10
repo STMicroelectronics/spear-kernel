@@ -299,7 +299,7 @@ static int dw_i2s_suspend(struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 
-	clk_disable(dev->clk);
+	clk_disable_unprepare(dev->clk);
 	return 0;
 }
 
@@ -307,7 +307,7 @@ static int dw_i2s_resume(struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 
-	clk_enable(dev->clk);
+	clk_prepare_enable(dev->clk);
 	return 0;
 }
 
@@ -381,7 +381,7 @@ static int dw_i2s_probe(struct platform_device *pdev)
 	if (IS_ERR(dev->clk))
 		return  PTR_ERR(dev->clk);
 
-	ret = clk_enable(dev->clk);
+	ret = clk_prepare_enable(dev->clk);
 	if (ret < 0)
 		goto err_clk_put;
 
@@ -427,7 +427,7 @@ static int dw_i2s_probe(struct platform_device *pdev)
 err_set_drvdata:
 	dev_set_drvdata(&pdev->dev, NULL);
 err_clk_disable:
-	clk_disable(dev->clk);
+	clk_disable_unprepare(dev->clk);
 err_clk_put:
 	clk_put(dev->clk);
 	return ret;
