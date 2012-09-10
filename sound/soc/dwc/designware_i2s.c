@@ -17,6 +17,7 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <sound/designware_i2s.h>
 #include <sound/pcm.h>
@@ -318,10 +319,11 @@ static int dw_i2s_resume(struct snd_soc_dai *dai)
 static int dw_i2s_probe(struct platform_device *pdev)
 {
 	const struct i2s_platform_data *pdata = pdev->dev.platform_data;
+	struct device_node *np = pdev->dev.of_node;
 	struct dw_i2s_dev *dev;
 	struct resource *res;
-	int ret;
-	unsigned int cap;
+	int ret, channel;
+	unsigned int cap = 0;
 	struct snd_soc_dai_driver *dw_i2s_dai;
 
 	if (!pdata) {
@@ -354,7 +356,11 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	cap = pdata->cap;
+	if (of_get_property(np, "play", NULL))
+		cap |= DWC_I2S_PLAY;
+	if (of_get_property(np, "record", NULL))
+		cap |= DWC_I2S_RECORD;
+
 	dev->capability = cap;
 	dev->i2s_clk_cfg = pdata->i2s_clk_cfg;
 
@@ -389,7 +395,8 @@ static int dw_i2s_probe(struct platform_device *pdev)
 	if (cap & DWC_I2S_PLAY) {
 		dev_dbg(&pdev->dev, " SPEAr: play supported\n");
 		dw_i2s_dai->playback.channels_min = MIN_CHANNEL_NUM;
-		dw_i2s_dai->playback.channels_max = pdata->channel;
+		of_property_read_u32(np, "channel", &channel);
+		dw_i2s_dai->playback.channels_max = channel;
 		dw_i2s_dai->playback.formats = pdata->snd_fmts;
 		dw_i2s_dai->playback.rates = pdata->snd_rates;
 	}
@@ -397,7 +404,8 @@ static int dw_i2s_probe(struct platform_device *pdev)
 	if (cap & DWC_I2S_RECORD) {
 		dev_dbg(&pdev->dev, "SPEAr: record supported\n");
 		dw_i2s_dai->capture.channels_min = MIN_CHANNEL_NUM;
-		dw_i2s_dai->capture.channels_max = pdata->channel;
+		of_property_read_u32(np, "channel", &channel);
+		dw_i2s_dai->capture.channels_max = channel;
 		dw_i2s_dai->capture.formats = pdata->snd_fmts;
 		dw_i2s_dai->capture.rates = pdata->snd_rates;
 	}
@@ -437,12 +445,19 @@ static int dw_i2s_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id dwc_i2s_of_match[]  = {
+	{ .compatible = "snps,designware-i2s", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, dwc_i2s_of_match);
+
 static struct platform_driver dw_i2s_driver = {
 	.probe		= dw_i2s_probe,
 	.remove		= dw_i2s_remove,
 	.driver		= {
 		.name	= "designware-i2s",
 		.owner	= THIS_MODULE,
+		.of_match_table = dwc_i2s_of_match,
 	},
 };
 
