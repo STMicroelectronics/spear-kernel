@@ -17,7 +17,10 @@
 #include <linux/amba/serial.h>
 #include <linux/delay.h>
 #include <linux/dw_dmac.h>
+#include <linux/i2c.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
+#include <linux/of.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
@@ -30,14 +33,27 @@
 #include <mach/spear.h>
 #include <sound/designware_i2s.h>
 #include <sound/pcm.h>
+#include <media/soc_camera.h>
+#include <plat/camif.h>
 
 /* Base addresses */
+#define SPEAR1340_CAM0_BASE			UL(0xD0200000)
+#define SPEAR1340_CAM1_BASE			UL(0xD0300000)
+#define SPEAR1340_CAM2_BASE			UL(0xD0400000)
+#define SPEAR1340_CAM3_BASE			UL(0xD0500000)
 #define SPEAR1340_SATA_BASE			UL(0xB1000000)
 #define SPEAR1340_UART1_BASE			UL(0xB4100000)
 #define SPEAR1340_I2S_PLAY_BASE			UL(0xB2400000)
 #define SPEAR1340_I2S_REC_BASE			UL(0xB2000000)
 #define SPEAR1340_SPDIF_IN_BASE			UL(0xD0100000)
 #define SPEAR1340_SPDIF_OUT_BASE		UL(0xD0000000)
+
+
+#define VA_SPEAR1340_PERIP3_SW_RST		(VA_MISC_BASE + 0x320)
+	#define SPEAR1340_CAM0_RST			(1 << 10)
+	#define SPEAR1340_CAM1_RST			(1 << 9)
+	#define SPEAR1340_CAM2_RST			(1 << 8)
+	#define SPEAR1340_CAM3_RST			(1 << 7)
 
 /* Power Management Registers */
 #define SPEAR1340_PCM_CFG			(VA_MISC_BASE + 0x100)
@@ -100,6 +116,8 @@
 			SPEAR1340_MIPHY_PLL_RATIO_TOP(25))
 
 #define SPEAR1340_UOC_RST_ENB                   11
+
+int gpio_cam_ce;
 
 static struct dw_dma_slave uart1_dma_param[] = {
 	{
@@ -340,12 +358,249 @@ static struct ahci_platform_data sata_pdata = {
 	.resume = sata_resume,
 };
 
+/* camera sensor registeration */
+static struct i2c_board_info vs6725_camera_sensor_info = {
+	I2C_BOARD_INFO("vs6725", 0x10),
+};
+
+/* Camera power: default is ON */
+static int vs6725_cam_power(struct device *dev, int val)
+{
+	struct device_node *np = dev->of_node;
+	int ret = 0;
+	static bool gpio_avail;
+	enum of_gpio_flags flags;
+
+	if (!gpio_avail) {
+
+		gpio_cam_ce = of_get_gpio_flags(np, 0, &flags);
+		if (gpio_cam_ce < 0) {
+			pr_debug("%s: deferred probe\n", __func__);
+			return (gpio_cam_ce == -ENODEV) ? -EPROBE_DEFER :
+				gpio_cam_ce;
+		}
+
+		ret = gpio_request(gpio_cam_ce, "vs6725-power");
+		if (!ret) {
+			gpio_direction_output(gpio_cam_ce, 0);
+		} else {
+			pr_err("gpio request fail for STMPE801 GPIO(6)\n");
+			goto out;
+		}
+
+		gpio_avail = true;
+	}
+
+	/* turn on/off the CE pin for camera sensor */
+	gpio_set_value_cansleep(gpio_cam_ce, val);
+
+	/*
+	 * Now check if we really were able to set the desired value on CE
+	 * pin of the sensor
+	 */
+	ret = gpio_get_value_cansleep(gpio_cam_ce);
+	if (ret != val) {
+		pr_err("gpio get_val returned %d but expected %d\n", ret, val);
+		ret = -ERESTARTSYS;
+	}
+
+out:
+	return ret;
+}
+
+static struct soc_camera_link vs6725_cam3_iclink_plat_data = {
+	.bus_id = 3,	/* sensor is connected to camera device 3 */
+	.i2c_adapter_id = 0, /* sensor is connected to i2c controller 0 */
+	.board_info = &vs6725_camera_sensor_info,
+	.power = vs6725_cam_power,
+	.module_name = "vs6725",
+};
+
+/* camera reset handler */
+static void camif_enable(int cam_id, bool enable)
+{
+	u32 val = readl(VA_SPEAR1340_PERIP3_SW_RST);
+	u32 mask = 0;
+
+	switch (cam_id) {
+	case 0:
+		mask = SPEAR1340_CAM0_RST;
+		break;
+	case 1:
+		mask = SPEAR1340_CAM1_RST;
+		break;
+	case 2:
+		mask = SPEAR1340_CAM2_RST;
+		break;
+	case 3:
+		mask = SPEAR1340_CAM3_RST;
+		break;
+	}
+
+	if (!enable)
+		writel(val | mask, VA_SPEAR1340_PERIP3_SW_RST);
+	else
+		writel(val & ~mask, VA_SPEAR1340_PERIP3_SW_RST);
+}
+static struct camif_config_data cam0_data = {
+	.sync_type = EMBEDDED_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable
+};
+
+static struct dw_dma_slave camif0_dma_param[] = {
+	{
+		/* odd line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}, {
+		/* even line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM0_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static struct camif_controller camif0_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif0_dma_param[0],
+	.dma_even_param = &camif0_dma_param[1],
+	.config = &cam0_data,
+};
+
+/* camera interface 1 device registeration */
+static struct camif_config_data cam1_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
+};
+
+static struct dw_dma_slave camif1_dma_param[] = {
+	{
+		/* odd line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}, {
+		/* even line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM1_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static struct camif_controller camif1_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif1_dma_param[0],
+	.dma_even_param = &camif1_dma_param[1],
+	.config = &cam1_data,
+};
+
+/* camera interface 2 device registeration */
+static struct camif_config_data cam2_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
+};
+
+static struct dw_dma_slave camif2_dma_param[] = {
+	{
+		/* odd line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}, {
+		/* even line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM2_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static struct camif_controller camif2_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif2_dma_param[0],
+	.dma_even_param = &camif2_dma_param[1],
+	.config = &cam2_data,
+};
+
+
+/* camera interface 3 device registeration */
+static struct camif_config_data cam3_data = {
+	.sync_type = EXTERNAL_SYNC,
+	.vsync_polarity = ACTIVE_HIGH,
+	.hsync_polarity = ACTIVE_HIGH,
+	.pclk_polarity = ACTIVE_LOW,
+	.capture_mode = VIDEO_MODE_ALL_FRAMES,
+	.burst_size = BURST_SIZE_128,
+	.channel = EVEN_CHANNEL,
+	.camif_module_enable = camif_enable,
+};
+
+static struct dw_dma_slave camif3_dma_param[] = {
+	{
+		/* odd line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_ODD),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}, {
+		/* even line */
+		.dma_master_id = 1,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_CAM3_EVEN),
+		.cfg_lo = 0,
+		.src_master = SPEAR1340_DMA_MASTER_CAM,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static struct camif_controller camif3_platform_data = {
+	.dma_filter = dw_dma_filter,
+	.dma_odd_param = &camif3_dma_param[0],
+	.dma_even_param = &camif3_dma_param[1],
+	.config = &cam3_data,
+};
+
 /* Add SPEAr1340 auxdata to pass platform data */
 static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("st,spear-adc", SPEAR13XX_ADC_BASE, NULL, &adc_pdata),
 	OF_DEV_AUXDATA("arasan,cf-spear1340", MCIF_CF_BASE, NULL, &cf_dma_priv),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC0_BASE, NULL, &dmac_plat_data0),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC1_BASE, NULL, &dmac_plat_data1),
+	OF_DEV_AUXDATA("st,camif", SPEAR1340_CAM0_BASE, NULL, &camif0_platform_data),
+	OF_DEV_AUXDATA("st,camif", SPEAR1340_CAM1_BASE, NULL, &camif1_platform_data),
+	OF_DEV_AUXDATA("st,camif", SPEAR1340_CAM2_BASE, NULL, &camif2_platform_data),
+	OF_DEV_AUXDATA("st,camif", SPEAR1340_CAM3_BASE, NULL, &camif3_platform_data),
+	OF_DEV_AUXDATA("spear,soc-camera", 0x0, NULL, &vs6725_cam3_iclink_plat_data),
 	OF_DEV_AUXDATA("arm,pl022", SSP_BASE, NULL, &pl022_plat_data),
 
 	OF_DEV_AUXDATA("snps,spear-ahci", SPEAR1340_SATA_BASE, NULL,
