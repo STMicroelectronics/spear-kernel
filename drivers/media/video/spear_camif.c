@@ -563,7 +563,7 @@ static void camif_start_capture(struct camif *camif,
 	camif_module_enable(camif, true);
 
 	/* enable CAMIF clk */
-	clk_enable(camif->clk);
+	clk_prepare_enable(camif->clk);
 
 	/* reset global flags */
 	camif->first_frame_end = true;
@@ -638,7 +638,7 @@ static void camif_stop_capture(struct camif *camif,
 	 * states
 	 */
 	/* disable CAMIF clk */
-	clk_disable(camif->clk);
+	clk_disable_unprepare(camif->clk);
 
 	/* turn off camif module */
 	camif_module_enable(camif, false);
