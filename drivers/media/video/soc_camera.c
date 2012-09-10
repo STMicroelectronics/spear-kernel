@@ -1516,12 +1516,24 @@ static int __devexit soc_camera_pdrv_remove(struct platform_device *pdev)
 
 	return 0;
 }
+#ifdef CONFIG_OF
+static const struct of_device_id soc_camera_of_match[] = {
+	{.compatible = "spear,soc-camera",},
+	{}
+};
+
+MODULE_DEVICE_TABLE(of, soc_camera_of_match);
+#endif
+
 
 static struct platform_driver __refdata soc_camera_pdrv = {
 	.remove  = __devexit_p(soc_camera_pdrv_remove),
 	.driver  = {
 		.name	= "soc-camera-pdrv",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = soc_camera_of_match,
+#endif
 	},
 };
 
