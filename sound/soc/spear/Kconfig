@@ -23,7 +23,6 @@ config SND_SPEAR_SOC
 	tristate "SoC Audio for the ST chip"
 	depends on SND_DESIGNWARE_I2S || SND_SPEAR_SPDIF_OUT || \
 		SND_SPEAR_SPDIF_IN
-	select SND_SOC_DMAENGINE_PCM
 	help
 	 Say Y or M if you want to add support for any of the audio
 	 controllers (I2S/SPDIF). You will also need to select
