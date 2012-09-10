@@ -419,6 +419,12 @@ static int __devexit sta529_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct of_device_id sta529_of_match[] = {
+	{ .compatible = "st,sta529", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, sta529_of_match);
+
 static const struct i2c_device_id sta529_i2c_id[] = {
 	{ "sta529", 0 },
 	{ }
@@ -429,6 +435,7 @@ static struct i2c_driver sta529_i2c_driver = {
 	.driver = {
 		.name = "sta529",
 		.owner = THIS_MODULE,
+		.of_match_table = sta529_of_match,
 	},
 	.probe		= sta529_i2c_probe,
 	.remove		= __devexit_p(sta529_i2c_remove),
