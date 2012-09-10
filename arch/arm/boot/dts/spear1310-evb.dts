@@ -121,19 +121,27 @@
 
 			partition@0 {
 				label = "xloader";
-				reg = <0x0 0x200000>;
+				reg = <0x0 0x80000>;
 			};
-			partition@200000 {
+			partition@80000 {
 				label = "u-boot";
-				reg = <0x200000 0x300000>;
+				reg = <0x80000 0x140000>;
 			};
-			partition@500000 {
+			partition@140000 {
+				label = "environment";
+				reg = <0x140000 0x40000>;
+			};
+			partition@180000 {
+				label = "dtb";
+				reg = <0x180000 0x40000>;
+			};
+			partition@1c0000 {
 				label = "linux";
-				reg = <0x500000 0xC00000>;
+				reg = <0x1c0000 0xC00000>;
 			};
-			partition@1100000 {
+			partition@dc0000 {
 				label = "rootfs";
-				reg = <0x1100000 0x7EF00000>;
+				reg = <0xdc0000 0x0>;
 			};
 		};
 
@@ -176,15 +184,23 @@
 				};
 				partition@10000 {
 					label = "u-boot";
-					reg = <0x10000 0x40000>;
+					reg = <0x10000 0x50000>;
 				};
-				partition@50000 {
+				partition@60000 {
+					label = "environment";
+					reg = <0x60000 0x10000>;
+				};
+				partition@70000 {
+					label = "dtb";
+					reg = <0x70000 0x10000>;
+				};
+				partition@80000 {
 					label = "linux";
-					reg = <0x50000 0x2c0000>;
+					reg = <0x80000 0x310000>;
 				};
-				partition@310000 {
+				partition@390000 {
 					label = "rootfs";
-					reg = <0x310000 0x4f0000>;
+					reg = <0x390000 0x0>;
 				};
 			};
 		};
