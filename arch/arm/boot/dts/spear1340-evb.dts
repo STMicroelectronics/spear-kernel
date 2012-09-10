@@ -253,11 +253,11 @@
 		        status = "okay";
 		};
 
-		vip@d0800000 {
+		mali {
 			status = "okay";
 		};
 
-		mali {
+		soc-camera {
 			status = "okay";
 		};
 
@@ -273,18 +273,6 @@
 				debounce-interval = <20>;
 				gpio-key,wakeup = <1>;
 			};
-		};
-
-		cam0@d02000000 {
-			status = "okay";
-		};
-
-		cam1@d03000000 {
-			status = "okay";
-		};
-
-		cam2@d04000000 {
-			status = "okay";
 		};
 
 		cam3@d05000000 {
