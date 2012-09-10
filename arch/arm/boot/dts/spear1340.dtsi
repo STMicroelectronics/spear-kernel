@@ -90,6 +90,11 @@
 			status = "disable";
 		};
 
+		soc-camera {
+			compatible = "spear,soc-camera";
+			status = "disable";
+		};
+
 		cam0@d02000000 {
 			compatible = "st,camif";
 			reg = <0xd0200000 0x1000>;
