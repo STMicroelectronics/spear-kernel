@@ -216,12 +216,41 @@
 			status = "okay";
 		};
 
-		spdif-in@d0100000 {
+		spdif0:spdif-in@d0100000 {
 			status = "okay";
 		};
 
-		spdif-out@d0000000 {
+		spdif1:spdif-out@d0000000 {
 			status = "okay";
+		};
+
+		i2s0:i2s-play@b2400000 {
+			status = "okay";
+		};
+
+		i2s1:i2s-rec@b2000000 {
+			status = "okay";
+     		};
+
+		incodec:dir-hifi {
+			compatible = "dummy,dir-hifi";
+			status = "okay";
+		};
+
+		outcodec:dit-hifi {
+			compatible = "dummy,dit-hifi";
+			status = "okay";
+		};
+
+		sound {
+			compatible = "spear,spear-evb";
+			audio-controllers = <&spdif0 &spdif1 &i2s0 &i2s1>;
+			audio-codecs = <&incodec &outcodec &sta529 &sta529>;
+			codec_dai_name = "dir-hifi", "dit-hifi", "sta529-audio", "sta529-audio";
+			stream_name = "spdif-cap", "spdif-play", "i2s-play", "i2s-cap";
+			dai_name = "spdifin-pcm", "spdifout-pcm", "i2s0-pcm", "i2s1-pcm";
+			nr_controllers = <4>;
+		        status = "okay";
 		};
 
 		vip@d0800000 {
@@ -381,7 +410,7 @@
 				irq-gpios = <&gpiopinctrl 70 0>;
 				};
 
-				sta529@1a {
+				sta529:sta529@1a {
 				compatible = "st,sta529";
 				reg = <0x1a>;
 				};
