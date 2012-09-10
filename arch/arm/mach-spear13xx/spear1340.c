@@ -26,6 +26,7 @@
 #include <asm/mach/arch.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
+#include <mach/spdif.h>
 #include <mach/spear.h>
 #include <sound/designware_i2s.h>
 #include <sound/pcm.h>
@@ -35,6 +36,8 @@
 #define SPEAR1340_UART1_BASE			UL(0xB4100000)
 #define SPEAR1340_I2S_PLAY_BASE			UL(0xB2400000)
 #define SPEAR1340_I2S_REC_BASE			UL(0xB2000000)
+#define SPEAR1340_SPDIF_IN_BASE			UL(0xD0100000)
+#define SPEAR1340_SPDIF_OUT_BASE		UL(0xD0000000)
 
 /* Power Management Registers */
 #define SPEAR1340_PCM_CFG			(VA_MISC_BASE + 0x100)
@@ -44,6 +47,8 @@
 #define SPEAR1340_PERIP1_SW_RST			(VA_MISC_BASE + 0x318)
 #define SPEAR1340_PERIP2_SW_RST			(VA_MISC_BASE + 0x31C)
 #define SPEAR1340_PERIP3_SW_RST			(VA_MISC_BASE + 0x320)
+	#define SPEAR1340_SPDIF_IN_RST			(1 << 12)
+
 #define SPEAR1340_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x30C)
 
 /* PCIE - SATA configuration registers */
@@ -185,6 +190,47 @@ static struct dwc_otg_plat_data spear1340_otg_plat_data = {
 	.phy_init = spear1340_otg_phy_init,
 };
 
+/* spdif-in device registeration */
+static void spdif_in_reset(void)
+{
+	writel(readl(SPEAR1340_PERIP3_SW_RST) | SPEAR1340_SPDIF_IN_RST,
+		SPEAR1340_PERIP3_SW_RST);
+
+	writel(readl(SPEAR1340_PERIP3_SW_RST) & ~SPEAR1340_SPDIF_IN_RST,
+		SPEAR1340_PERIP3_SW_RST);
+}
+
+static struct dw_dma_slave spdif_in_dma_data = {
+	/* Record */
+	.dma_master_id = 0,
+	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_SPDIF_RX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_SPDIF,
+	.dst_master = DMA_MASTER_MEMORY,
+};
+
+static struct spdif_platform_data spdif_in_data = {
+	.dma_params = &spdif_in_dma_data,
+	.filter = dw_dma_filter,
+	.reset_perip = spdif_in_reset,
+};
+
+/* spdif-out device registeration */
+static struct dw_dma_slave spdif_out_dma_data = {
+	/* Play */
+	.dma_master_id = 0,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_SPDIF_TX),
+	.cfg_lo = 0,
+	.src_master = DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_SPDIF,
+};
+
+static struct spdif_platform_data spdif_out_data = {
+	.dma_params = &spdif_out_dma_data,
+	.filter = dw_dma_filter,
+};
+
+
 /* i2s:play device registration */
 static struct dw_dma_slave i2s_play_dma_data = {
 	/* Play */
@@ -315,6 +361,10 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 			&i2s_play_data),
 	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR1340_I2S_REC_BASE, NULL,
 			&i2s_capture_data),
+	OF_DEV_AUXDATA("st,spdif-out", SPEAR1340_SPDIF_OUT_BASE, NULL,
+			&spdif_out_data),
+	OF_DEV_AUXDATA("st,spdif-in", SPEAR1340_SPDIF_IN_BASE, NULL,
+			&spdif_in_data),
 	{}
 };
 
