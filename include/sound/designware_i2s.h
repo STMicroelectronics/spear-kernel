@@ -47,6 +47,7 @@ struct i2s_platform_data {
 	void *capture_dma_data;
 	bool (*filter)(struct dma_chan *chan, void *slave);
 	int (*i2s_clk_cfg)(struct i2s_clk_config_data *config);
+	void (*clk_init)(void);
 };
 
 struct i2s_dma_data {
