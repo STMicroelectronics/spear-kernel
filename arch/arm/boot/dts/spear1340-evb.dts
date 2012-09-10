@@ -378,42 +378,41 @@
 			i2c0: i2c@e0280000 {
 			       status = "okay";
 
-				l3g4200d_gyro@69 {
-				compatible = "st,l3g4200d_gyro";
-				reg = <0x69>;
-				poll_interval = <5>;
-				min_interval = <2>;
-				axis_map_x = <0>;
-				axis_map_y = <1>;
-				axis_map_z = <2>;
-				};
+			       l3g4200d_gyro@69 {
+				       compatible = "st,l3g4200d_gyro";
+				       reg = <0x69>;
+				       poll_interval = <5>;
+				       min_interval = <2>;
+				       axis_map_x = <0>;
+				       axis_map_y = <1>;
+				       axis_map_z = <2>;
+			       };
 
-				lsm303dlh_a@19 {
-				compatible = "st,lsm303dlh_a";
-				reg = <0x19>;
-				axis_map_x = <0>;
-				axis_map_y = <1>;
-				axis_map_z = <2>;
-				input_poll_dev = <1>;
-				name_a = "lsm303dlh_a";
-				irq1-gpios = <&gpiopinctrl 71 0>;
-				irq2-gpios = <&gpiopinctrl 75 0>;
-				};
+			       lsm303dlh_a@19 {
+				       compatible = "st,lsm303dlh_a";
+				       reg = <0x19>;
+				       axis_map_x = <0>;
+				       axis_map_y = <1>;
+				       axis_map_z = <2>;
+				       input_poll_dev = <1>;
+				       name_a = "lsm303dlh_a";
+				       irq1-gpios = <&gpiopinctrl 71 0>;
+				       irq2-gpios = <&gpiopinctrl 75 0>;
+			       };
 
-				lsm303dlh_m@1e {
-				compatible = "st,lsm303dlh_m";
-				reg = <0x1e>;
-				axis_map_x = <0>;
-				axis_map_y = <1>;
-				axis_map_z = <2>;
-				name_m = "lsm303dlh_m";
-				irq-gpios = <&gpiopinctrl 70 0>;
-				};
-
+			       lsm303dlh_m@1e {
+				       compatible = "st,lsm303dlh_m";
+				       reg = <0x1e>;
+				       axis_map_x = <0>;
+				       axis_map_y = <1>;
+				       axis_map_z = <2>;
+				       name_m = "lsm303dlh_m";
+				       irq-gpios = <&gpiopinctrl 70 0>;
+			       };
 				sta529:sta529@1a {
-				compatible = "st,sta529";
-				reg = <0x1a>;
-				};
+				       compatible = "st,sta529";
+				       reg = <0x1a>;
+			       };
 
 				ad9889_hdmi_tx@39 {
 					compatible = "st,ad9889_hdmi_tx";
@@ -427,10 +426,10 @@
 			i2c1: i2c@b4000000 {
 			       status = "okay";
 
-				eeprom0@56 {
-				compatible = "st,eeprom";
-				reg = <0x56>;
-				};
+			       eeprom0@56 {
+				       compatible = "st,eeprom";
+				       reg = <0x56>;
+			       };
 
 				stmpe801@41 {
 					compatible = "st,stmpe801";
