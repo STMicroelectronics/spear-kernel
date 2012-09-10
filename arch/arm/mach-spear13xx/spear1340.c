@@ -27,10 +27,14 @@
 #include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <sound/designware_i2s.h>
+#include <sound/pcm.h>
 
 /* Base addresses */
 #define SPEAR1340_SATA_BASE			UL(0xB1000000)
 #define SPEAR1340_UART1_BASE			UL(0xB4100000)
+#define SPEAR1340_I2S_PLAY_BASE			UL(0xB2400000)
+#define SPEAR1340_I2S_REC_BASE			UL(0xB2000000)
 
 /* Power Management Registers */
 #define SPEAR1340_PCM_CFG			(VA_MISC_BASE + 0x100)
@@ -181,6 +185,43 @@ static struct dwc_otg_plat_data spear1340_otg_plat_data = {
 	.phy_init = spear1340_otg_phy_init,
 };
 
+/* i2s:play device registration */
+static struct dw_dma_slave i2s_play_dma_data = {
+	/* Play */
+	.dma_master_id = 0,
+	.cfg_hi = DWC_CFGH_DST_PER(SPEAR1340_DMA_REQ_I2S_TX),
+	.cfg_lo = 0,
+	.src_master = DMA_MASTER_MEMORY,
+	.dst_master = SPEAR1340_DMA_MASTER_I2S_PLAY,
+};
+
+static struct i2s_platform_data i2s_play_data = {
+	.play_dma_data = &i2s_play_dma_data,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
+	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
+	.clk_init = i2s_clk_init,
+};
+
+/* i2s:record device registeration */
+static struct dw_dma_slave i2s_capture_dma_data = {
+	/* Record */
+	.dma_master_id = 0,
+	.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1340_DMA_REQ_I2S_RX),
+	.cfg_lo = 0,
+	.src_master = SPEAR1340_DMA_MASTER_I2S_REC,
+	.dst_master = DMA_MASTER_MEMORY,
+};
+
+static struct i2s_platform_data i2s_capture_data = {
+	.capture_dma_data = &i2s_capture_dma_data,
+	.snd_fmts = SNDRV_PCM_FMTBIT_S16_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_48000),
+	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
+	.clk_init = i2s_clk_init,
+};
 static struct plat_stmmacenet_data eth_data = {
 	.bus_id = 0,
 	.phy_addr = -1,
@@ -270,6 +311,10 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 			&spear1340_otg_plat_data),
 	OF_DEV_AUXDATA("st,db9000-clcd", SPEAR13XX_CLCD_BASE, NULL,
 			&clcd_plat_info),
+	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR1340_I2S_PLAY_BASE, NULL,
+			&i2s_play_data),
+	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR1340_I2S_REC_BASE, NULL,
+			&i2s_capture_data),
 	{}
 };
 

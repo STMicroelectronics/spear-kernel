@@ -31,6 +31,8 @@
 #include <mach/generic.h>
 #include <mach/spear.h>
 #include <plat/adc.h>
+#include <sound/designware_i2s.h>
+#include <sound/pcm.h>
 
 /* common dw_dma filter routine to be used by peripherals */
 bool dw_dma_filter(struct dma_chan *chan, void *slave)
@@ -210,6 +212,228 @@ fail_get_input_clk:
 	clk_put(input_pclk);
 fail_get_input_pclk:
 	return ret;
+}
+
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_clk_config_data *config)
+{
+	struct clk *i2s_sclk_gclk, *i2s_ref_clk, *i2s_src_clk, *i2s_prs1_clk;
+	int ret;
+	u32 bclk;
+
+	i2s_sclk_gclk = clk_get_sys(NULL, "i2s_sclk_gclk");
+	if (IS_ERR(i2s_sclk_gclk)) {
+		pr_err("%s:couldn't get i2s_sclk_gclk\n", __func__);
+		return PTR_ERR(i2s_sclk_gclk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_mclk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk_gclk;
+	}
+
+	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
+	if (IS_ERR(i2s_src_clk)) {
+		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		ret = PTR_ERR(i2s_src_clk);
+		goto put_i2s_ref_clk;
+	}
+
+	i2s_prs1_clk = clk_get_sys(NULL, "i2s_prs1_clk");
+	if (IS_ERR(i2s_prs1_clk)) {
+		pr_err("%s:couldn't get i2s_prs1_clk\n", __func__);
+		ret = PTR_ERR(i2s_prs1_clk);
+		goto put_i2s_src_clk;
+	}
+
+	if (of_machine_is_compatible("st,spear1340")) {
+		if (config->sample_rate != 48000) {
+			ret = clk_set_parent(i2s_ref_clk, i2s_prs1_clk);
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_prs1_clk;
+			}
+		} else {
+			ret = clk_set_parent(i2s_ref_clk, i2s_src_clk);
+			if (ret) {
+				pr_err("%s:set_parent of ref_clk fail\n",
+						__func__);
+				goto put_i2s_prs1_clk;
+			}
+			goto config_bclk;
+		}
+	}
+
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_prs1_clk;
+	}
+
+config_bclk:
+	bclk = config->chan_nr * config->data_width * config->sample_rate;
+
+	ret = clk_set_rate(i2s_sclk_gclk, bclk);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_sclk_gclk rate\n", __func__);
+		goto put_i2s_prs1_clk;
+	}
+
+	ret = clk_prepare_enable(i2s_sclk_gclk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk_gclk\n", __func__);
+		goto put_i2s_prs1_clk;
+	}
+
+	return 0;
+
+put_i2s_prs1_clk:
+	clk_put(i2s_prs1_clk);
+put_i2s_src_clk:
+	clk_put(i2s_src_clk);
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk_gclk:
+	clk_put(i2s_sclk_gclk);
+
+	return ret;
+}
+
+void i2s_clk_init(void)
+{
+	int ret;
+	struct clk *i2s_ref_pad_clk, *i2s_sclk_clk, *i2s_src_clk, *i2s_ref_clk;
+	struct clk *src_pclk, *ref_pclk;
+	char *src_pclk_name, *ref_pclk_name;
+
+	if (of_machine_is_compatible("st,lcad") ||
+			!(of_machine_is_compatible("st,spear1340"))) {
+		if (of_machine_is_compatible("st,lcad"))
+			src_pclk_name = "pll2_clk";
+		else
+			src_pclk_name = "pll3_clk";
+
+		ref_pclk_name = "i2s_prs1_clk";
+
+	} else {
+		src_pclk_name = "i2s_src_pad_clk";
+		ref_pclk_name = "i2s_src_mclk";
+	}
+
+	src_pclk = clk_get_sys(NULL, src_pclk_name);
+	if (IS_ERR(src_pclk)) {
+		pr_err("%s:couldn't get i2s_src parent clk\n", __func__);
+		return;
+	}
+
+	if (of_machine_is_compatible("st,lcad") ||
+			!(of_machine_is_compatible("st,spear1340"))) {
+		/* set pll to 49.15 Mhz */
+		ret = clk_set_rate(src_pclk, 49152000);
+		if (ret) {
+			pr_err("%s:couldn't set src_pclk rate\n", __func__);
+			goto put_src_pclk;
+		}
+	}
+
+	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
+
+	if (IS_ERR(i2s_src_clk)) {
+		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		goto put_src_pclk;
+	}
+
+	/*
+	 * After this this src_clk is correctly programmed, either to
+	 * pll2, pll3 or pad.
+	 */
+
+	if (clk_set_parent(i2s_src_clk, src_pclk)) {
+		pr_err("%s:set_parent for i2s src clk fail\n",
+				__func__);
+		goto put_i2s_src_clk;
+	}
+
+	ref_pclk = clk_get_sys(NULL, ref_pclk_name);
+	if (IS_ERR(ref_pclk)) {
+		pr_err("%s:couldn't get ref_pclk\n", __func__);
+		goto put_i2s_src_clk;
+	}
+
+	/* program prescalar if required */
+	if (of_machine_is_compatible("st,lcad") ||
+			!(of_machine_is_compatible("st,spear1340"))) {
+		/* set to 12.288 Mhz */
+		if (clk_set_rate(ref_pclk, 12288000)) {
+			pr_err("%s:ref_pclk set_rate of %s fail\n", __func__,
+					ref_pclk_name);
+			goto put_ref_pclk;
+		}
+	}
+
+	/*
+	 * After this this ref_clk is correctly programmed to 12.288 and
+	 * sclk_clk to 1.536 MHz
+	 */
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_mclk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		goto put_ref_pclk;
+	}
+
+	if (clk_set_parent(i2s_ref_clk, ref_pclk)) {
+		pr_err("%s:set_parent of i2s_ref_clk fail\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
+	if (IS_ERR(i2s_sclk_clk)) {
+		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	i2s_ref_pad_clk = clk_get_sys(NULL, "i2s_ref_pad_clk");
+	if (IS_ERR(i2s_ref_pad_clk)) {
+		pr_err("%s:couldn't get i2s_ref_pad_clk\n", __func__);
+		goto put_sclk_clk;
+	}
+
+	if (clk_prepare_enable(i2s_ref_pad_clk)) {
+		pr_err("%s:enabling i2s_ref_pad_clk_fail\n", __func__);
+		goto put_ref_pad_clk;
+	}
+
+	if (clk_prepare_enable(i2s_sclk_clk)) {
+		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+		goto put_ref_pad_clk;
+	}
+put_ref_pad_clk:
+	clk_put(i2s_ref_pad_clk);
+put_sclk_clk:
+	clk_put(i2s_sclk_clk);
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_ref_pclk:
+	clk_put(ref_pclk);
+put_i2s_src_clk:
+	clk_put(i2s_src_clk);
+put_src_pclk:
+	clk_put(src_pclk);
 }
 
 void spear13xx_l2x0_init(void)

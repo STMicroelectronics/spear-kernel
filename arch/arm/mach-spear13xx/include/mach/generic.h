@@ -17,6 +17,7 @@
 #include <linux/dmaengine.h>
 #include <linux/platform_device.h>
 #include <asm/mach/time.h>
+#include <sound/designware_i2s.h>
 
 /* Add spear13xx structure declarations here */
 extern struct sys_timer spear13xx_timer;
@@ -34,6 +35,8 @@ void __init spear_setup_of_timer(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_dt_init_irq(void);
 void __init spear13xx_l2x0_init(void);
+int audio_clk_config(struct i2s_clk_config_data *config);
+void i2s_clk_init(void);
 bool dw_dma_filter(struct dma_chan *chan, void *slave);
 int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev);
 void spear_restart(char, const char *);
