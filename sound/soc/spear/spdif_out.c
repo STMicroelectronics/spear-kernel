@@ -65,7 +65,7 @@ static int spdif_out_startup(struct snd_pcm_substream *substream,
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)&host->dma_params);
 
-	ret = clk_enable(host->clk);
+	ret = clk_prepare_enable(host->clk);
 	if (ret)
 		return ret;
 
@@ -83,7 +83,7 @@ static void spdif_out_shutdown(struct snd_pcm_substream *substream,
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return;
 
-	clk_disable(host->clk);
+	clk_disable_unprepare(host->clk);
 	host->running = false;
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
@@ -340,7 +340,7 @@ static int spdif_out_suspend(struct device *dev)
 	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
 
 	if (host->running)
-		clk_disable(host->clk);
+		clk_disable_unprepare(host->clk);
 
 	return 0;
 }
@@ -351,7 +351,7 @@ static int spdif_out_resume(struct device *dev)
 	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
 
 	if (host->running) {
-		clk_enable(host->clk);
+		clk_prepare_enable(host->clk);
 		spdif_out_configure(host);
 		spdif_out_clock(host, host->saved_params.core_freq,
 				host->saved_params.rate);

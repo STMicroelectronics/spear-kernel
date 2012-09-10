@@ -120,7 +120,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		clk_enable(host->clk);
+		clk_prepare_enable(host->clk);
 		spdif_in_configure(host);
 		spdif_in_format(host, host->saved_params.format);
 
@@ -140,7 +140,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 
 		if (host->reset_perip)
 			host->reset_perip();
-		clk_disable(host->clk);
+		clk_disable_unprepare(host->clk);
 		break;
 
 	default:
