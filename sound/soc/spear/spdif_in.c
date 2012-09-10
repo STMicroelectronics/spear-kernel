@@ -279,6 +279,12 @@ static int spdif_in_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id spdif_in_of_match[]  = {
+	{ .compatible = "st,spdif-in", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_in_of_match);
+
 
 static struct platform_driver spdif_in_driver = {
 	.probe		= spdif_in_probe,
@@ -286,6 +292,7 @@ static struct platform_driver spdif_in_driver = {
 	.driver		= {
 		.name	= "spdif-in",
 		.owner	= THIS_MODULE,
+		.of_match_table = spdif_in_of_match,
 	},
 };
 
