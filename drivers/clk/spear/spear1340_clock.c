@@ -772,13 +772,13 @@ void __init spear1340_clk_init(void)
 			0, &_lock);
 	clk_register_clkdev(clk, "i2s_src_mclk", NULL);
 
-	clk = clk_register_aux("i2s_prs1_clk", NULL, "i2s_src_mclk", 0,
+	clk = clk_register_aux("i2s_prs1_clk", NULL, "i2s_src_mclk", CLK_SET_RATE_PARENT,
 			SPEAR1340_I2S_CLK_CFG, &i2s_prs1_masks, i2s_prs1_rtbl,
 			ARRAY_SIZE(i2s_prs1_rtbl), &_lock, NULL);
 	clk_register_clkdev(clk, "i2s_prs1_clk", NULL);
 
 	clk = clk_register_mux(NULL, "i2s_ref_mclk", i2s_ref_parents,
-			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR1340_I2S_CLK_CFG,
+			ARRAY_SIZE(i2s_ref_parents), CLK_SET_RATE_PARENT, SPEAR1340_I2S_CLK_CFG,
 			SPEAR1340_I2S_REF_SHIFT, SPEAR1340_I2S_REF_SEL_MASK, 0,
 			&_lock);
 	clk_register_clkdev(clk, "i2s_ref_mclk", NULL);
