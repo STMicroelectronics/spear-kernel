@@ -138,7 +138,6 @@ enum camif_transformation {
 				V4L2_MBUS_PCLK_SAMPLE_FALLING |		\
 				V4L2_MBUS_DATA_ACTIVE_HIGH |		\
 				V4L2_MBUS_DATA_ACTIVE_LOW)
-#define CAMIF_DATAWIDTH_8	8
 
 /* crop masks */
 #define CROP_V_MASK(a)		(((a) & 0xffff) << 15)
@@ -1170,7 +1169,7 @@ static int camif_test_param(struct camif *camif,
 	 * If requested data width is not supported by the platform,
 	 * exit with error
 	 */
-	if (!((1 << (buswidth - 1)) & CAMIF_DATAWIDTH_8))
+	if (!((1 << (buswidth - 1)) & SOCAM_DATAWIDTH_8))
 		return -EINVAL;
 
 	*flags = CAM_IF_BUS_FLAGS;
