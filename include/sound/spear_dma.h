@@ -32,4 +32,7 @@ struct spear_dma_data {
 	bool (*filter)(struct dma_chan *chan, void *slave);
 };
 
+int __devinit spear_pcm_platform_register(struct platform_device *pdev);
+int __devexit spear_pcm_platform_unregister(struct platform_device *pdev);
+
 #endif /* SPEAR_DMA_H */

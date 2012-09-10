@@ -19,6 +19,7 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <sound/spear_dma.h>
 #include <mach/hardware.h>
 
 
@@ -33,6 +34,12 @@ static __devinit int spear_evb_probe(struct platform_device *pdev)
 
 	if (!np)
 		return -EINVAL; /* no device tree */
+
+	ret = spear_pcm_platform_register(pdev);
+	if (ret) {
+		dev_err(&pdev->dev, "Could not register PCM: %d\n", ret);
+		goto err;
+	}
 
 	of_property_read_u32(np, "nr_controllers", &nr_controllers);
 
@@ -108,7 +115,7 @@ static int __devexit spear_evb_remove(struct platform_device *pdev)
 	struct snd_soc_card *spear_soc_card = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_card(spear_soc_card);
-
+	spear_pcm_platform_unregister(pdev);
 	return 0;
 }
 

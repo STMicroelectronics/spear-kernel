@@ -422,29 +422,20 @@ struct snd_soc_platform_driver spear_soc_platform = {
 	.pcm_free	=	spear_pcm_free,
 };
 
-static int __devinit spear_soc_platform_probe(struct platform_device *pdev)
+int __devinit spear_pcm_platform_register(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &spear_soc_platform);
 }
+EXPORT_SYMBOL(spear_pcm_platform_register);
 
-static int __devexit spear_soc_platform_remove(struct platform_device *pdev)
+int __devexit spear_pcm_platform_unregister(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 
 	return 0;
 }
+EXPORT_SYMBOL(spear_pcm_platform_unregister);
 
-static struct platform_driver spear_pcm_driver = {
-	.driver = {
-		.name = "spear-pcm-audio",
-		.owner = THIS_MODULE,
-	},
-
-	.probe = spear_soc_platform_probe,
-	.remove = __devexit_p(spear_soc_platform_remove),
-};
-
-module_platform_driver(spear_pcm_driver);
 MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
 MODULE_DESCRIPTION("SPEAr PCM DMA module");
 MODULE_LICENSE("GPL");
