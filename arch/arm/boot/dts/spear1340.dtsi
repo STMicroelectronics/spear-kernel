@@ -56,7 +56,7 @@
 		};
 
 		i2s-play@b2400000 {
-			compatible = "st,designware-i2s";
+			compatible = "snps,designware-i2s";
 			reg = <0xb2400000 0x10000>;
 			interrupt-names = "play_irq";
 			interrupts = <0 98 0x4
@@ -65,7 +65,7 @@
 		};
 
 		i2s-rec@b2000000 {
-			compatible = "st,designware-i2s";
+			compatible = "snps,designware-i2s";
 			reg = <0xb2000000 0x10000>;
 			interrupt-names = "record_irq";
 			interrupts = <0 100  0x4
