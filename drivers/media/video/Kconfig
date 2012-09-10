@@ -1073,6 +1073,12 @@ config SOC_CAMERA_OV9740
 	help
 	  This is a ov9740 camera driver
 
+config SOC_CAMERA_VS6725
+	tristate "ST VS6725 camera sensor support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This is a driver for the ST VS6725 camera sensor
+
 config MX1_VIDEO
 	bool
 
@@ -1102,6 +1108,13 @@ config VIDEO_PXA27x
 	select VIDEOBUF_DMA_SG
 	---help---
 	  This is a v4l2 driver for the PXA27x Quick Capture Interface
+
+config VIDEO_SPEAR_CAMIF
+	tristate "SPEAr Camera Interface driver"
+	depends on VIDEO_DEV && ARCH_SPEAR13XX && SOC_CAMERA
+	select VIDEOBUF_DMA_SG
+	---help---
+	  This is a v4l2 driver for the ST SPEAr camera capture interface
 
 config VIDEO_SH_MOBILE_CSI2
 	tristate "SuperH Mobile MIPI CSI-2 Interface driver"

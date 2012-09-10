@@ -19,6 +19,10 @@ endif
 # V4L2 core modules
 
 obj-$(CONFIG_VIDEO_DEV) += videodev.o v4l2-int-device.o
+ifeq ($(CONFIG_COMPAT),y)
+  obj-$(CONFIG_VIDEO_DEV) += v4l2-compat-ioctl32.o
+endif
+
 obj-$(CONFIG_VIDEO_V4L2_COMMON) += v4l2-common.o
 
 # Helper modules
@@ -99,6 +103,7 @@ obj-$(CONFIG_SOC_CAMERA_OV9640)		+= ov9640.o
 obj-$(CONFIG_SOC_CAMERA_OV9740)		+= ov9740.o
 obj-$(CONFIG_SOC_CAMERA_RJ54N1)		+= rj54n1cb0c.o
 obj-$(CONFIG_SOC_CAMERA_TW9910)		+= tw9910.o
+obj-$(CONFIG_SOC_CAMERA_VS6725)		+= vs6725.o
 
 # And now the v4l2 drivers:
 
@@ -192,6 +197,7 @@ obj-$(CONFIG_VIDEO_SAMSUNG_S5P_FIMC) 	+= s5p-fimc/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_JPEG)	+= s5p-jpeg/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_MFC)	+= s5p-mfc/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_TV)	+= s5p-tv/
+obj-$(CONFIG_VIDEO_SPEAR_CAMIF)		+= spear_camif.o
 
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_G2D)	+= s5p-g2d/
 
