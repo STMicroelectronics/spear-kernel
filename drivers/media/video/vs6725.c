@@ -1728,36 +1728,19 @@ static int vs6725_s_mbus_config(struct v4l2_subdev *sd,
 	unsigned long flags = soc_camera_apply_board_flags(icl, cfg);
 	int ret;
 
-	if (flags & V4L2_MBUS_PCLK_SAMPLE_RISING)
-		ret = vs6725_reg_write(client,
-				OIF_PCLK_SETUP,
-				0xFE | PCLK_PROG_POL_HI_INIT_LO);
-	else
-		ret = vs6725_reg_write(client,
-				OIF_PCLK_SETUP,
-				0xFE | PCLK_PROG_POL_LO_INIT_LO);
+	ret = vs6725_reg_write(client,
+			OIF_PCLK_SETUP,
+			0xFE | PCLK_PROG_POL_HI_INIT_LO);
 	if (ret)
 		return ret;
-
-	if (flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
-		ret = vs6725_reg_write(client,
+	ret = vs6725_reg_write(client,
 				OIF_HSYNC_SETUP,
 				0x0C | HSYNC_ENABLE | HSYNC_POLARITY_ACTIVE_LO);
-	else
-		ret = vs6725_reg_write(client,
-				OIF_HSYNC_SETUP,
-				0x0C | HSYNC_ENABLE | HSYNC_POLARITY_ACTIVE_HI);
 	if (ret)
 		return ret;
-
-	if (flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH)
-		ret = vs6725_reg_write(client,
+	ret = vs6725_reg_write(client,
 				OIF_VSYNC_SETUP,
 				0x0C | VSYNC_ENABLE | VSYNC_POLARITY_ACTIVE_LO);
-	else
-		ret = vs6725_reg_write(client,
-				OIF_VSYNC_SETUP,
-				0x0C | VSYNC_ENABLE | VSYNC_POLARITY_ACTIVE_HI);
 
 	return ret;
 }
