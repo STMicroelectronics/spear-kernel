@@ -891,12 +891,12 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "i2s_play_clk", "apb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_I2S_PLAY_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "b2400000.i2s");
+	clk_register_clkdev(clk, NULL, "b2400000.i2s-play");
 
 	clk = clk_register_gate(NULL, "i2s_rec_clk", "apb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_I2S_REC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "b2000000.i2s");
+	clk_register_clkdev(clk, NULL, "b2000000.i2s-rec");
 
 	clk = clk_register_gate(NULL, "kbd_clk", "apb_clk", 0,
 			SPEAR1340_PERIP2_CLK_ENB, SPEAR1340_KBD_CLK_ENB, 0,
@@ -962,7 +962,7 @@ void __init spear1340_clk_init(void)
 			CLK_SET_RATE_PARENT, SPEAR1340_PERIP3_CLK_ENB,
 			SPEAR1340_SPDIF_OUT_CLK_ENB,
 			0, &_lock);
-	clk_register_clkdev(clk, NULL, "spdif-out");
+	clk_register_clkdev(clk, NULL, "d0000000.spdif-out");
 
 	clk = clk_register_mux(NULL, "spdif_in_mclk", spdif_in_parents,
 			ARRAY_SIZE(spdif_in_parents), CLK_SET_RATE_PARENT,
@@ -974,7 +974,7 @@ void __init spear1340_clk_init(void)
 			CLK_SET_RATE_PARENT, SPEAR1340_PERIP3_CLK_ENB,
 			SPEAR1340_SPDIF_IN_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "spdif-in");
+	clk_register_clkdev(clk, NULL, "d0100000.spdif-in");
 
 	clk = clk_register_gate(NULL, "acp_clk", "acp_mclk", 0,
 			SPEAR1340_PERIP2_CLK_ENB, SPEAR1340_ACP_CLK_ENB, 0,
