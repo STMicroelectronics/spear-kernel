@@ -162,6 +162,12 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 		goto put_clk;
 	}
 
+	ret = clk_set_rate(sdhci->clk, 50000000);
+	if (ret) {
+		dev_dbg(&pdev->dev, "Error rate configuration\n");
+		goto disable_clk;
+	}
+
 	if (np) {
 		sdhci->data = sdhci_probe_config_dt(pdev);
 		if (IS_ERR(sdhci->data))
