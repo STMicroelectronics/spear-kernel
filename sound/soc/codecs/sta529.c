@@ -87,7 +87,8 @@
 #define FFX_CLK_ENB		0x01
 #define FFX_CLK_DIS		0x00
 #define FFX_CLK_MSK		0x01
-#define FREQ_RANGE_MSK		0x7C
+#define PLAY_FREQ_RANGE_MSK	0x70
+#define CAP_FREQ_RANGE_MSK	0x7C
 #define PDATA_LEN_MSK		0xC0
 #define BCLK_TO_FS_MSK		0x30
 #define AUDIO_MUTE_MSK		0x80
@@ -194,7 +195,7 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
-	int pdata, play_freq_val, record_freq_val, val;
+	int pdata, audio_freq_val, record_freq_val;
 	int bclk_to_fs_ratio;
 
 	switch (params_format(params)) {
@@ -218,19 +219,19 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	switch (params_rate(params)) {
 	case 8000:
 	case 11025:
-		play_freq_val = 0;
+		audio_freq_val = 0;
 		record_freq_val = 2;
 		break;
 	case 16000:
 	case 22050:
-		play_freq_val = 1;
+		audio_freq_val = 1;
 		record_freq_val = 0;
 		break;
 
 	case 32000:
 	case 44100:
 	case 48000:
-		play_freq_val = 2;
+		audio_freq_val = 2;
 		record_freq_val = 0;
 		break;
 	default:
@@ -243,16 +244,16 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 				pdata << 6);
 		snd_soc_update_bits(codec, STA529_S2PCFG1, BCLK_TO_FS_MSK,
 				bclk_to_fs_ratio << 4);
+		snd_soc_update_bits(codec, STA529_MISC, PLAY_FREQ_RANGE_MSK,
+				audio_freq_val << 4);
 	} else {
 		snd_soc_update_bits(codec, STA529_P2SCFG1, PDATA_LEN_MSK,
 				pdata << 6);
 		snd_soc_update_bits(codec, STA529_P2SCFG1, BCLK_TO_FS_MSK,
 				bclk_to_fs_ratio << 4);
+		snd_soc_update_bits(codec, STA529_MISC, CAP_FREQ_RANGE_MSK,
+				(record_freq_val << 2 | audio_freq_val << 4));
 	}
-
-	/* set FFX audio frequency range */
-	val = (((val & 0x83) | (play_freq_val << 4)) | (record_freq_val << 2));
-	snd_soc_update_bits(codec, STA529_MISC, FREQ_RANGE_MSK, val);
 
 	return 0;
 }
@@ -398,8 +399,9 @@ static __devinit int sta529_i2c_probe(struct i2c_client *i2c,
 
 	sta529->regmap = devm_regmap_init_i2c(i2c, &sta529_regmap);
 	if (IS_ERR(sta529->regmap)) {
+		ret = PTR_ERR(sta529->regmap);
 		dev_err(&i2c->dev, "Failed to allocate regmap: %d\n", ret);
-		return PTR_ERR(sta529->regmap);
+		return ret;
 	}
 
 	i2c_set_clientdata(i2c, sta529);
