@@ -82,7 +82,7 @@ static __devinit int spear_evb_probe(struct platform_device *pdev)
 
 		evb_dai[i].cpu_dai_name = NULL;
 		evb_dai[i].cpu_dai_of_node = spear_np;
-		evb_dai[i].platform_name = "sound.6";
+		evb_dai[i].platform_of_node = np;
 		evb_dai[i].codec_name = NULL;
 		evb_dai[i].codec_of_node = codec_np;
 		if (!(strcmp(evb_dai[i].codec_dai_name, "sta529-audio")))
