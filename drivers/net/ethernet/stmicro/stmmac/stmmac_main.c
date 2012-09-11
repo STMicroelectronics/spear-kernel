@@ -808,6 +808,7 @@ static void stmmac_mmc_setup(struct stmmac_priv *priv)
 	dwmac_mmc_intr_all_mask(priv->ioaddr);
 
 	if (priv->dma_cap.rmon) {
+		mode |= MMC_CNTRL_COUNTER_FREEZER;
 		dwmac_mmc_ctrl(priv->ioaddr, mode);
 		memset(&priv->mmc, 0, sizeof(struct stmmac_counters));
 	} else
