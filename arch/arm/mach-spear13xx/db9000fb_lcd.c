@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <video/db9000fb.h>
 #include <asm/setup.h>
+#include <asm/memblock.h>
 #include <mach/generic.h>
 
 static struct fb_videomode def_modelist[] = {
@@ -62,12 +63,11 @@ static unsigned long frame_buf_base;
 /* This will reserve memory for clcd framebuffer */
 void spear13xx_reserve_mem(void)
 {
-	frame_buf_base = memblock_alloc(FRAMEBUFFER_SIZE, SZ_1M);
+	unsigned long size = ALIGN(FRAMEBUFFER_SIZE, SZ_1M);
 
+	frame_buf_base = arm_memblock_steal(size, SZ_1M);
 	if (!frame_buf_base)
 		pr_err("Unable to allocate videobufs in fixup\n");
-	memblock_free(frame_buf_base, FRAMEBUFFER_SIZE);
-	memblock_remove(frame_buf_base, FRAMEBUFFER_SIZE);
 }
 
 static void set_fb_address(struct db9000fb_mach_info *pdata)
