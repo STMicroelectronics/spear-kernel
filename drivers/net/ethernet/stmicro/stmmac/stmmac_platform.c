@@ -81,6 +81,9 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 	struct plat_stmmacenet_data *plat_dat = NULL;
 	const char *mac = NULL;
 
+	if ((!pdev->dev.platform_data) && (!pdev->dev.of_node))
+		return -ENODEV;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
 		return -ENODEV;
@@ -99,7 +102,9 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 		goto out_release_region;
 	}
 
-	if (pdev->dev.of_node) {
+	if (pdev->dev.platform_data)
+		plat_dat = pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
 		plat_dat = devm_kzalloc(&pdev->dev,
 					sizeof(struct plat_stmmacenet_data),
 					GFP_KERNEL);
@@ -115,9 +120,6 @@ static int stmmac_pltfr_probe(struct platform_device *pdev)
 			goto out_unmap;
 		}
 	}
-
-	if (pdev->dev.platform_data)
-		plat_dat = pdev->dev.platform_data;
 
 	/* Custom initialisation (if needed)*/
 	if (plat_dat->init) {
