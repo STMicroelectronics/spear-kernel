@@ -207,8 +207,7 @@ static int __init spear_pm_init(void)
 	void __iomem *mpmc_regs_base;
 	struct clk *aor_clk, *sysram0_clk;
 
-	//pcm_set_cfg = GPIO_WKUP | RTC_WKUP | ETH_WKUP | USB_WKUP |
-	pcm_set_cfg = GPIO_WKUP | RTC_WKUP | ETH_WKUP |
+	pcm_set_cfg = GPIO_WKUP | RTC_WKUP | ETH_WKUP | USB_WKUP |
 		PWR_DOM_ON;
 
 	if (of_machine_is_compatible("st,spear1340")) {
