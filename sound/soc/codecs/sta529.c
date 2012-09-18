@@ -149,6 +149,7 @@ static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_SINGLE_TLV("Master Playback Volume", STA529_MVOL, 0, 127, 1,
 			master_vol_tlv),
 	SOC_ENUM("PWM Select", pwm_src),
+	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
 };
 
 static int sta529_set_bias_level(struct snd_soc_codec *codec, enum
