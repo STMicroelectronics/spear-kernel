@@ -136,8 +136,8 @@ static bool sta529_readable(struct device *dev, unsigned int reg)
 }
 
 
-static const char *pwm_mode_text[] = { "Binary", "Headphone", "Ternary",
-	"Phase-shift"};
+static const char *pwm_mode_text[] = {"Phase-shift", "Ternary", "Binary",
+	"Headphone"};
 
 static const DECLARE_TLV_DB_SCALE(out_gain_tlv, -9150, 50, 0);
 static const DECLARE_TLV_DB_SCALE(master_vol_tlv, -12750, 50, 0);
