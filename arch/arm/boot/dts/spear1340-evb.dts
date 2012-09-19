@@ -424,7 +424,7 @@
 					reg = <0x39>;
 					gpios = <&stmpegpio 7 0>;
 					fb = <0>;
-					ain = <1>;
+					ain = <0>;
 				};
 			};
 
