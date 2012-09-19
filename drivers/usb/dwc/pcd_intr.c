@@ -649,8 +649,6 @@ static int dwc_otg_pcd_handle_usb_reset_intr(struct dwc_pcd *pcd)
 	u32 i;
 	u32 gintsts = 0;
 
-	pr_info("USB RESET\n");
-
 	/* reset the HNP settings */
 	dwc_otg_pcd_update_otg(pcd, 1);
 
