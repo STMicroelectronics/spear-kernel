@@ -309,7 +309,7 @@ static void sg_fill(u32 size, dma_addr_t digital_volt)
 
 	while (size) {
 		int len = size < max_xfer ? size : max_xfer;
-		sg_dma_address(sg) = addr;
+		sg_dma_address(sg) = (dma_addr_t)virt_to_phys(addr);
 		sg_set_page(sg, virt_to_page(addr), len,
 				offset_in_page(addr));
 		addr += len;
