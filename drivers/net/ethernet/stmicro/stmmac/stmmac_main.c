@@ -613,8 +613,11 @@ static void stmmac_dma_operation_mode(struct stmmac_priv *priv)
 		 */
 		priv->hw->dma->dma_mode(priv->ioaddr,
 					SF_DMA_MODE, SF_DMA_MODE);
-	} else
-		priv->hw->dma->dma_mode(priv->ioaddr, tc, SF_DMA_MODE);
+		priv->no_csum_insertion = 0;
+	} else {
+		priv->hw->dma->dma_mode(priv->ioaddr, tc, 0);
+		priv->no_csum_insertion = 1;
+	}
 }
 
 /**
@@ -1177,7 +1180,12 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		       !skb_is_gso(skb) ? "isn't" : "is");
 #endif
 
-	csum_insertion = (skb->ip_summed == CHECKSUM_PARTIAL);
+	if (likely((skb->ip_summed == CHECKSUM_PARTIAL))) {
+		if (priv->no_csum_insertion)
+			skb_checksum_help(skb);
+		else
+			csum_insertion = 1;
+	}
 
 	desc = priv->dma_tx + entry;
 	first = desc;
