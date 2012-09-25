@@ -1695,6 +1695,10 @@ static struct spear_pingroup clcd_pingroup = {
 /* Disable cld runtime to save panel damage */
 static struct spear_muxreg clcd_sleep_muxreg[] = {
 	{
+		.reg = PAD_SHARED_IP_EN_1,
+		.mask = ARM_TRACE_MASK | MIPHY_DBG_MASK,
+		.val = 0,
+	}, {
 		.reg = PAD_FUNCTION_EN_5,
 		.mask = CLCD_REG4_MASK | CLCD_AND_ARM_TRACE_REG4_MASK,
 		.val = 0x0,
