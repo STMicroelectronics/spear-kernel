@@ -35,7 +35,7 @@ void __init spear_setup_of_timer(void);
 void __init spear13xx_map_io(void);
 void __init spear13xx_dt_init_irq(void);
 void __init spear13xx_l2x0_init(void);
-int audio_clk_config(struct i2s_clk_config_data *config);
+int audio_clk_config(struct i2s_hw_config_data *config);
 void i2s_clk_init(void);
 bool dw_dma_filter(struct dma_chan *chan, void *slave);
 int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev);
