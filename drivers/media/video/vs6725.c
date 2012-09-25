@@ -2709,6 +2709,42 @@ static int vs6725_remove(struct i2c_client *client)
 	return 0;
 }
 
+static int vs6725_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+
+	/* turn off CE pin of camera sensor */
+	return vs6725_s_power(sd, 0);
+}
+
+static int vs6725_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct vs6725 *priv = to_vs6725(client);
+	int ret;
+
+	/* turn on CE pin of camera sensor */
+	ret = vs6725_s_power(sd, 1);
+
+	/*
+	 * As per the last format set before we went for suspend,
+	 * reprogram sensor image size and image format
+	 */
+	if (!ret)
+		ret = vs6725_set_image_format(client, &priv->fmt);
+
+	if (!ret)
+		ret = vs6725_set_image_size(client, &priv->fmt);
+
+	/* set sensor in RUNning state */
+	if (!ret)
+		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
+
+	return ret;
+}
+
 static const struct i2c_device_id vs6725_id[] = {
 	{ "vs6725", 0 },
 	{ }
@@ -2724,13 +2760,15 @@ static const struct of_device_id vs6725_of_match[] = {
 MODULE_DEVICE_TABLE(of, vs6725_of_match);
 #endif
 
+static SIMPLE_DEV_PM_OPS(vs6725_pm_ops, vs6725_suspend, vs6725_resume);
+
 static struct i2c_driver vs6725_i2c_driver = {
 	.driver = {
 		.name = "vs6725",
 #ifdef CONFIG_OF
 		.of_match_table = vs6725_of_match,
 #endif
-
+		.pm = &vs6725_pm_ops,
 	},
 	.probe = vs6725_probe,
 	.remove = vs6725_remove,
