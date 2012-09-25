@@ -226,7 +226,7 @@ fail_get_input_pclk:
  * ref_clock = 256 * sample_rate
  */
 
-int audio_clk_config(struct i2s_clk_config_data *config)
+int audio_clk_config(struct i2s_hw_config_data *config)
 {
 	struct clk *i2s_sclk_gclk, *i2s_ref_clk, *i2s_src_clk, *i2s_prs1_clk;
 	int ret;

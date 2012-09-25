@@ -93,8 +93,8 @@ struct dw_i2s_dev {
 	/* data related to DMA transfers b/w i2s and DMAC */
 	struct i2s_dma_data play_dma_data;
 	struct i2s_dma_data capture_dma_data;
-	struct i2s_clk_config_data config;
-	int (*i2s_clk_cfg)(struct i2s_clk_config_data *config);
+	struct i2s_hw_config_data config;
+	int (*i2s_clk_cfg)(struct i2s_hw_config_data *config);
 };
 
 static inline void i2s_write_reg(void *io_base, int reg, u32 val)
@@ -197,7 +197,7 @@ static int dw_i2s_startup(struct snd_pcm_substream *substream,
 static int dw_i2s_hw_config(struct dw_i2s_dev *dev,
 		struct snd_pcm_substream *substream)
 {
-	struct i2s_clk_config_data *config = &dev->config;
+	struct i2s_hw_config_data *config = &dev->config;
 	u32 clock_config, xfer_resolution;
 	int i, ret, channels;
 
@@ -252,7 +252,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
-	struct i2s_clk_config_data *config = &dev->config;
+	struct i2s_hw_config_data *config = &dev->config;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
