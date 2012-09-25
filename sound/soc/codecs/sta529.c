@@ -405,6 +405,18 @@ static __devinit int sta529_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
+	regmap_write(sta529->regmap, STA529_FFXCFG1, 0xc8);
+	regmap_write(sta529->regmap, STA529_MVOL, 0x50);
+	regmap_write(sta529->regmap, STA529_LVOL, 0x00);
+	regmap_write(sta529->regmap, STA529_RVOL, 0x00);
+	regmap_write(sta529->regmap, STA529_S2PCFG0, 0xb2);
+	regmap_write(sta529->regmap, STA529_S2PCFG1, 0x41);
+	regmap_write(sta529->regmap, STA529_P2SCFG0, 0x92);
+	regmap_write(sta529->regmap, STA529_P2SCFG1, 0x41);
+	regmap_write(sta529->regmap, STA529_ADCCFG, 0xd2);
+	regmap_write(sta529->regmap, STA529_CKOCFG, 0x40);
+	regmap_write(sta529->regmap, STA529_MISC, 0x21);
+
 	i2c_set_clientdata(i2c, sta529);
 
 	ret = snd_soc_register_codec(&i2c->dev,
