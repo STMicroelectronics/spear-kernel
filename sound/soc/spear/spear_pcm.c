@@ -66,9 +66,9 @@ static int spear_pcm_prepare(struct snd_pcm_substream *substream)
 	prtd->dma_addr = runtime->dma_addr;
 
 	prtd->buf_index = 0;
-	prtd->dmacount = 0;
+	prtd->dma_index = 0;
 	prtd->xfer_len = snd_pcm_lib_period_bytes(substream);
-	prtd->xfer_cnt = snd_pcm_lib_buffer_bytes(substream) / prtd->xfer_len;
+	prtd->xfer_max = snd_pcm_lib_buffer_bytes(substream) / prtd->xfer_len;
 
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
@@ -89,7 +89,7 @@ static int start_dma(struct spear_runtime_data *prtd)
 	struct snd_soc_pcm_runtime *rtd = prtd->substream->private_data;
 	struct spear_dma_data *dma_data =
 		snd_soc_dai_get_dma_data(rtd->cpu_dai, prtd->substream);
-	addr = prtd->dma_addr + prtd->buf_index * prtd->xfer_len;
+	addr = prtd->dma_addr + prtd->dma_index * prtd->xfer_len;
 	if (prtd->substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		chan = prtd->dma_chan[0];
 		direction = DMA_TO_DEVICE;
@@ -128,10 +128,8 @@ static int start_dma(struct spear_runtime_data *prtd)
 	return 0;
 }
 
-static void pcm_dma_xfer(struct spear_runtime_data *prtd,
-		bool from_callback)
+static void pcm_dma_xfer(struct spear_runtime_data *prtd, int xfer_cnt)
 {
-	struct snd_pcm_substream *substream = prtd->substream;
 	struct dma_chan *chan;
 	unsigned long flags;
 	int ret;
@@ -142,28 +140,18 @@ static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 		return;
 	}
 
-	BUG_ON(prtd->dmacount >= prtd->xfer_cnt);
+	BUG_ON(prtd->dma_index >= prtd->xfer_max);
+	BUG_ON(xfer_cnt > prtd->xfer_max);
 
-	while (prtd->dmacount < prtd->xfer_cnt) {
-
+	while (xfer_cnt-- > 0) {
 		ret = start_dma(prtd);
 		if (ret) {
 			spin_unlock_irqrestore(&prtd->lock, flags);
 			return;
 		}
 
-		prtd->dmacount++;
-		prtd->buf_index++;
-
-		/* Set to zero, if crosses buffer size */
-		prtd->buf_index %= prtd->xfer_cnt;
-
-		/* Inform framework that a transfer is finished */
-		if (from_callback) {
-			spin_unlock_irqrestore(&prtd->lock, flags);
-			snd_pcm_period_elapsed(substream);
-			spin_lock_irqsave(&prtd->lock, flags);
-		}
+		if (++prtd->dma_index >= prtd->xfer_max)
+			prtd->dma_index = 0;
 	}
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
@@ -179,14 +167,20 @@ static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 static void pcm_dma_complete(void *arg)
 {
 	struct spear_runtime_data *prtd = arg;
+	struct snd_pcm_substream *substream = prtd->substream;
 	unsigned long flags;
 
+	/* Increase and set to zero, if crosses buffer size */
 	spin_lock_irqsave(&prtd->lock, flags);
-	prtd->dmacount--;
+
+	if (++prtd->buf_index >= prtd->xfer_max)
+		prtd->buf_index = 0;
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	if (prtd->pcm_running)
-		pcm_dma_xfer(prtd, true);
+		pcm_dma_xfer(prtd, 1);
+	/* Inform framework that a transfer is finished */
+	snd_pcm_period_elapsed(substream);
 }
 
 static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -200,15 +194,15 @@ static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_RESUME:
 		spin_lock_irqsave(&prtd->lock, flags);
 		/* Go to last successfully transferred index + 1 */
-		prtd->buf_index += prtd->xfer_cnt - prtd->dmacount;
-		prtd->buf_index %= prtd->xfer_cnt;
-		prtd->dmacount = 0;
+		prtd->buf_index += prtd->xfer_max - prtd->dma_index;
+		prtd->buf_index %= prtd->xfer_max;
+		prtd->dma_index = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 	case SNDRV_PCM_TRIGGER_START:
 		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->pcm_running = true;
 		spin_unlock_irqrestore(&prtd->lock, flags);
-		pcm_dma_xfer(prtd, false);
+		pcm_dma_xfer(prtd, prtd->xfer_max);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
