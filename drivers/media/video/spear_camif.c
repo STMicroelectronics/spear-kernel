@@ -159,7 +159,9 @@ enum camif_transformation {
 
 /* possible camif power states */
 enum camif_power_state {
-	CAMIF_SHUTDOWN = 0,
+	CAMIF_SUSPEND = 0,
+	CAMIF_RESUME,
+	CAMIF_SHUTDOWN,
 	CAMIF_BRINGUP,
 };
 
@@ -595,13 +597,30 @@ static void camif_start_capture(struct camif *camif,
 		 * interrupts after QBUF call from user-space
 		 */
 		camif_configure_interrupts(camif, DISABLE_ALL);
+
+		/* change state to running */
+		camif->is_running = true;
+
 		break;
+	case CAMIF_RESUME:
+		/* restore saved CAMIF registers */
+		camif_restore_regs(camif);
+
+		/*
+		 * we need to check for cur_frm when we resume.
+		 * If cur_frm is not NULL we should handle the
+		 * already queued cur_frm (when we went to suspend
+		 * state). This is done by simply enabling the FRAME_END
+		 * interrupt. Otherwise, we need to wait for new video-buffer
+		 * to be QUEUED before enabling the FRAME_END interrupt.
+		 */
+		if (camif->cur_frm)
+			camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
+		break;
+
 	default:
 		break;
 	}
-
-	/* change state to running */
-	camif->is_running = true;
 }
 
 /* Stop CAMIF functionality and DMA transfers */
@@ -621,7 +640,27 @@ static void camif_stop_capture(struct camif *camif,
 			dmaengine_terminate_all(camif->chan);
 			dma_release_channel(camif->chan);
 		}
+		/* change state to stopped */
+		camif->is_running = false;
 		break;
+
+	case CAMIF_SUSPEND:
+		/*
+		 * Save copies of CAMIF registers only if
+		 * we were SUSPENDed when there were no quirks applied.
+		 * Otherwise the registers already banked in
+		 * 'camif_set_hw/sw_recovery_state' will
+		 * serve our purpose.
+		 */
+		if (!camif->sw_workaround_applied &&
+				!camif->hw_workaround_applied)
+			camif_save_regs(camif);
+
+		/* terminate all requests on the DMA channel */
+		if (camif->chan)
+			dmaengine_terminate_all(camif->chan);
+		break;
+
 	default:
 		break;
 	}
@@ -642,9 +681,6 @@ static void camif_stop_capture(struct camif *camif,
 
 	/* turn off camif module */
 	camif_module_enable(camif, false);
-
-	/* change state to stopped */
-	camif->is_running = false;
 }
 
 /*
@@ -1936,6 +1972,70 @@ static struct soc_camera_host_ops camif_soc_camera_host_ops = {
 	.poll = camif_camera_poll,
 };
 
+static int camif_suspend(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	int ret = 0;
+
+	/* check if CAMIF is in running state */
+	if (camif->is_running) {
+		camif_stop_capture(camif, CAMIF_SUSPEND);
+	}
+
+	return ret;
+}
+
+static int camif_resume(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
+	dma_cookie_t cookie;
+	int ret = 0;
+
+	/* check if CAMIF is in power-save state */
+	if (camif->is_running) {
+		/*
+		 * As at the time of suspend, underlying DMA would have
+		 * terminated all existing DMA descriptor requests, we need
+		 * to again 'submit' the buffers present in our dma queue
+		 */
+		if (!ret && !list_empty(&camif->dma_queue)) {
+			list_for_each_entry(vb, &camif->dma_queue, queue) {
+				buf = container_of(vb, struct camif_buffer, vb);
+				ret = camif_init_dma_channel(camif, buf);
+				if (ret) {
+					dev_err(camif->icd->parent,
+						"DMA initialization failed\n");
+					goto out;
+				}
+
+				/* submit the DMA descriptor */
+				cookie = buf->desc->tx_submit(buf->desc);
+				ret = dma_submit_error(cookie);
+				if (ret) {
+					dev_err(camif->icd->parent,
+						"dma submit error %d\n",
+						cookie);
+					goto out;
+				}
+			}
+		}
+
+		/* Resume CAMIF frame capture */
+		camif_start_capture(camif, CAMIF_RESUME);
+	}
+
+out:
+	return ret;
+}
+
+#ifdef CONFIG_PM
+static SIMPLE_DEV_PM_OPS(camif_pm_ops, camif_suspend, camif_resume);
+#endif
+
 static int __devinit camif_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -2111,6 +2211,9 @@ static struct platform_driver camif_driver = {
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
 		.of_match_table = camif_id_match,
+#endif
+#ifdef CONFIG_PM
+		.pm = &camif_pm_ops,
 #endif
 	},
 };
