@@ -193,10 +193,10 @@ static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_RESUME:
 		spin_lock_irqsave(&prtd->lock, flags);
-		/* Go to last successfully transferred index + 1 */
-		prtd->buf_index += prtd->xfer_max - prtd->dma_index;
-		prtd->buf_index %= prtd->xfer_max;
-		prtd->dma_index = 0;
+		/* Re-init dma_index to buf_index (last buffer index
+		 * under service by DMA)
+		 */
+		prtd->dma_index = prtd->buf_index;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 	case SNDRV_PCM_TRIGGER_START:
 		spin_lock_irqsave(&prtd->lock, flags);
