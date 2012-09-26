@@ -303,7 +303,7 @@ int i2c_dw_init(struct dw_i2c_dev *dev)
 	hcnt = i2c_dw_scl_hcnt(input_clock_khz,
 				6,	/* tHD;STA = tHIGH = 0.6 us */
 				3,	/* tf = 0.3 us */
-				0,	/* 0: DW default, 1: Ideal */
+				1,	/* 0: DW default, 1: Ideal */
 				0);	/* No offset */
 	lcnt = i2c_dw_scl_lcnt(input_clock_khz,
 				13,	/* tLOW = 1.3 us */
