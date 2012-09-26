@@ -197,8 +197,26 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
+	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
 	int pdata, audio_freq_val, record_freq_val;
 	int bclk_to_fs_ratio;
+
+	if (of_machine_is_compatible("st,spear1340")) {
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			/*
+			* On SPEAr1340 SoC I2S capture controller is in
+			* slave mode. Hence sta529 must be configured
+			* to provide the bit clock and word select
+			* clock. For this sta529 capture part must be
+			* programmed in master mode.
+			* Another thing is this that unlike other SPEAr
+			* SoCs, bit clock would not be shared for play
+			* and record lines of sta529.
+			*/
+			regmap_write(sta529->regmap, STA529_S2PCFG0, 0x12);
+			regmap_write(sta529->regmap, STA529_P2SCFG0, 0x93);
+		}
+	}
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
