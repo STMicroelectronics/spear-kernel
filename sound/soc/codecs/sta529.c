@@ -113,7 +113,7 @@ struct sta529 {
 	struct regmap *regmap;
 };
 
-static bool sta529_readable(struct device *dev, unsigned int reg)
+static bool sta529_writeable(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 
@@ -395,7 +395,8 @@ static const struct regmap_config sta529_regmap = {
 	.val_bits = 8,
 
 	.max_register = STA529_MAX_REGISTER,
-	.readable_reg = sta529_readable,
+	.writeable_reg = sta529_writeable,
+	.use_single_rw = true,
 
 	.cache_type = REGCACHE_RBTREE,
 	.reg_defaults = sta529_reg_defaults,
