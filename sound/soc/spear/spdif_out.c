@@ -239,11 +239,8 @@ static const struct snd_kcontrol_new spdif_out_controls[] = {
 
 int spdif_soc_dai_probe(struct snd_soc_dai *dai)
 {
-	struct snd_soc_card *card = dai->card;
-	struct snd_soc_pcm_runtime *rtd = card->rtd;
-	struct snd_soc_codec *codec = rtd->codec;
 
-	return snd_soc_add_codec_controls(codec, spdif_out_controls,
+	return snd_soc_add_dai_controls(dai, spdif_out_controls,
 				ARRAY_SIZE(spdif_out_controls));
 }
 
