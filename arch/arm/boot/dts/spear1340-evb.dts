@@ -260,11 +260,11 @@
 
 		sound {
 			compatible = "spear,spear-evb";
-			audio-controllers = <&spdif0 &spdif1 &i2s0 &i2s1>;
-			audio-codecs = <&incodec &outcodec &sta529 &sta529>;
-			codec_dai_name = "dir-hifi", "dit-hifi", "sta529-audio", "sta529-audio";
-			stream_name = "spdif-cap", "spdif-play", "i2s-play", "i2s-cap";
-			dai_name = "spdifin-pcm", "spdifout-pcm", "i2s0-pcm", "i2s1-pcm";
+			audio-controllers = <&spdif1 &spdif0 &i2s0 &i2s1>;
+			audio-codecs = <&outcodec &incodec &sta529 &sta529>;
+			codec_dai_name = "dit-hifi", "dir-hifi", "sta529-audio", "sta529-audio";
+			stream_name = "spdif-play", "spdif-cap", "i2s-play", "i2s-cap";
+			dai_name = "spdifout-pcm", "spdifin-pcm", "i2s0-pcm", "i2s1-pcm";
 			nr_controllers = <4>;
 		        status = "okay";
 		};
