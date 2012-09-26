@@ -133,7 +133,7 @@ static int amba_pm_suspend(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_SUSPEND);
 	}
 
-	if (ret && dev->driver)
+	if (!ret && dev->driver)
 		clk_disable(pcdev->pclk);
 
 	return ret;
@@ -186,7 +186,7 @@ static int amba_pm_freeze(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_FREEZE);
 	}
 
-	if (ret && dev->driver)
+	if (!ret && dev->driver)
 		clk_disable(pcdev->pclk);
 
 	return ret;
@@ -230,7 +230,7 @@ static int amba_pm_poweroff(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_HIBERNATE);
 	}
 
-	if (ret && dev->driver)
+	if (!ret && dev->driver)
 		clk_disable(pcdev->pclk);
 
 	return ret;
