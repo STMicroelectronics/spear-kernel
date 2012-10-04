@@ -120,7 +120,6 @@ static int amba_legacy_resume(struct device *dev)
 static int amba_pm_suspend(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
@@ -133,23 +132,16 @@ static int amba_pm_suspend(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_SUSPEND);
 	}
 
-	if (ret && dev->driver)
-		clk_disable(pcdev->pclk);
-
 	return ret;
 }
 
 static int amba_pm_resume(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
 		return 0;
-
-	if (dev->driver)
-		ret = clk_enable(pcdev->pclk);
 
 	if (drv->pm) {
 		if (drv->pm->resume)
@@ -173,7 +165,6 @@ static int amba_pm_resume(struct device *dev)
 static int amba_pm_freeze(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
@@ -186,23 +177,16 @@ static int amba_pm_freeze(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_FREEZE);
 	}
 
-	if (ret && dev->driver)
-		clk_disable(pcdev->pclk);
-
 	return ret;
 }
 
 static int amba_pm_thaw(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
 		return 0;
-
-	if (dev->driver)
-		ret = clk_enable(pcdev->pclk);
 
 	if (drv->pm) {
 		if (drv->pm->thaw)
@@ -217,7 +201,6 @@ static int amba_pm_thaw(struct device *dev)
 static int amba_pm_poweroff(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
@@ -230,23 +213,16 @@ static int amba_pm_poweroff(struct device *dev)
 		ret = amba_legacy_suspend(dev, PMSG_HIBERNATE);
 	}
 
-	if (ret && dev->driver)
-		clk_disable(pcdev->pclk);
-
 	return ret;
 }
 
 static int amba_pm_restore(struct device *dev)
 {
 	struct device_driver *drv = dev->driver;
-	struct amba_device *pcdev = to_amba_device(dev);
 	int ret = 0;
 
 	if (!drv)
 		return 0;
-
-	if (dev->driver)
-		ret = clk_enable(pcdev->pclk);
 
 	if (drv->pm) {
 		if (drv->pm->restore)
