@@ -2309,8 +2309,7 @@ static int pl022_suspend(struct device *dev)
 		return ret;
 	}
 
-	clk_disable_unprepare(pl022->clk);
-
+	dev_dbg(dev, "suspended\n");
 	return 0;
 }
 
@@ -2319,16 +2318,12 @@ static int pl022_resume(struct device *dev)
 	struct pl022 *pl022 = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(pl022->clk);
-	if (ret)
-		dev_err(dev, "could not enable SSP/SPI bus clock\n");
-
 	/* Start the queue running */
 	ret = spi_master_resume(pl022->master);
 	if (ret)
 		dev_err(dev, "problem starting queue (%d)\n", ret);
 	else
-		dev_err(dev, "resumed\n");
+		dev_dbg(dev, "resumed\n");
 
 	return ret;
 }
