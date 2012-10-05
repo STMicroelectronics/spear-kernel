@@ -23,11 +23,10 @@
 #include <sound/spear_spdif.h>
 #include "spdif_out_regs.h"
 
-static int spdif_out_mute;
-
 struct spdif_out_params {
 	u32 rate;
 	u32 core_freq;
+	u32 mute;
 };
 
 struct spdif_out_dev {
@@ -164,7 +163,7 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 			ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
 			ctrl &= ~SPDIF_OPMODE_MASK;
-			if (!spdif_out_mute)
+			if (!host->saved_params.mute)
 				ctrl |= SPDIF_OPMODE_AUD_DATA |
 					SPDIF_STATE_NORMAL;
 			else
@@ -193,7 +192,7 @@ static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
 	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
 	u32 val;
 
-	spdif_out_mute = mute;
+	host->saved_params.mute = mute;
 	val = readl(host->io_base + SPDIF_OUT_CTRL);
 	val &= ~SPDIF_OPMODE_MASK;
 
@@ -213,27 +212,27 @@ static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
 static int spdif_mute_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = spdif_out_mute;
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.integer.value[0] = host->saved_params.mute;
 	return 0;
 }
 
 static int spdif_mute_put(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_card *card = codec->card;
-	struct snd_soc_pcm_runtime *rtd = card->rtd;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
 
-	if (spdif_out_mute == ucontrol->value.integer.value[0])
+	if (host->saved_params.mute == ucontrol->value.integer.value[0])
 		return 0;
-
 	spdif_digital_mute(cpu_dai, ucontrol->value.integer.value[0]);
 
 	return 1;
 }
 static const struct snd_kcontrol_new spdif_out_controls[] = {
-	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", (unsigned long)&spdif_out_mute,
+	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", 0,
 			spdif_mute_get, spdif_mute_put),
 };
 
