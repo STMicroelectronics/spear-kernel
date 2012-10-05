@@ -261,8 +261,8 @@
 			spi0: spi@e0100000 {
 				status = "okay";
 				num-cs = <3>;
-				cs-gpios = <&gpiopinctrl 112 0>, <&gpiopinctrl 96 0>,
-					   <&gpiopinctrl 95 0>;
+				cs-gpios = <&gpio1 7 0>, <&spics 0 0>,
+					   <&spics 1 0>;
 				stmpe610@0 {
 					status = "okay";
 					compatible = "st,stmpe610";
