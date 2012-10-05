@@ -145,7 +145,7 @@ static const SOC_ENUM_SINGLE_DECL(pwm_src, STA529_FFXCFG1, 4, pwm_mode_text);
 
 static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_DOUBLE_R_TLV("Digital Playback Volume", STA529_LVOL, STA529_RVOL, 0,
-			127, 0, out_gain_tlv),
+			127, 1, out_gain_tlv),
 	SOC_SINGLE_TLV("Master Playback Volume", STA529_MVOL, 0, 127, 1,
 			master_vol_tlv),
 	SOC_ENUM("PWM Select", pwm_src),
