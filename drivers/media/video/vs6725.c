@@ -352,6 +352,7 @@ struct vs6725 {
 	struct v4l2_ctrl_handler hdl;
 	struct soc_camera_link *icl;
 	int active_pipe;		/* whether pipe 0 or pipe 1 is active */
+	bool is_running;
 	struct {
 		/* exposure/autoexposure cluster */
 		struct v4l2_ctrl *autoexposure;
@@ -1802,6 +1803,7 @@ static int vs6725_s_power(struct v4l2_subdev *sd, int on)
 					"failed to power-off the camera.\n");
 				goto out;
 			}
+			priv->is_running = false;
 		}
 	} else {
 		/* power-on the sensor */
@@ -1824,6 +1826,7 @@ static int vs6725_s_power(struct v4l2_subdev *sd, int on)
 				"VS6725 default register program failed\n");
 			goto out;
 		}
+		priv->is_running = true;
 	}
 
 	return 0;
@@ -2717,19 +2720,20 @@ static int vs6725_suspend(struct device *dev)
 static int vs6725_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct vs6725 *priv = to_vs6725(client);
-	int ret;
+	int ret = 0;
 
 	/* turn on CE pin of camera sensor */
-	ret = vs6725_set_image_format(client, &priv->fmt);
+	if (priv->is_running) {
+		ret = vs6725_set_image_format(client, &priv->fmt);
 
-	if (!ret)
-		ret = vs6725_set_image_size(client, &priv->fmt);
+		if (!ret)
+			ret = vs6725_set_image_size(client, &priv->fmt);
 
-	/* set sensor in RUNning state */
-	if (!ret)
-		ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
+		/* set sensor in RUNning state */
+		if (!ret)
+			ret = vs6725_reg_write(client, USER_CMD, CMD_RUN);
+	}
 
 	return ret;
 }
