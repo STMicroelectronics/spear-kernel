@@ -2711,11 +2711,7 @@ static int vs6725_remove(struct i2c_client *client)
 
 static int vs6725_suspend(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-
-	/* turn off CE pin of camera sensor */
-	return vs6725_s_power(sd, 0);
+	return 0;
 }
 
 static int vs6725_resume(struct device *dev)
@@ -2726,14 +2722,7 @@ static int vs6725_resume(struct device *dev)
 	int ret;
 
 	/* turn on CE pin of camera sensor */
-	ret = vs6725_s_power(sd, 1);
-
-	/*
-	 * As per the last format set before we went for suspend,
-	 * reprogram sensor image size and image format
-	 */
-	if (!ret)
-		ret = vs6725_set_image_format(client, &priv->fmt);
+	ret = vs6725_set_image_format(client, &priv->fmt);
 
 	if (!ret)
 		ret = vs6725_set_image_size(client, &priv->fmt);

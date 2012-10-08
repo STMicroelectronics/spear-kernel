@@ -1981,6 +1981,13 @@ static int camif_suspend(struct device *dev)
 	/* check if CAMIF is in running state */
 	if (camif->is_running) {
 		camif_stop_capture(camif, CAMIF_SUSPEND);
+
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 0);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
 	}
 
 	return ret;
@@ -2022,6 +2029,12 @@ static int camif_resume(struct device *dev)
 					goto out;
 				}
 			}
+		}
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 1);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
 		}
 
 		/* Resume CAMIF frame capture */
