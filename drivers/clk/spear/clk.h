@@ -138,4 +138,16 @@ long clk_round_rate_index(struct clk_hw *hw, unsigned long drate,
 		unsigned long parent_rate, clk_calc_rate calc_rate, u8 rtbl_cnt,
 		int *index);
 
+struct clk *clk_lookup_subtree(const char *name, struct clk *clk);
+
+#if defined(CONFIG_ARCH_SPEAR3XX) || defined(CONFIG_ARCH_SPEAR6XX)
+void vco_set_rate(u16 m, u8 n);
+#else
+static inline void vco_set_rate(u16 m, u8 n)
+{
+	pr_err("VCO Set Rate not allowed\n");
+	BUG();
+}
+#endif
+
 #endif /* __SPEAR_CLK_H */
