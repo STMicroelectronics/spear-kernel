@@ -845,7 +845,7 @@ void __init spear1340_clk_init(void)
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_PCIE_SATA_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "dw_pcie");
-	clk_register_clkdev(clk, NULL, "ahci");
+	clk_register_clkdev(clk, NULL, "b1000000.ahci");
 
 	clk = clk_register_gate(NULL, "sysram0_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_SYSRAM0_CLK_ENB, 0,
