@@ -489,7 +489,8 @@ void __init spear1310_clk_init(void)
 	clk_register_clkdev(clk, "ddr_clk", NULL);
 
 	/* clock derived from pll1 clk */
-	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk", 0, 1, 2);
+	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk",
+			CLK_SET_RATE_PARENT, 1, 2);
 	clk_register_clkdev(clk, "cpu_clk", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "wdt_clk", "cpu_clk", 0, 1,

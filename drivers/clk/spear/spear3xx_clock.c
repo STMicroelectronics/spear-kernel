@@ -106,10 +106,26 @@ static struct vco_rate_tbl vco_rtbl[] = {
 	{.mode = 0, .m = 0x85, .n = 0x0C}, /* vco 532 */
 	{.mode = 0, .m = 0xA6, .n = 0x0C}, /* vco 664 */
 };
+
+/*
+ * Since the DDR shares the same pll as the total system (pll-1), the
+ * changes in system frequency requires the DDR to be moved into self
+ * refresh mode.
+ *
+ * The Clock framework implemetations changes VCO and PLL separately to the
+ * m/n & p values maintained in the VCO and PLL rate tables respectively.
+ *
+ * A quick fix by limiting the p-value to 1 helps to overcome the above
+ * limitations and handle the DDR specific changes at VCO level only.
+ *
+ * The PLL table value below is restricted to a single entry i.e. p value
+ * of 1. This value is sufficient to generate the requisite fequencies of
+ * 166/266/332 Mhz.
+ */
+
 static struct pll_rate_tbl pll_rtbl[] = {
 	/* o/p clk = parent clk (vco) / 2^p */
 	{.p = 0x1},
-	{.p = 0x0},
 };
 
 /* aux rate configuration table, in ascending order of rates */
@@ -397,7 +413,8 @@ void __init spear3xx_clk_init(void)
 	clk_register_clkdev(clk1, "pll2_clk", NULL);
 
 	/* clock derived from pll1 clk */
-	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk", 0, 1, 1);
+	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk",
+			CLK_SET_RATE_PARENT, 1, 1);
 	clk_register_clkdev(clk, "cpu_clk", NULL);
 
 	clk = clk_register_divider(NULL, "ahb_clk", "pll1_clk",
