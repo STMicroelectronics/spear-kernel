@@ -117,14 +117,6 @@ static struct pll_rate_tbl pll_rtbl[] = {
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
 	{.xscale = 2, .yscale = 27, .eq = 0}, /* 12.296 MHz */
-static struct pll_rate_tbl pll_rtbl[] = {
-	/* o/p clk = parent clk (vco) / 2^p */
-	{.p = 0x1},
-};
-
-/* aux rate configuration table, in ascending order of rates */
-static struct aux_rate_tbl aux_rtbl[] = {
-	/* For PLL1 = 332 MHz */
 	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
 	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
