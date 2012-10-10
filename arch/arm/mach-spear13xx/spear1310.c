@@ -13,6 +13,7 @@
 
 #define pr_fmt(fmt) "SPEAr1310: " fmt
 
+#include <linux/ahci_platform.h>
 #include <linux/delay.h>
 #include <linux/amba/pl022.h>
 #include <linux/clk.h>
@@ -47,11 +48,85 @@
 #define SPEAR1310_PHY_RMII_VAL		0x4
 #define SPEAR1310_PHY_SMII_VAL		0x6
 
+#define SPEAR1310_PCM_CFG			(VA_MISC_BASE + 0x100)
+
 #define VA_SPEAR1310_USBPHY_GEN_CFG		(VA_MISC_BASE + 0x394)
 	#define USBPLLLOCK			(1 << 24)
 	#define USBPHYRST			(1 << 15)
 	#define USBPRSNT			(1 << 13)
 	#define USBPHYPOR			(1 << 12)
+
+#define SPEAR1310_PCIE_SATA_CFG			(VA_MISC_BASE + 0x3A4)
+	#define SPEAR1310_PCIE_SATA2_SEL_PCIE		(0 << 31)
+	#define SPEAR1310_PCIE_SATA1_SEL_PCIE		(0 << 30)
+	#define SPEAR1310_PCIE_SATA0_SEL_PCIE		(0 << 29)
+	#define SPEAR1310_PCIE_SATA2_SEL_SATA		(1 << 31)
+	#define SPEAR1310_PCIE_SATA1_SEL_SATA		(1 << 30)
+	#define SPEAR1310_PCIE_SATA0_SEL_SATA		(1 << 29)
+	#define SPEAR1310_SATA2_CFG_TX_CLK_EN		(1 << 27)
+	#define SPEAR1310_SATA2_CFG_RX_CLK_EN		(1 << 26)
+	#define SPEAR1310_SATA2_CFG_POWERUP_RESET	(1 << 25)
+	#define SPEAR1310_SATA2_CFG_PM_CLK_EN		(1 << 24)
+	#define SPEAR1310_SATA1_CFG_TX_CLK_EN		(1 << 23)
+	#define SPEAR1310_SATA1_CFG_RX_CLK_EN		(1 << 22)
+	#define SPEAR1310_SATA1_CFG_POWERUP_RESET	(1 << 21)
+	#define SPEAR1310_SATA1_CFG_PM_CLK_EN		(1 << 20)
+	#define SPEAR1310_SATA0_CFG_TX_CLK_EN		(1 << 19)
+	#define SPEAR1310_SATA0_CFG_RX_CLK_EN		(1 << 18)
+	#define SPEAR1310_SATA0_CFG_POWERUP_RESET	(1 << 17)
+	#define SPEAR1310_SATA0_CFG_PM_CLK_EN		(1 << 16)
+	#define SPEAR1310_PCIE2_CFG_DEVICE_PRESENT	(1 << 11)
+	#define SPEAR1310_PCIE2_CFG_POWERUP_RESET	(1 << 10)
+	#define SPEAR1310_PCIE2_CFG_CORE_CLK_EN		(1 << 9)
+	#define SPEAR1310_PCIE2_CFG_AUX_CLK_EN		(1 << 8)
+	#define SPEAR1310_PCIE1_CFG_DEVICE_PRESENT	(1 << 7)
+	#define SPEAR1310_PCIE1_CFG_POWERUP_RESET	(1 << 6)
+	#define SPEAR1310_PCIE1_CFG_CORE_CLK_EN		(1 << 5)
+	#define SPEAR1310_PCIE1_CFG_AUX_CLK_EN		(1 << 4)
+	#define SPEAR1310_PCIE0_CFG_DEVICE_PRESENT	(1 << 3)
+	#define SPEAR1310_PCIE0_CFG_POWERUP_RESET	(1 << 2)
+	#define SPEAR1310_PCIE0_CFG_CORE_CLK_EN		(1 << 1)
+	#define SPEAR1310_PCIE0_CFG_AUX_CLK_EN		(1 << 0)
+
+	#define SPEAR1310_PCIE_CFG_MASK(x) ((0xF << (x * 4)) | (1 << (x + 29)))
+	#define SPEAR1310_SATA_CFG_MASK(x) ((0xF << (x * 4 + 16)) | \
+						(1 << (x + 29)))
+	#define SPEAR1310_PCIE_CFG_VAL(x) \
+			(SPEAR1310_PCIE_SATA##x##_SEL_PCIE | \
+			SPEAR1310_PCIE##x##_CFG_AUX_CLK_EN | \
+			SPEAR1310_PCIE##x##_CFG_CORE_CLK_EN | \
+			SPEAR1310_PCIE##x##_CFG_POWERUP_RESET | \
+			SPEAR1310_PCIE##x##_CFG_DEVICE_PRESENT)
+	#define SPEAR1310_SATA_CFG_VAL(x) \
+			(SPEAR1310_PCIE_SATA##x##_SEL_SATA | \
+			SPEAR1310_SATA##x##_CFG_PM_CLK_EN | \
+			SPEAR1310_SATA##x##_CFG_POWERUP_RESET | \
+			SPEAR1310_SATA##x##_CFG_RX_CLK_EN | \
+			SPEAR1310_SATA##x##_CFG_TX_CLK_EN)
+
+#define SPEAR1310_PCIE_MIPHY_CFG_1		(VA_MISC_BASE + 0x3A8)
+	#define SPEAR1310_MIPHY_DUAL_OSC_BYPASS_EXT	(1 << 31)
+	#define SPEAR1310_MIPHY_DUAL_CLK_REF_DIV2	(1 << 28)
+	#define SPEAR1310_MIPHY_DUAL_PLL_RATIO_TOP(x)	(x << 16)
+	#define SPEAR1310_MIPHY_SINGLE_OSC_BYPASS_EXT	(1 << 15)
+	#define SPEAR1310_MIPHY_SINGLE_CLK_REF_DIV2	(1 << 12)
+	#define SPEAR1310_MIPHY_SINGLE_PLL_RATIO_TOP(x)	(x << 0)
+	#define SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK (0xFFFF)
+	#define SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE_MASK (0xFFFF << 16)
+	#define SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA \
+			(SPEAR1310_MIPHY_DUAL_OSC_BYPASS_EXT | \
+			SPEAR1310_MIPHY_DUAL_CLK_REF_DIV2 | \
+			SPEAR1310_MIPHY_DUAL_PLL_RATIO_TOP(60) | \
+			SPEAR1310_MIPHY_SINGLE_OSC_BYPASS_EXT | \
+			SPEAR1310_MIPHY_SINGLE_CLK_REF_DIV2 | \
+			SPEAR1310_MIPHY_SINGLE_PLL_RATIO_TOP(60))
+	#define SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK \
+			(SPEAR1310_MIPHY_SINGLE_PLL_RATIO_TOP(120))
+	#define SPEAR1310_PCIE_SATA_MIPHY_CFG_PCIE \
+			(SPEAR1310_MIPHY_DUAL_OSC_BYPASS_EXT | \
+			SPEAR1310_MIPHY_DUAL_PLL_RATIO_TOP(25) | \
+			SPEAR1310_MIPHY_SINGLE_OSC_BYPASS_EXT | \
+			SPEAR1310_MIPHY_SINGLE_PLL_RATIO_TOP(25))
 
 #define SPEAR1310_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x300)
 #define SPEAR1310_PERIP1_SW_RST			(VA_MISC_BASE + 0x308)
@@ -282,6 +357,60 @@ static struct plat_stmmacenet_data eth4_data = {
 	.clk_csr = STMMAC_CSR_150_250M,
 };
 
+/* sata platfrom data */
+static void sata_miphy_exit(struct device *dev)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+
+	writel(temp, SPEAR1310_PCIE_SATA_CFG);
+	writel(~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK,
+			SPEAR1310_PCIE_MIPHY_CFG_1);
+
+	/* Enable PCIE SATA Controller reset */
+	writel((readl(SPEAR1310_PERIP1_SW_RST) | (0x1000)),
+			SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+	/* Switch off sata power domain */
+	writel((readl(SPEAR1310_PCM_CFG) & (~0x800)), SPEAR1310_PCM_CFG);
+	msleep(20);
+}
+
+static int sata_miphy_init(struct device *dev, void __iomem *addr)
+{
+	u32 temp;
+
+	/*TBD: Workaround to support multiple sata port.*/
+	temp = readl(SPEAR1310_PCIE_SATA_CFG);
+	temp &= ~SPEAR1310_SATA_CFG_MASK(0);
+	temp |= SPEAR1310_SATA_CFG_VAL(0);
+
+	writel(temp, SPEAR1310_PCIE_SATA_CFG);
+
+	temp = readl(SPEAR1310_PCIE_MIPHY_CFG_1);
+	temp &= ~SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_MASK;
+	temp |= SPEAR1310_PCIE_SATA_MIPHY_CFG_SATA_25M_CRYSTAL_CLK;
+
+	writel(temp, SPEAR1310_PCIE_MIPHY_CFG_1);
+	/* Switch on sata power domain */
+	writel((readl(SPEAR1310_PCM_CFG) | (0x800)), SPEAR1310_PCM_CFG);
+	msleep(20);
+	/* Disable PCIE SATA Controller reset */
+	writel((readl(SPEAR1310_PERIP1_SW_RST) & (~0x1000)),
+			SPEAR1310_PERIP1_SW_RST);
+	msleep(20);
+
+	return 0;
+}
+
+static struct ahci_platform_data sata_pdata = {
+	.init = sata_miphy_init,
+	.exit = sata_miphy_exit,
+};
+
 /* ssp device registration */
 static struct pl022_ssp_controller ssp1_plat_data = {
 	.enable_dma = 0,
@@ -365,6 +494,8 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 			&spear1310_otg_plat_data),
 	OF_DEV_AUXDATA("st,db9000-clcd", SPEAR13XX_CLCD_BASE, NULL,
 			&clcd_plat_info),
+	OF_DEV_AUXDATA("snps,spear-ahci", SPEAR1310_SATA0_BASE, NULL,
+			&sata_pdata),
 	{}
 };
 
