@@ -101,7 +101,15 @@
 						"nand_16bit_grp";
 					st,function = "nand";
 				};
+				sata {
+					st,pins = "sata0_grp";
+					st,function = "sata";
+				};
 			};
+		};
+
+		ahci@b1000000 {
+			status = "okay";
 		};
 
 		cf@b2800000 {
