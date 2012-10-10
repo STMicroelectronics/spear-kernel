@@ -409,6 +409,8 @@ static int sata_miphy_init(struct device *dev, void __iomem *addr)
 static struct ahci_platform_data sata_pdata = {
 	.init = sata_miphy_init,
 	.exit = sata_miphy_exit,
+	.suspend = sata_suspend,
+	.resume = sata_resume,
 };
 
 /* ssp device registration */

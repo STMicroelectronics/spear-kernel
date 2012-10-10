@@ -22,6 +22,7 @@
 #include <linux/of_irq.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
+#include <linux/ahci_platform.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/hardware/gic.h>
@@ -45,6 +46,33 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 	} else {
 		return false;
 	}
+}
+
+/* sata suspend/resume function */
+int sata_suspend(struct device *dev)
+{
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+
+	if (dev->power.power_state.event == PM_EVENT_FREEZE)
+		return 0;
+
+	if (pdata && pdata->exit)
+		pdata->exit(dev);
+
+	return 0;
+}
+
+int sata_resume(struct device *dev)
+{
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+
+	if (dev->power.power_state.event == PM_EVENT_THAW)
+		return 0;
+
+	if (pdata && pdata->init)
+		return pdata->init(dev, NULL);
+
+	return 0;
 }
 
 /* ssp device registration */
