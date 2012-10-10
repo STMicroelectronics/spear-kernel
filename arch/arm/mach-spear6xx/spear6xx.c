@@ -402,7 +402,7 @@ struct map_desc spear6xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR6XX_ML_CPU_BASE),
 		.length		= 2 * SZ_16M,
 		.type		= MT_DEVICE
-	},	{
+	}, {
 		.virtual	= VA_SPEAR6XX_ICM1_BASE,
 		.pfn		= __phys_to_pfn(SPEAR6XX_ICM1_BASE),
 		.length		= SZ_16M,
@@ -412,6 +412,11 @@ struct map_desc spear6xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR6XX_ICM3_SMI_CTRL_BASE),
 		.length		= SZ_16M,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= VA_SPEAR6XX_ICM1_SRAM_BASE,
+		.pfn		= __phys_to_pfn(SPEAR6XX_ICM1_SRAM_BASE),
+		.length		= SZ_4K,
+		.type		= MT_MEMORY_NONCACHED
 	},
 };
 

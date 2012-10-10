@@ -77,6 +77,11 @@ struct map_desc spear3xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR3XX_ICM3_SMI_CTRL_BASE),
 		.length		= SZ_16M,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= VA_SPEAR3XX_ICM1_SRAM_BASE,
+		.pfn		= __phys_to_pfn(SPEAR3XX_ICM1_SRAM_BASE),
+		.length		= SZ_4K,
+		.type		= MT_MEMORY_NONCACHED
 	},
 };
 
