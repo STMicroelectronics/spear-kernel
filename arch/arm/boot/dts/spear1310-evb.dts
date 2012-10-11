@@ -127,21 +127,21 @@
 				label = "u-boot";
 				reg = <0x80000 0x140000>;
 			};
-			partition@140000 {
+			partition@1C0000 {
 				label = "environment";
-				reg = <0x140000 0x40000>;
+				reg = <0x1C0000 0x40000>;
 			};
-			partition@180000 {
+			partition@200000 {
 				label = "dtb";
-				reg = <0x180000 0x40000>;
+				reg = <0x200000 0x40000>;
 			};
-			partition@1c0000 {
+			partition@240000 {
 				label = "linux";
-				reg = <0x1c0000 0xC00000>;
+				reg = <0x240000 0xC00000>;
 			};
-			partition@dc0000 {
+			partition@E40000 {
 				label = "rootfs";
-				reg = <0xdc0000 0x0>;
+				reg = <0xE40000 0x0>;
 			};
 		};
 
