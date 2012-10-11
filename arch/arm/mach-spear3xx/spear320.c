@@ -390,6 +390,8 @@ static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 			&spear320_hmi_macb_data[1]),
 	OF_DEV_AUXDATA("arm,pl110", SPEAR320_CLCD_BASE, NULL,
 			&pl110_plat_data),
+	OF_DEV_AUXDATA("snps,designware-udc", SPEAR3XX_USBD_CSR_BASE, NULL,
+			&udc_plat_data),
 	{}
 };
 
