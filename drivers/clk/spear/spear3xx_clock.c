@@ -582,7 +582,7 @@ void __init spear3xx_clk_init(void)
 	/* clock derived from apb clk */
 	clk = clk_register_gate(NULL, "adc_clk", "apb_clk", 0, PERIP1_CLK_ENB,
 			ADC_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "adc");
+	clk_register_clkdev(clk, NULL, "d0080000.adc");
 
 	clk = clk_register_gate(NULL, "gpio0_clk", "apb_clk", 0, PERIP1_CLK_ENB,
 			GPIO_CLK_ENB, 0, &_lock);
