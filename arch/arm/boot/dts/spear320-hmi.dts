@@ -206,13 +206,69 @@
 			status = "okay";
 		};
 
+		gpio_keys {
+			compatible = "gpio-keys";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			button@1 {
+				label = "user button 1";
+				linux,code = <0x100>;
+				gpios = <&stmpegpio 3 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
+			};
+
+			button@2 {
+				label = "user button 2";
+				linux,code = <0x200>;
+				gpios = <&stmpegpio 2 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
+			};
+		};
+
 		apb {
 			gpio0: gpio@fc980000 {
 			       status = "okay";
 			};
 
 			i2c0: i2c@d0180000 {
-			       status = "okay";
+				status = "okay";
+
+				stmpe811@41 {
+					compatible = "st,stmpe811";
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0x41>;
+					irq_over_gpio;
+					irq-gpios = <&gpiopinctrl 29 0x4>;
+					id = <0>;
+					blocks = <0x5>;
+					irq_trigger = <0x1>;
+
+					stmpegpio: stmpe-gpio {
+						compatible = "stmpe,gpio";
+						reg = <0>;
+						gpio-controller;
+						#gpio-cells = <2>;
+						gpio,norequest_mask = <0xF3>;
+					};
+
+					stmpe610-ts {
+						compatible = "stmpe,ts";
+						reg = <0>;
+						ts,sample_time = <4>;
+						ts,mod_12b = <1>;
+						ts,ref_sel = <0>;
+						ts,adc_freq = <1>;
+						ts,ave_ctrl = <1>;
+						ts,touch_det_delay = <3>;
+						ts,settling = <4>;
+						ts,fraction_z = <7>;
+						ts,i_drive = <1>;
+					};
+				};
 			};
 
 			i2c1: i2c@a7000000 {
