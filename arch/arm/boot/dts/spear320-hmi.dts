@@ -177,6 +177,10 @@
 			status = "okay";
 		};
 
+		usbd@e1100000 {
+			status = "okay";
+		};
+
 		apb {
 			gpio0: gpio@fc980000 {
 			       status = "okay";
@@ -218,6 +222,10 @@
 
 			wdt@fc880000 {
 			       status = "okay";
+			};
+
+			gpio@b3000000 {
+				status = "okay";
 			};
 		};
 	};
