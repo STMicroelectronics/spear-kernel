@@ -19,10 +19,19 @@
 #include <linux/io.h>
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
+#include <plat/adc.h>
 #include <plat/pl080.h>
 #include <plat/shirq.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+
+/* adc device registeration */
+struct adc_plat_data adc_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.dma_data = "adc",
+	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
+		NORMAL_RESOLUTION, 14000000, 0},
+};
 
 /* ssp device registration */
 struct pl022_ssp_controller pl022_plat_data = {

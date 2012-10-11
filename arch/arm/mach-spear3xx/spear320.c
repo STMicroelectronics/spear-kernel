@@ -402,6 +402,8 @@ static struct plat_stmmacenet_data eth_data = {
 
 /* Add SPEAr320 HMI auxdata to pass platform data */
 static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("st,spear-adc", SPEAR3XX_ICM1_ADC_BASE, NULL,
+			&adc_pdata),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
@@ -427,6 +429,8 @@ static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 
 /* Add SPEAr320 evb auxdata to pass platform data */
 static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("st,spear-adc", SPEAR3XX_ICM1_ADC_BASE, NULL,
+			&adc_pdata),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,

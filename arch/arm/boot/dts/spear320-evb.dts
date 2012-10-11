@@ -170,6 +170,10 @@
 		};
 
 		apb {
+			adc@d0080000 {
+				status = "okay";
+			};
+
 			gpio0: gpio@fc980000 {
 			       status = "okay";
 			};

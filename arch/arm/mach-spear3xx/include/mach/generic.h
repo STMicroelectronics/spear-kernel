@@ -24,6 +24,7 @@
 #include <asm/mach/map.h>
 
 /* Add spear3xx family device structure declarations here */
+extern struct adc_plat_data adc_pdata;
 extern struct sys_timer spear3xx_timer;
 extern struct pl022_ssp_controller pl022_plat_data;
 extern struct pl08x_platform_data pl080_plat_data;

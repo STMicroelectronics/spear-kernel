@@ -117,6 +117,13 @@
 			compatible = "simple-bus";
 			ranges = <0xd0000000 0xd0000000 0x30000000>;
 
+			adc@d0080000 {
+				compatible = "st,spear-adc";
+				reg = <0xd0080000 0x1000>;
+				interrupts = <18>;
+				status = "disabled";
+			};
+
 			gpio0: gpio@fc980000 {
 				compatible = "arm,pl061", "arm,primecell";
 				reg = <0xfc980000 0x1000>;
