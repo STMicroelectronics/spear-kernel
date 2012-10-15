@@ -20,6 +20,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/phy.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
@@ -445,6 +447,33 @@ static struct clcd_panel samsung_LMS700 = {
 	.bpp = 32,
 };
 
+/* Ethernet platform data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = 1,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 0,
+	.tx_coe = 0,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe = STMMAC_RX_COE_TYPE1,
+	.bugged_jumbo = 0,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
 /* This will create static memory mapping for selected devices */
 void __init spear6xx_map_io(void)
 {
@@ -490,6 +519,8 @@ struct of_dev_auxdata spear6xx_auxdata_lookup[] __initdata = {
 			&pl080_plat_data),
 	OF_DEV_AUXDATA("arm,pl110", SPEAR6XX_ICM3_CLCD_BASE, NULL,
 			&pl110_plat_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR6XX_GETH_BASE, NULL,
+			&eth_data),
 	{}
 };
 
