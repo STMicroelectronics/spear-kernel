@@ -510,6 +510,9 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 	addr = e_info->addr;
 	len = e_info->len;
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
 	mutex_lock(&flash->lock);
 
 	/* now erase sectors in loop */
@@ -520,6 +523,7 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 		if (ret) {
 			e_info->state = MTD_ERASE_FAILED;
 			mutex_unlock(&flash->lock);
+			clk_disable_unprepare(dev->clk);
 			return ret;
 		}
 		addr += mtd->erasesize;
@@ -529,6 +533,7 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 	mutex_unlock(&flash->lock);
 	e_info->state = MTD_ERASE_DONE;
 	mtd_erase_callback(e_info);
+	clk_disable_unprepare(dev->clk);
 
 	return 0;
 }
@@ -565,12 +570,16 @@ static int spear_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 	/* select address as per bank number */
 	src = flash->base_addr + from;
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
 	mutex_lock(&flash->lock);
 
 	/* wait till previous write/erase is done. */
 	ret = spear_smi_wait_till_ready(dev, flash->bank, SMI_MAX_TIME_OUT);
 	if (ret) {
 		mutex_unlock(&flash->lock);
+		clk_disable_unprepare(dev->clk);
 		return ret;
 	}
 
@@ -591,6 +600,7 @@ static int spear_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 	*retlen = len;
 	mutex_unlock(&flash->lock);
+	clk_disable_unprepare(dev->clk);
 
 	return 0;
 }
@@ -655,6 +665,10 @@ static int spear_mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 		return -EINVAL;
 	}
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
+
 	/* select address as per bank number */
 	dest = flash->base_addr + to;
 	mutex_lock(&flash->lock);
@@ -696,6 +710,7 @@ static int spear_mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 err_write:
 	mutex_unlock(&flash->lock);
+	clk_disable_unprepare(dev->clk);
 
 	return ret;
 }
@@ -1021,6 +1036,7 @@ static int __devinit spear_smi_probe(struct platform_device *pdev)
 		}
 	}
 
+	clk_disable_unprepare(dev->clk);
 	return 0;
 
 err_bank_setup:
@@ -1081,7 +1097,6 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, dev);
 
-	clk_disable_unprepare(dev->clk);
 	clk_put(dev->clk);
 	iounmap(dev->io_base);
 	kfree(dev);
@@ -1096,11 +1111,6 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int spear_smi_suspend(struct device *dev)
 {
-	struct spear_smi *sdev = dev_get_drvdata(dev);
-
-	if (sdev && sdev->clk)
-		clk_disable_unprepare(sdev->clk);
-
 	return 0;
 }
 
@@ -1109,11 +1119,12 @@ static int spear_smi_resume(struct device *dev)
 	struct spear_smi *sdev = dev_get_drvdata(dev);
 	int ret = -EPERM;
 
-	if (sdev && sdev->clk)
-		ret = clk_prepare_enable(sdev->clk);
-
-	if (!ret)
+	ret = clk_prepare_enable(sdev->clk);
+	if (!ret) {
 		spear_smi_hw_init(sdev);
+		clk_disable_unprepare(sdev->clk);
+	}
+
 	return ret;
 }
 
