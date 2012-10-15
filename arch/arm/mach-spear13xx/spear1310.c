@@ -18,6 +18,7 @@
 #include <linux/amba/pl022.h>
 #include <linux/clk.h>
 #include <linux/of_platform.h>
+#include <linux/pata_arasan_cf_data.h>
 #include <linux/phy.h>
 #include <linux/stmmac.h>
 #include <linux/usb/dwc_otg.h>
@@ -131,6 +132,12 @@
 #define SPEAR1310_PERIP1_CLK_ENB		(VA_MISC_BASE + 0x300)
 #define SPEAR1310_PERIP1_SW_RST			(VA_MISC_BASE + 0x308)
 #define SPEAR1310_UOC_RST_ENB			11
+
+static struct arasan_cf_pdata cf_pdata = {
+	.cf_if_clk = CF_IF_CLK_166M,
+	.quirk = CF_BROKEN_UDMA,
+	.dma_priv = &cf_dma_priv,
+};
 
 static int spear1310_eth_phy_clk_cfg(struct platform_device *pdev)
 {
@@ -476,7 +483,7 @@ static struct dwc_otg_plat_data spear1310_otg_plat_data = {
 /* Add SPEAr1310 auxdata to pass platform data */
 static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("st,spear-adc", SPEAR13XX_ADC_BASE, NULL, &adc_pdata),
-	OF_DEV_AUXDATA("arasan,cf-spear1340", MCIF_CF_BASE, NULL, &cf_dma_priv),
+	OF_DEV_AUXDATA("arasan,cf-spear1340", MCIF_CF_BASE, NULL, &cf_pdata),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC0_BASE, NULL, &dmac_plat_data0),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC1_BASE, NULL, &dmac_plat_data1),
 	OF_DEV_AUXDATA("arm,pl022", SSP_BASE, NULL, &pl022_plat_data),
