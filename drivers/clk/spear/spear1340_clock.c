@@ -650,14 +650,15 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk1, "uart0_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "uart0_mclk", uart0_parents,
-			ARRAY_SIZE(uart0_parents), 0, SPEAR1340_PERIP_CLK_CFG,
-			SPEAR1340_UART0_CLK_SHIFT, SPEAR1340_UART_CLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uart0_parents), CLK_SET_RATE_PARENT,
+			SPEAR1340_PERIP_CLK_CFG,
+			SPEAR1340_UART0_CLK_SHIFT,
+			SPEAR1340_UART_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "uart0_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "uart0_clk", "uart0_mclk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_UART0_CLK_ENB, 0,
-			&_lock);
+	clk = clk_register_gate(NULL, "uart0_clk", "uart0_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1340_PERIP1_CLK_ENB,
+			SPEAR1340_UART0_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "e0000000.serial");
 
 	clk = clk_register_aux("uart1_syn_clk", "uart1_syn_gclk",
@@ -709,14 +710,14 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk1, "c3_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "c3_mclk", c3_parents,
-			ARRAY_SIZE(c3_parents), 0, SPEAR1340_PERIP_CLK_CFG,
-			SPEAR1340_C3_CLK_SHIFT, SPEAR1340_C3_CLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(c3_parents), CLK_SET_RATE_PARENT,
+			SPEAR1340_PERIP_CLK_CFG, SPEAR1340_C3_CLK_SHIFT,
+			SPEAR1340_C3_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "c3_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_C3_CLK_ENB, 0,
-			&_lock);
+	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1340_PERIP1_CLK_ENB,
+			SPEAR1340_C3_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "e1800000.c3");
 
 	/* gmac */
