@@ -1181,7 +1181,8 @@ static const unsigned mcif_pins[] = { 86, 87, 88, 89, 90, 91, 92, 93, 213, 214,
 		.reg = PAD_DIRECTION_SEL_1,			\
 		.mask = PMX_MCIFALL_1_MASK | PMX_NFWPRT1_MASK |	\
 			PMX_NFWPRT2_MASK,			\
-		.val = PMX_MCIFALL_1_MASK,			\
+		.val = PMX_MCIFALL_1_MASK | PMX_NFWPRT1_MASK |  \
+			PMX_NFWPRT2_MASK,			\
 	}, {							\
 		.reg = PAD_DIRECTION_SEL_2,			\
 		.mask = PMX_MCIFALL_2_MASK,			\
