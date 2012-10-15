@@ -90,7 +90,7 @@
 
 		cf@b2800000 {
 			compatible = "arasan,cf-spear1340";
-			reg = <0xb2800000 0x100>;
+			reg = <0xb2800000 0x1000>;
 			interrupts = <0 29 0x4>;
 			status = "disabled";
 		};

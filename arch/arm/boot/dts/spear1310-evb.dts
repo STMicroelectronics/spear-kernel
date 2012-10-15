@@ -113,7 +113,7 @@
 		};
 
 		cf@b2800000 {
-			status = "okay";
+			status = "disabled";
 		};
 
 		dma@ea800000 {
