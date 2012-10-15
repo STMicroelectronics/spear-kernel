@@ -89,7 +89,7 @@ static struct macb_platform_data spear320_hmi_macb_data[] = {
 
 /* MACB platform data for SPEAr320 Evaluation board*/
 static struct macb_platform_data spear320_macb_data = {
-	.bus_id = 0,
+	.bus_id = 1,
 	.phy_mask = 0,
 	.phy_addr = 0x2,
 #ifdef PLGPIO_320
