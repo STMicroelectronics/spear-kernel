@@ -13,6 +13,7 @@
 
 #include <linux/err.h>
 #include <linux/export.h>
+#include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
@@ -123,6 +124,7 @@ static struct spear_shirq spear320_shirq_ras2 = {
 static struct spear_shirq spear320_shirq_ras3 = {
 	.irq_nr = 7,
 	.irq_bit_off = 0,
+	.invalid_irq = 1,
 	.regs = {
 		.enb_reg = SPEAR320_INT_ENB_MASK_REG,
 		.reset_to_enb = 1,
@@ -229,6 +231,9 @@ static void __init spear_shirq_register(struct spear_shirq *shirq)
 {
 	int i;
 
+	if (shirq->invalid_irq)
+		return;
+
 	irq_set_chained_handler(shirq->irq, shirq_handler);
 	for (i = 0; i < shirq->irq_nr; i++) {
 		irq_set_chip_and_handler(shirq->irq_base + i,
@@ -275,6 +280,7 @@ static int __init shirq_init(struct spear_shirq **shirq_blocks,
 		spear_shirq_register(shirq_blocks[i]);
 		hwirq += shirq_blocks[i]->irq_nr;
 	}
+
 	return 0;
 }
 
