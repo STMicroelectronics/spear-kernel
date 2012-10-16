@@ -105,6 +105,13 @@
 			local-mac-address = [f2 f2 f2 45 67 8a];
 		};
 
+		pwm: pwm@a8000000 {
+			compatible ="st,spear-pwm";
+			reg = <0xa8000000 0x1000>;
+			#pwm-cells = <2>;
+			status = "disabled";
+                };
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;

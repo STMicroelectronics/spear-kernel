@@ -172,10 +172,10 @@
 			status = "disabled";
 		};
 
-		pwm@e0180000 {
-			compatible = "st,pwm";
+		pwm: pwm@e0180000 {
+			compatible ="st,spear13xx-pwm";
 			reg = <0xe0180000 0x1000>;
-			interrupts = <0 0x4>;
+			#pwm-cells = <2>;
 			status = "disabled";
 		};
 

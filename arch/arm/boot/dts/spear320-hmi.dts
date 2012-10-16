@@ -228,6 +228,10 @@
 			};
 		};
 
+		pwm: pwm@a8000000 {
+			status = "okay";
+		};
+
 		apb {
 			gpio0: gpio@fc980000 {
 			       status = "okay";
