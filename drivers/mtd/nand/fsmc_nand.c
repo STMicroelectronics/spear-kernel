@@ -32,6 +32,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/nand_ecc.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/mtd/partitions.h>
@@ -370,6 +371,7 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 	case -1:
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0 | NAND_CTRL_CHANGE);
 		clk_disable_unprepare(host->clk);
+		pm_runtime_put_sync(host->dev);
 		break;
 	case 0:
 	case 1:
@@ -379,6 +381,7 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 			dev_err(host->dev, "couldn't enable clock\n");
 			return;
 		}
+		pm_runtime_get_sync(host->dev);
 
 		if (host->select_chip)
 			host->select_chip(chipnr,
@@ -1353,6 +1356,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 	clk_disable_unprepare(host->clk);
+	pm_runtime_enable(&pdev->dev);
 	dev_info(&pdev->dev, "FSMC NAND driver registration successful\n");
 	return 0;
 
@@ -1393,17 +1397,13 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 			dma_release_channel(host->read_dma_chan);
 		}
 		clk_put(host->clk);
+		pm_runtime_disable(&pdev->dev);
 	}
 
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int fsmc_nand_suspend(struct device *dev)
-{
-	return 0;
-}
-
 static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
@@ -1428,7 +1428,15 @@ static int fsmc_nand_resume(struct device *dev)
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(fsmc_nand_pm_ops, fsmc_nand_suspend, fsmc_nand_resume);
+static int fsmc_nand_pm_empty(struct device *dev)
+{
+	return 0;
+}
+
+const struct dev_pm_ops fsmc_nand_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(fsmc_nand_pm_empty, fsmc_nand_resume)
+	SET_RUNTIME_PM_OPS(fsmc_nand_pm_empty, fsmc_nand_pm_empty, NULL)
+};
 #endif
 
 #ifdef CONFIG_OF
