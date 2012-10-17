@@ -77,10 +77,6 @@
 					st,pins = "ssp0_grp", "ssp0_cs1_grp", "ssp0_cs2_grp", "ssp0_cs3_grp";
 					st,function = "ssp0";
 				};
-				pwm {
-					st,pins = "pwm2_grp", "pwm3_grp";
-					st,function = "pwm";
-				};
 				smi-pmx {
 					st,pins = "smi_grp";
 					st,function = "smi";
@@ -305,10 +301,6 @@
 		};
 
 		video-enc@ebd000000 {
-			status = "okay";
-		};
-
-		pwm@e0180000 {
 			status = "okay";
 		};
 
