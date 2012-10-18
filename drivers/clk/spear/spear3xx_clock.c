@@ -131,6 +131,12 @@ static struct pll_rate_tbl pll_rtbl[] = {
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
+	{.xscale = 1, .yscale = 81, .eq = 0}, /* 2.049 MHz */
+	{.xscale = 1, .yscale = 59, .eq = 0}, /* 2.822 MHz */
+	{.xscale = 2, .yscale = 81, .eq = 0}, /* 4.098 MHz */
+	{.xscale = 3, .yscale = 89, .eq = 0}, /* 5.644 MHz */
+	{.xscale = 4, .yscale = 81, .eq = 0}, /* 8.197 MHz */
+	{.xscale = 4, .yscale = 59, .eq = 0}, /* 11.254 MHz */
 	{.xscale = 2, .yscale = 27, .eq = 0}, /* 12.296 MHz */
 	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
 	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
@@ -298,11 +304,11 @@ static void __init spear320_clk_init(void)
 	clk_register_clkdev(clk, NULL, "a9400000.i2s");
 
 	clk = clk_register_mux(NULL, "i2s_ref_clk", i2s_ref_parents,
-			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR320_CONTROL_REG,
+			ARRAY_SIZE(i2s_ref_parents), CLK_SET_RATE_PARENT, SPEAR320_CONTROL_REG,
 			I2S_REF_PCLK_SHIFT, I2S_REF_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "i2s_ref_clk", NULL);
 
-	clk = clk_register_fixed_factor(NULL, "i2s_sclk", "i2s_ref_clk", 0, 1,
+	clk = clk_register_fixed_factor(NULL, "i2s_sclk", "i2s_ref_clk", CLK_SET_RATE_PARENT, 1,
 			4);
 	clk_register_clkdev(clk, "i2s_sclk", NULL);
 
