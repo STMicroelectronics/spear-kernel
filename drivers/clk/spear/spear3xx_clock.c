@@ -295,7 +295,7 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "i2s_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "i2s");
+	clk_register_clkdev(clk, NULL, "a9400000.i2s");
 
 	clk = clk_register_mux(NULL, "i2s_ref_clk", i2s_ref_parents,
 			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR320_CONTROL_REG,
