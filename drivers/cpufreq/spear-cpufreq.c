@@ -252,10 +252,16 @@ static int spear_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cur = policy->min = policy->max = spear_cpufreq_get(0);
 
+	if (num_online_cpus() == 1) {
+		cpumask_copy(policy->related_cpus, cpu_possible_mask);
+		cpumask_copy(policy->cpus, cpu_online_mask);
+	} else {
+		cpumask_setall(policy->cpus);
+	}
+
 	if (!cpufreq_frequency_table_cpuinfo(policy, spear_cpufreq.freq_tbl))
 		cpufreq_frequency_table_get_attr(spear_cpufreq.freq_tbl,
 				policy->cpu);
-
 	policy->cpuinfo.transition_latency = spear_cpufreq.transition_latency;
 
 	return 0;
