@@ -26,6 +26,7 @@
 #include <asm/mach/arch.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <sound/pcm.h>
 
 #define SPEAR320_UART1_BASE		UL(0xA3000000)
 #define SPEAR320_UART2_BASE		UL(0xA4000000)
@@ -34,6 +35,7 @@
 #define SPEAR320_MACB0_BASE		UL(0xAA000000)
 #define SPEAR320_MACB1_BASE		UL(0xAB000000)
 #define SPEAR320_CLCD_BASE		UL(0x90000000)
+#define SPEAR320_I2S_BASE              UL(0xA9400000)
 
 void spear320_macb_plat_mdio_control(struct platform_device *pdev)
 {
@@ -315,6 +317,146 @@ static struct amba_pl011_data spear320_uart_data[] = {
 	},
 };
 
+/*
+ * configure i2s ref clk and sclk
+ *
+ * Depending on these parameters sclk and ref clock will be configured.
+ * For sclk:
+ * sclk = channel_num * data_len * sample_rate
+ *
+ * For ref clock:
+ *
+ * ref_clock = 256 * sample_rate
+ */
+
+int audio_clk_config(struct i2s_hw_config_data *config)
+{
+	struct clk *i2s_sclk, *i2s_ref_clk;
+	int ret = 0;
+
+
+	i2s_sclk = clk_get_sys(NULL, "i2s_sclk");
+	if (IS_ERR(i2s_sclk)) {
+		pr_err("%s:couldn't get i2s_sclk\n", __func__);
+		return PTR_ERR(i2s_sclk);
+	}
+
+	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		ret = PTR_ERR(i2s_ref_clk);
+		goto put_i2s_sclk;
+	}
+
+	/*
+	 * 320 cannot generate accurate clock in some cases but slightly
+	 * more than that which is under acceptable limits.
+	 * But since clk_set_rate fails for this clock we explicitly try
+	 * to set the higher clock.
+	 */
+#define REF_CLK_DELTA	10000
+	ret = clk_set_rate(i2s_ref_clk, 256 * config->sample_rate +
+			REF_CLK_DELTA);
+	if (ret) {
+		pr_err("%s:couldn't set i2s_ref_clk rate\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_prepare_enable(i2s_sclk);
+	if (ret) {
+		pr_err("%s:enabling i2s_sclk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	return 0;
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_i2s_sclk:
+	clk_put(i2s_sclk);
+
+	return ret;
+
+}
+
+static void i2s_clk_init(void)
+{
+	int ret;
+	struct clk *i2s_sclk, *pll1_clk, *gen2_3_par_clk;
+	struct clk *i2s_ref_clk, *ras_syn2_gclk;
+
+	pll1_clk = clk_get(NULL, "pll1_clk");
+	if (IS_ERR(pll1_clk)) {
+		pr_err("%s:couldn't get gen2_3_par_clk\n", __func__);
+		return;
+	}
+
+	i2s_sclk = clk_get(NULL, "i2s_sclk");
+	if (IS_ERR(i2s_sclk)) {
+		pr_err("%s:couldn't get i2s_sclk\n", __func__);
+		return;
+	}
+
+	gen2_3_par_clk = clk_get(NULL, "gen2_3_par_clk");
+	if (IS_ERR(gen2_3_par_clk)) {
+		pr_err("%s:couldn't get gen2_3_par_clk\n", __func__);
+		goto put_i2s_sclk;
+	}
+
+	i2s_ref_clk = clk_get(NULL, "i2s_ref_clk");
+	if (IS_ERR(i2s_ref_clk)) {
+		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		goto put_gen2_3_par_clk;
+	}
+
+	ras_syn2_gclk = clk_get(NULL, "ras_syn2_gclk");
+	if (IS_ERR(ras_syn2_gclk)) {
+		pr_err("%s:couldn't get ras_syn2_gclk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_set_parent(gen2_3_par_clk, pll1_clk);
+	if (ret) {
+		pr_err("%s:set_parent of gen2_3_par_clk,\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	ret = clk_set_parent(i2s_ref_clk, ras_syn2_gclk);
+	if (ret) {
+		pr_err("%s:set_parent of i2s_ref_clk\n", __func__);
+		goto put_i2s_ref_clk;
+	}
+
+	if (clk_set_rate(i2s_sclk, 3073000)) /* 3.072 Mhz */
+		goto put_i2s_ref_clk;
+
+	if (clk_prepare_enable(i2s_sclk))
+		pr_err("%s:enabling i2s_sclk\n", __func__);
+
+put_i2s_ref_clk:
+	clk_put(i2s_ref_clk);
+put_gen2_3_par_clk:
+	clk_put(gen2_3_par_clk);
+put_i2s_sclk:
+	clk_put(i2s_sclk);
+}
+
+static struct i2s_platform_data i2s_data = {
+	.snd_fmts = SNDRV_PCM_FMTBIT_S32_LE,
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+			SNDRV_PCM_RATE_11025 | \
+			SNDRV_PCM_RATE_16000 | \
+			SNDRV_PCM_RATE_22050 | \
+			SNDRV_PCM_RATE_32000 | \
+			SNDRV_PCM_RATE_44100 | \
+			SNDRV_PCM_RATE_48000),
+	.play_dma_data = "i2s_tx",
+	.capture_dma_data = "i2s_rx",
+	.filter = pl08x_filter_id,
+	.i2s_clk_cfg = audio_clk_config,
+	.clk_init = i2s_clk_init,
+};
+
 /* AMBA clcd panel information */
 static struct clcd_panel et057010_640x480 = {
 	.mode = {
@@ -424,6 +566,8 @@ static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 			&pl110_plat_data),
 	OF_DEV_AUXDATA("snps,designware-udc", SPEAR3XX_USBD_CSR_BASE, NULL,
 			&udc_plat_data),
+	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR320_I2S_BASE, NULL,
+			&i2s_data),
 	{}
 };
 

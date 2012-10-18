@@ -22,6 +22,7 @@
 #include <linux/amba/bus.h>
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
+#include <sound/designware_i2s.h>
 
 /* Add spear3xx family device structure declarations here */
 extern struct adc_plat_data adc_pdata;
@@ -36,6 +37,7 @@ void __init spear3xx_clk_init(void);
 void __init spear3xx_map_io(void);
 void __init spear3xx_dt_init_irq(void);
 int clcd_panel_setup(struct clcd_panel *panel);
+int audio_clk_config(struct i2s_hw_config_data *config);
 
 void spear_restart(char, const char *);
 
