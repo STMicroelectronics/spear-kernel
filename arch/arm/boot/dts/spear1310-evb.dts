@@ -105,6 +105,10 @@
 					st,pins = "sata0_grp";
 					st,function = "sata";
 				};
+				pcie {
+					st,pins = "pcie1_grp", "pcie2_grp";
+					st,function = "pci_express";
+				};
 			};
 		};
 
