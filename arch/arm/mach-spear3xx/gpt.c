@@ -19,8 +19,6 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/ioport.h>
-#include <mach/hardware.h>
-#include <mach/irqs.h>
 #include <mach/gpt.h>
 
 static struct spear_timer spear3xx_gp_timers[] = {
@@ -44,7 +42,7 @@ static struct spear_timer spear3xx_gp_timers[] = {
 };
 
 static const char *gpt_parent_clk_name[] __initdata = {
-	"pll3_48m_clk",
+	"pll3_clk",
 	NULL
 };
 
@@ -82,7 +80,7 @@ static int gpt_enable(struct spear_timer *timer)
 	if (timer->enabled)
 		return 0;
 
-	clk_enable(timer->clk);
+	clk_prepare_enable(timer->clk);
 	timer->enabled = 1;
 
 	return 0;
@@ -96,7 +94,7 @@ static int gpt_disable(struct spear_timer *timer)
 	if (!timer->enabled)
 		return -EINVAL;
 
-	clk_disable(timer->clk);
+	clk_disable_unprepare(timer->clk);
 
 	timer->enabled = 0;
 
@@ -207,12 +205,17 @@ static int gpt_stop(struct spear_timer *timer)
  */
 static int gpt_set_source(struct spear_timer *timer, int source)
 {
+	int ret = 0;
+
 	if (!timer)
 		return -ENODEV;
 
-	clk_disable(timer->clk);
-	clk_set_parent(timer->clk, gpt_parent_clocks[source]);
-	clk_enable(timer->clk);
+	clk_disable_unprepare(timer->clk);
+	ret = clk_set_parent(timer->clk, gpt_parent_clocks[source]);
+	if (!ret)
+		return ret;
+
+	clk_prepare_enable(timer->clk);
 
 	/*
 	 * When the functional clock disappears, too quick writes seem to

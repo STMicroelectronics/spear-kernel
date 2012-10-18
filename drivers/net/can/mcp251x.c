@@ -712,8 +712,7 @@ static void mcp251x_error_skb(struct net_device *net, int can_id, int data1)
 		frame->data[1] = data1;
 		netif_rx_ni(skb);
 	} else {
-		dev_err(&net->dev,
-			"cannot allocate error skb\n");
+		netdev_err(net, "cannot allocate error skb\n");
 	}
 }
 
@@ -931,7 +930,8 @@ static int mcp251x_open(struct net_device *net)
 	priv->tx_len = 0;
 
 	ret = request_threaded_irq(spi->irq, NULL, mcp251x_can_ist,
-			  IRQF_TRIGGER_FALLING, DEVICE_NAME, priv);
+		  pdata->irq_flags ? pdata->irq_flags : IRQF_TRIGGER_FALLING,
+		  DEVICE_NAME, priv);
 	if (ret) {
 		dev_err(&spi->dev, "failed to acquire irq %d\n", spi->irq);
 		if (pdata->transceiver_enable)
@@ -940,7 +940,7 @@ static int mcp251x_open(struct net_device *net)
 		goto open_unlock;
 	}
 
-	priv->wq = create_freezeable_workqueue("mcp251x_wq");
+	priv->wq = create_freezable_workqueue("mcp251x_wq");
 	INIT_WORK(&priv->tx_work, mcp251x_tx_work_handler);
 	INIT_WORK(&priv->restart_work, mcp251x_restart_work_handler);
 

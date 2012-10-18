@@ -48,13 +48,12 @@ static int __init se7751_devices_setup(void)
 {
 	return platform_add_devices(se7751_devices, ARRAY_SIZE(se7751_devices));
 }
-__initcall(se7751_devices_setup);
+device_initcall(se7751_devices_setup);
 
 /*
  * The Machine Vector
  */
 static struct sh_machine_vector mv_7751se __initmv = {
 	.mv_name		= "7751 SolutionEngine",
-	.mv_nr_irqs		= 72,
 	.mv_init_irq		= init_7751se_IRQ,
 };

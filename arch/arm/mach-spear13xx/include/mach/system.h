@@ -17,32 +17,19 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
-#include <asm/proc-fns.h>
-#include <mach/hardware.h>
-#include <mach/misc_regs.h>
+#include <mach/spear.h>
 
-static inline void arch_idle(void)
-{
-	/*
-	 * This should do all the clock switching
-	 * and wait for interrupt tricks
-	 */
-	cpu_do_idle();
-}
+#define VA_SYS_CLK_CTRL		(VA_MISC_BASE + 0x200)
 
-static inline void arch_reset(char mode, const char *cmd)
-{
-	if (cpu_is_spear1340()) {
-#ifdef CONFIG_CPU_SPEAR1340
-		writel_relaxed(0x01, VA_SPEAR1340_SYS_SW_RES);
-#endif
-	} else if (cpu_is_spear1310()) {
-#ifdef CONFIG_CPU_SPEAR1310
-		writel_relaxed(0x01, VA_SPEAR1310_SYS_SW_RES);
-#endif
-	} else
-		writel_relaxed(0x01, VA_SYS_SW_RES);
-}
+/* System Mode Control Bit Masks */
+#define SYS_MODE_MASK		(0x7 << 0)
+#define SYS_MODE_DOZE		(0x1 << 0)
+#define SYS_MODE_SLOW		(0x2 << 0)
+#define SYS_MODE_NORMAL		(0x4 << 0)
+#define SYS_MODE_STS_MASK	(0xF << 16)
+#define SYS_MODE_STS_DOZE	(0x0 << 16)
+#define SYS_MODE_STS_SLOW	(0xA << 16)
+#define SYS_MODE_STS_NORMAL	(0xF << 16)
 
 static inline int arch_change_mode(int mode)
 {
@@ -50,16 +37,7 @@ static inline int arch_change_mode(int mode)
 	unsigned long finish;
 	void __iomem *sys_reg;
 
-	if (cpu_is_spear1340()) {
-#ifdef CONFIG_CPU_SPEAR1340
-		sys_reg = VA_SPEAR1340_SYS_CLK_CTRL;
-#endif
-	} else if (cpu_is_spear1310()) {
-#ifdef CONFIG_CPU_SPEAR1310
-		sys_reg = VA_SPEAR1310_SYS_CLK_CTRL;
-#endif
-	} else
-		sys_reg = VA_SYS_CLK_CTRL;
+	sys_reg = VA_SYS_CLK_CTRL;
 
 	switch (mode) {
 	case SYS_MODE_DOZE:

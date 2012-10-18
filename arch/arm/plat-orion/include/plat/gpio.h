@@ -12,31 +12,27 @@
 #define __PLAT_GPIO_H
 
 #include <linux/init.h>
-
-/*
- * GENERIC_GPIO primitives.
- */
-#define gpio_get_value  __gpio_get_value
-#define gpio_set_value  __gpio_set_value
-#define gpio_cansleep   __gpio_cansleep
+#include <linux/types.h>
 
 /*
  * Orion-specific GPIO API extensions.
  */
 void orion_gpio_set_unused(unsigned pin);
 void orion_gpio_set_blink(unsigned pin, int blink);
+int orion_gpio_led_blink_set(unsigned gpio, int state,
+	unsigned long *delay_on, unsigned long *delay_off);
 
 #define GPIO_INPUT_OK		(1 << 0)
 #define GPIO_OUTPUT_OK		(1 << 1)
 void orion_gpio_set_valid(unsigned pin, int mode);
 
 /* Initialize gpiolib. */
-void __init orion_gpio_init(void);
+void __init orion_gpio_init(int gpio_base, int ngpio,
+			    u32 base, int mask_offset, int secondary_irq_base);
 
 /*
  * GPIO interrupt handling.
  */
-extern struct irq_chip orion_gpio_irq_chip;
 void orion_gpio_irq_handler(int irqoff);
 
 

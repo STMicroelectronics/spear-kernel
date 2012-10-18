@@ -2119,7 +2119,7 @@ request_sense:
 	 * executed, unless a target connects to us.
 	 */
 	if (info->reqSCpnt)
-		printk(KERN_WARNING "scsi%d.%c: loosing request command\n",
+		printk(KERN_WARNING "scsi%d.%c: losing request command\n",
 			info->host->host_no, '0' + SCpnt->device->id);
 	info->reqSCpnt = SCpnt;
 }
@@ -2176,7 +2176,7 @@ static void fas216_done(FAS216_Info *info, unsigned int result)
 	fn = (void (*)(FAS216_Info *, struct scsi_cmnd *, unsigned int))SCpnt->host_scribble;
 	fn(info, SCpnt, result);
 
-	if (info->scsi.irq != NO_IRQ) {
+	if (info->scsi.irq) {
 		spin_lock_irqsave(&info->host_lock, flags);
 		if (info->scsi.phase == PHASE_IDLE)
 			fas216_kick(info);
@@ -2276,7 +2276,7 @@ static int fas216_noqueue_command_lck(struct scsi_cmnd *SCpnt,
 	 * We should only be using this if we don't have an interrupt.
 	 * Provide some "incentive" to use the queueing code.
 	 */
-	BUG_ON(info->scsi.irq != NO_IRQ);
+	BUG_ON(info->scsi.irq);
 
 	info->internal_done = 0;
 	fas216_queue_command_lck(SCpnt, fas216_internal_done);
@@ -2294,7 +2294,7 @@ static int fas216_noqueue_command_lck(struct scsi_cmnd *SCpnt,
 		 * If we don't have an IRQ, then we must poll the card for
 		 * it's interrupt, and use that to call this driver's
 		 * interrupt routine.  That way, we keep the command
-		 * progressing.  Maybe we can add some inteligence here
+		 * progressing.  Maybe we can add some intelligence here
 		 * and go to sleep if we know that the device is going
 		 * to be some time (eg, disconnected).
 		 */

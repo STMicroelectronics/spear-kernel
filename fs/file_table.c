@@ -25,7 +25,7 @@
 #include <linux/percpu.h>
 #include <linux/ima.h>
 
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #include "internal.h"
 
@@ -34,7 +34,6 @@ struct files_stat_struct files_stat = {
 	.max_files = NR_FILE
 };
 
-DECLARE_LGLOCK(files_lglock);
 DEFINE_LGLOCK(files_lglock);
 
 /* SLAB cache for file structures */
@@ -190,7 +189,8 @@ struct file *alloc_file(struct path *path, fmode_t mode,
 		file_take_write(file);
 		WARN_ON(mnt_clone_write(path->mnt));
 	}
-	ima_counts_get(file);
+	if ((mode & (FMODE_READ | FMODE_WRITE)) == FMODE_READ)
+		i_readcount_inc(path->dentry->d_inode);
 	return file;
 }
 EXPORT_SYMBOL(alloc_file);
@@ -203,7 +203,7 @@ EXPORT_SYMBOL(alloc_file);
  * to write to @file, along with access to write through
  * its vfsmount.
  */
-void drop_file_write_access(struct file *file)
+static void drop_file_write_access(struct file *file)
 {
 	struct vfsmount *mnt = file->f_path.mnt;
 	struct dentry *dentry = file->f_path.dentry;
@@ -218,7 +218,6 @@ void drop_file_write_access(struct file *file)
 	mnt_drop_write(mnt);
 	file_release_write(file);
 }
-EXPORT_SYMBOL_GPL(drop_file_write_access);
 
 /* the real guts of fput() - releasing the last reference to file
  */
@@ -246,11 +245,15 @@ static void __fput(struct file *file)
 		file->f_op->release(inode, file);
 	security_file_free(file);
 	ima_file_free(file);
-	if (unlikely(S_ISCHR(inode->i_mode) && inode->i_cdev != NULL))
+	if (unlikely(S_ISCHR(inode->i_mode) && inode->i_cdev != NULL &&
+		     !(file->f_mode & FMODE_PATH))) {
 		cdev_put(inode->i_cdev);
+	}
 	fops_put(file->f_op);
 	put_pid(file->f_owner.pid);
 	file_sb_list_del(file);
+	if ((file->f_mode & (FMODE_READ | FMODE_WRITE)) == FMODE_READ)
+		i_readcount_dec(inode);
 	if (file->f_mode & FMODE_WRITE)
 		drop_file_write_access(file);
 	file->f_path.dentry = NULL;
@@ -276,11 +279,10 @@ struct file *fget(unsigned int fd)
 	rcu_read_lock();
 	file = fcheck_files(files, fd);
 	if (file) {
-		if (!atomic_long_inc_not_zero(&file->f_count)) {
-			/* File object ref couldn't be taken */
-			rcu_read_unlock();
-			return NULL;
-		}
+		/* File object ref couldn't be taken */
+		if (file->f_mode & FMODE_PATH ||
+		    !atomic_long_inc_not_zero(&file->f_count))
+			file = NULL;
 	}
 	rcu_read_unlock();
 
@@ -288,6 +290,25 @@ struct file *fget(unsigned int fd)
 }
 
 EXPORT_SYMBOL(fget);
+
+struct file *fget_raw(unsigned int fd)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	rcu_read_lock();
+	file = fcheck_files(files, fd);
+	if (file) {
+		/* File object ref couldn't be taken */
+		if (!atomic_long_inc_not_zero(&file->f_count))
+			file = NULL;
+	}
+	rcu_read_unlock();
+
+	return file;
+}
+
+EXPORT_SYMBOL(fget_raw);
 
 /*
  * Lightweight file lookup - no refcnt increment if fd table isn't shared.
@@ -311,7 +332,34 @@ struct file *fget_light(unsigned int fd, int *fput_needed)
 	struct files_struct *files = current->files;
 
 	*fput_needed = 0;
-	if (likely((atomic_read(&files->count) == 1))) {
+	if (atomic_read(&files->count) == 1) {
+		file = fcheck_files(files, fd);
+		if (file && (file->f_mode & FMODE_PATH))
+			file = NULL;
+	} else {
+		rcu_read_lock();
+		file = fcheck_files(files, fd);
+		if (file) {
+			if (!(file->f_mode & FMODE_PATH) &&
+			    atomic_long_inc_not_zero(&file->f_count))
+				*fput_needed = 1;
+			else
+				/* Didn't get the reference, someone's freed */
+				file = NULL;
+		}
+		rcu_read_unlock();
+	}
+
+	return file;
+}
+
+struct file *fget_raw_light(unsigned int fd, int *fput_needed)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	*fput_needed = 0;
+	if (atomic_read(&files->count) == 1) {
 		file = fcheck_files(files, fd);
 	} else {
 		rcu_read_lock();
@@ -372,9 +420,9 @@ static inline void __file_sb_list_add(struct file *file, struct super_block *sb)
  */
 void file_sb_list_add(struct file *file, struct super_block *sb)
 {
-	lg_local_lock(files_lglock);
+	lg_local_lock(&files_lglock);
 	__file_sb_list_add(file, sb);
-	lg_local_unlock(files_lglock);
+	lg_local_unlock(&files_lglock);
 }
 
 /**
@@ -387,9 +435,9 @@ void file_sb_list_add(struct file *file, struct super_block *sb)
 void file_sb_list_del(struct file *file)
 {
 	if (!list_empty(&file->f_u.fu_list)) {
-		lg_local_lock_cpu(files_lglock, file_list_cpu(file));
+		lg_local_lock_cpu(&files_lglock, file_list_cpu(file));
 		list_del_init(&file->f_u.fu_list);
-		lg_local_unlock_cpu(files_lglock, file_list_cpu(file));
+		lg_local_unlock_cpu(&files_lglock, file_list_cpu(file));
 	}
 }
 
@@ -424,29 +472,6 @@ void file_sb_list_del(struct file *file)
 
 #endif
 
-int fs_may_remount_ro(struct super_block *sb)
-{
-	struct file *file;
-	/* Check that no files are currently opened for writing. */
-	lg_global_lock(files_lglock);
-	do_file_list_for_each_entry(sb, file) {
-		struct inode *inode = file->f_path.dentry->d_inode;
-
-		/* File with pending delete? */
-		if (inode->i_nlink == 0)
-			goto too_bad;
-
-		/* Writeable file? */
-		if (S_ISREG(inode->i_mode) && (file->f_mode & FMODE_WRITE))
-			goto too_bad;
-	} while_file_list_for_each_entry;
-	lg_global_unlock(files_lglock);
-	return 1; /* Tis' cool bro. */
-too_bad:
-	lg_global_unlock(files_lglock);
-	return 0;
-}
-
 /**
  *	mark_files_ro - mark all files read-only
  *	@sb: superblock in question
@@ -459,7 +484,7 @@ void mark_files_ro(struct super_block *sb)
 	struct file *f;
 
 retry:
-	lg_global_lock(files_lglock);
+	lg_global_lock(&files_lglock);
 	do_file_list_for_each_entry(sb, f) {
 		struct vfsmount *mnt;
 		if (!S_ISREG(f->f_path.dentry->d_inode->i_mode))
@@ -476,12 +501,12 @@ retry:
 		file_release_write(f);
 		mnt = mntget(f->f_path.mnt);
 		/* This can sleep, so we can't hold the spinlock. */
-		lg_global_unlock(files_lglock);
+		lg_global_unlock(&files_lglock);
 		mnt_drop_write(mnt);
 		mntput(mnt);
 		goto retry;
 	} while_file_list_for_each_entry;
-	lg_global_unlock(files_lglock);
+	lg_global_unlock(&files_lglock);
 }
 
 void __init files_init(unsigned long mempages)
@@ -499,6 +524,6 @@ void __init files_init(unsigned long mempages)
 	n = (mempages * (PAGE_SIZE / 1024)) / 10;
 	files_stat.max_files = max_t(unsigned long, n, NR_FILE);
 	files_defer_init();
-	lg_lock_init(files_lglock);
+	lg_lock_init(&files_lglock, "files_lglock");
 	percpu_counter_init(&nr_files, 0);
 } 

@@ -51,13 +51,17 @@
  * device.
  */
 
+#include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/usb/dwc_otg.h>
 #include <linux/platform_device.h>
-
 #include "driver.h"
 
 #define DWC_DRIVER_VERSION		"1.05"
 #define DWC_DRIVER_DESC			"HS OTG USB Controller driver"
-static const char dwc_driver_name[] = "dwc_otg";
+static const char dwc_driver_name[] = "usb_otg";
 
 /**
  * This function is the top level interrupt handler for the Common
@@ -143,11 +147,14 @@ static int __devexit dwc_otg_driver_remove(struct platform_device *ofdev)
 		release_mem_region(dwc_dev->phys_addr, dwc_dev->base_len);
 
 	if (dwc_dev->core_if->xceiv) {
-		otg_put_transceiver(dwc_dev->core_if->xceiv);
+		usb_put_transceiver(dwc_dev->core_if->xceiv);
 		dwc_dev->core_if->xceiv = NULL;
 		usb_nop_xceiv_unregister();
 	}
 
+	clk_disable_unprepare(dwc_dev->clk);
+	clk_put(dwc_dev->clk);
+	dwc_dev->clk = NULL;
 	kfree(dwc_dev);
 
 	/* Clear the drvdata pointer. */
@@ -171,8 +178,11 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	struct device *dev = &ofdev->dev;
 	struct resource *res;
 	struct dwc_otg_plat_data *pdata;
+	struct device_node *np = ofdev->dev.of_node;
+
 	ulong gusbcfg_addr;
 	u32 usbcfg = 0;
+	int i;
 
 	dev_dbg(dev, "dwc_otg_driver_probe(%p)\n", dev);
 
@@ -190,6 +200,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		retval = -ENODEV;
 		goto fail_of_irq;
 	}
+
 	dev_dbg(dev, "OTG - device irq: %d\n", dwc_dev->irq);
 
 	res = platform_get_resource(ofdev, IORESOURCE_MEM, 0);
@@ -224,10 +235,21 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	if (pdata) {
 		if (pdata->phy_init)
 			pdata->phy_init();
-		if (pdata->param_init)
-			pdata->param_init(&dwc_otg_module_params);
 	}
-
+	of_property_read_u32(np, "dev_rx_fifo_size",
+			&dwc_otg_module_params.dev_rx_fifo_size);
+	of_property_read_u32(np, "dev_nperio_tx_fifo_size",
+			&dwc_otg_module_params.dev_nperio_tx_fifo_size);
+	of_property_read_u32(np, "fifo_number",
+			&dwc_otg_module_params.fifo_number);
+	for (i = 1; i <= 7; i++)
+		dwc_otg_module_params.dev_tx_fifo_size[i - 1] = 0x200;
+	of_property_read_u32(np, "host_rx_fifo_size",
+			&dwc_otg_module_params.host_rx_fifo_size);
+	of_property_read_u32(np, "host_nperio_tx_fifo_size",
+			&dwc_otg_module_params.host_nperio_tx_fifo_size);
+	of_property_read_u32(np, "host_perio_tx_fifo_size",
+			&dwc_otg_module_params.host_perio_tx_fifo_size);
 	/*
 	 * Initialize driver data to point to the global DWC_otg
 	 * Device structure.
@@ -242,16 +264,14 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 		goto fail_cil_init;
 	}
 
-	/*
-	 * Validate parameter values after dwc_otg_cil_init.
-	 */
+	/* Validate parameter values after dwc_otg_cil_init. */
 	if (check_parameters(dwc_dev->core_if)) {
 		retval = -EINVAL;
 		goto fail_check_param;
 	}
 
 	usb_nop_xceiv_register();
-	dwc_dev->core_if->xceiv = otg_get_transceiver();
+	dwc_dev->core_if->xceiv = usb_get_transceiver();
 	if (!dwc_dev->core_if->xceiv) {
 		retval = -ENODEV;
 		goto fail_xceiv;
@@ -272,7 +292,7 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	 * enabling common interrupts in core_init below.
 	 */
 	retval = request_irq(dwc_dev->irq, dwc_otg_common_irq,
-			     IRQF_SHARED, "dwc_otg", dwc_dev);
+			     IRQF_SHARED, "usb-otg", dwc_dev);
 	if (retval) {
 		dev_err(dev, "request of irq%d failed retval: %d\n",
 			dwc_dev->irq, retval);
@@ -349,7 +369,17 @@ static int __devinit dwc_otg_driver_probe(struct platform_device *ofdev)
 	 * Enable the global interrupt after all the interrupt
 	 * handlers are installed.
 	 */
+
 	dwc_otg_enable_global_interrupts(dwc_dev->core_if);
+
+	dwc_dev->clk = clk_get(&ofdev->dev, NULL);
+
+	if (IS_ERR(dwc_dev->clk)) {
+		retval = PTR_ERR(dwc_dev->clk);
+		goto fail_req_irq;
+	}
+	clk_prepare_enable(dwc_dev->clk);
+
 	return 0;
 fail_hcd:
 	free_irq(dwc_dev->irq, dwc_dev);
@@ -358,7 +388,7 @@ fail_hcd:
 			dwc_otg_pcd_remove(dev);
 	}
 fail_req_irq:
-	otg_put_transceiver(dwc_dev->core_if->xceiv);
+	usb_put_transceiver(dwc_dev->core_if->xceiv);
 fail_xceiv:
 	usb_nop_xceiv_unregister();
 fail_check_param:
@@ -423,7 +453,7 @@ static SIMPLE_DEV_PM_OPS(dwc_otg_pm_ops, dwc_otg_suspend, dwc_otg_resume);
 
 #if defined(CONFIG_OF)
 static const struct of_device_id dwc_otg_match[] = {
-	{.compatible = "amcc,dwc-otg",},
+	{.compatible = "snps,usb-otg",},
 	{}
 };
 MODULE_DEVICE_TABLE(of, dwc_otg_match);

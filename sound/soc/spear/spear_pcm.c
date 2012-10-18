@@ -18,7 +18,7 @@
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
-#include <linux/spear_dma.h>
+#include <sound/spear_dma.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -28,6 +28,8 @@ struct snd_pcm_hardware spear_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_INTERLEAVED | SNDRV_PCM_INFO_BLOCK_TRANSFER |
 		 SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
+	.channels_min		= 2,
+	.channels_max		= 2,
 	.buffer_bytes_max = 16 * 1024, /* max buffer size */
 	.period_bytes_min = 2 * 1024, /* 1 msec data minimum period size */
 	.period_bytes_max = 2 * 1024, /* maximum period size */
@@ -64,9 +66,9 @@ static int spear_pcm_prepare(struct snd_pcm_substream *substream)
 	prtd->dma_addr = runtime->dma_addr;
 
 	prtd->buf_index = 0;
-	prtd->dmacount = 0;
+	prtd->dma_index = 0;
 	prtd->xfer_len = snd_pcm_lib_period_bytes(substream);
-	prtd->xfer_cnt = snd_pcm_lib_buffer_bytes(substream) / prtd->xfer_len;
+	prtd->xfer_max = snd_pcm_lib_buffer_bytes(substream) / prtd->xfer_len;
 
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
@@ -85,9 +87,9 @@ static int start_dma(struct spear_runtime_data *prtd)
 	enum dma_data_direction direction;
 	dma_addr_t addr;
 	struct snd_soc_pcm_runtime *rtd = prtd->substream->private_data;
-	struct dma_data *dma_data =
+	struct spear_dma_data *dma_data =
 		snd_soc_dai_get_dma_data(rtd->cpu_dai, prtd->substream);
-	addr = prtd->dma_addr + prtd->buf_index * prtd->xfer_len;
+	addr = prtd->dma_addr + prtd->dma_index * prtd->xfer_len;
 	if (prtd->substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		chan = prtd->dma_chan[0];
 		direction = DMA_TO_DEVICE;
@@ -113,7 +115,7 @@ static int start_dma(struct spear_runtime_data *prtd)
 	dmaengine_slave_config(chan, &conf);
 
 	desc = chan->device->device_prep_slave_sg(chan, &sg, 1, direction,
-			DMA_PREP_INTERRUPT);
+			DMA_PREP_INTERRUPT, NULL);
 	if (!desc) {
 		dev_err(&chan->dev->device, "cannot prepare slave dma\n");
 		return -EAGAIN;
@@ -126,10 +128,8 @@ static int start_dma(struct spear_runtime_data *prtd)
 	return 0;
 }
 
-static void pcm_dma_xfer(struct spear_runtime_data *prtd,
-		bool from_callback)
+static void pcm_dma_xfer(struct spear_runtime_data *prtd, int xfer_cnt)
 {
-	struct snd_pcm_substream *substream = prtd->substream;
 	struct dma_chan *chan;
 	unsigned long flags;
 	int ret;
@@ -140,28 +140,18 @@ static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 		return;
 	}
 
-	BUG_ON(prtd->dmacount >= prtd->xfer_cnt);
+	BUG_ON(prtd->dma_index >= prtd->xfer_max);
+	BUG_ON(xfer_cnt > prtd->xfer_max);
 
-	while (prtd->dmacount < prtd->xfer_cnt) {
-
+	while (xfer_cnt-- > 0) {
 		ret = start_dma(prtd);
 		if (ret) {
 			spin_unlock_irqrestore(&prtd->lock, flags);
 			return;
 		}
 
-		prtd->dmacount++;
-		prtd->buf_index++;
-
-		/* Set to zero, if crosses buffer size */
-		prtd->buf_index %= prtd->xfer_cnt;
-
-		/* Inform framework that a transfer is finished */
-		if (from_callback) {
-			spin_unlock_irqrestore(&prtd->lock, flags);
-			snd_pcm_period_elapsed(substream);
-			spin_lock_irqsave(&prtd->lock, flags);
-		}
+		if (++prtd->dma_index >= prtd->xfer_max)
+			prtd->dma_index = 0;
 	}
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
@@ -177,14 +167,20 @@ static void pcm_dma_xfer(struct spear_runtime_data *prtd,
 static void pcm_dma_complete(void *arg)
 {
 	struct spear_runtime_data *prtd = arg;
+	struct snd_pcm_substream *substream = prtd->substream;
 	unsigned long flags;
 
+	/* Increase and set to zero, if crosses buffer size */
 	spin_lock_irqsave(&prtd->lock, flags);
-	prtd->dmacount--;
+
+	if (++prtd->buf_index >= prtd->xfer_max)
+		prtd->buf_index = 0;
 	spin_unlock_irqrestore(&prtd->lock, flags);
 
 	if (prtd->pcm_running)
-		pcm_dma_xfer(prtd, true);
+		pcm_dma_xfer(prtd, 1);
+	/* Inform framework that a transfer is finished */
+	snd_pcm_period_elapsed(substream);
 }
 
 static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
@@ -197,16 +193,16 @@ static int spear_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_RESUME:
 		spin_lock_irqsave(&prtd->lock, flags);
-		/* Go to last successfully transferred index + 1 */
-		prtd->buf_index += prtd->xfer_cnt - prtd->dmacount;
-		prtd->buf_index %= prtd->xfer_cnt;
-		prtd->dmacount = 0;
+		/* Re-init dma_index to buf_index (last buffer index
+		 * under service by DMA)
+		 */
+		prtd->dma_index = prtd->buf_index;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 	case SNDRV_PCM_TRIGGER_START:
 		spin_lock_irqsave(&prtd->lock, flags);
 		prtd->pcm_running = true;
 		spin_unlock_irqrestore(&prtd->lock, flags);
-		pcm_dma_xfer(prtd, false);
+		pcm_dma_xfer(prtd, prtd->xfer_max);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -245,7 +241,7 @@ static int pcm_alloc_dma_chan(struct snd_pcm_substream *substream)
 	struct spear_runtime_data *prtd = substream->runtime->private_data;
 
 	int stream = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? 0 : 1;
-	struct dma_data *dma_data =
+	struct spear_dma_data *dma_data =
 		snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
 	prtd->dma_chan[stream] = dma_request_channel(prtd->smask,
@@ -384,9 +380,10 @@ static void spear_pcm_free(struct snd_pcm *pcm)
 
 static u64 spear_pcm_dmamask = DMA_BIT_MASK(32);
 
-static int spear_pcm_new(struct snd_card *card,
-		struct snd_soc_dai *dai, struct snd_pcm *pcm)
+static int spear_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_card *card = rtd->card->snd_card;
+	struct snd_pcm *pcm = rtd->pcm;
 	int ret;
 
 	if (!card->dev->dma_mask)
@@ -394,7 +391,7 @@ static int spear_pcm_new(struct snd_card *card,
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
-	if (dai->driver->playback.channels_min) {
+	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
 		ret = spear_pcm_preallocate_dma_buffer(pcm,
 				SNDRV_PCM_STREAM_PLAYBACK,
 				spear_pcm_hardware.buffer_bytes_max);
@@ -402,7 +399,7 @@ static int spear_pcm_new(struct snd_card *card,
 			return ret;
 	}
 
-	if (dai->driver->capture.channels_min) {
+	if (pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream) {
 		ret = spear_pcm_preallocate_dma_buffer(pcm,
 				SNDRV_PCM_STREAM_CAPTURE,
 				spear_pcm_hardware.buffer_bytes_max);
@@ -419,38 +416,19 @@ struct snd_soc_platform_driver spear_soc_platform = {
 	.pcm_free	=	spear_pcm_free,
 };
 
-static int __devinit spear_soc_platform_probe(struct platform_device *pdev)
+int __devinit spear_pcm_platform_register(struct platform_device *pdev)
 {
 	return snd_soc_register_platform(&pdev->dev, &spear_soc_platform);
 }
+EXPORT_SYMBOL(spear_pcm_platform_register);
 
-static int __devexit spear_soc_platform_remove(struct platform_device *pdev)
+int __devexit spear_pcm_platform_unregister(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 
 	return 0;
 }
-
-static struct platform_driver spear_pcm_driver = {
-	.driver = {
-		.name = "spear-pcm-audio",
-		.owner = THIS_MODULE,
-	},
-
-	.probe = spear_soc_platform_probe,
-	.remove = __devexit_p(spear_soc_platform_remove),
-};
-static int __init snd_spear_pcm_init(void)
-{
-	return platform_driver_register(&spear_pcm_driver);
-}
-module_init(snd_spear_pcm_init);
-
-static void __exit snd_spear_pcm_exit(void)
-{
-	platform_driver_unregister(&spear_pcm_driver);
-}
-module_exit(snd_spear_pcm_exit);
+EXPORT_SYMBOL(spear_pcm_platform_unregister);
 
 MODULE_AUTHOR("Rajeev Kumar <rajeev-dlh.kumar@st.com>");
 MODULE_DESCRIPTION("SPEAr PCM DMA module");

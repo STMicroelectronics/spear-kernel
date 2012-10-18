@@ -37,7 +37,6 @@
 #include <linux/interrupt.h>	/* For task queue support */
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/smp_lock.h>
 #include <linux/pagemap.h>
 
 #define I810_BUF_FREE		2
@@ -94,17 +93,14 @@ static int i810_mmap_buffers(struct file *filp, struct vm_area_struct *vma)
 	struct drm_buf *buf;
 	drm_i810_buf_priv_t *buf_priv;
 
-	lock_kernel();
 	dev = priv->minor->dev;
 	dev_priv = dev->dev_private;
 	buf = dev_priv->mmap_buffer;
 	buf_priv = buf->dev_private;
 
 	vma->vm_flags |= (VM_IO | VM_DONTCOPY);
-	vma->vm_file = filp;
 
 	buf_priv->currently_mapped = I810_BUF_MAPPED;
-	unlock_kernel();
 
 	if (io_remap_pfn_range(vma, vma->vm_start,
 			       vma->vm_pgoff,
@@ -116,7 +112,7 @@ static int i810_mmap_buffers(struct file *filp, struct vm_area_struct *vma)
 static const struct file_operations i810_buffer_fops = {
 	.open = drm_open,
 	.release = drm_release,
-	.unlocked_ioctl = i810_ioctl,
+	.unlocked_ioctl = drm_ioctl,
 	.mmap = i810_mmap_buffers,
 	.fasync = drm_fasync,
 	.llseek = noop_llseek,
@@ -133,11 +129,11 @@ static int i810_map_buffer(struct drm_buf *buf, struct drm_file *file_priv)
 	if (buf_priv->currently_mapped == I810_BUF_MAPPED)
 		return -EINVAL;
 
-	down_write(&current->mm->mmap_sem);
+	/* This is all entirely broken */
 	old_fops = file_priv->filp->f_op;
 	file_priv->filp->f_op = &i810_buffer_fops;
 	dev_priv->mmap_buffer = buf;
-	buf_priv->virtual = (void *)do_mmap(file_priv->filp, 0, buf->total,
+	buf_priv->virtual = (void *)vm_mmap(file_priv->filp, 0, buf->total,
 					    PROT_READ | PROT_WRITE,
 					    MAP_SHARED, buf->bus_address);
 	dev_priv->mmap_buffer = NULL;
@@ -148,7 +144,6 @@ static int i810_map_buffer(struct drm_buf *buf, struct drm_file *file_priv)
 		retcode = PTR_ERR(buf_priv->virtual);
 		buf_priv->virtual = NULL;
 	}
-	up_write(&current->mm->mmap_sem);
 
 	return retcode;
 }
@@ -161,11 +156,8 @@ static int i810_unmap_buffer(struct drm_buf *buf)
 	if (buf_priv->currently_mapped != I810_BUF_MAPPED)
 		return -EINVAL;
 
-	down_write(&current->mm->mmap_sem);
-	retcode = do_munmap(current->mm,
-			    (unsigned long)buf_priv->virtual,
+	retcode = vm_munmap((unsigned long)buf_priv->virtual,
 			    (size_t) buf->total);
-	up_write(&current->mm->mmap_sem);
 
 	buf_priv->currently_mapped = I810_BUF_UNMAPPED;
 	buf_priv->virtual = NULL;
@@ -225,8 +217,6 @@ static int i810_dma_cleanup(struct drm_device *dev)
 			pci_free_consistent(dev->pdev, PAGE_SIZE,
 					    dev_priv->hw_status_page,
 					    dev_priv->dma_status_page);
-			/* Need to rewrite hardware status page */
-			I810_WRITE(0x02080, 0x1ffff000);
 		}
 		kfree(dev->dev_private);
 		dev->dev_private = NULL;
@@ -1213,6 +1203,8 @@ int i810_driver_load(struct drm_device *dev, unsigned long flags)
 	dev->types[8] = _DRM_STAT_SECONDARY;
 	dev->types[9] = _DRM_STAT_DMA;
 
+	pci_set_master(dev->pdev);
+
 	return 0;
 }
 
@@ -1240,19 +1232,6 @@ int i810_driver_dma_quiescent(struct drm_device *dev)
 {
 	i810_dma_quiescent(dev);
 	return 0;
-}
-
-/*
- * call the drm_ioctl under the big kernel lock because
- * to lock against the i810_mmap_buffers function.
- */
-long i810_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-	int ret;
-	lock_kernel();
-	ret = drm_ioctl(file, cmd, arg);
-	unlock_kernel();
-	return ret;
 }
 
 struct drm_ioctl_desc i810_ioctls[] = {

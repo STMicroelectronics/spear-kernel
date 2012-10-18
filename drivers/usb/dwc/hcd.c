@@ -42,6 +42,7 @@
 
 #include <asm/unaligned.h>
 #include <linux/dma-mapping.h>
+#include <linux/sched.h>
 
 #include "hcd.h"
 
@@ -385,8 +386,10 @@ static int dwc_otg_hcd_stop_cb(void *_p)
 	return 1;
 }
 
-static void del_timers(struct dwc_hcd *hcd)
+static void del_timers(unsigned long _dwc_hcd)
 {
+	struct dwc_hcd *hcd = (void *)_dwc_hcd;
+
 	del_timer_sync(&hcd->conn_timer);
 }
 
@@ -458,7 +461,7 @@ static int dwc_otg_hcd_disconnect_cb(void *_p)
 	dwc_modify32(gintmsk_reg(hcd), intr, 0);
 	dwc_modify32(gintsts_reg(hcd), intr, 0);
 
-	del_timers(hcd);
+	tasklet_schedule(&hcd->del_con_timer);
 
 	/*
 	 * Turn off the vbus power only if the core has transitioned to device
@@ -1244,7 +1247,7 @@ static void dwc_otg_hcd_free(struct usb_hcd *hcd)
 	struct dwc_hcd *dwc_hcd = hcd_to_dwc_otg_hcd(hcd);
 	u32 i;
 
-	del_timers(dwc_hcd);
+	tasklet_schedule(&dwc_hcd->del_con_timer);
 
 	/* Free memory for QH/QTD lists */
 	qh_list_free(dwc_hcd, &dwc_hcd->non_periodic_sched_inactive);
@@ -1290,6 +1293,19 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	struct dwc_hc *channel;
 	int retval = 0;
 
+	/* Set device flags indicating whether the HCD supports DMA. */
+	if (otg_dev->core_if->dma_enable) {
+		static u64 dummy_mask = DMA_BIT_MASK(32);
+
+		pr_info("Using DMA mode\n");
+		_dev->dma_mask = (void *)&dummy_mask;
+		_dev->coherent_dma_mask = ~0;
+	} else {
+		pr_info("Using Slave mode\n");
+		_dev->dma_mask = (void *)0;
+		_dev->coherent_dma_mask = 0;
+	}
+
 	/*
 	 * Allocate memory for the base HCD plus the DWC OTG HCD.
 	 * Initialize the base HCD.
@@ -1312,6 +1328,8 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	spin_lock_init(&dwc_hcd->lock);
 	otg_dev->hcd = dwc_hcd;
 
+	tasklet_init(&dwc_hcd->del_con_timer, del_timers, (unsigned long)
+			dwc_hcd);
 	/* Register the HCD CIL Callbacks */
 	dwc_otg_cil_register_hcd_callbacks(otg_dev->core_if, &hcd_cil_callbacks,
 					   hcd);
@@ -1356,19 +1374,6 @@ int __devinit dwc_otg_hcd_init(struct device *_dev,
 	INIT_WORK(&dwc_hcd->core_if->usb_port_otg, NULL);
 	INIT_DELAYED_WORK(&dwc_hcd->core_if->usb_port_wakeup,
 			  port_wakeup_wqfunc);
-
-	/* Set device flags indicating whether the HCD supports DMA. */
-	if (otg_dev->core_if->dma_enable) {
-		static u64 dummy_mask = DMA_BIT_MASK(32);
-
-		pr_info("Using DMA mode\n");
-		_dev->dma_mask = (void *)&dummy_mask;
-		_dev->coherent_dma_mask = ~0;
-	} else {
-		pr_info("Using Slave mode\n");
-		_dev->dma_mask = (void *)0;
-		_dev->coherent_dma_mask = 0;
-	}
 
 	init_hcd_usecs(dwc_hcd);
 	/*

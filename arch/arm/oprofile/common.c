@@ -84,7 +84,7 @@ static struct frame_tail* user_backtrace(struct frame_tail *tail)
 
 	/* frame pointers should strictly progress back up the stack
 	 * (towards higher addresses) */
-	if (tail >= buftail[0].fp)
+	if (tail + 1 >= buftail[0].fp)
 		return NULL;
 
 	return buftail[0].fp-1;
@@ -116,7 +116,7 @@ int __init oprofile_arch_init(struct oprofile_operations *ops)
 	return oprofile_perf_init(ops);
 }
 
-void __exit oprofile_arch_exit(void)
+void oprofile_arch_exit(void)
 {
 	oprofile_perf_exit();
 }

@@ -42,7 +42,7 @@ static int gkrouted_only __read_mostly = 1;
 module_param(gkrouted_only, int, 0600);
 MODULE_PARM_DESC(gkrouted_only, "only accept calls from gatekeeper");
 
-static int callforward_filter __read_mostly = 1;
+static bool callforward_filter __read_mostly = true;
 module_param(callforward_filter, bool, 0600);
 MODULE_PARM_DESC(callforward_filter, "only create call forwarding expectations "
 				     "if both endpoints are on different sides "
@@ -270,9 +270,8 @@ static int expect_rtp_rtcp(struct sk_buff *skb, struct nf_conn *ct,
 		return 0;
 
 	/* RTP port is even */
-	port &= htons(~1);
-	rtp_port = port;
-	rtcp_port = htons(ntohs(port) + 1);
+	rtp_port = port & ~htons(1);
+	rtcp_port = port | htons(1);
 
 	/* Create expect for RTP */
 	if ((rtp_exp = nf_ct_expect_alloc(ct)) == NULL)
@@ -571,10 +570,9 @@ static int h245_help(struct sk_buff *skb, unsigned int protoff,
 	int ret;
 
 	/* Until there's been traffic both ways, don't look in packets. */
-	if (ctinfo != IP_CT_ESTABLISHED &&
-	    ctinfo != IP_CT_ESTABLISHED + IP_CT_IS_REPLY) {
+	if (ctinfo != IP_CT_ESTABLISHED && ctinfo != IP_CT_ESTABLISHED_REPLY)
 		return NF_ACCEPT;
-	}
+
 	pr_debug("nf_ct_h245: skblen = %u\n", skb->len);
 
 	spin_lock_bh(&nf_h323_lock);
@@ -606,8 +604,7 @@ static int h245_help(struct sk_buff *skb, unsigned int protoff,
 
       drop:
 	spin_unlock_bh(&nf_h323_lock);
-	if (net_ratelimit())
-		pr_info("nf_ct_h245: packet dropped\n");
+	net_info_ratelimited("nf_ct_h245: packet dropped\n");
 	return NF_DROP;
 }
 
@@ -714,7 +711,6 @@ static int callforward_do_filter(const union nf_inet_addr *src,
 				 u_int8_t family)
 {
 	const struct nf_afinfo *afinfo;
-	struct flowi fl1, fl2;
 	int ret = 0;
 
 	/* rcu_read_lock()ed by nf_hook_slow() */
@@ -722,17 +718,20 @@ static int callforward_do_filter(const union nf_inet_addr *src,
 	if (!afinfo)
 		return 0;
 
-	memset(&fl1, 0, sizeof(fl1));
-	memset(&fl2, 0, sizeof(fl2));
-
 	switch (family) {
 	case AF_INET: {
+		struct flowi4 fl1, fl2;
 		struct rtable *rt1, *rt2;
 
-		fl1.fl4_dst = src->ip;
-		fl2.fl4_dst = dst->ip;
-		if (!afinfo->route((struct dst_entry **)&rt1, &fl1)) {
-			if (!afinfo->route((struct dst_entry **)&rt2, &fl2)) {
+		memset(&fl1, 0, sizeof(fl1));
+		fl1.daddr = src->ip;
+
+		memset(&fl2, 0, sizeof(fl2));
+		fl2.daddr = dst->ip;
+		if (!afinfo->route(&init_net, (struct dst_entry **)&rt1,
+				   flowi4_to_flowi(&fl1), false)) {
+			if (!afinfo->route(&init_net, (struct dst_entry **)&rt2,
+					   flowi4_to_flowi(&fl2), false)) {
 				if (rt1->rt_gateway == rt2->rt_gateway &&
 				    rt1->dst.dev  == rt2->dst.dev)
 					ret = 1;
@@ -742,15 +741,20 @@ static int callforward_do_filter(const union nf_inet_addr *src,
 		}
 		break;
 	}
-#if defined(CONFIG_NF_CONNTRACK_IPV6) || \
-    defined(CONFIG_NF_CONNTRACK_IPV6_MODULE)
+#if IS_ENABLED(CONFIG_NF_CONNTRACK_IPV6)
 	case AF_INET6: {
+		struct flowi6 fl1, fl2;
 		struct rt6_info *rt1, *rt2;
 
-		memcpy(&fl1.fl6_dst, src, sizeof(fl1.fl6_dst));
-		memcpy(&fl2.fl6_dst, dst, sizeof(fl2.fl6_dst));
-		if (!afinfo->route((struct dst_entry **)&rt1, &fl1)) {
-			if (!afinfo->route((struct dst_entry **)&rt2, &fl2)) {
+		memset(&fl1, 0, sizeof(fl1));
+		fl1.daddr = src->in6;
+
+		memset(&fl2, 0, sizeof(fl2));
+		fl2.daddr = dst->in6;
+		if (!afinfo->route(&init_net, (struct dst_entry **)&rt1,
+				   flowi6_to_flowi(&fl1), false)) {
+			if (!afinfo->route(&init_net, (struct dst_entry **)&rt2,
+					   flowi6_to_flowi(&fl2), false)) {
 				if (!memcmp(&rt1->rt6i_gateway, &rt2->rt6i_gateway,
 					    sizeof(rt1->rt6i_gateway)) &&
 				    rt1->dst.dev == rt2->dst.dev)
@@ -1117,10 +1121,9 @@ static int q931_help(struct sk_buff *skb, unsigned int protoff,
 	int ret;
 
 	/* Until there's been traffic both ways, don't look in packets. */
-	if (ctinfo != IP_CT_ESTABLISHED &&
-	    ctinfo != IP_CT_ESTABLISHED + IP_CT_IS_REPLY) {
+	if (ctinfo != IP_CT_ESTABLISHED && ctinfo != IP_CT_ESTABLISHED_REPLY)
 		return NF_ACCEPT;
-	}
+
 	pr_debug("nf_ct_q931: skblen = %u\n", skb->len);
 
 	spin_lock_bh(&nf_h323_lock);
@@ -1151,8 +1154,7 @@ static int q931_help(struct sk_buff *skb, unsigned int protoff,
 
       drop:
 	spin_unlock_bh(&nf_h323_lock);
-	if (net_ratelimit())
-		pr_info("nf_ct_q931: packet dropped\n");
+	net_info_ratelimited("nf_ct_q931: packet dropped\n");
 	return NF_DROP;
 }
 
@@ -1225,7 +1227,7 @@ static struct nf_conntrack_expect *find_expect(struct nf_conn *ct,
 
 /****************************************************************************/
 static int set_expect_timeout(struct nf_conntrack_expect *exp,
-			      unsigned timeout)
+			      unsigned int timeout)
 {
 	if (!exp || !del_timer(&exp->timeout))
 		return 0;
@@ -1726,8 +1728,7 @@ static int ras_help(struct sk_buff *skb, unsigned int protoff,
 
       drop:
 	spin_unlock_bh(&nf_h323_lock);
-	if (net_ratelimit())
-		pr_info("nf_ct_ras: packet dropped\n");
+	net_info_ratelimited("nf_ct_ras: packet dropped\n");
 	return NF_DROP;
 }
 
@@ -1828,4 +1829,6 @@ MODULE_AUTHOR("Jing Min Zhao <zhaojingmin@users.sourceforge.net>");
 MODULE_DESCRIPTION("H.323 connection tracking helper");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("ip_conntrack_h323");
-MODULE_ALIAS_NFCT_HELPER("h323");
+MODULE_ALIAS_NFCT_HELPER("RAS");
+MODULE_ALIAS_NFCT_HELPER("Q.931");
+MODULE_ALIAS_NFCT_HELPER("H.245");

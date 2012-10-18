@@ -25,7 +25,10 @@
 
 #include <linux/i2c.h>
 #include <linux/slab.h>
+#include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -33,7 +36,7 @@
 #ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
 #include <linux/input.h>
 #include <linux/interrupt.h>
-#include <mach/gpio.h>
+#include <linux/gpio.h>
 #endif
 
 #include <linux/i2c/lsm303dlh.h>
@@ -576,12 +579,48 @@ static const struct attribute_group lsm303dlh_m_attr_group = {
 	.attrs = lsm303dlh_m_attributes,
 };
 
+#ifdef CONFIG_OF
+static int __devinit lsm303dlh_m_probe_config_dt(
+		struct lsm303dlh_platform_data *pdata,
+		struct device_node *np)
+{
+	if (of_property_read_u32(np, "axis_map_x", &pdata->axis_map_x))
+		pr_debug("unable to get axis_map_x from %s.", __func__);
+	if (of_property_read_u32(np, "axis_map_y", &pdata->axis_map_y))
+		pr_debug("unable to get axis_map_y from %s.", __func__);
+	if (of_property_read_u32(np, "axis_map_z", &pdata->axis_map_z))
+		pr_debug("unable to get axis_map_z from %s.", __func__);
+	if (of_property_read_u32(np, "negative_x", &pdata->negative_x))
+		pr_debug("unable to get negative_x from %s.", __func__);
+	if (of_property_read_u32(np, "negative_y", &pdata->negative_y))
+		pr_debug("unable to get negative_y from %s.", __func__);
+	if (of_property_read_u32(np, "negative_z", &pdata->negative_z))
+		pr_debug("unable to get negative_z from %s.", __func__);
+	if (of_property_read_string(np, "name_m", &pdata->name_m))
+		pr_debug("unable to get name_m from %s.", __func__);
+#ifdef CONFIG_INPUT_ST_LSM303DLH_INPUT_DEVICE
+	pdata->irq_m = of_get_named_gpio(np, "irq-gpios", 0);
+	if (!pdata->irq_m)
+		pr_debug("unable to get irq_m from %s.", __func__);
+#endif
+	return 0;
+}
+#else
+static int __devinit lsm303dlh_m_probe_config_dt(
+		struct lsm303dlh_platform_data *pdata,
+		struct device_node *np)
+{
+	return -ENOSYS;
+}
+#endif
+
 static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 						const struct i2c_device_id *id)
 {
 	int ret;
 	struct lsm303dlh_m_data *ddata = NULL;
 	unsigned char version[3];
+	struct device_node *np = client->dev.of_node;
 
 	ddata = kzalloc(sizeof(struct lsm303dlh_m_data), GFP_KERNEL);
 	if (ddata == NULL) {
@@ -592,9 +631,17 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	ddata->client = client;
 	i2c_set_clientdata(client, ddata);
 
-	/* copy platform specific data */
-	memcpy(&ddata->pdata, client->dev.platform_data, sizeof(ddata->pdata));
-
+	if (np) {
+		ret = lsm303dlh_m_probe_config_dt(&ddata->pdata, np);
+		if (ret) {
+			dev_err(&client->dev, "no platform data\n");
+			return -ENODEV;
+		}
+	} else {
+		/* copy platform specific data */
+		memcpy(&ddata->pdata, client->dev.platform_data,
+				sizeof(ddata->pdata));
+	}
 	ddata->mode = LSM303DLH_M_MODE_SLEEP;
 	ddata->rate = LSM303DLH_M_RATE_00_75;
 	ddata->range = LSM303DLH_M_RANGE_1_3G;
@@ -666,7 +713,8 @@ static int __devinit lsm303dlh_m_probe(struct i2c_client *client,
 	/* register interrupt */
 	ret = request_threaded_irq(gpio_to_irq(ddata->pdata.irq_m), NULL,
 		lsm303dlh_m_gpio_irq,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "lsm303dlh_m",
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+		IRQF_ONESHOT, "lsm303dlh_m",
 		ddata);
 	if (ret) {
 		dev_err(&client->dev, "request irq EGPIO_PIN_1 failed\n");
@@ -799,12 +847,25 @@ static const struct i2c_device_id lsm303dlh_m_id[] = {
 	{ },
 };
 
+#ifdef CONFIG_OF
+static const struct of_device_id lsm303dlh_m_of_match[] = {
+	{.compatible = "st,lsm303dlh_m",},
+	{}
+};
+
+MODULE_DEVICE_TABLE(of, lsm303dlh_m_of_match);
+#endif
+
 static struct i2c_driver lsm303dlh_m_driver = {
 	.probe		= lsm303dlh_m_probe,
 	.remove		= lsm303dlh_m_remove,
 	.id_table	= lsm303dlh_m_id,
 	.driver = {
 		.name = "lsm303dlh_m",
+		.owner = THIS_MODULE,
+	#ifdef CONFIG_OF
+		.of_match_table = lsm303dlh_m_of_match,
+	#endif
 	#ifdef CONFIG_PM
 		.pm = &lsm303dlh_m_dev_pm_ops,
 	#endif

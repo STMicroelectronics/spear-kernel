@@ -29,8 +29,7 @@ struct udc_ep_data {
 
 struct udc_platform_data {
 	int num_ep;
-	struct udc_ep_data ep[0];
+	struct udc_ep_data *ep;
 };
 
-void set_udc_plat_data(struct platform_device *pdev);
 #endif

@@ -105,51 +105,6 @@ static const unsigned short ModeIndex_1920x1440[]    = {0x68, 0x69, 0x00, 0x6b};
 static const unsigned short ModeIndex_300_2048x1536[]= {0x6c, 0x6d, 0x00, 0x00};
 static const unsigned short ModeIndex_310_2048x1536[]= {0x6c, 0x6d, 0x00, 0x6e};
 
-static const unsigned short SiS_DRAMType[17][5]={
-	{0x0C,0x0A,0x02,0x40,0x39},
-	{0x0D,0x0A,0x01,0x40,0x48},
-	{0x0C,0x09,0x02,0x20,0x35},
-	{0x0D,0x09,0x01,0x20,0x44},
-	{0x0C,0x08,0x02,0x10,0x31},
-	{0x0D,0x08,0x01,0x10,0x40},
-	{0x0C,0x0A,0x01,0x20,0x34},
-	{0x0C,0x09,0x01,0x08,0x32},
-	{0x0B,0x08,0x02,0x08,0x21},
-	{0x0C,0x08,0x01,0x08,0x30},
-	{0x0A,0x08,0x02,0x04,0x11},
-	{0x0B,0x0A,0x01,0x10,0x28},
-	{0x09,0x08,0x02,0x02,0x01},
-	{0x0B,0x09,0x01,0x08,0x24},
-	{0x0B,0x08,0x01,0x04,0x20},
-	{0x0A,0x08,0x01,0x02,0x10},
-	{0x09,0x08,0x01,0x01,0x00}
-};
-
-static const unsigned short SiS_SDRDRAM_TYPE[13][5] =
-{
-	{ 2,12, 9,64,0x35},
-	{ 1,13, 9,64,0x44},
-	{ 2,12, 8,32,0x31},
-	{ 2,11, 9,32,0x25},
-	{ 1,12, 9,32,0x34},
-	{ 1,13, 8,32,0x40},
-	{ 2,11, 8,16,0x21},
-	{ 1,12, 8,16,0x30},
-	{ 1,11, 9,16,0x24},
-	{ 1,11, 8, 8,0x20},
-	{ 2, 9, 8, 4,0x01},
-	{ 1,10, 8, 4,0x10},
-	{ 1, 9, 8, 2,0x00}
-};
-
-static const unsigned short SiS_DDRDRAM_TYPE[4][5] =
-{
-	{ 2,12, 9,64,0x35},
-	{ 2,12, 8,32,0x31},
-	{ 2,11, 8,16,0x21},
-	{ 2, 9, 8, 4,0x01}
-};
-
 static const unsigned char SiS_MDA_DAC[] =
 {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -1515,19 +1470,6 @@ unsigned short	SiS_GetModeID_TV(int VGAEngine, unsigned int VBFlags, int HDispla
 				int VDisplay, int Depth, unsigned int VBFlags2);
 unsigned short	SiS_GetModeID_VGA2(int VGAEngine, unsigned int VBFlags, int HDisplay,
 				int VDisplay, int Depth, unsigned int VBFlags2);
-
-void		SiS_SetReg(SISIOADDRESS port, unsigned short index, unsigned short data);
-void		SiS_SetRegByte(SISIOADDRESS port, unsigned short data);
-void		SiS_SetRegShort(SISIOADDRESS port, unsigned short data);
-void		SiS_SetRegLong(SISIOADDRESS port, unsigned int data);
-unsigned char	SiS_GetReg(SISIOADDRESS port, unsigned short index);
-unsigned char	SiS_GetRegByte(SISIOADDRESS port);
-unsigned short	SiS_GetRegShort(SISIOADDRESS port);
-unsigned int	SiS_GetRegLong(SISIOADDRESS port);
-void		SiS_SetRegANDOR(SISIOADDRESS Port, unsigned short Index, unsigned short DataAND,
-				unsigned short DataOR);
-void		SiS_SetRegAND(SISIOADDRESS Port,unsigned short Index, unsigned short DataAND);
-void		SiS_SetRegOR(SISIOADDRESS Port,unsigned short Index, unsigned short DataOR);
 
 void		SiS_DisplayOn(struct SiS_Private *SiS_Pr);
 void		SiS_DisplayOff(struct SiS_Private *SiS_Pr);

@@ -1,10 +1,10 @@
 /*
- * linux/arch/arm/mach-spear13xx/sleep_13xx.S
+ * linux/arch/arm/mach-spear13xx/sleep_1310.S
  *
- * SPEAR13xx specific functions that will run in internal SRAM.
+ * SPEAR1310 specific functions that will run in internal SRAM.
  * The functions are used in power management.
  *
- * Copyright (C) 2010 ST MicroElectronics
+ * Copyright (C) 2012 ST MicroElectronics
  * Deepak Sikri <deepak.sikri@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -16,22 +16,17 @@
 #include <asm/assembler.h>
 #include <mach/suspend.h>
 
-#define DDR_PLL_SREFRESH
-#define MPMC_RESET
-#define PWRDOMAINS_ON
-#define GPIO_DDR_ISOLATE
-#define RESET_UART_REGISTERS
 /*
- * spear13xx_sleep_mode()
+ * spear1310_sleep_mode()
  * Forces SPEAr into sleep
- * r0: state
  */
+
 .text
 ENTRY(spear1310_sleep_mode)
 	mov	r10, r1		/* latch the address of cpu_resume */
 	mov	r11, r0		/* latch the suspend state */
 
-	ldr	r8, =IO_ADDRESS(SPEAR_SRAM_STACK_PA)
+	ldr	r8, =SRAM_STACK_VA
 	/* Latch the physical address of cpu_resume on to SRAM */
 	io_v2p	r0, r10, r1
 	stmia	r8!, {r0}
@@ -40,37 +35,26 @@ ENTRY(spear1310_sleep_mode)
 	adr	r0, mmu_off
 	io_v2p	r2, r0, r1
 
-	/* Disable MMU */
-	mrc	p15, 0, r0, c1, c0, 0
-	ldr	r1, =DISABLE_I_C_M_V
-	bic	r0, r0, r1
-	mcr	p15, 0, r0, c1, c0, 0
+	/* Disable MMU and Caches */
+	disable_mmu	r0, r1
 	/* Move the Physical address into PC */
 	bx	r2
 	nop
 mmu_off:
 	/* Put the DDR in self refresh mode */
-	ldr	r6, =MISC_BASE_PA
-	ldr	r7, =MPMC_BASE_PA
+	ldr	r6, =MISC_BASE
+	ldr	r7, =A9SM_AND_MPMC_BASE
+	/* Program the Status check offset in misc space */
+	ldr	r1, =0x3DC
+	/* Move DDR into self-refresh */
+	put_ddr_to_srefresh r0, r6, r7, r1
 
-	/* Program MPMC Control Status register in Misc Space */
-	ldr	r0, [r7, #0x2C]
-	/* Set srefresh_enter bit(2) */
-	orr	r0, r0, #0x10000
-	str	r0, [r7, #0x2c]
-wait_till_srefresh_on_r0:
-	ldr	r0, [r6, #0x3DC]
-	/* check for cke_status bit(13) */
-	tst	r0, #0x2000
-	bne	wait_till_srefresh_on_r0
-
-#ifdef GPIO_DDR_ISOLATE
 	/* enable gpio clock */
 	ldr	r0, [r6, #0x300]
 	orr	r0, r0, #0x00800000
 	str	r0, [r6, #0x300]
 
-	ldr	r6, =GPIO_START_PA
+	ldr	r6, =GPIO0_BASE
 	/* Set the Direction of GPIO-2 as output */
 	ldr	r0, [r6, #0x400]
 	orr	r0, r0, #0xc
@@ -80,11 +64,7 @@ wait_till_srefresh_on_r0:
 	ldr	r0, [r6, #0x3fc]
 	orr	r0, r0, #0xc
 	str	r0, [r6, #0x3fc]
-	ldr	r6, =MISC_BASE_PA
-#endif
-
-#ifdef MPMC_RESET
-	ldr	r7, =MPMC_BASE_PA
+	ldr	r6, =MISC_BASE
 	/* Stop the MPMC controller */
 	ldr	r0, [r7, #0x2c]
 	bic	r0, r0, #0x1000000
@@ -99,60 +79,24 @@ wait_till_srefresh_on_r0:
 	ldr	r1, [r6, #0x304]
 	bic	r1, r1, #0x3
 	str	r1, [r6, #0x304]
-#endif
-	/* Put the system in slow mode */
-	ldr	r0, [r6, #0x200]
-	bic	r0, r0, #0x4
-	/* Set the apt mode bits(2:0) in SCCTRL register */
-	orr	r0, r0, #0x2
-	str	r0, [r6, #0x200]	/* System is now in slow mode */
-wait_till_slow_mode:
-	ldr	r0, [r6, #0x200]
-	/* Wait for the mode to be updated */
-	and	r0, r0, #0xF0000
-	/* Poll the SCCTRL register status bits (6:3) */
-	cmp	r0, #0xA0000
-	bne wait_till_slow_mode
 
-	/*
-	 * Put the all the system pll's to off state
-	 * The loop of count 3 is provided below to
-	 * switch off the pll-1/2/3.
-	 * r1 contains the offset for the pll control
-	 * registers in the misc space.
-	 * DDR pll-4 requires different processing.
-	 */
-	ldr	r1, =MISC_PLL_OFFS
-	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
-swoff_pll:
-	ldr	r0, [r6, r1]
-	/* Clear pll_enable bit(1) of PLL1_CTR register in Misc registers */
-	bic	r0, r0, #0x04
-	str	r0, [r6, r1]
-	add	r1, #0xc
-	add	r2, #0x1
-	cmp	r2, #0x3	/* Switch off pll-1/2/3 */
-	bne	swoff_pll
+	/* Move the system into slow mode */
+	put_system_to_slow_mode	r0, r6
 
-#ifdef DDR_PLL_SREFRESH
-	/* Switch off pll-4 */
-	ldr	r0, [r6, r1]
-	/* Clear pll_enable bit(2) of PLL1_CTR register in Misc registers */
-	bic	r0, r0, #0x04
-	str	r0, [r6, r1]
-#endif
-#ifdef PWRDOMAINS_ON
+	/* Switch off the system pll's */
+	switch_off_sys_plls  r0, r2, r6, r1
+
+	/* Switch off Power Domains for s2r */
 	cmp	r11, #0x1
 	beq	standby_mode
-
 	/* Store the Resume Physical Address on Stack Secure location */
 	adr	r0, spear_sleep_restore
 	ldr	r3, =SRAM_SCR_REG
-	ldr	r6, =SPEAR_SRAM_START_PA
+	ldr	r6, =SRAM_START_PA
 	str	r0, [r6, r3]
 
 	/* Enable bootrom and always on ram clock */
-	ldr	r6, =MISC_BASE_PA
+	ldr	r6, =MISC_BASE
 	ldr	r0, [r6, #0x300]
 	orr	r0, r0, #0x6
 	str	r0, [r6, #0x300]
@@ -187,81 +131,31 @@ wait_ack2:
 	bic	r0, r0, #0x30000
 	str	r0, [r6, #0x100]
 
-#ifdef CPU_PWR_DOMAIN_OFF
 	bic	r0, r0, #0x9000
 	str	r0, [r6, #0x100]
 wait_ack3:
 	ldr	r0, [r6, #0x100]
 	tst	r0, #0x10000
 	beq	wait_ack3
-#endif
-#endif
 
 standby_mode:
 	wfi				@ wait for interrupt
 	nop
 spear_sleep_restore:
 	nop
-	ldr	r6, =MISC_BASE_PA
+	ldr	r6, =MISC_BASE
 	ldr	r1, =MISC_PLL_OFFS
 
-#ifdef DDR_PLL_SREFRESH
-	/* Switch on PLL-4, strobe the pll also */
-	ldr	r0, [r6, #0x238]
-	ldr	r0, =PLL_VAL1
-	str	r0, [r6, #0x238]
-	ldr	r0, =PLL_VAL2
-	str	r0, [r6, #0x238]
-	ldr	r0, =PLL_VAL3
-	str	r0, [r6, #0x238]
-	ldr	r0, =PLL_VAL2
-	str	r0, [r6, #0x238]
-pll_lock_4:
-	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
-	ldr	r5, [r6, #0x238]
-	and	r5, r5, #0x1
-	/* Wait for pll lock status */
-	cmp	r5, #0x1
-	bne	pll_lock_4
-#endif
+	/* Switch on Pll 4 */
+	switch_on_pll4 r0, r6
 
-	ldr	r2, =0x0	/* PLL Counter 1, 2, 3, 4 */
-swon_pll_1_3:
-	/* Switch on Pll-1/2/3 */
-	ldr	r0, [r6, r1]
-	orr	r0, r0, #0x6
-	str	r0, [r6, r1]
-pll_lock_1_3:
-	/* Set the pll_lock bit(0) in PLLX_CTR register in misc space*/
-	ldr	r5, [r6, r1]
-	and	r5, r5, #0x1
-	/* Wait for pll lock status */
-	cmp	r5, #0x1
-	bne	pll_lock_1_3
+	/* Switch on pll-1/2/3 */	
+	switch_on_pll_1_to_3 r0, r2, r6, r1
 
-	/* Loop for all the pll's */
-	add	r1, #0xc
-	add	r2, #0x1
-	cmp	r2, #0x3	/* Switch on till pll-3 */
-	bne	swon_pll_1_3
+	/* Move the system into normal mode */
+	put_system_to_normal_mode r0, r6
 
-	/* Put the system in normal mode */
-	ldr	r0, [r6, #0x200]
-	bic	r0, r0, #0x7
-	/* Set the apt mode bits(2:0) in SCCTRL register */
-	orr	r0, r0, #0x4
-	str	r0, [r6, #0x200]	/* System is now in slow mode */
-wait_till_normal_mode:
-	ldr	r0, [r6, #0x200]
-	/* Wait for the mode to be updated */
-	and	r0, r0, #0xF0000
-	/* Poll the SCCTRL register status bits (6:3) */
-	cmp	r0, #0xf0000
-	bne wait_till_normal_mode
-
-	ldr	r6, =SPEAR_SRAM_START_PA
-#ifdef MPMC_RESET
-	ldr	r7, =MISC_BASE_PA
+	ldr	r7, =MISC_BASE
 	/* Enable the MPMC clock */
 	ldr	r1, [r7, #0x304]
 	orr	r1, r1, #0x3
@@ -273,29 +167,14 @@ wait_till_normal_mode:
 	/* Enable MPMC back */
 	bic	r1, r1, #0x3
 	str	r1, [r7, #0x30c]
-#endif
 	/* Restore the MPMC registers */
-	ldr	r7, =MPMC_BASE_PA
-	mov	r0, #0
-	ldr	r3, =MPMC_REG_END
-mpmc_restore_regs:
-	ldr	r1, [r6, r3]
-	cmp	r0, #0x2c
-	bne	ddf
-	nop
-	nop
-	bic	r1, r1, #0x1000000
-ddf:
-	str	r1, [r7, r0]
-	sub	r3, r3, #4
-	add	r0, r0, #4
-	cmp	r0, #0x340
-	bne	mpmc_restore_regs
-	dsb
-	isb
+	ldr	r1, =MPMC_REG_END
+	ldr	r6, =SRAM_START_PA
+	ldr	r7, =A9SM_AND_MPMC_BASE
+	/* Restor the mpmc registers */
+	mpmc_restore_regs r0, r2, r6, r7, r1
 
-#ifdef GPIO_DDR_ISOLATE
-	ldr	r7, =GPIO_START_PA
+	ldr	r7, =GPIO0_BASE
 	/* Set the Direction of GPIO-2 as output */
 	ldr	r0, [r7, #0x400]
 	orr	r0, r0, #0xc
@@ -313,10 +192,9 @@ ddr_out_srefresh:
 	cmp	r0, #0x60000
 	bne	ddr_out_srefresh
 
-#endif
 	/* Move the DDR out of self refresh mode */
-	ldr	r7, =MPMC_BASE_PA
-	ldr	r8, =SPEAR_SRAM_STACK_PA
+	ldr	r7, =A9SM_AND_MPMC_BASE
+	ldr	r8, =SRAM_STACK_PA
 
 	/* Exit from SR (bit 8) */
 	ldr	r1, [r7, #0x18]
@@ -350,7 +228,7 @@ ddr_out_srefresh:
 	 */
 	bic	r1, r1, #0x10000
 
-	ldr	r6, =MISC_BASE_PA
+	ldr	r6, =MISC_BASE
 	/* Program MPMC Control Status register in Misc Space */
 	ldr	r0, [r6, #0x3DC]
 	/* Clear srefresh_enter bit(2) */
@@ -362,7 +240,7 @@ wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x3DC]
 	tst	r0, #0x2000
 	beq	wait_for_srefresh_exit_r0
-	ldr	r7, =GPIO_START_PA
+	ldr	r7, =GPIO0_BASE
 	ldr	r0, [r7, #0x3fc]
 	bic	r0, r0, #0x8
 	str	r0, [r7, #0x3fc]
@@ -373,35 +251,8 @@ ddr_out_srefresh1:
 	cmp	r0, #0x60000
 	bne	ddr_out_srefresh1
 
-#ifdef RESET_UART_REGISTERS
-	/* Reprogram UART0 before wakeup */
-	ldr	r7, =UART_BASE_PA
+	uart_restore r0, r2, r7
 
-	ldr	r0, [r7, #0x024]
-	orr	r0, r0, #0x1A
-	str	r0, [r7, #0x024]
-
-	ldr	r0, [r7, #0x028]
-	orr	r0, r0, #0x3
-	str	r0, [r7, #0x028]
-
-	ldr	r0, [r7, #0x02C]
-	orr	r0, r0, #0x70
-	str	r0, [r7, #0x02C]
-
-	ldr	r0, [r7, #0x030]
-	ldr	r2, =0xF01
-	orr	r0, r0, r2
-	str	r0, [r7, #0x030]
-
-	ldr	r0, [r7, #0x034]
-	orr	r0, r0, #0x12
-	str	r0, [r7, #0x034]
-
-	ldr	r0, [r7, #0x038]
-	orr	r0, r0, #0x50
-	str	r0, [r7, #0x038]
-#endif
 	ldmia	r8!, {r0}
 	mov	pc, r0
 	nop

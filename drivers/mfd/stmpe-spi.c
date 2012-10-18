@@ -4,13 +4,16 @@
  * Copyright (C) ST Microelectronics SA 2011
  *
  * License Terms: GNU General Public License, version 2
- * Author: Viresh Kumar <viresh.kumar@st.com> for ST Microelectronics
+ * Author: Viresh Kumar <viresh.linux@gmail.com> for ST Microelectronics
  */
 
 #include <linux/spi/spi.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/types.h>
 #include "stmpe.h"
 
@@ -59,6 +62,17 @@ static int spi_block_write(struct stmpe *stmpe, u8 reg, u8 length,
 
 	return ret;
 }
+
+static const struct of_device_id stmpe_dt_ids[] = {
+	{ .compatible = "st,stmpe610", .data = (void *) STMPE610, },
+	{ .compatible = "st,stmpe801", .data = (void *) STMPE801, },
+	{ .compatible = "st,stmpe811", .data = (void *) STMPE811, },
+	{ .compatible = "st,stmpe1601", .data = (void *) STMPE1601, },
+	{ .compatible = "st,stmpe2401", .data = (void *) STMPE2401, },
+	{ .compatible = "st,stmpe2403", .data = (void *) STMPE2403, },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, stmpe_dt_ids);
 
 static void spi_init(struct stmpe *stmpe)
 {
@@ -122,29 +136,18 @@ MODULE_DEVICE_TABLE(spi, stmpe_id);
 static struct spi_driver stmpe_spi_driver = {
 	.driver = {
 		.name	= "stmpe-spi",
-		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_PM
 		.pm	= &stmpe_dev_pm_ops,
 #endif
+		.of_match_table = stmpe_dt_ids,
 	},
 	.probe		= stmpe_spi_probe,
 	.remove		= __devexit_p(stmpe_spi_remove),
 	.id_table	= stmpe_spi_id,
 };
-
-static int __init stmpe_init(void)
-{
-	return spi_register_driver(&stmpe_spi_driver);
-}
-subsys_initcall(stmpe_init);
-
-static void __exit stmpe_exit(void)
-{
-	spi_unregister_driver(&stmpe_spi_driver);
-}
-module_exit(stmpe_exit);
+module_spi_driver(stmpe_spi_driver);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("STMPE MFD SPI Interface Driver");
-MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
+MODULE_AUTHOR("Viresh Kumar <viresh.linux@gmail.com>");

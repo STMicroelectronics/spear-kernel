@@ -1,0 +1,29 @@
+* Synopsys DesignWare I2C
+
+Required properties :
+
+ - compatible : should be "snps,designware-i2c"
+ - reg : Offset and length of the register set for the device
+ - interrupts : <IRQ> where IRQ is the interrupt number.
+
+Recommended properties :
+
+ - clock-frequency : desired I2C bus clock frequency in Hz.
+
+Optional properties :
+ - stop-control : boolean value which suggests that the controller has
+ been configured with 'IC_EMPTYFIFO_HOLD_MASTER_EN' option, meaning that
+ s/w needs to write command to generate stop with the last byte of
+ transfer.
+
+Example :
+
+	i2c@f0000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "snps,designware-i2c";
+		reg = <0xf0000 0x1000>;
+		interrupts = <11>;
+		stop-control;
+		clock-frequency = <400000>;
+	};

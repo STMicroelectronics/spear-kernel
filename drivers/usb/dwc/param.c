@@ -37,8 +37,8 @@
  * This file provides dwc_otg driver parameter and parameter checking.
  */
 
+#include <linux/moduleparam.h>
 #include "cil.h"
-
 /*
  * Encapsulate the module parameter settings
  */
@@ -215,5 +215,5 @@ int __devinit check_parameters(struct core_if *core_if)
 	return 0;
 }
 
-module_param_named(dma_enable, dwc_otg_module_params.dma_enable, bool, 0444);
+module_param_named(dma_enable, dwc_otg_module_params.dma_enable, int, 0444);
 MODULE_PARM_DESC(dma_enable, "DMA Mode 0=Slave 1=DMA enabled");

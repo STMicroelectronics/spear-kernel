@@ -65,7 +65,7 @@ struct nf_conntrack_l3proto {
 
 #ifdef CONFIG_SYSCTL
 	struct ctl_table_header	*ctl_table_header;
-	struct ctl_path		*ctl_table_path;
+	const char		*ctl_table_path;
 	struct ctl_table	*ctl_table;
 #endif /* CONFIG_SYSCTL */
 
@@ -73,7 +73,7 @@ struct nf_conntrack_l3proto {
 	struct module *me;
 };
 
-extern struct nf_conntrack_l3proto *nf_ct_l3protos[AF_MAX];
+extern struct nf_conntrack_l3proto __rcu *nf_ct_l3protos[AF_MAX];
 
 /* Protocol registration. */
 extern int nf_conntrack_l3proto_register(struct nf_conntrack_l3proto *proto);

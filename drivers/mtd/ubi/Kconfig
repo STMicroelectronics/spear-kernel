@@ -52,6 +52,4 @@ config MTD_UBI_GLUEBI
 	   work on top of UBI. Do not enable this unless you use legacy
 	   software.
 
-source "drivers/mtd/ubi/Kconfig.debug"
-
 endif # MTD_UBI

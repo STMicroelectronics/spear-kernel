@@ -14,8 +14,6 @@
  * published by the Free Software Foundation.
  */
 
-#include "cm.h"
-
 /* Bits shared between registers */
 
 /* CM_FCLKEN1_CORE and CM_ICLKEN1_CORE shared bits */
@@ -81,7 +79,7 @@
 
 /* CM_CLKSEL1_PLL_IVA2 */
 #define OMAP3430_IVA2_CLK_SRC_SHIFT			19
-#define OMAP3430_IVA2_CLK_SRC_MASK			(0x3 << 19)
+#define OMAP3430_IVA2_CLK_SRC_MASK			(0x7 << 19)
 #define OMAP3430_IVA2_DPLL_MULT_SHIFT			8
 #define OMAP3430_IVA2_DPLL_MULT_MASK			(0x7ff << 8)
 #define OMAP3430_IVA2_DPLL_DIV_SHIFT			0
@@ -126,7 +124,7 @@
 
 /* CM_CLKSEL1_PLL_MPU */
 #define OMAP3430_MPU_CLK_SRC_SHIFT			19
-#define OMAP3430_MPU_CLK_SRC_MASK			(0x3 << 19)
+#define OMAP3430_MPU_CLK_SRC_MASK			(0x7 << 19)
 #define OMAP3430_MPU_DPLL_MULT_SHIFT			8
 #define OMAP3430_MPU_DPLL_MULT_MASK			(0x7ff << 8)
 #define OMAP3430_MPU_DPLL_DIV_SHIFT			0
@@ -799,5 +797,16 @@
 /* CM_CLKSTST_USBHOST */
 #define OMAP3430ES2_CLKACTIVITY_USBHOST_SHIFT		0
 #define OMAP3430ES2_CLKACTIVITY_USBHOST_MASK		(1 << 0)
+
+/*
+ *
+ */
+
+/* OMAP3XXX CM_CLKSTCTRL_*.CLKTRCTRL_* register bit values */
+#define OMAP34XX_CLKSTCTRL_DISABLE_AUTO		0x0
+#define OMAP34XX_CLKSTCTRL_FORCE_SLEEP		0x1
+#define OMAP34XX_CLKSTCTRL_FORCE_WAKEUP		0x2
+#define OMAP34XX_CLKSTCTRL_ENABLE_AUTO		0x3
+
 
 #endif

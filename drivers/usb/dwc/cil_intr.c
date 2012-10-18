@@ -42,6 +42,7 @@
  * This file contains the Common Interrupt handlers.
  */
 #include <linux/delay.h>
+#include <linux/usb/otg.h>
 
 #include "cil.h"
 

@@ -28,11 +28,9 @@
 	dev_warn (ehci_to_hcd(ehci)->self.controller , fmt , ## args )
 
 #ifdef VERBOSE_DEBUG
-#	define vdbg dbg
 #	define ehci_vdbg ehci_dbg
 #else
-#	define vdbg(fmt,args...) do { } while (0)
-#	define ehci_vdbg(ehci, fmt, args...) do { } while (0)
+	static inline void ehci_vdbg(struct ehci_hcd *ehci, ...) {}
 #endif
 
 #ifdef	DEBUG
@@ -109,7 +107,7 @@ static void dbg_hcc_params (struct ehci_hcd *ehci, char *label)
 			HCC_PER_PORT_CHANGE_EVENT(params) ? " ppce" : "",
 			HCC_HW_PREFETCH(params) ? " hw prefetch" : "",
 			HCC_32FRAME_PERIODIC_LIST(params) ?
-				" 32 peridic list" : "");
+				" 32 periodic list" : "");
 	}
 }
 #else
@@ -354,7 +352,6 @@ static int debug_async_open(struct inode *, struct file *);
 static int debug_periodic_open(struct inode *, struct file *);
 static int debug_registers_open(struct inode *, struct file *);
 static int debug_async_open(struct inode *, struct file *);
-static int debug_lpm_open(struct inode *, struct file *);
 static ssize_t debug_lpm_read(struct file *file, char __user *user_buf,
 				   size_t count, loff_t *ppos);
 static ssize_t debug_lpm_write(struct file *file, const char __user *buffer,
@@ -387,7 +384,7 @@ static const struct file_operations debug_registers_fops = {
 };
 static const struct file_operations debug_lpm_fops = {
 	.owner		= THIS_MODULE,
-	.open		= debug_lpm_open,
+	.open		= simple_open,
 	.read		= debug_lpm_read,
 	.write		= debug_lpm_write,
 	.release	= debug_lpm_close,
@@ -699,6 +696,19 @@ static ssize_t fill_periodic_buffer(struct debug_buffer *buf)
 }
 #undef DBG_SCHED_LIMIT
 
+static const char *rh_state_string(struct ehci_hcd *ehci)
+{
+	switch (ehci->rh_state) {
+	case EHCI_RH_HALTED:
+		return "halted";
+	case EHCI_RH_SUSPENDED:
+		return "suspended";
+	case EHCI_RH_RUNNING:
+		return "running";
+	}
+	return "?";
+}
+
 static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 {
 	struct usb_hcd		*hcd;
@@ -728,15 +738,15 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 	}
 
 	/* Capability Registers */
-	i = HC_VERSION(ehci_readl(ehci, &ehci->caps->hc_capbase));
+	i = HC_VERSION(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
 	temp = scnprintf (next, size,
 		"bus %s, device %s\n"
 		"%s\n"
-		"EHCI %x.%02x, hcd state %d\n",
+		"EHCI %x.%02x, rh state %s\n",
 		hcd->self.controller->bus->name,
 		dev_name(hcd->self.controller),
 		hcd->product_desc,
-		i >> 8, i & 0x0ff, hcd->state);
+		i >> 8, i & 0x0ff, rh_state_string(ehci));
 	size -= temp;
 	next += temp;
 
@@ -810,7 +820,7 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 	next += temp;
 
 	temp = scnprintf (next, size, "uframe %04x\n",
-			ehci_readl(ehci, &ehci->regs->frame_index));
+			ehci_read_frame_index(ehci));
 	size -= temp;
 	next += temp;
 
@@ -879,7 +889,7 @@ static int fill_buffer(struct debug_buffer *buf)
 	int ret = 0;
 
 	if (!buf->output_buf)
-		buf->output_buf = (char *)vmalloc(buf->alloc_size);
+		buf->output_buf = vmalloc(buf->alloc_size);
 
 	if (!buf->output_buf) {
 		ret = -ENOMEM;
@@ -959,12 +969,6 @@ static int debug_registers_open(struct inode *inode, struct file *file)
 	return file->private_data ? 0 : -ENOMEM;
 }
 
-static int debug_lpm_open(struct inode *inode, struct file *file)
-{
-	file->private_data = inode->i_private;
-	return 0;
-}
-
 static int debug_lpm_close(struct inode *inode, struct file *file)
 {
 	return 0;
@@ -1021,10 +1025,8 @@ static ssize_t debug_lpm_write(struct file *file, const char __user *user_buf,
 		if (strict_strtoul(buf + 5, 16, &hird))
 			return -EINVAL;
 		printk(KERN_INFO "setting hird %s %lu\n", buf + 6, hird);
-		temp = ehci_readl(ehci, &ehci->regs->command);
-		temp &= ~CMD_HIRD;
-		temp |= hird << 24;
-		ehci_writel(ehci, temp, &ehci->regs->command);
+		ehci->command = (ehci->command & ~CMD_HIRD) | (hird << 24);
+		ehci_writel(ehci, ehci->command, &ehci->regs->command);
 	} else if (strncmp(buf, "disable", 7) == 0) {
 		if (strict_strtoul(buf + 8, 10, &port))
 			return -EINVAL;

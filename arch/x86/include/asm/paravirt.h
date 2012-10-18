@@ -10,6 +10,7 @@
 #include <asm/paravirt_types.h>
 
 #ifndef __ASSEMBLY__
+#include <linux/bug.h>
 #include <linux/types.h>
 #include <linux/cpumask.h>
 
@@ -112,7 +113,7 @@ static inline void arch_safe_halt(void)
 
 static inline void halt(void)
 {
-	PVOP_VCALL0(pv_irq_ops.safe_halt);
+	PVOP_VCALL0(pv_irq_ops.halt);
 }
 
 static inline void wbinvd(void)
@@ -228,6 +229,15 @@ do {						\
 static inline unsigned long long paravirt_sched_clock(void)
 {
 	return PVOP_CALL0(unsigned long long, pv_time_ops.sched_clock);
+}
+
+struct static_key;
+extern struct static_key paravirt_steal_enabled;
+extern struct static_key paravirt_steal_rq_enabled;
+
+static inline u64 paravirt_steal_clock(int cpu)
+{
+	return PVOP_CALL1(u64, pv_time_ops.steal_clock, cpu);
 }
 
 static inline unsigned long long paravirt_read_pmc(int counter)
@@ -435,11 +445,22 @@ static inline void pte_update(struct mm_struct *mm, unsigned long addr,
 {
 	PVOP_VCALL3(pv_mmu_ops.pte_update, mm, addr, ptep);
 }
+static inline void pmd_update(struct mm_struct *mm, unsigned long addr,
+			      pmd_t *pmdp)
+{
+	PVOP_VCALL3(pv_mmu_ops.pmd_update, mm, addr, pmdp);
+}
 
 static inline void pte_update_defer(struct mm_struct *mm, unsigned long addr,
 				    pte_t *ptep)
 {
 	PVOP_VCALL3(pv_mmu_ops.pte_update_defer, mm, addr, ptep);
+}
+
+static inline void pmd_update_defer(struct mm_struct *mm, unsigned long addr,
+				    pmd_t *pmdp)
+{
+	PVOP_VCALL3(pv_mmu_ops.pmd_update_defer, mm, addr, pmdp);
 }
 
 static inline pte_t __pte(pteval_t val)
@@ -542,6 +563,19 @@ static inline void set_pte_at(struct mm_struct *mm, unsigned long addr,
 	else
 		PVOP_VCALL4(pv_mmu_ops.set_pte_at, mm, addr, ptep, pte.pte);
 }
+
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
+static inline void set_pmd_at(struct mm_struct *mm, unsigned long addr,
+			      pmd_t *pmdp, pmd_t pmd)
+{
+	if (sizeof(pmdval_t) > sizeof(long))
+		/* 5 arg words */
+		pv_mmu_ops.set_pmd_at(mm, addr, pmdp, pmd);
+	else
+		PVOP_VCALL4(pv_mmu_ops.set_pmd_at, mm, addr, pmdp,
+			    native_pmd_val(pmd));
+}
+#endif
 
 static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
@@ -989,10 +1023,8 @@ extern void default_banner(void);
 		  call PARA_INDIRECT(pv_cpu_ops+PV_CPU_swapgs)		\
 		 )
 
-#define GET_CR2_INTO_RCX				\
-	call PARA_INDIRECT(pv_mmu_ops+PV_MMU_read_cr2);	\
-	movq %rax, %rcx;				\
-	xorq %rax, %rax;
+#define GET_CR2_INTO_RAX				\
+	call PARA_INDIRECT(pv_mmu_ops+PV_MMU_read_cr2)
 
 #define PARAVIRT_ADJUST_EXCEPTION_FRAME					\
 	PARA_SITE(PARA_PATCH(pv_irq_ops, PV_IRQ_adjust_exception_frame), \

@@ -92,6 +92,8 @@ struct pl08x_bus_data {
  * right now
  * @serving: the virtual channel currently being served by this physical
  * channel
+ * @locked: channel unavailable for the system, e.g. dedicated to secure
+ * world
  */
 struct pl08x_phy_chan {
 	unsigned int id;
@@ -99,6 +101,7 @@ struct pl08x_phy_chan {
 	spinlock_t lock;
 	int signal;
 	struct pl08x_dma_chan *serving;
+	bool locked;
 };
 
 /**
@@ -130,7 +133,7 @@ struct pl08x_txd {
 	struct dma_async_tx_descriptor tx;
 	struct list_head node;
 	struct list_head dsg_list;
-	enum dma_data_direction	direction;
+	enum dma_transfer_direction direction;
 	dma_addr_t llis_bus;
 	struct pl08x_lli *llis_va;
 	/* Default cctl value for LLIs */
@@ -172,7 +175,6 @@ enum pl08x_dma_chan_state {
  * @runtime_addr: address for RX/TX according to the runtime config
  * @runtime_direction: current direction of this channel according to
  * runtime config
- * @lc: last completed transaction on this channel
  * @pend_list: queued transactions pending on this channel
  * @at: active transaction on this channel
  * @lock: a lock for this channel data
@@ -196,8 +198,7 @@ struct pl08x_dma_chan {
 	dma_addr_t dst_addr;
 	u32 src_cctl;
 	u32 dst_cctl;
-	enum dma_data_direction	runtime_direction;
-	dma_cookie_t lc;
+	enum dma_transfer_direction runtime_direction;
 	struct list_head pend_list;
 	struct pl08x_txd *at;
 	spinlock_t lock;

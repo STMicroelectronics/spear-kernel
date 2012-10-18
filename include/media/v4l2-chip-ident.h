@@ -74,6 +74,9 @@ enum {
 	V4L2_IDENT_SOI968 = 256,
 	V4L2_IDENT_OV9640 = 257,
 	V4L2_IDENT_OV6650 = 258,
+	V4L2_IDENT_OV2640 = 259,
+	V4L2_IDENT_OV9740 = 260,
+	V4L2_IDENT_OV5642 = 261,
 
 	/* module saa7146: reserved range 300-309 */
 	V4L2_IDENT_SAA7146 = 300,
@@ -84,9 +87,6 @@ enum {
 	V4L2_IDENT_CX23416 = 416,
 	V4L2_IDENT_CX23417 = 417,
 	V4L2_IDENT_CX23418 = 418,
-
-	/* module HI704: just ident 704 */
-	V4L2_IDENT_HI704 = 704,
 
 	/* module bt819: reserved range 810-819 */
 	V4L2_IDENT_BT815A = 815,
@@ -143,6 +143,9 @@ enum {
 	/* module saa6588: just ident 6588 */
 	V4L2_IDENT_SAA6588 = 6588,
 
+	/* module vs6624: just ident 6624 */
+	V4L2_IDENT_VS6624 = 6624,
+
 	/* module vs6725: just ident 6725 */
 	V4L2_IDENT_VS6725 = 6725,
 
@@ -164,6 +167,9 @@ enum {
 
 	/* module adv7180: just ident 7180 */
 	V4L2_IDENT_ADV7180 = 7180,
+
+	/* module adv7183: just ident 7183 */
+	V4L2_IDENT_ADV7183 = 7183,
 
 	/* module saa7185: just ident 7185 */
 	V4L2_IDENT_SAA7185 = 7185,
@@ -189,8 +195,9 @@ enum {
 	/* module wm8775: just ident 8775 */
 	V4L2_IDENT_WM8775 = 8775,
 
-	/* module cafe_ccic, just ident 8801 */
+	/* Marvell controllers starting at 8801 */
 	V4L2_IDENT_CAFE = 8801,
+	V4L2_IDENT_ARMADA610 = 8802,
 
 	/* AKM AK8813/AK8814 */
 	V4L2_IDENT_AK8813 = 8813,

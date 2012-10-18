@@ -109,7 +109,7 @@ static unsigned long corgibl_flags;
 #define CORGIBL_BATTLOW       0x02
 
 /*
- * This is only a psuedo I2C interface. We can't use the standard kernel
+ * This is only a pseudo I2C interface. We can't use the standard kernel
  * routines as the interface is write only. We just assume the data is acked...
  */
 static void lcdtg_ssp_i2c_send(struct corgi_lcd *lcd, uint8_t data)
@@ -544,7 +544,7 @@ static int __devinit corgi_lcd_probe(struct spi_device *spi)
 		return -EINVAL;
 	}
 
-	lcd = kzalloc(sizeof(struct corgi_lcd), GFP_KERNEL);
+	lcd = devm_kzalloc(&spi->dev, sizeof(struct corgi_lcd), GFP_KERNEL);
 	if (!lcd) {
 		dev_err(&spi->dev, "failed to allocate memory\n");
 		return -ENOMEM;
@@ -554,14 +554,14 @@ static int __devinit corgi_lcd_probe(struct spi_device *spi)
 
 	lcd->lcd_dev = lcd_device_register("corgi_lcd", &spi->dev,
 					lcd, &corgi_lcd_ops);
-	if (IS_ERR(lcd->lcd_dev)) {
-		ret = PTR_ERR(lcd->lcd_dev);
-		goto err_free_lcd;
-	}
+	if (IS_ERR(lcd->lcd_dev))
+		return PTR_ERR(lcd->lcd_dev);
+
 	lcd->power = FB_BLANK_POWERDOWN;
 	lcd->mode = (pdata) ? pdata->init_mode : CORGI_LCD_MODE_VGA;
 
 	memset(&props, 0, sizeof(struct backlight_properties));
+	props.type = BACKLIGHT_RAW;
 	props.max_brightness = pdata->max_intensity;
 	lcd->bl_dev = backlight_device_register("corgi_bl", &spi->dev, lcd,
 						&corgi_bl_ops, &props);
@@ -590,8 +590,6 @@ err_unregister_bl:
 	backlight_device_unregister(lcd->bl_dev);
 err_unregister_lcd:
 	lcd_device_unregister(lcd->lcd_dev);
-err_free_lcd:
-	kfree(lcd);
 	return ret;
 }
 
@@ -612,7 +610,6 @@ static int __devexit corgi_lcd_remove(struct spi_device *spi)
 
 	corgi_lcd_set_power(lcd->lcd_dev, FB_BLANK_POWERDOWN);
 	lcd_device_unregister(lcd->lcd_dev);
-	kfree(lcd);
 
 	return 0;
 }
@@ -628,17 +625,7 @@ static struct spi_driver corgi_lcd_driver = {
 	.resume		= corgi_lcd_resume,
 };
 
-static int __init corgi_lcd_init(void)
-{
-	return spi_register_driver(&corgi_lcd_driver);
-}
-module_init(corgi_lcd_init);
-
-static void __exit corgi_lcd_exit(void)
-{
-	spi_unregister_driver(&corgi_lcd_driver);
-}
-module_exit(corgi_lcd_exit);
+module_spi_driver(corgi_lcd_driver);
 
 MODULE_DESCRIPTION("LCD and backlight driver for SHARP C7x0/Cxx00");
 MODULE_AUTHOR("Eric Miao <eric.miao@marvell.com>");

@@ -161,11 +161,4 @@ struct kbd_platform_data {
 	unsigned int suspended_rate;
 };
 
-/* This function is used to set platform data field of pdev->dev */
-static inline void
-kbd_set_plat_data(struct platform_device *pdev, struct kbd_platform_data *data)
-{
-	pdev->dev.platform_data = data;
-}
-
 #endif /* __PLAT_KEYBOARD_H */

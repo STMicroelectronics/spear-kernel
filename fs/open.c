@@ -223,11 +223,24 @@ int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 		return -EINVAL;
 
 	/* Return error if mode is not supported */
-	if (mode && !(mode & FALLOC_FL_KEEP_SIZE))
+	if (mode & ~(FALLOC_FL_KEEP_SIZE | FALLOC_FL_PUNCH_HOLE))
+		return -EOPNOTSUPP;
+
+	/* Punch hole must have keep size set */
+	if ((mode & FALLOC_FL_PUNCH_HOLE) &&
+	    !(mode & FALLOC_FL_KEEP_SIZE))
 		return -EOPNOTSUPP;
 
 	if (!(file->f_mode & FMODE_WRITE))
 		return -EBADF;
+
+	/* It's not possible punch hole on append only file */
+	if (mode & FALLOC_FL_PUNCH_HOLE && IS_APPEND(inode))
+		return -EPERM;
+
+	if (IS_IMMUTABLE(inode))
+		return -EPERM;
+
 	/*
 	 * Revalidate the write permissions, in case security policy has
 	 * changed since the files were opened.
@@ -250,10 +263,10 @@ int do_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
 	if (((offset + len) > inode->i_sb->s_maxbytes) || ((offset + len) < 0))
 		return -EFBIG;
 
-	if (!inode->i_op->fallocate)
+	if (!file->f_op->fallocate)
 		return -EOPNOTSUPP;
 
-	return inode->i_op->fallocate(inode, mode, offset, len);
+	return file->f_op->fallocate(file, mode, offset, len);
 }
 
 SYSCALL_DEFINE(fallocate)(int fd, int mode, loff_t offset, loff_t len)
@@ -303,7 +316,8 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 
 	if (!issecure(SECURE_NO_SETUID_FIXUP)) {
 		/* Clear the capabilities if we switch to a non-root user */
-		if (override_cred->uid)
+		kuid_t root_uid = make_kuid(override_cred->user_ns, 0);
+		if (!uid_eq(override_cred->uid, root_uid))
 			cap_clear(override_cred->cap_effective);
 		else
 			override_cred->cap_effective =
@@ -383,10 +397,10 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
 {
 	struct file *file;
 	struct inode *inode;
-	int error;
+	int error, fput_needed;
 
 	error = -EBADF;
-	file = fget(fd);
+	file = fget_raw_light(fd, &fput_needed);
 	if (!file)
 		goto out;
 
@@ -400,7 +414,7 @@ SYSCALL_DEFINE1(fchdir, unsigned int, fd)
 	if (!error)
 		set_fs_pwd(current->fs, &file->f_path);
 out_putf:
-	fput(file);
+	fput_light(file, fput_needed);
 out:
 	return error;
 }
@@ -433,78 +447,56 @@ out:
 	return error;
 }
 
-SYSCALL_DEFINE2(fchmod, unsigned int, fd, mode_t, mode)
+static int chmod_common(struct path *path, umode_t mode)
 {
-	struct inode * inode;
-	struct dentry * dentry;
-	struct file * file;
-	int err = -EBADF;
+	struct inode *inode = path->dentry->d_inode;
 	struct iattr newattrs;
-
-	file = fget(fd);
-	if (!file)
-		goto out;
-
-	dentry = file->f_path.dentry;
-	inode = dentry->d_inode;
-
-	audit_inode(NULL, dentry);
-
-	err = mnt_want_write_file(file);
-	if (err)
-		goto out_putf;
-	mutex_lock(&inode->i_mutex);
-	err = security_path_chmod(dentry, file->f_vfsmnt, mode);
-	if (err)
-		goto out_unlock;
-	if (mode == (mode_t) -1)
-		mode = inode->i_mode;
-	newattrs.ia_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
-	newattrs.ia_valid = ATTR_MODE | ATTR_CTIME;
-	err = notify_change(dentry, &newattrs);
-out_unlock:
-	mutex_unlock(&inode->i_mutex);
-	mnt_drop_write(file->f_path.mnt);
-out_putf:
-	fput(file);
-out:
-	return err;
-}
-
-SYSCALL_DEFINE3(fchmodat, int, dfd, const char __user *, filename, mode_t, mode)
-{
-	struct path path;
-	struct inode *inode;
 	int error;
-	struct iattr newattrs;
 
-	error = user_path_at(dfd, filename, LOOKUP_FOLLOW, &path);
+	error = mnt_want_write(path->mnt);
 	if (error)
-		goto out;
-	inode = path.dentry->d_inode;
-
-	error = mnt_want_write(path.mnt);
-	if (error)
-		goto dput_and_out;
+		return error;
 	mutex_lock(&inode->i_mutex);
-	error = security_path_chmod(path.dentry, path.mnt, mode);
+	error = security_path_chmod(path, mode);
 	if (error)
 		goto out_unlock;
-	if (mode == (mode_t) -1)
-		mode = inode->i_mode;
 	newattrs.ia_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	newattrs.ia_valid = ATTR_MODE | ATTR_CTIME;
-	error = notify_change(path.dentry, &newattrs);
+	error = notify_change(path->dentry, &newattrs);
 out_unlock:
 	mutex_unlock(&inode->i_mutex);
-	mnt_drop_write(path.mnt);
-dput_and_out:
-	path_put(&path);
-out:
+	mnt_drop_write(path->mnt);
 	return error;
 }
 
-SYSCALL_DEFINE2(chmod, const char __user *, filename, mode_t, mode)
+SYSCALL_DEFINE2(fchmod, unsigned int, fd, umode_t, mode)
+{
+	struct file * file;
+	int err = -EBADF;
+
+	file = fget(fd);
+	if (file) {
+		audit_inode(NULL, file->f_path.dentry);
+		err = chmod_common(&file->f_path, mode);
+		fput(file);
+	}
+	return err;
+}
+
+SYSCALL_DEFINE3(fchmodat, int, dfd, const char __user *, filename, umode_t, mode)
+{
+	struct path path;
+	int error;
+
+	error = user_path_at(dfd, filename, LOOKUP_FOLLOW, &path);
+	if (!error) {
+		error = chmod_common(&path, mode);
+		path_put(&path);
+	}
+	return error;
+}
+
+SYSCALL_DEFINE2(chmod, const char __user *, filename, umode_t, mode)
 {
 	return sys_fchmodat(AT_FDCWD, filename, mode);
 }
@@ -514,15 +506,24 @@ static int chown_common(struct path *path, uid_t user, gid_t group)
 	struct inode *inode = path->dentry->d_inode;
 	int error;
 	struct iattr newattrs;
+	kuid_t uid;
+	kgid_t gid;
+
+	uid = make_kuid(current_user_ns(), user);
+	gid = make_kgid(current_user_ns(), group);
 
 	newattrs.ia_valid =  ATTR_CTIME;
 	if (user != (uid_t) -1) {
+		if (!uid_valid(uid))
+			return -EINVAL;
 		newattrs.ia_valid |= ATTR_UID;
-		newattrs.ia_uid = user;
+		newattrs.ia_uid = uid;
 	}
 	if (group != (gid_t) -1) {
+		if (!gid_valid(gid))
+			return -EINVAL;
 		newattrs.ia_valid |= ATTR_GID;
-		newattrs.ia_gid = group;
+		newattrs.ia_gid = gid;
 	}
 	if (!S_ISDIR(inode->i_mode))
 		newattrs.ia_valid |=
@@ -560,13 +561,15 @@ SYSCALL_DEFINE5(fchownat, int, dfd, const char __user *, filename, uid_t, user,
 {
 	struct path path;
 	int error = -EINVAL;
-	int follow;
+	int lookup_flags;
 
-	if ((flag & ~AT_SYMLINK_NOFOLLOW) != 0)
+	if ((flag & ~(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH)) != 0)
 		goto out;
 
-	follow = (flag & AT_SYMLINK_NOFOLLOW) ? 0 : LOOKUP_FOLLOW;
-	error = user_path_at(dfd, filename, follow, &path);
+	lookup_flags = (flag & AT_SYMLINK_NOFOLLOW) ? 0 : LOOKUP_FOLLOW;
+	if (flag & AT_EMPTY_PATH)
+		lookup_flags |= LOOKUP_EMPTY;
+	error = user_path_at(dfd, filename, lookup_flags, &path);
 	if (error)
 		goto out;
 	error = mnt_want_write(path.mnt);
@@ -615,7 +618,7 @@ SYSCALL_DEFINE3(fchown, unsigned int, fd, uid_t, user, gid_t, group)
 	dentry = file->f_path.dentry;
 	audit_inode(NULL, dentry);
 	error = chown_common(&file->f_path, user, group);
-	mnt_drop_write(file->f_path.mnt);
+	mnt_drop_write_file(file);
 out_fput:
 	fput(file);
 out:
@@ -651,16 +654,34 @@ static inline int __get_file_write_access(struct inode *inode,
 	return error;
 }
 
-static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
-					struct file *f,
-					int (*open)(struct inode *, struct file *),
-					const struct cred *cred)
+int open_check_o_direct(struct file *f)
 {
+	/* NB: we're sure to have correct a_ops only after f_op->open */
+	if (f->f_flags & O_DIRECT) {
+		if (!f->f_mapping->a_ops ||
+		    ((!f->f_mapping->a_ops->direct_IO) &&
+		    (!f->f_mapping->a_ops->get_xip_mem))) {
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+static struct file *do_dentry_open(struct dentry *dentry, struct vfsmount *mnt,
+				   struct file *f,
+				   int (*open)(struct inode *, struct file *),
+				   const struct cred *cred)
+{
+	static const struct file_operations empty_fops = {};
 	struct inode *inode;
 	int error;
 
 	f->f_mode = OPEN_FMODE(f->f_flags) | FMODE_LSEEK |
 				FMODE_PREAD | FMODE_PWRITE;
+
+	if (unlikely(f->f_flags & O_PATH))
+		f->f_mode = FMODE_PATH;
+
 	inode = dentry->d_inode;
 	if (f->f_mode & FMODE_WRITE) {
 		error = __get_file_write_access(inode, mnt);
@@ -674,10 +695,20 @@ static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
 	f->f_path.dentry = dentry;
 	f->f_path.mnt = mnt;
 	f->f_pos = 0;
-	f->f_op = fops_get(inode->i_fop);
 	file_sb_list_add(f, inode->i_sb);
 
-	error = security_dentry_open(f, cred);
+	if (unlikely(f->f_mode & FMODE_PATH)) {
+		f->f_op = &empty_fops;
+		return f;
+	}
+
+	f->f_op = fops_get(inode->i_fop);
+
+	error = security_file_open(f, cred);
+	if (error)
+		goto cleanup_all;
+
+	error = break_lease(inode, f->f_flags);
 	if (error)
 		goto cleanup_all;
 
@@ -688,21 +719,12 @@ static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
 		if (error)
 			goto cleanup_all;
 	}
-	ima_counts_get(f);
+	if ((f->f_mode & (FMODE_READ | FMODE_WRITE)) == FMODE_READ)
+		i_readcount_inc(inode);
 
 	f->f_flags &= ~(O_CREAT | O_EXCL | O_NOCTTY | O_TRUNC);
 
 	file_ra_state_init(&f->f_ra, f->f_mapping->host->i_mapping);
-
-	/* NB: we're sure to have correct a_ops only after f_op->open */
-	if (f->f_flags & O_DIRECT) {
-		if (!f->f_mapping->a_ops ||
-		    ((!f->f_mapping->a_ops->direct_IO) &&
-		    (!f->f_mapping->a_ops->get_xip_mem))) {
-			fput(f);
-			f = ERR_PTR(-EINVAL);
-		}
-	}
 
 	return f;
 
@@ -725,10 +747,27 @@ cleanup_all:
 	f->f_path.dentry = NULL;
 	f->f_path.mnt = NULL;
 cleanup_file:
-	put_filp(f);
 	dput(dentry);
 	mntput(mnt);
 	return ERR_PTR(error);
+}
+
+static struct file *__dentry_open(struct dentry *dentry, struct vfsmount *mnt,
+				struct file *f,
+				int (*open)(struct inode *, struct file *),
+				const struct cred *cred)
+{
+	struct file *res = do_dentry_open(dentry, mnt, f, open, cred);
+	if (!IS_ERR(res)) {
+		int error = open_check_o_direct(f);
+		if (error) {
+			fput(res);
+			res = ERR_PTR(error);
+		}
+	} else {
+		put_filp(f);
+	}
+	return res;
 }
 
 /**
@@ -766,7 +805,7 @@ out:
 	return nd->intent.open.file;
 out_err:
 	release_open_intent(nd);
-	nd->intent.open.file = (struct file *)dentry;
+	nd->intent.open.file = ERR_CAST(dentry);
 	goto out;
 }
 EXPORT_SYMBOL_GPL(lookup_instantiate_filp);
@@ -785,11 +824,31 @@ struct file *nameidata_to_filp(struct nameidata *nd)
 
 	/* Pick up the filp from the open intent */
 	filp = nd->intent.open.file;
+
 	/* Has the filesystem initialised the file for us? */
-	if (filp->f_path.dentry == NULL) {
+	if (filp->f_path.dentry != NULL) {
+		nd->intent.open.file = NULL;
+	} else {
+		struct file *res;
+
 		path_get(&nd->path);
-		filp = __dentry_open(nd->path.dentry, nd->path.mnt, filp,
-				     NULL, cred);
+		res = do_dentry_open(nd->path.dentry, nd->path.mnt,
+				     filp, NULL, cred);
+		if (!IS_ERR(res)) {
+			int error;
+
+			nd->intent.open.file = NULL;
+			BUG_ON(res != filp);
+
+			error = open_check_o_direct(filp);
+			if (error) {
+				fput(filp);
+				filp = ERR_PTR(error);
+			}
+		} else {
+			/* Allow nd->intent.open.file to be recycled */
+			filp = res;
+		}
 	}
 	return filp;
 }
@@ -806,17 +865,8 @@ struct file *dentry_open(struct dentry *dentry, struct vfsmount *mnt, int flags,
 
 	validate_creds(cred);
 
-	/*
-	 * We must always pass in a valid mount pointer.   Historically
-	 * callers got away with not passing it, but we must enforce this at
-	 * the earliest possible point now to avoid strange problems deep in the
-	 * filesystem stack.
-	 */
-	if (!mnt) {
-		printk(KERN_WARNING "%s called with NULL vfsmount\n", __func__);
-		dump_stack();
-		return ERR_PTR(-EINVAL);
-	}
+	/* We must always pass in a valid mount pointer. */
+	BUG_ON(!mnt);
 
 	error = -ENFILE;
 	f = get_empty_filp();
@@ -834,7 +884,7 @@ EXPORT_SYMBOL(dentry_open);
 static void __put_unused_fd(struct files_struct *files, unsigned int fd)
 {
 	struct fdtable *fdt = files_fdtable(files);
-	__FD_CLR(fd, fdt->open_fds);
+	__clear_open_fd(fd, fdt);
 	if (fd < files->next_fd)
 		files->next_fd = fd;
 }
@@ -875,15 +925,110 @@ void fd_install(unsigned int fd, struct file *file)
 
 EXPORT_SYMBOL(fd_install);
 
-long do_sys_open(int dfd, const char __user *filename, int flags, int mode)
+static inline int build_open_flags(int flags, umode_t mode, struct open_flags *op)
 {
+	int lookup_flags = 0;
+	int acc_mode;
+
+	if (!(flags & O_CREAT))
+		mode = 0;
+	op->mode = mode;
+
+	/* Must never be set by userspace */
+	flags &= ~FMODE_NONOTIFY;
+
+	/*
+	 * O_SYNC is implemented as __O_SYNC|O_DSYNC.  As many places only
+	 * check for O_DSYNC if the need any syncing at all we enforce it's
+	 * always set instead of having to deal with possibly weird behaviour
+	 * for malicious applications setting only __O_SYNC.
+	 */
+	if (flags & __O_SYNC)
+		flags |= O_DSYNC;
+
+	/*
+	 * If we have O_PATH in the open flag. Then we
+	 * cannot have anything other than the below set of flags
+	 */
+	if (flags & O_PATH) {
+		flags &= O_DIRECTORY | O_NOFOLLOW | O_PATH;
+		acc_mode = 0;
+	} else {
+		acc_mode = MAY_OPEN | ACC_MODE(flags);
+	}
+
+	op->open_flag = flags;
+
+	/* O_TRUNC implies we need access checks for write permissions */
+	if (flags & O_TRUNC)
+		acc_mode |= MAY_WRITE;
+
+	/* Allow the LSM permission hook to distinguish append
+	   access from general write access. */
+	if (flags & O_APPEND)
+		acc_mode |= MAY_APPEND;
+
+	op->acc_mode = acc_mode;
+
+	op->intent = flags & O_PATH ? 0 : LOOKUP_OPEN;
+
+	if (flags & O_CREAT) {
+		op->intent |= LOOKUP_CREATE;
+		if (flags & O_EXCL)
+			op->intent |= LOOKUP_EXCL;
+	}
+
+	if (flags & O_DIRECTORY)
+		lookup_flags |= LOOKUP_DIRECTORY;
+	if (!(flags & O_NOFOLLOW))
+		lookup_flags |= LOOKUP_FOLLOW;
+	return lookup_flags;
+}
+
+/**
+ * filp_open - open file and return file pointer
+ *
+ * @filename:	path to open
+ * @flags:	open flags as per the open(2) second argument
+ * @mode:	mode for the new file if O_CREAT is set, else ignored
+ *
+ * This is the helper to open a file from kernelspace if you really
+ * have to.  But in generally you should not do this, so please move
+ * along, nothing to see here..
+ */
+struct file *filp_open(const char *filename, int flags, umode_t mode)
+{
+	struct open_flags op;
+	int lookup = build_open_flags(flags, mode, &op);
+	return do_filp_open(AT_FDCWD, filename, &op, lookup);
+}
+EXPORT_SYMBOL(filp_open);
+
+struct file *file_open_root(struct dentry *dentry, struct vfsmount *mnt,
+			    const char *filename, int flags)
+{
+	struct open_flags op;
+	int lookup = build_open_flags(flags, 0, &op);
+	if (flags & O_CREAT)
+		return ERR_PTR(-EINVAL);
+	if (!filename && (flags & O_DIRECTORY))
+		if (!dentry->d_inode->i_op->lookup)
+			return ERR_PTR(-ENOTDIR);
+	return do_file_open_root(dentry, mnt, filename, &op, lookup);
+}
+EXPORT_SYMBOL(file_open_root);
+
+long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
+{
+	struct open_flags op;
+	int lookup = build_open_flags(flags, mode, &op);
 	char *tmp = getname(filename);
 	int fd = PTR_ERR(tmp);
 
 	if (!IS_ERR(tmp)) {
 		fd = get_unused_fd_flags(flags);
 		if (fd >= 0) {
-			struct file *f = do_filp_open(dfd, tmp, flags, mode, 0);
+			struct file *f = do_filp_open(dfd, tmp, &op, lookup);
 			if (IS_ERR(f)) {
 				put_unused_fd(fd);
 				fd = PTR_ERR(f);
@@ -897,7 +1042,7 @@ long do_sys_open(int dfd, const char __user *filename, int flags, int mode)
 	return fd;
 }
 
-SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, int, mode)
+SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, umode_t, mode)
 {
 	long ret;
 
@@ -911,7 +1056,7 @@ SYSCALL_DEFINE3(open, const char __user *, filename, int, flags, int, mode)
 }
 
 SYSCALL_DEFINE4(openat, int, dfd, const char __user *, filename, int, flags,
-		int, mode)
+		umode_t, mode)
 {
 	long ret;
 
@@ -930,7 +1075,7 @@ SYSCALL_DEFINE4(openat, int, dfd, const char __user *, filename, int, flags,
  * For backward compatibility?  Maybe this should be moved
  * into arch/i386 instead?
  */
-SYSCALL_DEFINE2(creat, const char __user *, pathname, int, mode)
+SYSCALL_DEFINE2(creat, const char __user *, pathname, umode_t, mode)
 {
 	return sys_open(pathname, O_CREAT | O_WRONLY | O_TRUNC, mode);
 }
@@ -953,8 +1098,10 @@ int filp_close(struct file *filp, fl_owner_t id)
 	if (filp->f_op && filp->f_op->flush)
 		retval = filp->f_op->flush(filp, id);
 
-	dnotify_flush(filp, id);
-	locks_remove_posix(filp, id);
+	if (likely(!(filp->f_mode & FMODE_PATH))) {
+		dnotify_flush(filp, id);
+		locks_remove_posix(filp, id);
+	}
 	fput(filp);
 	return retval;
 }
@@ -981,7 +1128,7 @@ SYSCALL_DEFINE1(close, unsigned int, fd)
 	if (!filp)
 		goto out_unlock;
 	rcu_assign_pointer(fdt->fd[fd], NULL);
-	FD_CLR(fd, fdt->close_on_exec);
+	__clear_close_on_exec(fd, fdt);
 	__put_unused_fd(files, fd);
 	spin_unlock(&files->file_lock);
 	retval = filp_close(filp, files);

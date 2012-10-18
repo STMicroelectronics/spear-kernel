@@ -114,8 +114,8 @@ int kvm_irq_delivery_to_apic(struct kvm *kvm, struct kvm_lapic *src,
 	return r;
 }
 
-static int kvm_set_msi(struct kvm_kernel_irq_routing_entry *e,
-		       struct kvm *kvm, int irq_source_id, int level)
+int kvm_set_msi(struct kvm_kernel_irq_routing_entry *e,
+		struct kvm *kvm, int irq_source_id, int level)
 {
 	struct kvm_lapic_irq irq;
 
@@ -136,6 +136,20 @@ static int kvm_set_msi(struct kvm_kernel_irq_routing_entry *e,
 
 	/* TODO Deal with RH bit of MSI message address */
 	return kvm_irq_delivery_to_apic(kvm, NULL, &irq);
+}
+
+int kvm_send_userspace_msi(struct kvm *kvm, struct kvm_msi *msi)
+{
+	struct kvm_kernel_irq_routing_entry route;
+
+	if (!irqchip_in_kernel(kvm) || msi->flags != 0)
+		return -EINVAL;
+
+	route.msi.address_lo = msi->address_lo;
+	route.msi.address_hi = msi->address_hi;
+	route.msi.data = msi->data;
+
+	return kvm_set_msi(&route, kvm, KVM_USERSPACE_IRQ_SOURCE_ID, 1);
 }
 
 /*
@@ -318,6 +332,7 @@ static int setup_routing_entry(struct kvm_irq_routing_table *rt,
 	 */
 	hlist_for_each_entry(ei, n, &rt->map[ue->gsi], link)
 		if (ei->type == KVM_IRQ_ROUTING_MSI ||
+		    ue->type == KVM_IRQ_ROUTING_MSI ||
 		    ue->u.irqchip.irqchip == ei->irqchip.irqchip)
 			return r;
 
@@ -409,8 +424,9 @@ int kvm_set_irq_routing(struct kvm *kvm,
 
 	mutex_lock(&kvm->irq_lock);
 	old = kvm->irq_routing;
-	rcu_assign_pointer(kvm->irq_routing, new);
+	kvm_irq_routing_update(kvm, new);
 	mutex_unlock(&kvm->irq_lock);
+
 	synchronize_rcu();
 
 	new = old;

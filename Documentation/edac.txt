@@ -311,7 +311,7 @@ Total Correctable Errors count attribute file:
 	'ce_noinfo_count'
 
 	This attribute file displays the number of CEs that
-	have occurred wherewith no informations as to which DIMM slot
+	have occurred wherewith no information as to which DIMM slot
 	is having errors. Memory is handicapped, but operational,
 	yet no information is available to indicate which slot
 	the failing memory is in. This count field should be also
@@ -334,8 +334,8 @@ Sdram memory scrubbing rate:
 
 	Reading the file will return the actual scrubbing rate employed.
 
-	If configuration fails or memory scrubbing is not implemented, the value
-	of the attribute file will be -1.
+	If configuration fails or memory scrubbing is not implemented, accessing
+	that attribute will fail.
 
 
 
@@ -734,14 +734,14 @@ were done at i7core_edac driver. This chapter will cover those differences
    associated with a physical CPU socket.
 
    Each MC have 3 physical read channels, 3 physical write channels and
-   3 logic channels. The driver currenty sees it as just 3 channels.
+   3 logic channels. The driver currently sees it as just 3 channels.
    Each channel can have up to 3 DIMMs.
 
    The minimum known unity is DIMMs. There are no information about csrows.
    As EDAC API maps the minimum unity is csrows, the driver sequencially
    maps channel/dimm into different csrows.
 
-   For example, suposing the following layout:
+   For example, supposing the following layout:
 	Ch0 phy rd0, wr0 (0x063f4031): 2 ranks, UDIMMs
 	  dimm 0 1024 Mb offset: 0, bank: 8, rank: 1, row: 0x4000, col: 0x400
 	  dimm 1 1024 Mb offset: 4, bank: 8, rank: 1, row: 0x4000, col: 0x400

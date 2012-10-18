@@ -88,20 +88,19 @@ you might want to raise the limit.
 
 file-max & file-nr:
 
-The kernel allocates file handles dynamically, but as yet it
-doesn't free them again.
-
 The value in file-max denotes the maximum number of file-
 handles that the Linux kernel will allocate. When you get lots
 of error messages about running out of file handles, you might
 want to increase this limit.
 
-Historically, the three values in file-nr denoted the number of
-allocated file handles, the number of allocated but unused file
-handles, and the maximum number of file handles. Linux 2.6 always
-reports 0 as the number of free file handles -- this is not an
-error, it just means that the number of allocated file handles
-exactly matches the number of used file handles.
+Historically,the kernel was able to allocate file handles
+dynamically, but not to free them again. The three values in
+file-nr denote the number of allocated file handles, the number
+of allocated but unused file handles, and the maximum number of
+file handles. Linux 2.6 always reports 0 as the number of free
+file handles -- this is not an error, it just means that the
+number of allocated file handles exactly matches the number of
+used file handles.
 
 Attempts to allocate more file descriptors than file-max are
 reported with printk, look for "VFS: file-max limit <number>
@@ -226,18 +225,18 @@ a queue must be less or equal then msg_max.
 maximum  message size value (it is every  message queue's attribute set during
 its creation).
 
+/proc/sys/fs/mqueue/msg_default is  a read/write  file for setting/getting the
+default number of messages in a queue value if attr parameter of mq_open(2) is
+NULL. If it exceed msg_max, the default value is initialized msg_max.
+
+/proc/sys/fs/mqueue/msgsize_default is a read/write file for setting/getting
+the default message size value if attr parameter of mq_open(2) is NULL. If it
+exceed msgsize_max, the default value is initialized msgsize_max.
 
 4. /proc/sys/fs/epoll - Configuration options for the epoll interface
 --------------------------------------------------------
 
 This directory contains configuration options for the epoll(7) interface.
-
-max_user_instances
-------------------
-
-This is the maximum number of epoll file descriptors that a single user can
-have open at a given time. The default value is 128, and should be enough
-for normal users.
 
 max_user_watches
 ----------------

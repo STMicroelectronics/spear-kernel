@@ -3,8 +3,8 @@
  *
  * SPEAr3xx Machine family specific architecture functions
  *
- * Copyright (C) 2009 ST Microelectronics
- * Viresh Kumar<viresh.kumar@st.com>
+ * Copyright (C) 2012 ST Microelectronics
+ * Deepak Sikri <deepak.sikri@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any

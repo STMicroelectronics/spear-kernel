@@ -39,6 +39,9 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/slab.h>
+#include <linux/v4l2-mediabus.h>
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
@@ -127,15 +130,15 @@ enum camif_transformation {
 #define CAM_IF_VERSION_CODE	KERNEL_VERSION(0, 0, 1)
 
 /* camif bus capabilities */
-#define CAM_IF_BUS_FLAGS	(SOCAM_MASTER | SOCAM_DATAWIDTH_8 |	\
-				SOCAM_HSYNC_ACTIVE_HIGH |		\
-				SOCAM_HSYNC_ACTIVE_LOW |		\
-				SOCAM_VSYNC_ACTIVE_HIGH |		\
-				SOCAM_VSYNC_ACTIVE_LOW |		\
-				SOCAM_PCLK_SAMPLE_RISING |		\
-				SOCAM_PCLK_SAMPLE_FALLING |		\
-				SOCAM_DATA_ACTIVE_HIGH |		\
-				SOCAM_DATA_ACTIVE_LOW)
+#define CAM_IF_BUS_FLAGS	(V4L2_MBUS_MASTER |			\
+				V4L2_MBUS_HSYNC_ACTIVE_HIGH |		\
+				V4L2_MBUS_HSYNC_ACTIVE_LOW |		\
+				V4L2_MBUS_VSYNC_ACTIVE_HIGH |		\
+				V4L2_MBUS_VSYNC_ACTIVE_LOW |		\
+				V4L2_MBUS_PCLK_SAMPLE_RISING |		\
+				V4L2_MBUS_PCLK_SAMPLE_FALLING |		\
+				V4L2_MBUS_DATA_ACTIVE_HIGH |		\
+				V4L2_MBUS_DATA_ACTIVE_LOW)
 
 /* crop masks */
 #define CROP_V_MASK(a)		(((a) & 0xffff) << 15)
@@ -282,7 +285,7 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 	},
 
 	/* 3-byte RGB-888 received -> 4-byte RGBa stored */
-	[V4L2_MBUS_FMT_RGB888_2X8_LE] = {
+	[V4L2_MBUS_FMT_RGB24_2X8_LE] = {
 		.fourcc			= V4L2_PIX_FMT_RGB32,
 		.name			= "RGBa 32 bit",
 		.bits_per_sample	= 8,
@@ -290,7 +293,7 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 		.order			= SOC_MBUS_ORDER_LE,
 	},
 	/* 3-byte BGR-888 received -> 4-byte BGRa stored */
-	[V4L2_MBUS_FMT_BGR888_2X8_LE] = {
+	[V4L2_MBUS_FMT_BGR24_2X8_LE] = {
 		.fourcc			= V4L2_PIX_FMT_BGR32,
 		.name			= "BGRa 32 bit",
 		.bits_per_sample	= 8,
@@ -550,7 +553,7 @@ static void camif_set_hw_recovery_state(struct camif *camif)
 	camif->hw_workaround_applied = true;
 }
 
-/* Start/Resume CAMIF functionality and DMA transfers */
+/* Start CAMIF functionality and DMA transfers */
 static void camif_start_capture(struct camif *camif,
 			enum camif_power_state state)
 {
@@ -562,7 +565,7 @@ static void camif_start_capture(struct camif *camif,
 	camif_module_enable(camif, true);
 
 	/* enable CAMIF clk */
-	clk_enable(camif->clk);
+	clk_prepare_enable(camif->clk);
 
 	/* reset global flags */
 	camif->first_frame_end = true;
@@ -594,6 +597,10 @@ static void camif_start_capture(struct camif *camif,
 		 * interrupts after QBUF call from user-space
 		 */
 		camif_configure_interrupts(camif, DISABLE_ALL);
+
+		/* change state to running */
+		camif->is_running = true;
+
 		break;
 	case CAMIF_RESUME:
 		/* restore saved CAMIF registers */
@@ -610,15 +617,13 @@ static void camif_start_capture(struct camif *camif,
 		if (camif->cur_frm)
 			camif_configure_interrupts(camif, ENABLE_FRAME_END_INT);
 		break;
+
 	default:
 		break;
 	}
-
-	/* change state to running */
-	camif->is_running = true;
 }
 
-/* Stop/Suspend CAMIF functionality and DMA transfers */
+/* Stop CAMIF functionality and DMA transfers */
 static void camif_stop_capture(struct camif *camif,
 			enum camif_power_state state)
 {
@@ -635,7 +640,10 @@ static void camif_stop_capture(struct camif *camif,
 			dmaengine_terminate_all(camif->chan);
 			dma_release_channel(camif->chan);
 		}
+		/* change state to stopped */
+		camif->is_running = false;
 		break;
+
 	case CAMIF_SUSPEND:
 		/*
 		 * Save copies of CAMIF registers only if
@@ -652,6 +660,7 @@ static void camif_stop_capture(struct camif *camif,
 		if (camif->chan)
 			dmaengine_terminate_all(camif->chan);
 		break;
+
 	default:
 		break;
 	}
@@ -668,13 +677,10 @@ static void camif_stop_capture(struct camif *camif,
 	 * states
 	 */
 	/* disable CAMIF clk */
-	clk_disable(camif->clk);
+	clk_disable_unprepare(camif->clk);
 
 	/* turn off camif module */
 	camif_module_enable(camif, false);
-
-	/* change state to stopped */
-	camif->is_running = false;
 }
 
 /*
@@ -685,6 +691,7 @@ static void camif_do_idle(unsigned long arg)
 {
 	struct camif *camif = (struct camif *)arg;
 	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
@@ -703,6 +710,7 @@ static void camif_do_idle(unsigned long arg)
 
 		while (!list_empty(&camif->dma_queue)) {
 			vb = &camif->cur_frm->vb;
+			buf = container_of(vb, struct camif_buffer, vb);
 			vb->state = VIDEOBUF_ERROR;
 			do_gettimeofday(&vb->ts);
 
@@ -819,7 +827,7 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 		camif->chan->device->device_prep_slave_sg(
 				camif->chan,
 				dma->sglist, dma->sglen, direction,
-				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK, "sg");
 	if (!buf->desc) {
 		dev_err(camif->ici.v4l2_dev.dev,
 				"%s: buf->desc is NULL\n", __func__);
@@ -866,6 +874,8 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 	int status_reg;
 	unsigned long flags;
 	struct camif *camif = (struct camif *)dev_id;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
 
 	status_reg = readl(camif->base + CAMIF_STATUS);
 	if (!status_reg)
@@ -891,6 +901,9 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 		camif->cur_frm =
 			list_first_entry(&camif->dma_queue,
 					struct camif_buffer, vb.queue);
+
+		vb = &camif->cur_frm->vb;
+		buf = container_of(vb, struct camif_buffer, vb);
 
 		/* mark state of the current frame to active */
 		camif->cur_frm->vb.state = VIDEOBUF_ACTIVE;
@@ -925,7 +938,7 @@ static void free_buffer(struct videobuf_queue *vq, struct camif_buffer *buf)
 
 	BUG_ON(in_interrupt());
 
-	dev_dbg(icd->dev.parent, "(vb=0x%p) 0x%08lx %d\n",
+	dev_dbg(icd->parent, "(vb=0x%p) 0x%08lx %d\n",
 			&buf->vb, buf->vb.baddr, buf->vb.bsize);
 
 	vb->state = VIDEOBUF_DONE;
@@ -963,7 +976,7 @@ static int camif_videobuf_setup(struct videobuf_queue *vq,
 	if (*size * *count > MAX_VIDEO_MEM * 1024 * 1024)
 		*count = (MAX_VIDEO_MEM * 1024 * 1024) / *size;
 
-	dev_dbg(icd->dev.parent, "count=%d, size=%d\n", *count, *size);
+	dev_dbg(icd->parent, "count=%d, size=%d\n", *count, *size);
 
 	return 0;
 }
@@ -973,7 +986,7 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 {
 	int ret;
 	struct soc_camera_device *icd = vq->priv_data;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 	struct device *dev = camif->ici.v4l2_dev.dev;
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
@@ -1042,11 +1055,11 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	int ret;
 	dma_cookie_t cookie;
 	struct soc_camera_device *icd = vq->priv_data;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 	struct camif *camif = ici->priv;
 
-	dev_dbg(icd->dev.parent, "%s (vb=0x%p) 0x%08lx %d\n",
+	dev_dbg(icd->parent, "%s (vb=0x%p) 0x%08lx %d\n",
 		__func__, vb, vb->baddr, vb->bsize);
 
 	/* add the buffer to the DMA queue */
@@ -1061,7 +1074,7 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	 */
 	ret = camif_init_dma_channel(camif, buf);
 	if (ret) {
-		dev_err(icd->dev.parent,
+		dev_err(icd->parent,
 				"DMA initialization failed\n");
 		return;
 	}
@@ -1070,7 +1083,7 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	cookie = buf->desc->tx_submit(buf->desc);
 	ret = dma_submit_error(cookie);
 	if (ret) {
-		dev_err(icd->dev.parent,
+		dev_err(icd->parent,
 				"dma submit error %d\n", cookie);
 		return;
 	}
@@ -1106,7 +1119,7 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 				 struct videobuf_buffer *vb)
 {
 	struct soc_camera_device *icd = vq->priv_data;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
 	struct camif *camif = ici->priv;
 	unsigned long flags;
@@ -1149,7 +1162,7 @@ static struct videobuf_queue_ops camif_videobuf_ops = {
  */
 static int camif_add_device(struct soc_camera_device *icd)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 
 	/* camif can manage a single camera at one time */
@@ -1163,7 +1176,7 @@ static int camif_add_device(struct soc_camera_device *icd)
 
 	camif_start_capture(camif, CAMIF_BRINGUP);
 
-	dev_info(icd->dev.parent, "SPEAr Camera driver attached to camera %d\n",
+	dev_info(icd->parent, "SPEAr Camera driver attached to camera %d\n",
 		 icd->devnum);
 
 	return 0;
@@ -1172,7 +1185,7 @@ static int camif_add_device(struct soc_camera_device *icd)
 /* Called with .video_lock held */
 static void camif_remove_device(struct soc_camera_device *icd)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 
 	BUG_ON(icd != camif->icd);
@@ -1180,17 +1193,62 @@ static void camif_remove_device(struct soc_camera_device *icd)
 	/* put CAMIF in SHUTDOWN state */
 	camif_stop_capture(camif, CAMIF_SHUTDOWN);
 
-	dev_info(icd->dev.parent,
+	dev_info(icd->parent,
 		"SPEAr Camera driver detached from camera %d\n", icd->devnum);
 
 	camif->icd = NULL;
+}
+
+static int camif_test_param(struct camif *camif,
+			       unsigned char buswidth, unsigned long *flags)
+{
+	/*
+	 * If requested data width is not supported by the platform,
+	 * exit with error
+	 */
+	if (!((1 << (buswidth - 1)) & SOCAM_DATAWIDTH_8))
+		return -EINVAL;
+
+	*flags = CAM_IF_BUS_FLAGS;
+
+	return 0;
+}
+
+static int camif_try_bus_param(struct soc_camera_device *icd,
+					unsigned char buswidth)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+	struct camif *camif = ici->priv;
+	struct v4l2_mbus_config cfg = {.type = V4L2_MBUS_PARALLEL,};
+	unsigned long bus_flags, common_flags;
+	int ret = camif_test_param(camif, buswidth, &bus_flags);
+
+	if (ret < 0)
+		return ret;
+
+	ret = v4l2_subdev_call(sd, video, g_mbus_config, &cfg);
+	if (!ret) {
+		common_flags = soc_mbus_config_compatible(&cfg,
+							  bus_flags);
+		if (!common_flags) {
+			dev_warn(icd->parent,
+				 "Flags incompatible: camera 0x%x, host 0x%lx\n",
+				 cfg.flags, bus_flags);
+			return -EINVAL;
+		}
+	} else if (ret == -ENOIOCTLCMD) {
+		ret = 0;
+	}
+
+	return ret;
 }
 
 static int camif_get_formats(struct soc_camera_device *icd, unsigned int idx,
 				struct soc_camera_format_xlate *xlate)
 {
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	int formats = 0, ret;
 	enum v4l2_mbus_pixelcode code;
 	const struct soc_mbus_pixelfmt *fmt;
@@ -1206,9 +1264,14 @@ static int camif_get_formats(struct soc_camera_device *icd, unsigned int idx,
 		return 0;
 	}
 
+	/* This also checks support for the requested bits-per-sample */
+	ret = camif_try_bus_param(icd, fmt->bits_per_sample);
+	if (ret < 0)
+		return 0;
+
 	switch (code) {
-	case V4L2_MBUS_FMT_RGB888_2X8_LE:
-	case V4L2_MBUS_FMT_BGR888_2X8_LE:
+	case V4L2_MBUS_FMT_RGB24_2X8_LE:
+	case V4L2_MBUS_FMT_BGR24_2X8_LE:
 		formats++;
 		if (xlate) {
 			xlate->host_fmt	= &camif_formats[code];
@@ -1280,7 +1343,7 @@ static int camif_change_dma_settings(struct camif *camif, u32 bytesperline)
 		 * CAMIF will stall while performing a SREQ, so
 		 * we need to warn the user and return an error here
 		 */
-		dev_err(camif->icd->dev.parent,
+		dev_err(camif->icd->parent,
 				"CAMIF cannot support SINGLE DMA requests "
 				"program a different resolution\n");
 
@@ -1321,7 +1384,7 @@ out:
 static int camif_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
 	struct v4l2_rect *rect = &crop->c;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 	int ret = 0;
 
@@ -1384,7 +1447,7 @@ static int camif_cropcap(struct soc_camera_device *icd,
 				struct v4l2_cropcap *crop)
 {
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	int ret;
 
 	/* try to check if the sub-device supports cropcap */
@@ -1419,9 +1482,9 @@ out:
  */
 static int camif_get_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	struct camif *camif = ici->priv;
 	int ret;
 
@@ -1459,7 +1522,7 @@ out:
 static int camif_set_crop(struct soc_camera_device *icd, struct v4l2_crop *crop)
 {
 	struct v4l2_rect *rect = &crop->c;
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct v4l2_mbus_framefmt mf;
 	int ret;
@@ -1525,9 +1588,9 @@ out:
 
 static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 {
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 	const struct soc_camera_format_xlate *xlate = NULL;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
@@ -1545,7 +1608,7 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 
 	ctrl = readl(camif->base + CAMIF_CTRL);
 	switch (xlate->code) {
-	case V4L2_MBUS_FMT_RGB888_2X8_LE:
+	case V4L2_MBUS_FMT_RGB24_2X8_LE:
 		ctrl |= CTRL_IF_TRANS(RGB888);
 		break;
 	case V4L2_MBUS_FMT_RGB444_2X8_PADHI_BE:
@@ -1590,7 +1653,7 @@ static int camif_set_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 		break;
 	default:
 		/* TODO: support interlaced at least in pass-through mode */
-		dev_warn(icd->dev.parent, "field type %d unsupported, "
+		dev_warn(icd->parent, "field type %d unsupported, "
 				"resorting to the default PROGRESSIVE mode\n",
 				mf.field);
 		pix->field = V4L2_FIELD_NONE;
@@ -1645,7 +1708,7 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 
 	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
 	if (!xlate) {
-		dev_warn(icd->dev.parent, "format %x not found\n", pixfmt);
+		dev_warn(icd->parent, "format %x not found\n", pixfmt);
 		return -EINVAL;
 	}
 
@@ -1678,7 +1741,7 @@ static int camif_try_fmt(struct soc_camera_device *icd, struct v4l2_format *f)
 		break;
 	default:
 		/* TODO: support interlaced at least in pass-through mode */
-		dev_warn(icd->dev.parent, "field type %d unsupported, "
+		dev_warn(icd->parent, "field type %d unsupported, "
 				"resorting to the default PROGRESSIVE mode\n",
 				mf.field);
 		pix->field = V4L2_FIELD_NONE;
@@ -1706,7 +1769,7 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 		struct soc_camera_device *icd)
 {
 	dma_cap_mask_t mask;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 
 	/* dma related settings */
@@ -1726,7 +1789,7 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 		camif->chan = dma_request_channel(mask,
 			camif->pdata->dma_filter, camif->pdata->dma_even_param);
 		if (!camif->chan) {
-			dev_err(icd->dev.parent,
+			dev_err(icd->parent,
 				"unable to get DMA channel for even lines\n");
 			return;
 		}
@@ -1737,12 +1800,12 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 		 * not supported as of now, warn and return to default
 		 * 'even line' _only_ settings
 		 */
-		dev_warn(icd->dev.parent, "Interlaced fields are not supported"
+		dev_warn(icd->parent, "Interlaced fields are not supported"
 				"defaulting to even line settings\n");
 		camif->chan = dma_request_channel(mask,
 			camif->pdata->dma_filter, camif->pdata->dma_even_param);
 		if (!camif->chan) {
-			dev_err(icd->dev.parent,
+			dev_err(icd->parent,
 				"unable to get DMA channel for even lines\n");
 			return;
 		}
@@ -1751,7 +1814,7 @@ static void camif_init_videobuf(struct videobuf_queue *q,
 
 	dmaengine_slave_config(camif->chan, (void *) &dma_conf);
 
-	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->dev.parent,
+	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->parent,
 			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
 			camif->fmt.fmt.pix.field, sizeof(struct camif_buffer),
 			icd, NULL);
@@ -1789,53 +1852,88 @@ static int camif_querycap(struct soc_camera_host *ici,
 	return 0;
 }
 
-static void camif_setup_ctrl(struct soc_camera_device *icd,
-		unsigned long flags, __u32 pixfmt)
+static void camif_setup_ctrl(struct soc_camera_device *icd, unsigned long flags)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
 	u32 ctrl;
 
 	ctrl = readl(camif->base + CAMIF_CTRL);
 	ctrl |= CTRL_VS_POL_HI | CTRL_HS_POL_HI;
 
-	if (flags & SOCAM_PCLK_SAMPLE_FALLING)
+	if (flags & V4L2_MBUS_PCLK_SAMPLE_FALLING)
 		ctrl &= ~CTRL_PCK_POL_HI;
-	if (flags & SOCAM_HSYNC_ACTIVE_LOW)
+	if (flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
 		ctrl &= ~CTRL_HS_POL_HI;
-	if (flags & SOCAM_VSYNC_ACTIVE_LOW)
+	if (flags & V4L2_MBUS_VSYNC_ACTIVE_LOW)
 		ctrl &= ~CTRL_VS_POL_HI;
 
 	writel(ctrl, camif->base + CAMIF_CTRL);
 }
 
-static int camif_set_bus_param(struct soc_camera_device *icd, __u32 pixfmt)
+static int camif_set_bus_param(struct soc_camera_device *icd)
 {
-	unsigned long bus_flags, camera_flags, common_flags;
-	struct device *dev = icd->dev.parent;
-	int ret;
-
-	/* get bus configuration required by current camera */
-	camera_flags = icd->ops->query_bus_param(icd);
-
-	/* test compatibility between camif and current camera sensor */
-	common_flags = soc_camera_bus_param_compatible(camera_flags,
-						CAM_IF_BUS_FLAGS);
-
-	if (!common_flags) {
-		dev_err(dev,
-			"camif and current camera sensor are incompatible\n");
-		return -EINVAL;
-	}
-
-	dev_dbg(dev, "bus caps: camera 0x%lx, host 0x%lx, common 0x%lx\n",
-		camera_flags, bus_flags, common_flags);
-
-	ret = icd->ops->set_bus_param(icd, common_flags);
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+	struct camif *camif = ici->priv;
+	struct v4l2_mbus_config cfg = {.type = V4L2_MBUS_PARALLEL,};
+	unsigned long bus_flags, common_flags;
+	int ret = camif_test_param(camif, icd->current_fmt->host_fmt->bits_per_sample,
+				&bus_flags);
 	if (ret < 0)
 		return ret;
 
-	camif_setup_ctrl(icd, common_flags, pixfmt);
+	/* get bus configuration supported by underlying sensor */
+	ret = v4l2_subdev_call(sd, video, g_mbus_config, &cfg);
+	if (!ret) {
+		common_flags = soc_mbus_config_compatible(&cfg,
+							  bus_flags);
+		if (!common_flags) {
+			dev_warn(icd->parent,
+				 "Flags incompatible: camera 0x%x, host 0x%lx\n",
+				 cfg.flags, bus_flags);
+			return -EINVAL;
+		}
+	} else if (ret != -ENOIOCTLCMD) {
+		return ret;
+	} else {
+		common_flags = bus_flags;
+	}
+
+	/* Make choises, based on platform preferences */
+	if ((common_flags & V4L2_MBUS_HSYNC_ACTIVE_HIGH) &&
+	    (common_flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)) {
+		if (camif->pdata->config->hsync_polarity == ACTIVE_LOW)
+			common_flags &= ~V4L2_MBUS_HSYNC_ACTIVE_HIGH;
+		else
+			common_flags &= ~V4L2_MBUS_HSYNC_ACTIVE_LOW;
+	}
+
+	if ((common_flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH) &&
+	    (common_flags & V4L2_MBUS_VSYNC_ACTIVE_LOW)) {
+		if (camif->pdata->config->vsync_polarity == ACTIVE_LOW)
+			common_flags &= ~V4L2_MBUS_VSYNC_ACTIVE_HIGH;
+		else
+			common_flags &= ~V4L2_MBUS_VSYNC_ACTIVE_LOW;
+	}
+
+	if ((common_flags & V4L2_MBUS_PCLK_SAMPLE_RISING) &&
+	    (common_flags & V4L2_MBUS_PCLK_SAMPLE_FALLING)) {
+		if (camif->pdata->config->pclk_polarity == ACTIVE_LOW)
+			common_flags &= ~V4L2_MBUS_PCLK_SAMPLE_RISING;
+		else
+			common_flags &= ~V4L2_MBUS_PCLK_SAMPLE_FALLING;
+	}
+
+	cfg.flags = common_flags;
+	ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_dbg(icd->parent, "camera s_mbus_config(0x%lx) returned %d\n",
+			common_flags, ret);
+		return ret;
+	}
+
+	camif_setup_ctrl(icd, common_flags);
 
 	return 0;
 }
@@ -1856,83 +1954,10 @@ static unsigned int camif_camera_poll(struct file *file, poll_table *pt)
 	return 0;
 }
 
-static int camif_suspend(struct soc_camera_device *icd, pm_message_t pm_state)
-{
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct camif *camif = ici->priv;
-	int ret = 0;
-
-	/* check if CAMIF is in running state */
-	if (camif->is_running) {
-		camif_stop_capture(camif, CAMIF_SUSPEND);
-
-		/* put subdev in low-power state */
-		if ((camif->icd) && (camif->icd->ops->suspend))
-			ret = camif->icd->ops->suspend(camif->icd, pm_state);
-	}
-
-	return ret;
-}
-
-static int camif_resume(struct soc_camera_device *icd)
-{
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct camif *camif = ici->priv;
-	struct videobuf_buffer *vb;
-	struct camif_buffer *buf;
-	dma_cookie_t cookie;
-	int ret = 0;
-
-	/* check if CAMIF is in power-save state */
-	if (!camif->is_running) {
-		/* bring subdev out of low-power state */
-		if ((camif->icd) && (camif->icd->ops->resume)) {
-			ret = camif->icd->ops->resume(camif->icd);
-			if (ret < 0)
-				goto out;
-		}
-
-		/*
-		 * As at the time of suspend, underlying DMA would have
-		 * terminated all existing DMA descriptor requests, we need
-		 * to again 'submit' the buffers present in our dma queue
-		 */
-		if (!ret && !list_empty(&camif->dma_queue)) {
-			list_for_each_entry(vb, &camif->dma_queue, queue) {
-				buf = container_of(vb, struct camif_buffer, vb);
-				ret = camif_init_dma_channel(camif, buf);
-				if (ret) {
-					dev_err(camif->icd->dev.parent,
-						"DMA initialization failed\n");
-					goto out;
-				}
-
-				/* submit the DMA descriptor */
-				cookie = buf->desc->tx_submit(buf->desc);
-				ret = dma_submit_error(cookie);
-				if (ret) {
-					dev_err(camif->icd->dev.parent,
-						"dma submit error %d\n",
-						cookie);
-					goto out;
-				}
-			}
-		}
-
-		/* Resume CAMIF frame capture */
-		camif_start_capture(camif, CAMIF_RESUME);
-	}
-
-out:
-	return ret;
-}
-
 static struct soc_camera_host_ops camif_soc_camera_host_ops = {
 	.owner = THIS_MODULE,
 	.add = camif_add_device,
 	.remove	= camif_remove_device,
-	.suspend = camif_suspend,
-	.resume	= camif_resume,
 	.get_formats = camif_get_formats,
 	.put_formats = camif_put_formats,
 	.cropcap = camif_cropcap,
@@ -1946,6 +1971,83 @@ static struct soc_camera_host_ops camif_soc_camera_host_ops = {
 	.set_bus_param = camif_set_bus_param,
 	.poll = camif_camera_poll,
 };
+
+static int camif_suspend(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	int ret = 0;
+
+	/* check if CAMIF is in running state */
+	if (camif->is_running) {
+		camif_stop_capture(camif, CAMIF_SUSPEND);
+
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 0);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
+	}
+
+	return ret;
+}
+
+static int camif_resume(struct device *dev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(dev);
+	struct camif *camif = ici->priv;
+	struct videobuf_buffer *vb;
+	struct camif_buffer *buf;
+	dma_cookie_t cookie;
+	int ret = 0;
+
+	/* check if CAMIF is in power-save state */
+	if (camif->is_running) {
+		/*
+		 * As at the time of suspend, underlying DMA would have
+		 * terminated all existing DMA descriptor requests, we need
+		 * to again 'submit' the buffers present in our dma queue
+		 */
+		if (!ret && !list_empty(&camif->dma_queue)) {
+			list_for_each_entry(vb, &camif->dma_queue, queue) {
+				buf = container_of(vb, struct camif_buffer, vb);
+				ret = camif_init_dma_channel(camif, buf);
+				if (ret) {
+					dev_err(camif->icd->parent,
+						"DMA initialization failed\n");
+					goto out;
+				}
+
+				/* submit the DMA descriptor */
+				cookie = buf->desc->tx_submit(buf->desc);
+				ret = dma_submit_error(cookie);
+				if (ret) {
+					dev_err(camif->icd->parent,
+						"dma submit error %d\n",
+						cookie);
+					goto out;
+				}
+			}
+		}
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 1);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
+
+		/* Resume CAMIF frame capture */
+		camif_start_capture(camif, CAMIF_RESUME);
+	}
+
+out:
+	return ret;
+}
+
+#ifdef CONFIG_PM
+static SIMPLE_DEV_PM_OPS(camif_pm_ops, camif_suspend, camif_resume);
+#endif
 
 static int __devinit camif_probe(struct platform_device *pdev)
 {
@@ -1962,7 +2064,6 @@ static int __devinit camif_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto exit;
 	}
-
 	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	line_irq = platform_get_irq_byname(pdev, "line_end_irq");
@@ -2010,7 +2111,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif->frm_start_end_irq = frm_start_end_irq;
 	camif->line_irq = line_irq;
 	camif->pdata = pdev->dev.platform_data;
-	camif->id = pdev->id;
+	camif->id = camif->pdata->id;
 
 	ret = request_irq(camif->line_irq, camif_line_int, 0,
 				"camif_line", camif);
@@ -2040,7 +2141,7 @@ static int __devinit camif_probe(struct platform_device *pdev)
 	camif_configure_interrupts(camif, DISABLE_ALL);
 
 	camif->ici.v4l2_dev.dev = &pdev->dev;
-	camif->ici.nr = pdev->id;
+	camif->ici.nr = camif->pdata->id;
 	camif->ici.priv = camif;
 	camif->ici.drv_name = "spear_camif";
 	camif->ici.ops = &camif_soc_camera_host_ops;
@@ -2107,6 +2208,13 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+static struct of_device_id camif_id_match[] = {
+	{ .compatible = "st,camif", },
+	{}
+};
+MODULE_DEVICE_TABLE(of, camif_id_match);
+#endif
 
 static struct platform_driver camif_driver = {
 	.probe = camif_probe,
@@ -2114,6 +2222,12 @@ static struct platform_driver camif_driver = {
 	.driver = {
 		.name = "spear_camif",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = camif_id_match,
+#endif
+#ifdef CONFIG_PM
+		.pm = &camif_pm_ops,
+#endif
 	},
 };
 

@@ -17,12 +17,14 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/of.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
 #include "dw_dmac_regs.h"
+#include "dmaengine.h"
 
 /*
  * This supports the Synopsys "DesignWare AHB Central DMA Controller",
@@ -156,21 +158,6 @@ static void dwc_desc_put(struct dw_dma_chan *dwc, struct dw_desc *desc)
 	}
 }
 
-/* Called with dwc->lock held and bh disabled */
-static dma_cookie_t
-dwc_assign_cookie(struct dw_dma_chan *dwc, struct dw_desc *desc)
-{
-	dma_cookie_t cookie = dwc->chan.cookie;
-
-	if (++cookie < 0)
-		cookie = 1;
-
-	dwc->chan.cookie = cookie;
-	desc->txd.cookie = cookie;
-
-	return cookie;
-}
-
 static void dwc_initialize(struct dw_dma_chan *dwc)
 {
 	struct dw_dma *dw = to_dw_dma(dwc->chan.device);
@@ -186,7 +173,7 @@ static void dwc_initialize(struct dw_dma_chan *dwc)
 		 * We need controller-specific data to set up slave
 		 * transfers.
 		 */
-		BUG_ON(!dws->dma_dev || dws->dma_dev != dw->dma.dev);
+		BUG_ON(dws->dma_master_id != dw->dma.dev_id);
 
 		cfghi = dws->cfg_hi;
 		cfglo |= dws->cfg_lo & ~DWC_CFGL_CH_PRIOR_MASK;
@@ -236,14 +223,6 @@ static void dwc_dostart(struct dw_dma_chan *dwc, struct dw_desc *first)
 
 /*----------------------------------------------------------------------*/
 
-#define dw_dmac_unmap(utype, _desc, _child, _buf, _dir)			\
-do {									\
-	list_for_each_entry(_child, &_desc->tx_list, desc_node)		\
-		dma_unmap_##utype(parent, _child->lli._buf,		\
-				_child->len, _dir);			\
-	dma_unmap_##utype(parent, _desc->lli._buf, _desc->len, _dir);	\
-} while (0)
-
 static void
 dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 		bool callback_required)
@@ -257,7 +236,7 @@ dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 	dev_vdbg(chan2dev(&dwc->chan), "descriptor %u complete\n", txd->cookie);
 
 	spin_lock_irqsave(&dwc->lock, flags);
-	dwc->completed = txd->cookie;
+	dma_cookie_complete(txd);
 	if (callback_required) {
 		callback = txd->callback;
 		param = txd->callback_param;
@@ -277,19 +256,19 @@ dwc_descriptor_complete(struct dw_dma_chan *dwc, struct dw_desc *desc,
 		struct device *parent = chan2parent(&dwc->chan);
 		if (!(txd->flags & DMA_COMPL_SKIP_DEST_UNMAP)) {
 			if (txd->flags & DMA_COMPL_DEST_UNMAP_SINGLE)
-				dw_dmac_unmap(single, desc, child, dar,
-						DMA_FROM_DEVICE);
+				dma_unmap_single(parent, desc->lli.dar,
+						desc->len, DMA_FROM_DEVICE);
 			else
-				dw_dmac_unmap(page, desc, child, dar,
-						DMA_FROM_DEVICE);
+				dma_unmap_page(parent, desc->lli.dar,
+						desc->len, DMA_FROM_DEVICE);
 		}
 		if (!(txd->flags & DMA_COMPL_SKIP_SRC_UNMAP)) {
 			if (txd->flags & DMA_COMPL_SRC_UNMAP_SINGLE)
-				dw_dmac_unmap(single, desc, child, sar,
-						DMA_TO_DEVICE);
+				dma_unmap_single(parent, desc->lli.sar,
+						desc->len, DMA_TO_DEVICE);
 			else
-				dw_dmac_unmap(page, desc, child, sar,
-						DMA_TO_DEVICE);
+				dma_unmap_page(parent, desc->lli.sar,
+						desc->len, DMA_TO_DEVICE);
 		}
 	}
 
@@ -610,7 +589,7 @@ static dma_cookie_t dwc_tx_submit(struct dma_async_tx_descriptor *tx)
 	unsigned long		flags;
 
 	spin_lock_irqsave(&dwc->lock, flags);
-	cookie = dwc_assign_cookie(dwc, desc);
+	cookie = dma_cookie_assign(tx);
 
 	/*
 	 * REVISIT: We should attempt to chain as many descriptors as
@@ -689,7 +668,6 @@ dwc_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest, dma_addr_t src,
 		desc->lli.dar = dest + offset;
 		desc->lli.ctllo = ctllo;
 		desc->lli.ctlhi = xfer_count;
-		desc->len = xfer_count << src_width;
 
 		if (!first) {
 			first = desc;
@@ -715,6 +693,7 @@ dwc_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest, dma_addr_t src,
 			DMA_TO_DEVICE);
 
 	first->txd.flags = flags;
+	first->len = len;
 
 	return &first->txd;
 
@@ -725,8 +704,8 @@ err_desc_get:
 
 static struct dma_async_tx_descriptor *
 dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
-		unsigned int sg_len, enum dma_data_direction direction,
-		unsigned long flags)
+		unsigned int sg_len, enum dma_transfer_direction direction,
+		unsigned long flags, void *context)
 {
 	struct dw_dma_chan	*dwc = to_dw_dma_chan(chan);
 	struct dw_dma_slave	*dws = chan->private;
@@ -739,6 +718,7 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	unsigned int		mem_width;
 	unsigned int		i;
 	struct scatterlist	*sg;
+	size_t			total_len = 0;
 
 	dev_vdbg(chan2dev(chan), "prep_dma_slave\n");
 
@@ -748,7 +728,7 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 	prev = first = NULL;
 
 	switch (direction) {
-	case DMA_TO_DEVICE:
+	case DMA_MEM_TO_DEV:
 		reg_width = __fls(sconfig->dst_addr_width);
 		reg = sconfig->dst_addr;
 		ctllo = (DWC_DEFAULT_CTLLO(chan)
@@ -763,7 +743,7 @@ dwc_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
 			struct dw_desc	*desc;
 			u32		len, dlen, mem;
 
-			mem = sg_phys(sg);
+			mem = sg_dma_address(sg);
 			len = sg_dma_len(sg);
 
 			if (!((mem | len) & 7))
@@ -796,7 +776,6 @@ slave_sg_todev_fill_desc:
 			}
 
 			desc->lli.ctlhi = dlen >> mem_width;
-			desc->len = dlen;
 
 			if (!first) {
 				first = desc;
@@ -810,12 +789,13 @@ slave_sg_todev_fill_desc:
 						&first->tx_list);
 			}
 			prev = desc;
+			total_len += dlen;
 
 			if (len)
 				goto slave_sg_todev_fill_desc;
 		}
 		break;
-	case DMA_FROM_DEVICE:
+	case DMA_DEV_TO_MEM:
 		reg_width = __fls(sconfig->src_addr_width);
 		reg = sconfig->src_addr;
 		ctllo = (DWC_DEFAULT_CTLLO(chan)
@@ -830,7 +810,7 @@ slave_sg_todev_fill_desc:
 			struct dw_desc	*desc;
 			u32		len, dlen, mem;
 
-			mem = sg_phys(sg);
+			mem = sg_dma_address(sg);
 			len = sg_dma_len(sg);
 
 			if (!((mem | len) & 7))
@@ -862,7 +842,6 @@ slave_sg_fromdev_fill_desc:
 				len = 0;
 			}
 			desc->lli.ctlhi = dlen >> reg_width;
-			desc->len = dlen;
 
 			if (!first) {
 				first = desc;
@@ -876,6 +855,7 @@ slave_sg_fromdev_fill_desc:
 						&first->tx_list);
 			}
 			prev = desc;
+			total_len += dlen;
 
 			if (len)
 				goto slave_sg_fromdev_fill_desc;
@@ -893,6 +873,8 @@ slave_sg_fromdev_fill_desc:
 	dma_sync_single_for_device(chan2parent(chan),
 			prev->txd.phys, sizeof(prev->lli),
 			DMA_TO_DEVICE);
+
+	first->len = total_len;
 
 	return &first->txd;
 
@@ -998,36 +980,17 @@ dwc_tx_status(struct dma_chan *chan,
 	      struct dma_tx_state *txstate)
 {
 	struct dw_dma_chan	*dwc = to_dw_dma_chan(chan);
-	dma_cookie_t		last_used;
-	dma_cookie_t		last_complete;
-	int			ret;
+	enum dma_status		ret;
 
-	last_complete = dwc->completed;
-	last_used = chan->cookie;
-
-	ret = dma_async_is_complete(cookie, last_complete, last_used);
+	ret = dma_cookie_status(chan, cookie, txstate);
 	if (ret != DMA_SUCCESS) {
 		dwc_scan_descriptors(to_dw_dma(chan->device), dwc);
 
-		last_complete = dwc->completed;
-		last_used = chan->cookie;
-
-		ret = dma_async_is_complete(cookie, last_complete, last_used);
+		ret = dma_cookie_status(chan, cookie, txstate);
 	}
 
-	if (ret != DMA_SUCCESS) {
-		struct dw_desc *desc, *child;
-		unsigned int len;
-
-		desc = dwc_first_active(dwc);
-		len = desc->len;
-		list_for_each_entry(child, &desc->tx_list, desc_node)
-			len += child->len;
-
-		dma_set_tx_state(txstate, last_complete, last_used, len);
-	} else {
-		dma_set_tx_state(txstate, last_complete, last_used, 0);
-	}
+	if (ret != DMA_SUCCESS)
+		dma_set_residue(txstate, dwc_first_active(dwc)->len);
 
 	if (dwc->paused)
 		return DMA_PAUSED;
@@ -1059,7 +1022,7 @@ static int dwc_alloc_chan_resources(struct dma_chan *chan)
 		return -EIO;
 	}
 
-	dwc->completed = chan->cookie = 1;
+	dma_cookie_init(chan);
 
 	/*
 	 * NOTE: some controllers may have additional features that we
@@ -1225,7 +1188,7 @@ EXPORT_SYMBOL(dw_dma_cyclic_stop);
  */
 struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 		dma_addr_t buf_addr, size_t buf_len, size_t period_len,
-		enum dma_data_direction direction)
+		enum dma_transfer_direction direction)
 {
 	struct dw_dma_chan		*dwc = to_dw_dma_chan(chan);
 	struct dma_slave_config		*sconfig = &dwc->dma_sconfig;
@@ -1257,7 +1220,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 
 	retval = ERR_PTR(-EINVAL);
 
-	if (direction == DMA_TO_DEVICE)
+	if (direction == DMA_MEM_TO_DEV)
 		reg_width = __ffs(sconfig->dst_addr_width);
 	else
 		reg_width = __ffs(sconfig->src_addr_width);
@@ -1271,7 +1234,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 		goto out_err;
 	if (unlikely(buf_addr & ((1 << reg_width) - 1)))
 		goto out_err;
-	if (unlikely(!(direction & (DMA_TO_DEVICE | DMA_FROM_DEVICE))))
+	if (unlikely(!(direction & (DMA_MEM_TO_DEV | DMA_DEV_TO_MEM))))
 		goto out_err;
 
 	retval = ERR_PTR(-ENOMEM);
@@ -1293,7 +1256,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 			goto out_err_desc_get;
 
 		switch (direction) {
-		case DMA_TO_DEVICE:
+		case DMA_MEM_TO_DEV:
 			desc->lli.dar = sconfig->dst_addr;
 			desc->lli.sar = buf_addr + (period_len * i);
 			desc->lli.ctllo = (DWC_DEFAULT_CTLLO(chan)
@@ -1308,7 +1271,7 @@ struct dw_cyclic_desc *dw_dma_cyclic_prep(struct dma_chan *chan,
 				DWC_CTLL_FC(DW_DMA_FC_D_M2P);
 
 			break;
-		case DMA_FROM_DEVICE:
+		case DMA_DEV_TO_MEM:
 			desc->lli.dar = buf_addr + (period_len * i);
 			desc->lli.sar = sconfig->src_addr;
 			desc->lli.ctllo = (DWC_DEFAULT_CTLLO(chan)
@@ -1467,7 +1430,7 @@ static int __init dw_probe(struct platform_device *pdev)
 		err = PTR_ERR(dw->clk);
 		goto err_clk;
 	}
-	clk_enable(dw->clk);
+	clk_prepare_enable(dw->clk);
 
 	/* force dma off, just in case */
 	dw_dma_off(dw);
@@ -1488,7 +1451,7 @@ static int __init dw_probe(struct platform_device *pdev)
 		struct dw_dma_chan	*dwc = &dw->chan[i];
 
 		dwc->chan.device = &dw->dma;
-		dwc->chan.cookie = dwc->completed = 1;
+		dma_cookie_init(&dwc->chan);
 		dwc->chan.chan_id = i;
 		if (pdata->chan_allocation_order == CHAN_ALLOCATION_ASCENDING)
 			list_add_tail(&dwc->chan.device_node,
@@ -1529,6 +1492,7 @@ static int __init dw_probe(struct platform_device *pdev)
 	if (pdata->is_private)
 		dma_cap_set(DMA_PRIVATE, dw->dma.cap_mask);
 	dw->dma.dev = &pdev->dev;
+	dw->dma.dev_id = pdata->dev_id;
 	dw->dma.device_alloc_chan_resources = dwc_alloc_chan_resources;
 	dw->dma.device_free_chan_resources = dwc_free_chan_resources;
 
@@ -1550,7 +1514,7 @@ static int __init dw_probe(struct platform_device *pdev)
 	return 0;
 
 err_irq:
-	clk_disable(dw->clk);
+	clk_disable_unprepare(dw->clk);
 	clk_put(dw->clk);
 err_clk:
 	iounmap(dw->regs);
@@ -1580,7 +1544,7 @@ static int __exit dw_remove(struct platform_device *pdev)
 		channel_clear_bit(dw, CH_EN, dwc->mask);
 	}
 
-	clk_disable(dw->clk);
+	clk_disable_unprepare(dw->clk);
 	clk_put(dw->clk);
 
 	iounmap(dw->regs);
@@ -1599,7 +1563,7 @@ static void dw_shutdown(struct platform_device *pdev)
 	struct dw_dma	*dw = platform_get_drvdata(pdev);
 
 	dw_dma_off(platform_get_drvdata(pdev));
-	clk_disable(dw->clk);
+	clk_disable_unprepare(dw->clk);
 }
 
 static int dw_suspend_noirq(struct device *dev)
@@ -1608,7 +1572,7 @@ static int dw_suspend_noirq(struct device *dev)
 	struct dw_dma	*dw = platform_get_drvdata(pdev);
 
 	dw_dma_off(platform_get_drvdata(pdev));
-	clk_disable(dw->clk);
+	clk_disable_unprepare(dw->clk);
 
 	return 0;
 }
@@ -1618,7 +1582,7 @@ static int dw_resume_noirq(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct dw_dma	*dw = platform_get_drvdata(pdev);
 
-	clk_enable(dw->clk);
+	clk_prepare_enable(dw->clk);
 	dma_writel(dw, CFG, DW_CFG_DMA_EN);
 	return 0;
 }
@@ -1632,12 +1596,21 @@ static const struct dev_pm_ops dw_dev_pm_ops = {
 	.poweroff_noirq = dw_suspend_noirq,
 };
 
+#ifdef CONFIG_OF
+static const struct of_device_id dw_dma_id_table[] = {
+	{ .compatible = "snps,dma-spear1340" },
+	{}
+};
+MODULE_DEVICE_TABLE(of, dw_dma_id_table);
+#endif
+
 static struct platform_driver dw_driver = {
 	.remove		= __exit_p(dw_remove),
 	.shutdown	= dw_shutdown,
 	.driver = {
 		.name	= "dw_dmac",
 		.pm	= &dw_dev_pm_ops,
+		.of_match_table = of_match_ptr(dw_dma_id_table),
 	},
 };
 
@@ -1655,5 +1628,5 @@ module_exit(dw_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("Synopsys DesignWare DMA Controller driver");
-MODULE_AUTHOR("Haavard Skinnemoen <haavard.skinnemoen@atmel.com>");
-MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
+MODULE_AUTHOR("Haavard Skinnemoen (Atmel)");
+MODULE_AUTHOR("Viresh Kumar <viresh.linux@gmail.com>");

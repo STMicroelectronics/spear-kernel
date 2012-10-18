@@ -72,5 +72,6 @@ struct dwc_otg_device {
 
 	/* Length of memory region, used by release_mem_region(). */
 	unsigned long base_len;
+	struct clk		*clk;
 };
 #endif

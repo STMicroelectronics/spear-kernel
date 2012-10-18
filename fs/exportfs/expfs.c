@@ -43,24 +43,26 @@ find_acceptable_alias(struct dentry *result,
 		void *context)
 {
 	struct dentry *dentry, *toput = NULL;
+	struct inode *inode;
 
 	if (acceptable(context, result))
 		return result;
 
-	spin_lock(&dcache_lock);
-	list_for_each_entry(dentry, &result->d_inode->i_dentry, d_alias) {
-		dget_locked(dentry);
-		spin_unlock(&dcache_lock);
+	inode = result->d_inode;
+	spin_lock(&inode->i_lock);
+	list_for_each_entry(dentry, &inode->i_dentry, d_alias) {
+		dget(dentry);
+		spin_unlock(&inode->i_lock);
 		if (toput)
 			dput(toput);
 		if (dentry != result && acceptable(context, dentry)) {
 			dput(result);
 			return dentry;
 		}
-		spin_lock(&dcache_lock);
+		spin_lock(&inode->i_lock);
 		toput = dentry;
 	}
-	spin_unlock(&dcache_lock);
+	spin_unlock(&inode->i_lock);
 
 	if (toput)
 		dput(toput);
@@ -302,37 +304,36 @@ out:
 
 /**
  * export_encode_fh - default export_operations->encode_fh function
- * @dentry:  the dentry to encode
+ * @inode:   the object to encode
  * @fh:      where to store the file handle fragment
  * @max_len: maximum length to store there
- * @connectable: whether to store parent information
+ * @parent:  parent directory inode, if wanted
  *
  * This default encode_fh function assumes that the 32 inode number
  * is suitable for locating an inode, and that the generation number
  * can be used to check that it is still valid.  It places them in the
  * filehandle fragment where export_decode_fh expects to find them.
  */
-static int export_encode_fh(struct dentry *dentry, struct fid *fid,
-		int *max_len, int connectable)
+static int export_encode_fh(struct inode *inode, struct fid *fid,
+		int *max_len, struct inode *parent)
 {
-	struct inode * inode = dentry->d_inode;
 	int len = *max_len;
 	int type = FILEID_INO32_GEN;
-	
-	if (len < 2 || (connectable && len < 4))
+
+	if (parent && (len < 4)) {
+		*max_len = 4;
 		return 255;
+	} else if (len < 2) {
+		*max_len = 2;
+		return 255;
+	}
 
 	len = 2;
 	fid->i32.ino = inode->i_ino;
 	fid->i32.gen = inode->i_generation;
-	if (connectable && !S_ISDIR(inode->i_mode)) {
-		struct inode *parent;
-
-		spin_lock(&dentry->d_lock);
-		parent = dentry->d_parent->d_inode;
+	if (parent) {
 		fid->i32.parent_ino = parent->i_ino;
 		fid->i32.parent_gen = parent->i_generation;
-		spin_unlock(&dentry->d_lock);
 		len = 4;
 		type = FILEID_INO32_GEN_PARENT;
 	}
@@ -345,11 +346,22 @@ int exportfs_encode_fh(struct dentry *dentry, struct fid *fid, int *max_len,
 {
 	const struct export_operations *nop = dentry->d_sb->s_export_op;
 	int error;
+	struct dentry *p = NULL;
+	struct inode *inode = dentry->d_inode, *parent = NULL;
 
+	if (connectable && !S_ISDIR(inode->i_mode)) {
+		p = dget_parent(dentry);
+		/*
+		 * note that while p might've ceased to be our parent already,
+		 * it's still pinned by and still positive.
+		 */
+		parent = p->d_inode;
+	}
 	if (nop->encode_fh)
-		error = nop->encode_fh(dentry, fid->raw, max_len, connectable);
+		error = nop->encode_fh(inode, fid->raw, max_len, parent);
 	else
-		error = export_encode_fh(dentry, fid, max_len, connectable);
+		error = export_encode_fh(inode, fid, max_len, parent);
+	dput(p);
 
 	return error;
 }
@@ -367,6 +379,8 @@ struct dentry *exportfs_decode_fh(struct vfsmount *mnt, struct fid *fid,
 	/*
 	 * Try to get any dentry for the given file handle from the filesystem.
 	 */
+	if (!nop || !nop->fh_to_dentry)
+		return ERR_PTR(-ESTALE);
 	result = nop->fh_to_dentry(mnt->mnt_sb, fid, fh_len, fileid_type);
 	if (!result)
 		result = ERR_PTR(-ESTALE);

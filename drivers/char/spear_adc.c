@@ -34,11 +34,11 @@
 #include <linux/clk.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
+#include <linux/of.h>
 #include <linux/sched.h>
 #include <linux/types.h>
 #include <linux/wait.h>
 #include <plat/adc.h>
-#include <plat/hardware.h>
 #include <linux/spear_adc.h>
 
 #define DRIVER_NAME "spear-adc"
@@ -235,7 +235,8 @@ void adc_reset(void)
 	enum adc_chan_id i = ADC_CHANNEL0;
 
 	adc_writel(g_drv_data->regs, STATUS, 0);
-	if (!cpu_is_spear1340() && !cpu_is_spear1310())
+	if (!of_machine_is_compatible("st,spear1340") &&
+			!of_machine_is_compatible("st,spear1310"))
 		adc_writel(g_drv_data->regs, CLK, 0);
 	while (i <= ADC_CHANNEL7) {
 		adc_writel(g_drv_data->regs, CHAN_CTRL[i], 0);
@@ -308,7 +309,7 @@ static void sg_fill(u32 size, dma_addr_t digital_volt)
 
 	while (size) {
 		int len = size < max_xfer ? size : max_xfer;
-		sg_dma_address(sg) = addr;
+		sg_dma_address(sg) = (dma_addr_t)virt_to_phys(addr);
 		sg_set_page(sg, virt_to_page(addr), len,
 				offset_in_page(addr));
 		addr += len;
@@ -393,7 +394,7 @@ static s32 dma_xfer(u32 len, void *digital_volt)
 	tx = chan->device->device_prep_slave_sg(chan,
 			g_drv_data->sg,
 			g_drv_data->sg_len, DMA_FROM_DEVICE,
-			DMA_PREP_INTERRUPT);
+			DMA_PREP_INTERRUPT, NULL);
 
 	if (!tx) {
 		dev_err(&g_drv_data->pdev->dev, "error preparing dma xfer\n");
@@ -465,7 +466,7 @@ s32 spear_adc_chan_get(void *dev_id, enum adc_chan_id chan_id)
 	/* Checking that the requested ADC is Free or Busy */
 	if (!g_drv_data->chan[chan_id].owner) {
 		if (!g_drv_data->clk_enbld) {
-			status = clk_enable(g_drv_data->clk);
+			status = clk_prepare_enable(g_drv_data->clk);
 			if (status) {
 				dev_err(&g_drv_data->pdev->dev,
 						"error enabling clock\n");
@@ -528,7 +529,7 @@ s32 spear_adc_chan_put(void *dev_id, enum adc_chan_id chan_id)
 		g_drv_data->scan_rate = ADC_MAX_SCAN_RATE;
 
 		if (g_drv_data->clk_enbld) {
-			clk_disable(g_drv_data->clk);
+			clk_disable_unprepare(g_drv_data->clk);
 			g_drv_data->clk_enbld = false;
 		}
 	}
@@ -695,7 +696,8 @@ u32 adc_configure(struct adc_config *config)
 	u32 status_reg = 0, ret = 0, clk_high = 0, clk_low = 0, count, clk_min,
 	    clk_max;
 
-	if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+	if (!of_machine_is_compatible("st,spear1340") &&
+			!of_machine_is_compatible("st,spear1310")) {
 		clk_min = 2500000;
 		clk_max = 20000000;
 	} else {
@@ -706,7 +708,8 @@ u32 adc_configure(struct adc_config *config)
 	if ((config->req_clk < clk_min) || (config->req_clk > clk_max))
 		return -EINVAL;
 
-	if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+	if (!of_machine_is_compatible("st,spear1340") &&
+			!of_machine_is_compatible("st,spear1310")) {
 		u32 apb_clk = clk_get_rate(g_drv_data->clk);
 
 		count = (apb_clk + config->req_clk - 1) / config->req_clk;
@@ -734,7 +737,8 @@ u32 adc_configure(struct adc_config *config)
 
 	status_reg |= VOLT_REF(config->volt_ref);
 #ifndef CONFIG_ARCH_SPEAR6XX
-	if (cpu_is_spear1340() || cpu_is_spear1310())
+	if (of_machine_is_compatible("st,spear1340") ||
+			of_machine_is_compatible("st,spear1310"))
 		status_reg |= SPEAR1340_RESOLUTION(config->resolution);
 	else
 		status_reg |= RESOLUTION(config->resolution);
@@ -742,7 +746,8 @@ u32 adc_configure(struct adc_config *config)
 	status_reg |= ADC_ENABLE;
 
 	adc_writel(g_drv_data->regs, STATUS, status_reg);
-	if (!cpu_is_spear1340() && !cpu_is_spear1310())
+	if (!of_machine_is_compatible("st,spear1340") &&
+			!of_machine_is_compatible("st,spear1310"))
 		adc_writel(g_drv_data->regs, CLK, CLK_LOW(clk_low) |
 				CLK_HIGH(clk_high));
 	return 0;
@@ -890,7 +895,8 @@ s32 spear_adc_get_configure(void *dev_id, enum adc_chan_id chan_id,
 #endif
 		config->mvolt = g_drv_data->mvolt;
 
-		if (!cpu_is_spear1340() && !cpu_is_spear1310()) {
+		if (!of_machine_is_compatible("st,spear1340") &&
+				!of_machine_is_compatible("st,spear1310")) {
 			reg = adc_readl(g_drv_data->regs, CLK);
 			config->req_clk = clk_get_rate(g_drv_data->clk) /
 				(GET_CLK_HIGH(reg) + GET_CLK_LOW(reg));
@@ -1171,8 +1177,7 @@ spear_adc_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
 	if (!status) {
 		status = copy_to_user(buf, digital_volt, size);
 		status = len - status;
-	}
-
+	} else
 	kfree(digital_volt);
 
 	return status;
@@ -1459,7 +1464,7 @@ static s32 spear_adc_remove(struct platform_device *pdev)
 	unregister_chrdev_region(g_drv_data->chan[0].dev_num, ADC_CHANNEL_NUM);
 
 	if (g_drv_data->clk_enbld) {
-		clk_disable(g_drv_data->clk);
+		clk_disable_unprepare(g_drv_data->clk);
 		g_drv_data->clk_enbld = false;
 	}
 
@@ -1511,7 +1516,7 @@ static s32 adc_suspend(struct device *dev, bool csave)
 	}
 
 sus_clk_dis:
-	clk_disable(g_drv_data->clk);
+	clk_disable_unprepare(g_drv_data->clk);
 
 	return ret;
 }
@@ -1536,7 +1541,7 @@ static s32 adc_resume(struct device *dev, bool csave)
 		return ret;
 	}
 
-	ret = clk_enable(g_drv_data->clk);
+	ret = clk_prepare_enable(g_drv_data->clk);
 	if (ret) {
 		dev_err(dev, "Resume: clk enable failed\n");
 		return ret;
@@ -1568,7 +1573,7 @@ static s32 adc_resume(struct device *dev, bool csave)
 	return 0;
 
 disable_clk:
-	clk_disable(g_drv_data->clk);
+	clk_disable_unprepare(g_drv_data->clk);
 
 	return ret;
 }
@@ -1597,12 +1602,23 @@ static const struct dev_pm_ops spear_adc_dev_pm_ops = {
 #define SPEAR_ADC_DEV_PM_OPS NULL
 #endif /* CONFIG_PM */
 
+#ifdef CONFIG_OF
+static const struct of_device_id spear_adc_of_match[] = {
+	{ .compatible = "st,spear-adc" },
+	{}
+};
+MODULE_DEVICE_TABLE(of, spear_adc_of_match);
+#endif
+
 static struct platform_driver spear_adc_driver = {
 	.driver = {
 		.name = "adc",
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
 		.pm = SPEAR_ADC_DEV_PM_OPS,
+#ifdef CONFIG_OF
+		.of_match_table = of_match_ptr(spear_adc_of_match),
+#endif
 	},
 	.probe = spear_adc_probe,
 	.remove = __devexit_p(spear_adc_remove),

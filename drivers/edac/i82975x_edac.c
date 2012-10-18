@@ -16,7 +16,7 @@
 #include <linux/edac.h>
 #include "edac_core.h"
 
-#define I82975X_REVISION	" Ver: 1.0.0 " __DATE__
+#define I82975X_REVISION	" Ver: 1.0.0"
 #define EDAC_MOD_STR		"i82975x_edac"
 
 #define i82975x_printk(level, fmt, arg...) \
@@ -29,7 +29,8 @@
 #define PCI_DEVICE_ID_INTEL_82975_0	0x277c
 #endif				/* PCI_DEVICE_ID_INTEL_82975_0 */
 
-#define I82975X_NR_CSROWS(nr_chans)		(8/(nr_chans))
+#define I82975X_NR_DIMMS		8
+#define I82975X_NR_CSROWS(nr_chans)	(I82975X_NR_DIMMS / (nr_chans))
 
 /* Intel 82975X register addresses - device 0 function 0 - DRAM Controller */
 #define I82975X_EAP		0x58	/* Dram Error Address Pointer (32b)
@@ -160,8 +161,8 @@ NOTE: Only ONE of the three must be enabled
 					 * 3:2  Rank 1 architecture
 					 * 1:0  Rank 0 architecture
 					 *
-					 * 00 => x16 devices; i.e 4 banks
-					 * 01 => x8  devices; i.e 8 banks
+					 * 00 => 4 banks
+					 * 01 => 8 banks
 					 */
 #define I82975X_C0BNKARC	0x10e
 #define I82975X_C1BNKARC	0x18e
@@ -277,9 +278,8 @@ static void i82975x_get_error_info(struct mem_ctl_info *mci,
 static int i82975x_process_error_info(struct mem_ctl_info *mci,
 		struct i82975x_error_info *info, int handle_errors)
 {
-	int row, multi_chan, chan;
-
-	multi_chan = mci->csrows[0].nr_channels - 1;
+	int row, chan;
+	unsigned long offst, page;
 
 	if (!(info->errsts2 & 0x0003))
 		return 0;
@@ -288,23 +288,41 @@ static int i82975x_process_error_info(struct mem_ctl_info *mci,
 		return 1;
 
 	if ((info->errsts ^ info->errsts2) & 0x0003) {
-		edac_mc_handle_ce_no_info(mci, "UE overwrote CE");
+		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci, 0, 0, 0,
+				     -1, -1, -1, "UE overwrote CE", "", NULL);
 		info->errsts = info->errsts2;
 	}
 
-	chan = info->eap & 1;
-	info->eap >>= 1;
-	if (info->xeap )
-		info->eap |= 0x80000000;
-	info->eap >>= PAGE_SHIFT;
-	row = edac_mc_find_csrow_by_page(mci, info->eap);
+	page = (unsigned long) info->eap;
+	page >>= 1;
+	if (info->xeap & 1)
+		page |= 0x80000000;
+	page >>= (PAGE_SHIFT - 1);
+	row = edac_mc_find_csrow_by_page(mci, page);
+
+	if (row == -1)	{
+		i82975x_mc_printk(mci, KERN_ERR, "error processing EAP:\n"
+			"\tXEAP=%u\n"
+			"\t EAP=0x%08x\n"
+			"\tPAGE=0x%08x\n",
+			(info->xeap & 1) ? 1 : 0, info->eap, (unsigned int) page);
+		return 0;
+	}
+	chan = (mci->csrows[row].nr_channels == 1) ? 0 : info->eap & 1;
+	offst = info->eap
+			& ((1 << PAGE_SHIFT) -
+			   (1 << mci->csrows[row].channels[chan].dimm->grain));
 
 	if (info->errsts & 0x0002)
-		edac_mc_handle_ue(mci, info->eap, 0, row, "i82975x UE");
+		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
+				     page, offst, 0,
+				     row, -1, -1,
+				     "i82975x UE", "", NULL);
 	else
-		edac_mc_handle_ce(mci, info->eap, 0, info->derrsyn, row,
-				multi_chan ? chan : 0,
-				"i82975x CE");
+		edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
+				     page, offst, info->derrsyn,
+				     row, chan ? chan : 0, -1,
+				     "i82975x CE", "", NULL);
 
 	return 1;
 }
@@ -344,11 +362,7 @@ static int dual_channel_active(void __iomem *mch_window)
 static enum dev_type i82975x_dram_type(void __iomem *mch_window, int rank)
 {
 	/*
-	 * ASUS P5W DH either does not program this register or programs
-	 * it wrong!
-	 * ECC is possible on i92975x ONLY with DEV_X8 which should mean 'val'
-	 * for each rank should be 01b - the LSB of the word should be 0x55;
-	 * but it reads 0!
+	 * ECC is possible on i92975x ONLY with DEV_X8
 	 */
 	return DEV_X8;
 }
@@ -356,11 +370,17 @@ static enum dev_type i82975x_dram_type(void __iomem *mch_window, int rank)
 static void i82975x_init_csrows(struct mem_ctl_info *mci,
 		struct pci_dev *pdev, void __iomem *mch_window)
 {
+	static const char *labels[4] = {
+							"DIMM A1", "DIMM A2",
+							"DIMM B1", "DIMM B2"
+						};
 	struct csrow_info *csrow;
 	unsigned long last_cumul_size;
 	u8 value;
-	u32 cumul_size;
-	int index;
+	u32 cumul_size, nr_pages;
+	int index, chan;
+	struct dimm_info *dimm;
+	enum dev_type dtype;
 
 	last_cumul_size = 0;
 
@@ -369,11 +389,7 @@ static void i82975x_init_csrows(struct mem_ctl_info *mci,
 	 * The dram row boundary (DRB) reg values are boundary address
 	 * for each DRAM row with a granularity of 32 or 64MB (single/dual
 	 * channel operation).  DRB regs are cumulative; therefore DRB7 will
-	 * contain the total memory contained in all eight rows.
-	 *
-	 * FIXME:
-	 *  EDAC currently works for Dual-channel Interleaved configuration.
-	 *  Other configurations, which the chip supports, need fixing/testing.
+	 * contain the total memory contained in all rows.
 	 *
 	 */
 
@@ -384,19 +400,42 @@ static void i82975x_init_csrows(struct mem_ctl_info *mci,
 					((index >= 4) ? 0x80 : 0));
 		cumul_size = value;
 		cumul_size <<= (I82975X_DRB_SHIFT - PAGE_SHIFT);
+		/*
+		 * Adjust cumul_size w.r.t number of channels
+		 *
+		 */
+		if (csrow->nr_channels > 1)
+			cumul_size <<= 1;
 		debugf3("%s(): (%d) cumul_size 0x%x\n", __func__, index,
 			cumul_size);
-		if (cumul_size == last_cumul_size)
-			continue;	/* not populated */
+
+		nr_pages = cumul_size - last_cumul_size;
+		if (!nr_pages)
+			continue;
+
+		/*
+		 * Initialise dram labels
+		 * index values:
+		 *   [0-7] for single-channel; i.e. csrow->nr_channels = 1
+		 *   [0-3] for dual-channel; i.e. csrow->nr_channels = 2
+		 */
+		dtype = i82975x_dram_type(mch_window, index);
+		for (chan = 0; chan < csrow->nr_channels; chan++) {
+			dimm = mci->csrows[index].channels[chan].dimm;
+
+			dimm->nr_pages = nr_pages / csrow->nr_channels;
+			strncpy(csrow->channels[chan].dimm->label,
+					labels[(index >> 1) + (chan * 2)],
+					EDAC_MC_LABEL_LEN);
+			dimm->grain = 1 << 7;	/* 128Byte cache-line resolution */
+			dimm->dtype = i82975x_dram_type(mch_window, index);
+			dimm->mtype = MEM_DDR2; /* I82975x supports only DDR2 */
+			dimm->edac_mode = EDAC_SECDED; /* only supported */
+		}
 
 		csrow->first_page = last_cumul_size;
 		csrow->last_page = cumul_size - 1;
-		csrow->nr_pages = cumul_size - last_cumul_size;
 		last_cumul_size = cumul_size;
-		csrow->grain = 1 << 7;	/* I82975X_EAP has 128B resolution */
-		csrow->mtype = MEM_DDR; /* i82975x supports only DDR2 */
-		csrow->dtype = i82975x_dram_type(mch_window, index);
-		csrow->edac_mode = EDAC_SECDED; /* only supported */
 	}
 }
 
@@ -438,6 +477,7 @@ static int i82975x_probe1(struct pci_dev *pdev, int dev_idx)
 {
 	int rc = -ENODEV;
 	struct mem_ctl_info *mci;
+	struct edac_mc_layer layers[2];
 	struct i82975x_pvt *pvt;
 	void __iomem *mch_window;
 	u32 mchbar;
@@ -506,8 +546,13 @@ static int i82975x_probe1(struct pci_dev *pdev, int dev_idx)
 	chans = dual_channel_active(mch_window) + 1;
 
 	/* assuming only one controller, index thus is 0 */
-	mci = edac_mc_alloc(sizeof(*pvt), I82975X_NR_CSROWS(chans),
-					chans, 0);
+	layers[0].type = EDAC_MC_LAYER_CHIP_SELECT;
+	layers[0].size = I82975X_NR_DIMMS;
+	layers[0].is_virt_csrow = true;
+	layers[1].type = EDAC_MC_LAYER_CHANNEL;
+	layers[1].size = I82975X_NR_CSROWS(chans);
+	layers[1].is_virt_csrow = false;
+	mci = edac_mc_alloc(0, ARRAY_SIZE(layers), layers, sizeof(*pvt));
 	if (!mci) {
 		rc = -ENOMEM;
 		goto fail1;
@@ -515,18 +560,20 @@ static int i82975x_probe1(struct pci_dev *pdev, int dev_idx)
 
 	debugf3("%s(): init mci\n", __func__);
 	mci->dev = &pdev->dev;
-	mci->mtype_cap = MEM_FLAG_DDR;
+	mci->mtype_cap = MEM_FLAG_DDR2;
 	mci->edac_ctl_cap = EDAC_FLAG_NONE | EDAC_FLAG_SECDED;
 	mci->edac_cap = EDAC_FLAG_NONE | EDAC_FLAG_SECDED;
 	mci->mod_name = EDAC_MOD_STR;
 	mci->mod_ver = I82975X_REVISION;
 	mci->ctl_name = i82975x_devs[dev_idx].ctl_name;
+	mci->dev_name = pci_name(pdev);
 	mci->edac_check = i82975x_check;
 	mci->ctl_page_to_phys = NULL;
 	debugf3("%s(): init pvt\n", __func__);
 	pvt = (struct i82975x_pvt *) mci->pvt_info;
 	pvt->mch_window = mch_window;
 	i82975x_init_csrows(mci, pdev, mch_window);
+	mci->scrub_mode = SCRUB_HW_SRC;
 	i82975x_get_error_info(mci, &discard);  /* clear counters */
 
 	/* finalize this instance of memory controller with edac core */
@@ -585,7 +632,7 @@ static void __devexit i82975x_remove_one(struct pci_dev *pdev)
 	edac_mc_free(mci);
 }
 
-static const struct pci_device_id i82975x_pci_tbl[] __devinitdata = {
+static DEFINE_PCI_DEVICE_TABLE(i82975x_pci_tbl) = {
 	{
 		PCI_VEND_DEV(INTEL, 82975_0), PCI_ANY_ID, PCI_ANY_ID, 0, 0,
 		I82975X
@@ -664,7 +711,7 @@ module_init(i82975x_init);
 module_exit(i82975x_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Arvind R. <arvind@acarlab.com>");
+MODULE_AUTHOR("Arvind R. <arvino55@gmail.com>");
 MODULE_DESCRIPTION("MC support for Intel 82975 memory hub controllers");
 
 module_param(edac_op_state, int, 0444);

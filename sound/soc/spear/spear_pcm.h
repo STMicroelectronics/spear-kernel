@@ -25,9 +25,9 @@ struct spear_runtime_data {
 
 	/* For Keeping track of buffers */
 	unsigned long xfer_len;	/* Data transfered by one transfer */
-	int xfer_cnt; /* Total number of transfers to be done */
-	int buf_index; /* Current buffer count */
-	int dmacount; /* No. of DMA transfer ongoing */
+	int xfer_max; /* Total number of transfers to be done */
+	int buf_index; /* Current buffer index */
+	int dma_index; /* Current DMA transfer index */
 	bool pcm_running; /* Current state of pcm, true if running */
 };
 #endif /* end of pcm header file */

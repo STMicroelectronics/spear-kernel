@@ -4,7 +4,7 @@
  * ARM PrimeXsys System Controller SP810 header file
  *
  * Copyright (C) 2009 ST Microelectronics
- * Viresh Kumar<viresh.kumar@st.com>
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -64,6 +64,12 @@
 #define SCPCELLID2		0xFF8
 #define SCPCELLID3		0xFFC
 
+#define SCCTRL_TIMEREN0SEL_REFCLK	(0 << 15)
+#define SCCTRL_TIMEREN0SEL_TIMCLK	(1 << 15)
+
+#define SCCTRL_TIMEREN1SEL_REFCLK	(0 << 17)
+#define SCCTRL_TIMEREN1SEL_TIMCLK	(1 << 17)
+
 static inline void sysctl_soft_reset(void __iomem *base)
 {
 	/* switch to slow mode */
@@ -112,7 +118,6 @@ static inline int sysctl_change_mode(void __iomem *base, int mode)
 			return 0;
 		udelay(1000);
 	} while (!time_after_eq(jiffies, finish));
-
-	return -EFAULT;
 }
+
 #endif	/* __ASM_ARM_SP810_H */

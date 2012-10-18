@@ -6,6 +6,7 @@
  *
  * This file is released under the GPLv2.
  */
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/device.h>
@@ -68,6 +69,7 @@ static struct acpi_bus_type *acpi_get_bus_type(struct bus_type *type)
 	up_read(&bus_type_sem);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(register_acpi_bus_type);
 
 static int acpi_find_bridge_device(struct device *dev, acpi_handle * handle)
 {
@@ -84,6 +86,7 @@ static int acpi_find_bridge_device(struct device *dev, acpi_handle * handle)
 	up_read(&bus_type_sem);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(unregister_acpi_bus_type);
 
 /* Get device's handler per its address under its parent */
 struct acpi_find_child {
@@ -167,11 +170,8 @@ static int acpi_bind_one(struct device *dev, acpi_handle handle)
 				"firmware_node");
 		ret = sysfs_create_link(&acpi_dev->dev.kobj, &dev->kobj,
 				"physical_node");
-		if (acpi_dev->wakeup.flags.valid) {
+		if (acpi_dev->wakeup.flags.valid)
 			device_set_wakeup_capable(dev, true);
-			device_set_wakeup_enable(dev,
-						acpi_dev->wakeup.state.enabled);
-		}
 	}
 
 	return 0;

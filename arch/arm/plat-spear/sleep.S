@@ -17,81 +17,15 @@
 #include <mach/suspend.h>
 
 #define DISABLE_I_C_M_V	0x1805
-#define MISC_PLL_OFFS	0x214
-#define MPMC_REG_END	0xffc
 #define PLL_VAL1	0x060a
 #define PLL_VAL2	0x060e
 #define PLL_VAL3	0x0606
-#define ASSOC_MASK	0x3ff
-#define NUMSET_MASK	0x7fff
-
-#define	MODE_IRQ_32	0x12
-#define	MODE_SVC_32	0x13
-#define	MODE_ABT_32	0x17
-#define	MODE_UND_32	0x1B
-#define	MODE_SYS_32	0x1F
-#define	MODE_BITS	0x1F
 
 .text
 ENTRY(spear_sleep_mode)
-	mov	r10, r1		/* latch the address of cpu_resume */
-	mov	r11, r0		/* latch the suspend state */
-
-	ldr	r3, =IO_ADDRESS(SPEAR_SRAM_STACK_PA)
-	/* Save the current mode with irq disabled */
-	mrs	r0, cpsr
-	stmia	r3!, {r0}
-
-	/* Move to IRQ Mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_IRQ_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-
-	/* Saving FIQ stack pointer on to Stack in DDR */
-	stmia	r3!, {r1, r13, r14}
-
-	/* Move to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r3!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to ABT mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_ABT_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r3!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to undefined mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_UND_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r3!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move to sys_32 mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SYS_32)
-	msr	cpsr_c, r1
-	mrs	r1, spsr
-	stmia	r3!, {r1, r13, r14}	/* Saving IRQ stack pointer */
-
-	/* Move back to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-
+	ldr	r3, =SRAM_STACK_VA
 	/* Store the physical address of cpu_resume routine */
-	stmia	r3!, {r10}
+	stmia	r3!, {r0}
 	/*
 	 * Capture the Physical Address.
 	 * This will be used once MMU is Off
@@ -99,7 +33,7 @@ ENTRY(spear_sleep_mode)
 	adr	r0, mmu_off
 	adr	r1, spear_sleep_mode
 	sub	r1, r0, r1
-	ldr	r0, =SPEAR_START_SRAM
+	ldr	r0, =SRAM_START_PA
 	add	r2, r1, r0
 
 	/* Disable MMU */
@@ -264,51 +198,7 @@ wait_till_norm_mode:
 
 	mov	r0, #0
 	/* Start the Restore Processing */
-	ldr	r6, =SPEAR_SRAM_STACK_PA
-
-	ldmia	r6!, {r4}
-	msr	cpsr, r4
-	mov	r0, r4
-
-	/* Move to IRQ mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_IRQ_32)
-	msr	cpsr_c, r1
-	ldmia	r6!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to svc mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_SVC_32)
-	msr	cpsr_c, r1
-	ldmia	r6!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to ABT mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_ABT_32)
-	msr	cpsr_c, r1
-	ldmia	r6!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to undefined mode */
-	mrs	r0, cpsr
-	bic	r0, r0, #MODE_BITS
-	orr	r1, r0, #(MODE_UND_32)
-	msr	cpsr_c, r1
-	ldmia	r6!, {r1, r13, r14}
-	msr	spsr, r1
-
-	/* Move to sys_32 mode */
-	orr	r1, r0, #(MODE_SYS_32)
-	msr	cpsr_c, r1
-	ldmia	r6!, {r0, r13, r14}
-	msr	spsr_cxsf, r0
-
-	msr	cpsr, r4
+	ldr	r6, =SRAM_STACK_PA
 	ldmia	r6!, {r0}
 	mov	pc, r0
 	nop

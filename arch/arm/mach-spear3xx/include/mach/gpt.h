@@ -16,6 +16,16 @@
 
 #include <linux/io.h>
 
+/* Timers Base addresses */
+#define SPEAR3XX_ICM3_TMR0_BASE		UL(0xFC800000)
+#define SPEAR3XX_ICM3_TMR1_BASE		UL(0xFCB00000)
+
+/* Timer IRQ numbers */
+#define SPEAR3XX_IRQ_BASIC_GPT1_1	4
+#define SPEAR3XX_IRQ_BASIC_GPT1_2	5
+#define SPEAR3XX_IRQ_BASIC_GPT2_1	6
+#define SPEAR3XX_IRQ_BASIC_GPT2_2	7
+
 /* register offsets */
 #define GPT_CTRL_OFF	0x80 /* Control Register */
 #define GPT_INT_OFF	0x84 /* Interrupt Regiset */

@@ -1,3 +1,24 @@
+/*
+ * linux/usb/dwc_otg.h
+ *
+ * Copyright (ST) 2012 Rajeev Kumar (rajeev-dlh.kumar@st.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 /* DWC OTG (On The Go) defines */
 
 #ifndef __LINUX_DWC_OTG_H
@@ -106,7 +127,7 @@ struct core_params {
 	 * mode when dynamic FIFO sizing is enabled.  4 to 768 (default 256)
 	 */
 #define MAX_TX_FIFOS			15	/* Max periodic FIFOs */
-	u32 dev_perio_tx_fifo_size[MAX_TX_FIFOS];
+	unsigned int dev_perio_tx_fifo_size[MAX_TX_FIFOS];
 #define dwc_param_dev_perio_tx_fifo_size_default	256
 
 	/*
@@ -239,8 +260,8 @@ struct core_params {
 	 * Number of 4-byte words in each of the Tx FIFOs in device
 	 * mode when dynamic FIFO sizing is enabled. 4 to 768 (default 256)
 	 */
-	u32 dev_tx_fifo_size[MAX_TX_FIFOS];
-	u32 fifo_number;
+	unsigned int dev_tx_fifo_size[MAX_TX_FIFOS];
+	unsigned int fifo_number;
 #define dwc_param_dev_tx_fifo_size_default	256
 
 	/*
@@ -249,15 +270,15 @@ struct core_params {
 	 *      bit 1 - enable ISO Tx thresholding
 	 *      bit 2 - enable Rx thresholding
 	 */
-	u32 thr_ctl;
+	unsigned int thr_ctl;
 #define dwc_param_thr_ctl_default		0
 
 	/* Thresholding length for Tx FIFOs in 32 bit DWORDs */
-	u32 tx_thr_length;
+	unsigned int tx_thr_length;
 #define dwc_param_tx_thr_length_default		64
 
 	/* Thresholding length for Rx FIFOs in 32 bit DWORDs */
-	u32 rx_thr_length;
+	unsigned int rx_thr_length;
 #define dwc_param_rx_thr_length_default		64
 
 };
@@ -268,7 +289,6 @@ struct core_params {
  */
 struct dwc_otg_plat_data {
 	int (*phy_init)(void);
-	int (*param_init)(struct core_params *);
 };
 
 #endif /* __LINUX_DWC_OTG_H */

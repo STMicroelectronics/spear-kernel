@@ -4,7 +4,7 @@
  * Arasan Compact Flash host controller source file
  *
  * Copyright (C) 2011 ST Microelectronics
- * Viresh Kumar <viresh.kumar@st.com>
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -385,7 +385,7 @@ static inline int wait4buf(struct arasan_cf_dev *acdev)
 		return -ETIMEDOUT;
 	}
 
-	/* Check if PIO Error interrupt has occured */
+	/* Check if PIO Error interrupt has occurred */
 	if (acdev->dma_status & ATA_DMA_ERR)
 		return -EAGAIN;
 
@@ -450,7 +450,7 @@ static int sg_xfer(struct arasan_cf_dev *acdev, struct scatterlist *sg)
 	/*
 	 * For each sg:
 	 * MAX_XFER_COUNT data will be transferred before we get transfer
-	 * complete interrupt. Inbetween after FIFO_SIZE data
+	 * complete interrupt. Between after FIFO_SIZE data
 	 * buffer available interrupt will be generated. At this time we will
 	 * fill FIFO again: max FIFO_SIZE data.
 	 */
@@ -463,7 +463,7 @@ static int sg_xfer(struct arasan_cf_dev *acdev, struct scatterlist *sg)
 				acdev->vbase + XFER_CTR);
 		spin_unlock_irqrestore(&acdev->host->lock, flags);
 
-		/* continue dma xfers untill current sg is completed */
+		/* continue dma xfers until current sg is completed */
 		while (xfer_cnt) {
 			/* wait for read to complete */
 			if (!write) {
@@ -563,7 +563,7 @@ static void data_xfer(struct work_struct *work)
 
 chan_request_fail:
 	spin_lock_irqsave(&acdev->host->lock, flags);
-	/* error when transfering data to/from memory */
+	/* error when transferring data to/from memory */
 	qc->err_mask |= AC_ERR_HOST_BUS;
 	qc->ap->hsm_task_state = HSM_ST_ERR;
 
@@ -886,7 +886,8 @@ static int __devinit arasan_cf_probe(struct platform_device *pdev)
 	ap->ioaddr.altstatus_addr = acdev->vbase + ATA_ASTS_DCTR;
 	ap->ioaddr.ctl_addr = acdev->vbase + ATA_ASTS_DCTR;
 
-	ata_port_desc(ap, "phy_addr %x virt_addr %p", res->start, acdev->vbase);
+	ata_port_desc(ap, "phy_addr %llx virt_addr %p",
+		      (unsigned long long) res->start, acdev->vbase);
 
 	ret = cf_init(acdev);
 	if (ret)
@@ -921,8 +922,7 @@ static int __devexit arasan_cf_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int arasan_cf_suspend(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	struct ata_host *host = dev_get_drvdata(dev);
 	struct arasan_cf_dev *acdev = host->ports[0]->private_data;
 
 	if (acdev->dma_chan)
@@ -935,8 +935,7 @@ static int arasan_cf_suspend(struct device *dev)
 
 static int arasan_cf_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	struct ata_host *host = dev_get_drvdata(dev);
 	struct arasan_cf_dev *acdev = host->ports[0]->private_data;
 
 	cf_init(acdev);
@@ -944,9 +943,9 @@ static int arasan_cf_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(arasan_cf_pm_ops, arasan_cf_suspend, arasan_cf_resume);
-#endif
 
 static struct platform_driver arasan_cf_driver = {
 	.probe		= arasan_cf_probe,
@@ -954,25 +953,13 @@ static struct platform_driver arasan_cf_driver = {
 	.driver		= {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &arasan_cf_pm_ops,
-#endif
 	},
 };
 
-static int __init arasan_cf_init(void)
-{
-	return platform_driver_register(&arasan_cf_driver);
-}
-module_init(arasan_cf_init);
+module_platform_driver(arasan_cf_driver);
 
-static void __exit arasan_cf_exit(void)
-{
-	platform_driver_unregister(&arasan_cf_driver);
-}
-module_exit(arasan_cf_exit);
-
-MODULE_AUTHOR("Viresh Kumar <viresh.kumar@st.com>");
+MODULE_AUTHOR("Viresh Kumar <viresh.linux@gmail.com>");
 MODULE_DESCRIPTION("Arasan ATA Compact Flash driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:" DRIVER_NAME);

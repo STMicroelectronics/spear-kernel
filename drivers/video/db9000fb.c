@@ -44,13 +44,15 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <video/db9000fb.h>
 
 #include <asm/irq.h>
-#include <mach/bitfield.h>
 #include <mach/generic.h>
 #include <mach/hardware.h>
 
@@ -64,7 +66,7 @@
 #define DRIVER_NAME "clcd-db9000"
 #define DEF_BRIGHTNESS 0x80
 
-static char *mode_option __devinitdata;
+const char *mode_option __devinitdata;
 
 /* Bits which should not be set in machine configuration structures */
 #define CR1_INVALID_CONFIG_MASK	(~(DB9000_CR1_ENB | DB9000_CR1_LPE |\
@@ -481,6 +483,7 @@ static void init_backlight(struct db9000fb_info *fbi)
 
 	fbi->bl_power = FB_BLANK_UNBLANK;
 	props.max_brightness = 0xff;
+	props.type = BACKLIGHT_RAW;
 	bl = backlight_device_register("backlight", &fbi->pdev->dev, fbi,
 			&db9000_lcd_bl_ops, &props);
 
@@ -947,9 +950,25 @@ static inline void db9000fb_lcd_power(struct db9000fb_info *fbi, int on)
 
 static void db9000fb_setup_gpio(struct db9000fb_info *fbi, bool on)
 {
-	/* gpio or clcd pad selection */
-	if (fbi->setup_gpio)
-		fbi->setup_gpio(on);
+	int ret;
+
+	if (on) {
+		if (!IS_ERR(fbi->pins_default)) {
+			ret = pinctrl_select_state(fbi->pinctrl,
+					fbi->pins_default);
+			if (ret)
+				dev_err(&fbi->pdev->dev,
+					"could not set default pins\n");
+		}
+	} else {
+		if (!IS_ERR(fbi->pins_sleep)) {
+			ret = pinctrl_select_state(fbi->pinctrl,
+					fbi->pins_sleep);
+			if (ret)
+				dev_err(&fbi->pdev->dev,
+					"could not set pins to sleep state\n");
+		}
+	}
 }
 
 static void db9000fb_enable_controller(struct db9000fb_info *fbi)
@@ -969,7 +988,7 @@ static void db9000fb_enable_controller(struct db9000fb_info *fbi)
 	/* enable LCD controller clock */
 	if (!fbi->clk_enabled) {
 		fbi->clk_enabled =true;
-		clk_enable(fbi->clk);
+		clk_prepare_enable(fbi->clk);
 	}
 
 	/* Write into the palette memory */
@@ -1017,7 +1036,7 @@ static void db9000fb_disable_controller(struct db9000fb_info *fbi)
 
 	if (fbi->clk_enabled) {
 		fbi->clk_enabled = false;
-		clk_disable(fbi->clk);
+		clk_disable_unprepare(fbi->clk);
 	}
 }
 
@@ -1256,7 +1275,7 @@ static int db9000fb_thaw(struct device *dev)
 
 	if (!fbi->clk_enabled) {
 		fbi->clk_enabled = true;
-		clk_enable(fbi->clk);
+		clk_prepare_enable(fbi->clk);
 	}
 
 	fbi->state = fbi->old_state;
@@ -1270,7 +1289,7 @@ static int db9000fb_freeze(struct device *dev)
 
 	if (fbi->clk_enabled) {
 		fbi->clk_enabled = false;
-		clk_disable(fbi->clk);
+		clk_disable_unprepare(fbi->clk);
 	}
 
 	fbi->old_state = fbi->state;
@@ -1307,6 +1326,14 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	struct db9000fb_info *fbi;
 	struct db9000fb_mach_info *inf = dev_get_platdata(dev);
 
+	if (inf->clcd_plat_conf) {
+		if (inf->clcd_plat_conf(inf)) {
+			dev_err(dev, "%s: platform configuration failed\n",
+					__func__);
+			return NULL;
+		}
+	}
+
 	/* Alloc the db9000fb_info with the embedded pseudo_palette */
 	fbi = kzalloc(sizeof(struct db9000fb_info), GFP_KERNEL);
 	if (!fbi) {
@@ -1323,7 +1350,7 @@ static struct db9000fb_info * __devinit db9000fb_init_fbinfo(struct device *dev)
 	fbi->pixel_clk = inf->pixel_clk;
 	fbi->bus_clk = inf->bus_clk;
 
-	if (!fbi->pixel_clk || !fbi->bus_clk)
+	if (!fbi->bus_clk || !fbi->pixel_clk)
 		return NULL;
 
 	strcpy(fbi->fb.fix.id, DB9000FB_NAME);
@@ -1518,7 +1545,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 	} else if (!strncmp(this_opt, "dear:", 5)) {
 		inf->ctrl_info->dear = strict_strtoul(this_opt+5, 0, 0);
 		sprintf(s, "DMA end address offset: %d\n",
-			strict_strtoul(this_opt+4, 0, 0));
+				strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "lps:", 4)) {
 		if (strict_strtoul(this_opt+4, 0, 0) == 0) {
 			sprintf(s, "Selected Single port output mode to LCD\n");
@@ -1546,7 +1573,7 @@ static int __devinit parse_opt(struct device *dev, char *this_opt)
 		inf->ctrl_info->cr1 = (info->reg_cr1 & ~DB9000_CR1_OPS(7));
 		inf->ctrl_info->cr1 |=
 			(DB9000_CR1_OPS(strict_strtoul(this_opt+4, 0, 0))
-				& DB9000_CR1_OPS(3));
+			 & DB9000_CR1_OPS(3));
 		sprintf(s, "Output pixel select: %d\n",
 				strict_strtoul(this_opt+4, 0, 0));
 	} else if (!strncmp(this_opt, "rgb:", 4)) {
@@ -1714,6 +1741,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 {
 	struct db9000fb_info *fbi = NULL;
 	struct db9000fb_mach_info *inf = dev_get_platdata(&pdev->dev);
+	struct device_node __maybe_unused *np = pdev->dev.of_node;
 	struct resource *r;
 	char __iomem *addr;
 	int irq;
@@ -1721,6 +1749,12 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 
 	if (!inf)
 		return ret;
+
+	if (np) {
+		of_property_read_string(np, "st,mode", &inf->def_mode);
+		if (of_get_property(np, "ignore_cpufreq_notification", NULL))
+			inf->ignore_cpufreq_notification = true;
+	}
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!r)
@@ -1746,6 +1780,21 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to init framebuffer device\n");
 		return -ENOMEM;
 	}
+
+	fbi->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(fbi->pinctrl)) {
+		ret = PTR_ERR(fbi->pinctrl);
+	}
+
+	fbi->pins_default = pinctrl_lookup_state(fbi->pinctrl,
+			PINCTRL_STATE_DEFAULT);
+	if (IS_ERR(fbi->pins_default))
+		dev_err(&pdev->dev, "could not get default pinstate\n");
+
+	fbi->pins_sleep = pinctrl_lookup_state(fbi->pinctrl,
+			PINCTRL_STATE_SLEEP);
+	if (IS_ERR(fbi->pins_sleep))
+		dev_dbg(&pdev->dev, "could not get sleep pinstate\n");
 
 	fbi->mmio_base = ioremap(r->start, resource_size(r));
 	if (!fbi->mmio_base) {
@@ -1791,7 +1840,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	fbi->fb.fix.smem_len	= fbi->video_mem_size;
 	fbi->fb.var.height	= fbi->fb.var.yres;
 	fbi->fb.var.width	= fbi->fb.var.xres;
-	fbi->setup_gpio		= inf->clcd_mux_selection;
 
 	/* Clear the screen */
 	memset((char *)fbi->fb.screen_base, 0, fbi->fb.fix.smem_len);
@@ -1829,7 +1877,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 	ret = register_framebuffer(&fbi->fb);
 	if (ret < 0) {
 		dev_err(&pdev->dev,
-			"Failed to register framebuffer device:%d\n", ret);
+				"Failed to register framebuffer device:%d\n", ret);
 		goto err_clear_plat_data;
 	}
 
@@ -1868,10 +1916,10 @@ err_clear_plat_data:
 		fb_dealloc_cmap(&fbi->fb.cmap);
 err_free_irq:
 	free_irq(irq, fbi);
-err_free_framebuffer_addr:
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	exit_backlight(fbi);
 #endif
+err_free_framebuffer_addr:
 	iounmap(addr);
 err_free_mmio_base:
 	iounmap(fbi->mmio_base);
@@ -1897,7 +1945,6 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	info = &fbi->fb;
 
 	unregister_framebuffer(info);
-	db9000fb_setup_gpio(fbi, false);
 	db9000fb_disable_controller(fbi);
 	complete_and_exit(&fbi->vsync_notifier, 0);
 
@@ -1909,6 +1956,7 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	exit_backlight(fbi);
 #endif
+
 	iounmap(fbi->fb.screen_base);
 	iounmap(fbi->mmio_base);
 
@@ -1921,12 +1969,18 @@ static int __devexit db9000fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static struct of_device_id db9000fb_id_match[] = {
+	{ .compatible = "st,db9000-clcd", },
+	{}
+};
+
 static struct platform_driver db9000fb_driver = {
 	.probe		= db9000fb_probe,
 	.remove		= db9000fb_remove,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= DRIVER_NAME,
+		.of_match_table = db9000fb_id_match,
 #ifdef CONFIG_PM
 		.pm = &db9000fb_pm_ops,
 #endif

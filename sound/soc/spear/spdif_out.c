@@ -1,7 +1,7 @@
 /*
  * ALSA SoC SPDIF Out Audio Layer for spear processors
  *
- * Copyright (C) 2011 ST Microelectronics
+ * Copyright (C) 2012 ST Microelectronics
  * Vipin Kumar <vipin.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -12,26 +12,26 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/spear_dma.h>
 #include <sound/soc.h>
-#include <mach/spdif.h>
+#include <sound/spear_dma.h>
+#include <sound/spear_spdif.h>
 #include "spdif_out_regs.h"
-
-static int spdif_out_mute;
 
 struct spdif_out_params {
 	u32 rate;
 	u32 core_freq;
+	u32 mute;
 };
 
 struct spdif_out_dev {
 	struct clk *clk;
-	struct dma_data dma_params;
+	struct spear_dma_data dma_params;
 	struct spdif_out_params saved_params;
 	u32 running;
 	void *io_base;
@@ -64,7 +64,7 @@ static int spdif_out_startup(struct snd_pcm_substream *substream,
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)&host->dma_params);
 
-	ret = clk_enable(host->clk);
+	ret = clk_prepare_enable(host->clk);
 	if (ret)
 		return ret;
 
@@ -82,7 +82,7 @@ static void spdif_out_shutdown(struct snd_pcm_substream *substream,
 	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK)
 		return;
 
-	clk_disable(host->clk);
+	clk_disable_unprepare(host->clk);
 	host->running = false;
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
 }
@@ -163,7 +163,7 @@ static int spdif_out_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 			ctrl = readl(host->io_base + SPDIF_OUT_CTRL);
 			ctrl &= ~SPDIF_OPMODE_MASK;
-			if (!spdif_out_mute)
+			if (!host->saved_params.mute)
 				ctrl |= SPDIF_OPMODE_AUD_DATA |
 					SPDIF_STATE_NORMAL;
 			else
@@ -192,7 +192,7 @@ static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
 	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(dai);
 	u32 val;
 
-	spdif_out_mute = mute;
+	host->saved_params.mute = mute;
 	val = readl(host->io_base + SPDIF_OUT_CTRL);
 	val &= ~SPDIF_OPMODE_MASK;
 
@@ -212,37 +212,34 @@ static int spdif_digital_mute(struct snd_soc_dai *dai, int mute)
 static int spdif_mute_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = spdif_out_mute;
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.integer.value[0] = host->saved_params.mute;
 	return 0;
 }
 
 static int spdif_mute_put(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_card *card = codec->card;
-	struct snd_soc_pcm_runtime *rtd = card->rtd;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct spdif_out_dev *host = snd_soc_dai_get_drvdata(cpu_dai);
 
-	if (spdif_out_mute == ucontrol->value.integer.value[0])
+	if (host->saved_params.mute == ucontrol->value.integer.value[0])
 		return 0;
-
 	spdif_digital_mute(cpu_dai, ucontrol->value.integer.value[0]);
 
 	return 1;
 }
 static const struct snd_kcontrol_new spdif_out_controls[] = {
-	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", (unsigned long)&spdif_out_mute,
+	SOC_SINGLE_BOOL_EXT("SPDIF Play Mute", 0,
 			spdif_mute_get, spdif_mute_put),
 };
 
 int spdif_soc_dai_probe(struct snd_soc_dai *dai)
 {
-	struct snd_soc_card *card = dai->card;
-	struct snd_soc_pcm_runtime *rtd = card->rtd;
-	struct snd_soc_codec *codec = rtd->codec;
 
-	return snd_soc_add_controls(codec, spdif_out_controls,
+	return snd_soc_add_dai_controls(dai, spdif_out_controls,
 				ARRAY_SIZE(spdif_out_controls));
 }
 
@@ -270,7 +267,7 @@ struct snd_soc_dai_driver spdif_out_dai = {
 static int spdif_out_probe(struct platform_device *pdev)
 {
 	struct spdif_out_dev *host;
-	struct spdif_platform_data *pdata;
+	struct spear_spdif_platform_data *pdata;
 	struct resource *res;
 	int ret;
 
@@ -339,7 +336,7 @@ static int spdif_out_suspend(struct device *dev)
 	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
 
 	if (host->running)
-		clk_disable(host->clk);
+		clk_disable_unprepare(host->clk);
 
 	return 0;
 }
@@ -350,7 +347,7 @@ static int spdif_out_resume(struct device *dev)
 	struct spdif_out_dev *host = dev_get_drvdata(&pdev->dev);
 
 	if (host->running) {
-		clk_enable(host->clk);
+		clk_prepare_enable(host->clk);
 		spdif_out_configure(host);
 		spdif_out_clock(host, host->saved_params.core_freq,
 				host->saved_params.rate);
@@ -368,6 +365,12 @@ static SIMPLE_DEV_PM_OPS(spdif_out_dev_pm_ops, spdif_out_suspend, \
 
 #endif
 
+static const struct of_device_id spdif_out_of_match[]  = {
+	{ .compatible = "st,spdif-out", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_out_of_match);
+
 static struct platform_driver spdif_out_driver = {
 	.probe		= spdif_out_probe,
 	.remove		= spdif_out_remove,
@@ -375,21 +378,13 @@ static struct platform_driver spdif_out_driver = {
 		.name	= "spdif-out",
 		.owner	= THIS_MODULE,
 		.pm	= SPDIF_OUT_DEV_PM_OPS,
+		.of_match_table = spdif_out_of_match,
 	},
 };
 
-static int __init spdif_out_init(void)
-{
-	return platform_driver_register(&spdif_out_driver);
-}
-module_init(spdif_out_init);
-
-static void __exit spdif_out_exit(void)
-{
-	platform_driver_unregister(&spdif_out_driver);
-}
-module_exit(spdif_out_exit);
+module_platform_driver(spdif_out_driver);
 
 MODULE_AUTHOR("Vipin Kumar <vipin.kumar@st.com>");
 MODULE_DESCRIPTION("SPEAr SPDIF OUT SoC Interface");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:spdif_out");

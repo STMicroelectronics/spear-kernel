@@ -13,7 +13,6 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/driver.h>
 #include <linux/mfd/abx500.h>
@@ -205,29 +204,6 @@ static int ab3100_enable_regulator(struct regulator_dev *reg)
 		return err;
 	}
 
-	/* Per-regulator power on delay from spec */
-	switch (abreg->regreg) {
-	case AB3100_LDO_A: /* Fallthrough */
-	case AB3100_LDO_C: /* Fallthrough */
-	case AB3100_LDO_D: /* Fallthrough */
-	case AB3100_LDO_E: /* Fallthrough */
-	case AB3100_LDO_H: /* Fallthrough */
-	case AB3100_LDO_K:
-		udelay(200);
-		break;
-	case AB3100_LDO_F:
-		udelay(600);
-		break;
-	case AB3100_LDO_G:
-		udelay(400);
-		break;
-	case AB3100_BUCK:
-		mdelay(1);
-		break;
-	default:
-		break;
-	}
-
 	return 0;
 }
 
@@ -328,50 +304,12 @@ static int ab3100_get_voltage_regulator(struct regulator_dev *reg)
 	return abreg->typ_voltages[regval];
 }
 
-static int ab3100_get_best_voltage_index(struct regulator_dev *reg,
-				   int min_uV, int max_uV)
-{
-	struct ab3100_regulator *abreg = reg->reg_data;
-	int i;
-	int bestmatch;
-	int bestindex;
-
-	/*
-	 * Locate the minimum voltage fitting the criteria on
-	 * this regulator. The switchable voltages are not
-	 * in strict falling order so we need to check them
-	 * all for the best match.
-	 */
-	bestmatch = INT_MAX;
-	bestindex = -1;
-	for (i = 0; i < abreg->voltages_len; i++) {
-		if (abreg->typ_voltages[i] <= max_uV &&
-		    abreg->typ_voltages[i] >= min_uV &&
-		    abreg->typ_voltages[i] < bestmatch) {
-			bestmatch = abreg->typ_voltages[i];
-			bestindex = i;
-		}
-	}
-
-	if (bestindex < 0) {
-		dev_warn(&reg->dev, "requested %d<=x<=%d uV, out of range!\n",
-			 min_uV, max_uV);
-		return -EINVAL;
-	}
-	return bestindex;
-}
-
-static int ab3100_set_voltage_regulator(struct regulator_dev *reg,
-					int min_uV, int max_uV)
+static int ab3100_set_voltage_regulator_sel(struct regulator_dev *reg,
+					    unsigned selector)
 {
 	struct ab3100_regulator *abreg = reg->reg_data;
 	u8 regval;
 	int err;
-	int bestindex;
-
-	bestindex = ab3100_get_best_voltage_index(reg, min_uV, max_uV);
-	if (bestindex < 0)
-		return bestindex;
 
 	err = abx500_get_register_interruptible(abreg->dev, 0,
 						abreg->regreg, &regval);
@@ -384,7 +322,7 @@ static int ab3100_set_voltage_regulator(struct regulator_dev *reg,
 
 	/* The highest three bits control the variable regulators */
 	regval &= ~0xE0;
-	regval |= (bestindex << 5);
+	regval |= (selector << 5);
 
 	err = abx500_set_register_interruptible(abreg->dev, 0,
 						abreg->regreg, regval);
@@ -412,7 +350,7 @@ static int ab3100_set_suspend_voltage_regulator(struct regulator_dev *reg,
 		return -EINVAL;
 
 	/* LDO E and BUCK have special suspend voltages you can set */
-	bestindex = ab3100_get_best_voltage_index(reg, uV, uV);
+	bestindex = regulator_map_voltage_iterate(reg, uV, uV);
 
 	err = abx500_get_register_interruptible(abreg->dev, 0,
 						targetreg, &regval);
@@ -446,11 +384,37 @@ static int ab3100_get_voltage_regulator_external(struct regulator_dev *reg)
 	return abreg->plfdata->external_voltage;
 }
 
+static int ab3100_enable_time_regulator(struct regulator_dev *reg)
+{
+	struct ab3100_regulator *abreg = reg->reg_data;
+
+	/* Per-regulator power on delay from spec */
+	switch (abreg->regreg) {
+	case AB3100_LDO_A: /* Fallthrough */
+	case AB3100_LDO_C: /* Fallthrough */
+	case AB3100_LDO_D: /* Fallthrough */
+	case AB3100_LDO_E: /* Fallthrough */
+	case AB3100_LDO_H: /* Fallthrough */
+	case AB3100_LDO_K:
+		return 200;
+	case AB3100_LDO_F:
+		return 600;
+	case AB3100_LDO_G:
+		return 400;
+	case AB3100_BUCK:
+		return 1000;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static struct regulator_ops regulator_ops_fixed = {
 	.enable      = ab3100_enable_regulator,
 	.disable     = ab3100_disable_regulator,
 	.is_enabled  = ab3100_is_enabled_regulator,
 	.get_voltage = ab3100_get_voltage_regulator,
+	.enable_time = ab3100_enable_time_regulator,
 };
 
 static struct regulator_ops regulator_ops_variable = {
@@ -458,8 +422,9 @@ static struct regulator_ops regulator_ops_variable = {
 	.disable     = ab3100_disable_regulator,
 	.is_enabled  = ab3100_is_enabled_regulator,
 	.get_voltage = ab3100_get_voltage_regulator,
-	.set_voltage = ab3100_set_voltage_regulator,
+	.set_voltage_sel = ab3100_set_voltage_regulator_sel,
 	.list_voltage = ab3100_list_voltage_regulator,
+	.enable_time = ab3100_enable_time_regulator,
 };
 
 static struct regulator_ops regulator_ops_variable_sleepable = {
@@ -467,9 +432,10 @@ static struct regulator_ops regulator_ops_variable_sleepable = {
 	.disable     = ab3100_disable_regulator,
 	.is_enabled  = ab3100_is_enabled_regulator,
 	.get_voltage = ab3100_get_voltage_regulator,
-	.set_voltage = ab3100_set_voltage_regulator,
+	.set_voltage_sel = ab3100_set_voltage_regulator_sel,
 	.set_suspend_voltage = ab3100_set_suspend_voltage_regulator,
 	.list_voltage = ab3100_list_voltage_regulator,
+	.enable_time = ab3100_enable_time_regulator,
 };
 
 /*
@@ -574,6 +540,7 @@ ab3100_regulator_desc[AB3100_NUM_REGULATORS] = {
 static int __devinit ab3100_regulators_probe(struct platform_device *pdev)
 {
 	struct ab3100_platform_data *plfdata = pdev->dev.platform_data;
+	struct regulator_config config = { };
 	int err = 0;
 	u8 data;
 	int i;
@@ -619,15 +586,15 @@ static int __devinit ab3100_regulators_probe(struct platform_device *pdev)
 		reg->dev = &pdev->dev;
 		reg->plfdata = plfdata;
 
+		config.dev = &pdev->dev;
+		config.driver_data = reg;
+		config.init_data = &plfdata->reg_constraints[i];
+
 		/*
 		 * Register the regulator, pass around
 		 * the ab3100_regulator struct
 		 */
-		rdev = regulator_register(&ab3100_regulator_desc[i],
-					  &pdev->dev,
-					  &plfdata->reg_constraints[i],
-					  reg);
-
+		rdev = regulator_register(&ab3100_regulator_desc[i], &config);
 		if (IS_ERR(rdev)) {
 			err = PTR_ERR(rdev);
 			dev_err(&pdev->dev,

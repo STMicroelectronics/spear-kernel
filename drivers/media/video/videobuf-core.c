@@ -1129,6 +1129,7 @@ unsigned int videobuf_poll_stream(struct file *file,
 				  struct videobuf_queue *q,
 				  poll_table *wait)
 {
+	unsigned long req_events = poll_requested_events(wait);
 	struct videobuf_buffer *buf = NULL;
 	unsigned int rc = 0;
 
@@ -1137,7 +1138,7 @@ unsigned int videobuf_poll_stream(struct file *file,
 		if (!list_empty(&q->stream))
 			buf = list_entry(q->stream.next,
 					 struct videobuf_buffer, stream);
-	} else {
+	} else if (req_events & (POLLIN | POLLRDNORM)) {
 		if (!q->reading)
 			__videobuf_read_start(q);
 		if (!q->reading) {
@@ -1202,33 +1203,3 @@ int videobuf_mmap_mapper(struct videobuf_queue *q, struct vm_area_struct *vma)
 	return rc;
 }
 EXPORT_SYMBOL_GPL(videobuf_mmap_mapper);
-
-#ifdef CONFIG_VIDEO_V4L1_COMPAT
-int videobuf_cgmbuf(struct videobuf_queue *q,
-		    struct video_mbuf *mbuf, int count)
-{
-	struct v4l2_requestbuffers req;
-	int rc, i;
-
-	MAGIC_CHECK(q->int_ops->magic, MAGIC_QTYPE_OPS);
-
-	memset(&req, 0, sizeof(req));
-	req.type   = q->type;
-	req.count  = count;
-	req.memory = V4L2_MEMORY_MMAP;
-	rc = videobuf_reqbufs(q, &req);
-	if (rc < 0)
-		return rc;
-
-	mbuf->frames = req.count;
-	mbuf->size   = 0;
-	for (i = 0; i < mbuf->frames; i++) {
-		mbuf->offsets[i]  = q->bufs[i]->boff;
-		mbuf->size       += PAGE_ALIGN(q->bufs[i]->bsize);
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(videobuf_cgmbuf);
-#endif
-

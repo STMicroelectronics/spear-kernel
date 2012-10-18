@@ -1,0 +1,12 @@
+#
+# stmicro macb Network device configuration
+#
+config ETH_SPEAR_MACB
+	bool "Cadence macb Ethernet adapted for SPEAr 320 Support"
+	depends on ARM && MACH_SPEAR320
+	select PHYLIB
+	help
+	  This is the driver for Cadence macb Ethernet controller
+	  adopted for ST Micro SPEAr SOC. The driver adaptation takes
+	  into account some of the fixes which are particular to SPEAr
+	  SOC.

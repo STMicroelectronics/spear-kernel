@@ -56,22 +56,14 @@
  */
 static inline u32 dwc_read32(ulong reg)
 {
-#ifdef CONFIG_DWC_OTG_REG_LE
-	return in_le32((unsigned __iomem *)reg);
-#else
-	return in_be32((unsigned __iomem *)reg);
-#endif
+	return readl((unsigned __iomem *)reg);
 };
 /**
  * Writes a register with a 32 bit value.
  */
 static inline void dwc_write32(ulong reg, const u32 value)
 {
-#ifdef CONFIG_DWC_OTG_REG_LE
-	out_le32((unsigned __iomem *)reg, value);
-#else
-	out_be32((unsigned __iomem *)reg, value);
-#endif
+	writel(value, (unsigned __iomem *)reg);
 };
 
 /**
@@ -81,33 +73,18 @@ static inline void dwc_write32(ulong reg, const u32 value)
 static inline
 	void dwc_modify32(ulong reg, const u32 _clear_mask, const u32 _set_mask)
 {
-#ifdef CONFIG_DWC_OTG_REG_LE
-	out_le32((unsigned __iomem *)reg,
-			(in_le32((unsigned __iomem *)reg) & ~_clear_mask) |
-			_set_mask);
-#else
-	out_be32((unsigned __iomem *)reg,
-			(in_be32(((unsigned __iomem *))reg) & ~_clear_mask) |
-			_set_mask);
-#endif
+	writel((readl((unsigned __iomem *)reg) & ~_clear_mask) | _set_mask,
+			(unsigned __iomem *)reg);
 };
 
 static inline void dwc_write_fifo32(ulong reg, const u32 _value)
 {
-#ifdef CONFIG_DWC_OTG_FIFO_LE
-	out_le32((unsigned __iomem *)reg, _value);
-#else
-	out_be32((unsigned __iomem *)reg, _value);
-#endif
+	writel(_value, (unsigned __iomem *)reg);
 };
 
 static inline u32 dwc_read_fifo32(ulong _reg)
 {
-#ifdef CONFIG_DWC_OTG_FIFO_LE
-	return in_le32((unsigned __iomem *) _reg);
-#else
-	return in_be32((unsigned __iomem *) _reg);
-#endif
+	return readl((unsigned __iomem *) _reg);
 };
 
 /*
@@ -354,6 +331,8 @@ struct dwc_pcd {
  */
 struct dwc_hcd {
 	spinlock_t lock;
+
+	struct tasklet_struct del_con_timer;
 
 	/* DWC OTG Core Interface Layer */
 	struct core_if *core_if;
@@ -763,7 +742,7 @@ struct core_if {
 
 	struct delayed_work usb_port_wakeup;
 	struct work_struct usb_port_otg;
-	struct otg_transceiver *xceiv;
+	struct usb_phy *xceiv;
 };
 
 /*

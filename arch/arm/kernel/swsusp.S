@@ -3,6 +3,7 @@
  *
  * Based on work by:
  *
+ * Copyright (C) 2006 Rafael J. Wysocki <rjw@sisk.pl>
  * Ubuntu project, hibernation support for mach-dove,
  * Copyright (C) 2010 Nokia Corporation (Hiroshi Doyu)
  * Copyright (C) 2010 Texas Instruments, Inc. (Teerth Reddy et al.)
@@ -10,7 +11,8 @@
  *	https://lists.linux-foundation.org/pipermail/linux-pm/2010-June/027422.html
  *	https://patchwork.kernel.org/patch/96442/
  *
- * Copyright (C) 2006 Rafael J. Wysocki <rjw@sisk.pl>
+ * Copyright (C) 2012 ST Microelectronics
+ * Deepak Sikri<deepak.sikri@st.com>
  *
  * License terms: GNU General Public License (GPL) version 2
  */
@@ -35,17 +37,20 @@ ENTRY(swsusp_arch_suspend)
 	stmfd	sp!, {r1-r11,lr}		@ save registers
 	ldr	r0, =.Ltemp_sp
 	str	sp, [r0]			@ temp
-	ldr	r1, =(PHYS_OFFSET - PAGE_OFFSET)
-	adr	r3, .Lresume_post_mmu		@ resume here
+	mov	r0, #0
+	adr	r1, .Lresume_s2d		@ resume here
 	bl	cpu_suspend			@ snapshot state (to stack)
-	ldr	r1, =sleep_save_sp
-	ldr	r0, =__swsusp_save_sp
-	ldr	r2, [r1]
-	str	r2, [r0]
-	bl	swsusp_save			@ write snapshot
-	ldr	r1, =.Ltemp_sp
-	ldr	sp, [r1]			@ restore stack
-	ldmfd	sp!, {r1-r11, pc}		@ return
+	/*
+	 * Execution returns here via resuming the saved context.
+	 * MMU is active again and CPU core state has been restored, all
+	 * that remains to be done now is to restore the CPU registers.
+	 */
+	ldmfd	sp!, {r1-r11}
+	msr	cpsr, r1
+	msr	spsr, r2
+	bl	cpu_init			@ reinitialize other modes
+	ldmfd	sp!, {lr}
+	b	__swsusp_arch_resume_finish	@ cleanup
 ENDPROC(swsusp_arch_suspend)
 
 /*
@@ -65,18 +70,15 @@ ENTRY(swsusp_arch_resume)
 	b	__swsusp_arch_restore_image
 .ltorg
 .align 5
-	/*
-	 * Execution returns here via resuming the saved context.
-	 * MMU is active again and CPU core state has been restored, all
-	 * that remains to be done now is to restore the CPU registers.
-	 */
-.Lresume_post_mmu:
-	ldmfd	sp!, {r1-r11}
-	msr	cpsr, r1
-	msr	spsr, r2
-	bl	cpu_init			@ reinitialize other modes
-	ldmfd	sp!, {lr}
-	b	__swsusp_arch_resume_finish	@ cleanup
+.Lresume_s2d:
+	ldr	r1, =sleep_save_sp
+	ldr	r0, =__swsusp_save_sp
+	ldr	r2, [r1]
+	str	r2, [r0]
+	bl	swsusp_save			@ write snapshot
+	ldr	r1, =.Ltemp_sp
+	ldr	sp, [r1]			@ restore stack
+	ldmfd	sp!, {r1-r11, pc}		@ return
 ENDPROC(swsusp_arch_resume)
 
 .data

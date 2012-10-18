@@ -139,7 +139,7 @@ tapechar_read(struct file *filp, char __user *data, size_t count, loff_t *ppos)
 	/*
 	 * If the tape isn't terminated yet, do it now. And since we then
 	 * are at the end of the tape there wouldn't be anything to read
-	 * anyways. So we return immediatly.
+	 * anyways. So we return immediately.
 	 */
 	if(device->required_tapemarks) {
 		return tape_std_terminate_write(device);
@@ -160,11 +160,6 @@ tapechar_read(struct file *filp, char __user *data, size_t count, loff_t *ppos)
 	rc = tapechar_check_idalbuffer(device, block_size);
 	if (rc)
 		return rc;
-
-#ifdef CONFIG_S390_TAPE_BLOCK
-	/* Changes position. */
-	device->blk_data.medium_changed = 1;
-#endif
 
 	DBF_EVENT(6, "TCHAR:nbytes: %lx\n", block_size);
 	/* Let the discipline build the ccw chain. */
@@ -217,11 +212,6 @@ tapechar_write(struct file *filp, const char __user *data, size_t count, loff_t 
 	rc = tapechar_check_idalbuffer(device, block_size);
 	if (rc)
 		return rc;
-
-#ifdef CONFIG_S390_TAPE_BLOCK
-	/* Changes position. */
-	device->blk_data.medium_changed = 1;
-#endif
 
 	DBF_EVENT(6,"TCHAR:nbytes: %lx\n", block_size);
 	DBF_EVENT(6, "TCHAR:nblocks: %x\n", nblocks);
@@ -379,9 +369,6 @@ __tapechar_ioctl(struct tape_device *device,
 			case MTBSFM:
 			case MTFSFM:
 			case MTSEEK:
-#ifdef CONFIG_S390_TAPE_BLOCK
-				device->blk_data.medium_changed = 1;
-#endif
 				if (device->required_tapemarks)
 					tape_std_terminate_write(device);
 			default:

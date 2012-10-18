@@ -138,9 +138,9 @@
 #include <linux/spinlock.h>
 #include <linux/stat.h>
 #include <linux/bitops.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
-#include <asm/system.h>
 #include <asm/dma.h>
 
 #define ULTRASTOR_PRIVATE	/* Get the private stuff from ultrastor.h */
@@ -306,7 +306,7 @@ static inline int find_and_clear_bit_16(unsigned long *field)
 	"0: bsfw %1,%w0\n\t"
 	"btr %0,%1\n\t"
 	"jnc 0b"
-	: "=&r" (rv), "=m" (*field) :);
+	: "=&r" (rv), "+m" (*field) :);
 
   return rv;
 }

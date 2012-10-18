@@ -10,10 +10,7 @@
 #include <linux/sched.h>
 #include <asm/openprom.h>
 #include <asm/oplib.h>
-#include <asm/system.h>
 #include <linux/string.h>
-
-extern int prom_stdin, prom_stdout;
 
 static int __prom_console_write_buf(const char *buf, int len)
 {

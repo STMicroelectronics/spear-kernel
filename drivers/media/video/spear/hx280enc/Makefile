@@ -1,1 +1,0 @@
-obj-$(CONFIG_VIDEO_SPEAR_VIDEOENC)	+= hx280enc.o

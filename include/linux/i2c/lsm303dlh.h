@@ -42,17 +42,17 @@ struct lsm303dlh_platform_data {
 	u32 irq_m;	/* interrupt line of magnetometer*/
 
 	/* position of x, y and z axis */
-	u8 axis_map_x; /* [0-2] */
-	u8 axis_map_y; /* [0-2] */
-	u8 axis_map_z; /* [0-2] */
+	u32 axis_map_x; /* [0-2] */
+	u32 axis_map_y; /* [0-2] */
+	u32 axis_map_z; /* [0-2] */
 
 	/* orientation of x, y and z axis */
-	u8 negative_x; /* [0-1] */
-	u8 negative_y; /* [0-1] */
-	u8 negative_z; /* [0-1] */
+	u32 negative_x; /* [0-1] */
+	u32 negative_y; /* [0-1] */
+	u32 negative_z; /* [0-1] */
 
 	/*  set this for poll device */
-	u8  input_poll_dev;
+	u32  input_poll_dev;
 };
 #endif /* __KERNEL__ */
 

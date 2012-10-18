@@ -319,7 +319,7 @@ typedef union
  *         is an error code, or zero if no error.  The val0 member is the
  *         updated value of seqno; it has been incremented by 1 for each
  *         packet sent.  That increment may be less than nentries if an
- *         error occured, or if some of the entries in the vector contain
+ *         error occurred, or if some of the entries in the vector contain
  *         handles equal to NETIO_PKT_HANDLE_NONE.  The val1 member is the
  *         updated value of nentries; it has been decremented by 1 for each
  *         vector entry processed.  Again, that decrement may be less than
@@ -460,7 +460,7 @@ typedef void* lepp_comp_t;
  *  linux's "MAX_SKB_FRAGS", and presumably over-estimates by one, for
  *  our page size of exactly 65536.  We add one for a "body" fragment.
  */
-#define LEPP_MAX_FRAGS (65536 / HV_PAGE_SIZE_SMALL + 2 + 1)
+#define LEPP_MAX_FRAGS (65536 / HV_DEFAULT_PAGE_SIZE_SMALL + 2 + 1)
 
 /** Total number of bytes needed for an lepp_tso_cmd_t. */
 #define LEPP_TSO_CMD_SIZE(num_frags, header_size) \

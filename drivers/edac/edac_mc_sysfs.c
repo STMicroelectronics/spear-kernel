@@ -144,25 +144,31 @@ static ssize_t csrow_ce_count_show(struct csrow_info *csrow, char *data,
 static ssize_t csrow_size_show(struct csrow_info *csrow, char *data,
 				int private)
 {
-	return sprintf(data, "%u\n", PAGES_TO_MiB(csrow->nr_pages));
+	int i;
+	u32 nr_pages = 0;
+
+	for (i = 0; i < csrow->nr_channels; i++)
+		nr_pages += csrow->channels[i].dimm->nr_pages;
+
+	return sprintf(data, "%u\n", PAGES_TO_MiB(nr_pages));
 }
 
 static ssize_t csrow_mem_type_show(struct csrow_info *csrow, char *data,
 				int private)
 {
-	return sprintf(data, "%s\n", mem_types[csrow->mtype]);
+	return sprintf(data, "%s\n", mem_types[csrow->channels[0].dimm->mtype]);
 }
 
 static ssize_t csrow_dev_type_show(struct csrow_info *csrow, char *data,
 				int private)
 {
-	return sprintf(data, "%s\n", dev_types[csrow->dtype]);
+	return sprintf(data, "%s\n", dev_types[csrow->channels[0].dimm->dtype]);
 }
 
 static ssize_t csrow_edac_mode_show(struct csrow_info *csrow, char *data,
 				int private)
 {
-	return sprintf(data, "%s\n", edac_caps[csrow->edac_mode]);
+	return sprintf(data, "%s\n", edac_caps[csrow->channels[0].dimm->edac_mode]);
 }
 
 /* show/store functions for DIMM Label attributes */
@@ -170,11 +176,11 @@ static ssize_t channel_dimm_label_show(struct csrow_info *csrow,
 				char *data, int channel)
 {
 	/* if field has not been initialized, there is nothing to send */
-	if (!csrow->channels[channel].label[0])
+	if (!csrow->channels[channel].dimm->label[0])
 		return 0;
 
 	return snprintf(data, EDAC_MC_LABEL_LEN, "%s\n",
-			csrow->channels[channel].label);
+			csrow->channels[channel].dimm->label);
 }
 
 static ssize_t channel_dimm_label_store(struct csrow_info *csrow,
@@ -184,8 +190,8 @@ static ssize_t channel_dimm_label_store(struct csrow_info *csrow,
 	ssize_t max_size = 0;
 
 	max_size = min((ssize_t) count, (ssize_t) EDAC_MC_LABEL_LEN - 1);
-	strncpy(csrow->channels[channel].label, data, max_size);
-	csrow->channels[channel].label[max_size] = '\0';
+	strncpy(csrow->channels[channel].dimm->label, data, max_size);
+	csrow->channels[channel].dimm->label[max_size] = '\0';
 
 	return max_size;
 }
@@ -419,8 +425,8 @@ static ssize_t mci_reset_counters_store(struct mem_ctl_info *mci,
 
 	mci->ue_noinfo_count = 0;
 	mci->ce_noinfo_count = 0;
-	mci->ue_count = 0;
-	mci->ce_count = 0;
+	mci->ue_mc = 0;
+	mci->ce_mc = 0;
 
 	for (row = 0; row < mci->nr_csrows; row++) {
 		struct csrow_info *ri = &mci->csrows[row];
@@ -436,67 +442,65 @@ static ssize_t mci_reset_counters_store(struct mem_ctl_info *mci,
 	return count;
 }
 
-/* memory scrubbing */
+/* Memory scrubbing interface:
+ *
+ * A MC driver can limit the scrubbing bandwidth based on the CPU type.
+ * Therefore, ->set_sdram_scrub_rate should be made to return the actual
+ * bandwidth that is accepted or 0 when scrubbing is to be disabled.
+ *
+ * Negative value still means that an error has occurred while setting
+ * the scrub rate.
+ */
 static ssize_t mci_sdram_scrub_rate_store(struct mem_ctl_info *mci,
 					  const char *data, size_t count)
 {
 	unsigned long bandwidth = 0;
-	int err;
+	int new_bw = 0;
 
-	if (!mci->set_sdram_scrub_rate) {
-		edac_printk(KERN_WARNING, EDAC_MC,
-			    "Memory scrub rate setting not implemented!\n");
-		return -EINVAL;
-	}
+	if (!mci->set_sdram_scrub_rate)
+		return -ENODEV;
 
 	if (strict_strtoul(data, 10, &bandwidth) < 0)
 		return -EINVAL;
 
-	err = mci->set_sdram_scrub_rate(mci, (u32)bandwidth);
-	if (err) {
-		edac_printk(KERN_DEBUG, EDAC_MC,
-			    "Failed setting scrub rate to %lu\n", bandwidth);
+	new_bw = mci->set_sdram_scrub_rate(mci, bandwidth);
+	if (new_bw < 0) {
+		edac_printk(KERN_WARNING, EDAC_MC,
+			    "Error setting scrub rate to: %lu\n", bandwidth);
 		return -EINVAL;
 	}
-	else {
-		edac_printk(KERN_DEBUG, EDAC_MC,
-			    "Scrub rate set to: %lu\n", bandwidth);
-		return count;
-	}
+
+	return count;
 }
 
+/*
+ * ->get_sdram_scrub_rate() return value semantics same as above.
+ */
 static ssize_t mci_sdram_scrub_rate_show(struct mem_ctl_info *mci, char *data)
 {
-	u32 bandwidth = 0;
-	int err;
+	int bandwidth = 0;
 
-	if (!mci->get_sdram_scrub_rate) {
-		edac_printk(KERN_WARNING, EDAC_MC,
-			    "Memory scrub rate reading not implemented\n");
-		return -EINVAL;
-	}
+	if (!mci->get_sdram_scrub_rate)
+		return -ENODEV;
 
-	err = mci->get_sdram_scrub_rate(mci, &bandwidth);
-	if (err) {
+	bandwidth = mci->get_sdram_scrub_rate(mci);
+	if (bandwidth < 0) {
 		edac_printk(KERN_DEBUG, EDAC_MC, "Error reading scrub rate\n");
-		return err;
+		return bandwidth;
 	}
-	else {
-		edac_printk(KERN_DEBUG, EDAC_MC,
-			    "Read scrub rate: %d\n", bandwidth);
-		return sprintf(data, "%d\n", bandwidth);
-	}
+
+	return sprintf(data, "%d\n", bandwidth);
 }
 
 /* default attribute files for the MCI object */
 static ssize_t mci_ue_count_show(struct mem_ctl_info *mci, char *data)
 {
-	return sprintf(data, "%d\n", mci->ue_count);
+	return sprintf(data, "%d\n", mci->ue_mc);
 }
 
 static ssize_t mci_ce_count_show(struct mem_ctl_info *mci, char *data)
 {
-	return sprintf(data, "%d\n", mci->ce_count);
+	return sprintf(data, "%d\n", mci->ce_mc);
 }
 
 static ssize_t mci_ce_noinfo_show(struct mem_ctl_info *mci, char *data)
@@ -521,16 +525,16 @@ static ssize_t mci_ctl_name_show(struct mem_ctl_info *mci, char *data)
 
 static ssize_t mci_size_mb_show(struct mem_ctl_info *mci, char *data)
 {
-	int total_pages, csrow_idx;
+	int total_pages = 0, csrow_idx, j;
 
-	for (total_pages = csrow_idx = 0; csrow_idx < mci->nr_csrows;
-		csrow_idx++) {
+	for (csrow_idx = 0; csrow_idx < mci->nr_csrows; csrow_idx++) {
 		struct csrow_info *csrow = &mci->csrows[csrow_idx];
 
-		if (!csrow->nr_pages)
-			continue;
+		for (j = 0; j < csrow->nr_channels; j++) {
+			struct dimm_info *dimm = csrow->channels[j].dimm;
 
-		total_pages += csrow->nr_pages;
+			total_pages += dimm->nr_pages;
+		}
 	}
 
 	return sprintf(data, "%u\n", PAGES_TO_MiB(total_pages));
@@ -786,10 +790,10 @@ static int edac_create_mci_instance_attributes(struct mem_ctl_info *mci,
 {
 	int err;
 
-	debugf1("%s()\n", __func__);
+	debugf4("%s()\n", __func__);
 
 	while (sysfs_attrib) {
-		debugf1("%s() sysfs_attrib = %p\n",__func__, sysfs_attrib);
+		debugf4("%s() sysfs_attrib = %p\n",__func__, sysfs_attrib);
 		if (sysfs_attrib->grp) {
 			struct mcidev_sysfs_group_kobj *grp_kobj;
 
@@ -819,7 +823,7 @@ static int edac_create_mci_instance_attributes(struct mem_ctl_info *mci,
 			if (err < 0)
 				return err;
 		} else if (sysfs_attrib->attr.name) {
-			debugf0("%s() file %s\n", __func__,
+			debugf4("%s() file %s\n", __func__,
 				sysfs_attrib->attr.name);
 
 			err = sysfs_create_file(kobj, &sysfs_attrib->attr);
@@ -851,29 +855,29 @@ static void edac_remove_mci_instance_attributes(struct mem_ctl_info *mci,
 
 	/*
 	 * loop if there are attributes and until we hit a NULL entry
-	 * Remove first all the atributes
+	 * Remove first all the attributes
 	 */
 	while (sysfs_attrib) {
-		debugf1("%s() sysfs_attrib = %p\n",__func__, sysfs_attrib);
+		debugf4("%s() sysfs_attrib = %p\n",__func__, sysfs_attrib);
 		if (sysfs_attrib->grp) {
-			debugf1("%s() seeking for group %s\n",
+			debugf4("%s() seeking for group %s\n",
 				__func__, sysfs_attrib->grp->name);
 			list_for_each_entry(grp_kobj,
 					    &mci->grp_kobj_list, list) {
-				debugf1("%s() grp_kobj->grp = %p\n",__func__, grp_kobj->grp);
+				debugf4("%s() grp_kobj->grp = %p\n",__func__, grp_kobj->grp);
 				if (grp_kobj->grp == sysfs_attrib->grp) {
 					edac_remove_mci_instance_attributes(mci,
 						    grp_kobj->grp->mcidev_attr,
 						    &grp_kobj->kobj, count + 1);
-					debugf0("%s() group %s\n", __func__,
+					debugf4("%s() group %s\n", __func__,
 						sysfs_attrib->grp->name);
 					kobject_put(&grp_kobj->kobj);
 				}
 			}
-			debugf1("%s() end of seeking for group %s\n",
+			debugf4("%s() end of seeking for group %s\n",
 				__func__, sysfs_attrib->grp->name);
 		} else if (sysfs_attrib->attr.name) {
-			debugf0("%s() file %s\n", __func__,
+			debugf4("%s() file %s\n", __func__,
 				sysfs_attrib->attr.name);
 			sysfs_remove_file(kobj, &sysfs_attrib->attr);
 		} else
@@ -902,7 +906,7 @@ static void edac_remove_mci_instance_attributes(struct mem_ctl_info *mci,
  */
 int edac_create_sysfs_mci_device(struct mem_ctl_info *mci)
 {
-	int i;
+	int i, j;
 	int err;
 	struct csrow_info *csrow;
 	struct kobject *kobj_mci = &mci->edac_mci_kobj;
@@ -936,10 +940,13 @@ int edac_create_sysfs_mci_device(struct mem_ctl_info *mci)
 	/* Make directories for each CSROW object under the mc<id> kobject
 	 */
 	for (i = 0; i < mci->nr_csrows; i++) {
-		csrow = &mci->csrows[i];
+		int nr_pages = 0;
 
-		/* Only expose populated CSROWs */
-		if (csrow->nr_pages > 0) {
+		csrow = &mci->csrows[i];
+		for (j = 0; j < csrow->nr_channels; j++)
+			nr_pages += csrow->channels[j].dimm->nr_pages;
+
+		if (nr_pages > 0) {
 			err = edac_create_csrow_object(mci, csrow, i);
 			if (err) {
 				debugf1("%s() failure: create csrow %d obj\n",
@@ -951,12 +958,15 @@ int edac_create_sysfs_mci_device(struct mem_ctl_info *mci)
 
 	return 0;
 
-	/* CSROW error: backout what has already been registered,  */
 fail1:
 	for (i--; i >= 0; i--) {
-		if (csrow->nr_pages > 0) {
+		int nr_pages = 0;
+
+		csrow = &mci->csrows[i];
+		for (j = 0; j < csrow->nr_channels; j++)
+			nr_pages += csrow->channels[j].dimm->nr_pages;
+		if (nr_pages > 0)
 			kobject_put(&mci->csrows[i].kobj);
-		}
 	}
 
 	/* remove the mci instance's attributes, if any */
@@ -975,14 +985,20 @@ fail0:
  */
 void edac_remove_sysfs_mci_device(struct mem_ctl_info *mci)
 {
-	int i;
+	struct csrow_info *csrow;
+	int i, j;
 
 	debugf0("%s()\n", __func__);
 
 	/* remove all csrow kobjects */
-	debugf0("%s()  unregister this mci kobj\n", __func__);
+	debugf4("%s()  unregister this mci kobj\n", __func__);
 	for (i = 0; i < mci->nr_csrows; i++) {
-		if (mci->csrows[i].nr_pages > 0) {
+		int nr_pages = 0;
+
+		csrow = &mci->csrows[i];
+		for (j = 0; j < csrow->nr_channels; j++)
+			nr_pages += csrow->channels[j].dimm->nr_pages;
+		if (nr_pages > 0) {
 			debugf0("%s()  unreg csrow-%d\n", __func__, i);
 			kobject_put(&mci->csrows[i].kobj);
 		}
@@ -990,18 +1006,18 @@ void edac_remove_sysfs_mci_device(struct mem_ctl_info *mci)
 
 	/* remove this mci instance's attribtes */
 	if (mci->mc_driver_sysfs_attributes) {
-		debugf0("%s()  unregister mci private attributes\n", __func__);
+		debugf4("%s()  unregister mci private attributes\n", __func__);
 		edac_remove_mci_instance_attributes(mci,
 						mci->mc_driver_sysfs_attributes,
 						&mci->edac_mci_kobj, 0);
 	}
 
 	/* remove the symlink */
-	debugf0("%s()  remove_link\n", __func__);
+	debugf4("%s()  remove_link\n", __func__);
 	sysfs_remove_link(&mci->edac_mci_kobj, EDAC_DEVICE_SYMLINK);
 
 	/* unregister this instance's kobject */
-	debugf0("%s()  remove_mci_instance\n", __func__);
+	debugf4("%s()  remove_mci_instance\n", __func__);
 	kobject_put(&mci->edac_mci_kobj);
 }
 
@@ -1023,19 +1039,19 @@ void edac_remove_sysfs_mci_device(struct mem_ctl_info *mci)
 int edac_sysfs_setup_mc_kset(void)
 {
 	int err = -EINVAL;
-	struct sysdev_class *edac_class;
+	struct bus_type *edac_subsys;
 
 	debugf1("%s()\n", __func__);
 
-	/* get the /sys/devices/system/edac class reference */
-	edac_class = edac_get_sysfs_class();
-	if (edac_class == NULL) {
-		debugf1("%s() no edac_class error=%d\n", __func__, err);
+	/* get the /sys/devices/system/edac subsys reference */
+	edac_subsys = edac_get_sysfs_subsys();
+	if (edac_subsys == NULL) {
+		debugf1("%s() no edac_subsys error=%d\n", __func__, err);
 		goto fail_out;
 	}
 
 	/* Init the MC's kobject */
-	mc_kset = kset_create_and_add("mc", NULL, &edac_class->kset.kobj);
+	mc_kset = kset_create_and_add("mc", NULL, &edac_subsys->dev_root->kobj);
 	if (!mc_kset) {
 		err = -ENOMEM;
 		debugf1("%s() Failed to register '.../edac/mc'\n", __func__);
@@ -1047,7 +1063,7 @@ int edac_sysfs_setup_mc_kset(void)
 	return 0;
 
 fail_kset:
-	edac_put_sysfs_class();
+	edac_put_sysfs_subsys();
 
 fail_out:
 	return err;
@@ -1061,6 +1077,6 @@ fail_out:
 void edac_sysfs_teardown_mc_kset(void)
 {
 	kset_unregister(mc_kset);
-	edac_put_sysfs_class();
+	edac_put_sysfs_subsys();
 }
 

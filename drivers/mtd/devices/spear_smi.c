@@ -1,12 +1,10 @@
 /*
- * linux/drivers/mtd/devices/spear_smi.c
- *
  * SMI (Serial Memory Controller) device driver for Serial NOR Flash on
  * SPEAr platform
  * The serial nor interface is largely based on drivers/mtd/m25p80.c,
  * however the SPI interface has been replaced by SMI.
  *
- * Copyright (C) 2010 STMicroelectronics.
+ * Copyright © 2010 STMicroelectronics.
  * Ashish Priyadarshi
  * Shiraz Hashim <shiraz.hashim@st.com>
  *
@@ -25,19 +23,19 @@
 #include <linux/ioport.h>
 #include <linux/jiffies.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/param.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
+#include <linux/mtd/spear_smi.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
-#include <plat/smi.h>
-
-/* max possible slots for serial-nor flash chip in the SMI controller */
-#define MAX_NUM_FLASH_CHIP	4
+#include <linux/of.h>
+#include <linux/of_address.h>
 
 /* SMI clock rate */
 #define SMI_MAX_CLOCK_FREQ	50000000 /* 50 MHz */
@@ -149,22 +147,6 @@ static struct flash_device flash_devices[] = {
 	FLASH_ID("mac 25l3205"   , 0xd8, 0x001620C2, 0x100, 0x10000, 0x400000),
 	FLASH_ID("mac 25l3205a"  , 0xd8, 0x001620C2, 0x100, 0x10000, 0x400000),
 	FLASH_ID("mac 25l6405"   , 0xd8, 0x001720C2, 0x100, 0x10000, 0x800000),
-	FLASH_ID("wbd w25q128" , 0xd8, 0x001840EF, 0x100, 0x10000, 0x1000000),
-};
-
-/* These partitions would be used if platform doesn't pass one */
-static struct mtd_partition part_info_8M[] = {
-	DEFINE_PARTS("Xloader", 0x00, 0x10000),
-	DEFINE_PARTS("UBoot", 0x10000, 0x40000),
-	DEFINE_PARTS("Kernel", 0x50000, 0x2C0000),
-	DEFINE_PARTS("Root File System", 0x310000, 0x4F0000),
-};
-
-static struct mtd_partition part_info_16M[] = {
-	DEFINE_PARTS("Xloader", 0x00, 0x40000),
-	DEFINE_PARTS("UBoot", 0x40000, 0x100000),
-	DEFINE_PARTS("Kernel", 0x140000, 0x300000),
-	DEFINE_PARTS("Root File System", 0x440000, 0xBC0000),
 };
 
 /* Define spear specific structures */
@@ -290,7 +272,7 @@ static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 		status = spear_smi_read_sr(dev, bank);
 		if (status < 0) {
 			if (status == -ETIMEDOUT)
-				continue; /* try till timeout */
+				continue; /* try till finish */
 			return status;
 		} else if (!(status & SR_WIP)) {
 			return 0;
@@ -519,10 +501,6 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 	if (!flash || !dev)
 		return -ENODEV;
 
-	/* do not allow erase past end of device */
-	if (e_info->addr + e_info->len > flash->mtd.size)
-		return -EINVAL;
-
 	bank = flash->bank;
 	if (bank > dev->num_flashes - 1) {
 		dev_err(&dev->pdev->dev, "Invalid Bank Num");
@@ -576,25 +554,13 @@ static int spear_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 	u32 ctrlreg1, val;
 	int ret;
 
-	if (!len)
-		return 0;
-
 	if (!flash || !dev)
 		return -ENODEV;
-
-	/* do not allow reads past end of device */
-	if (from + len > flash->mtd.size)
-		return -EINVAL;
 
 	if (flash->bank > dev->num_flashes - 1) {
 		dev_err(&dev->pdev->dev, "Invalid Bank Num");
 		return -EINVAL;
 	}
-
-	if (!retlen)
-		return -EINVAL;
-	else
-		*retlen = 0;
 
 	/* select address as per bank number */
 	src = flash->base_addr + from;
@@ -684,22 +650,10 @@ static int spear_mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 	if (!flash || !dev)
 		return -ENODEV;
 
-	if (!len)
-		return 0;
-
-	/* do not allow write past end of page */
-	if (to + len > flash->mtd.size)
-		return -EINVAL;
-
 	if (flash->bank > dev->num_flashes - 1) {
 		dev_err(&dev->pdev->dev, "Invalid Bank Num");
 		return -EINVAL;
 	}
-
-	if (!retlen)
-		return -EINVAL;
-	else
-		*retlen = 0;
 
 	/* select address as per bank number */
 	dest = flash->base_addr + to;
@@ -800,13 +754,68 @@ err_probe:
 	return ret;
 }
 
-static int spear_smi_setup_banks(struct platform_device *pdev, u32 bank)
+
+#ifdef CONFIG_OF
+static int __devinit spear_smi_probe_config_dt(struct platform_device *pdev,
+					       struct device_node *np)
 {
-	const char *part_probes[] = {"cmdlinepart", NULL};
+	struct spear_smi_plat_data *pdata = dev_get_platdata(&pdev->dev);
+	struct device_node *pp = NULL;
+	const __be32 *addr;
+	u32 val;
+	int len;
+	int i = 0;
+
+	if (!np)
+		return -ENODEV;
+
+	of_property_read_u32(np, "clock-rate", &val);
+	pdata->clk_rate = val;
+
+	pdata->board_flash_info = devm_kzalloc(&pdev->dev,
+					       sizeof(*pdata->board_flash_info),
+					       GFP_KERNEL);
+
+	/* Fill structs for each subnode (flash device) */
+	while ((pp = of_get_next_child(np, pp))) {
+		struct spear_smi_flash_info *flash_info;
+
+		flash_info = &pdata->board_flash_info[i];
+		pdata->np[i] = pp;
+
+		/* Read base-addr and size from DT */
+		addr = of_get_property(pp, "reg", &len);
+		pdata->board_flash_info->mem_base = be32_to_cpup(&addr[0]);
+		pdata->board_flash_info->size = be32_to_cpup(&addr[1]);
+
+		if (of_get_property(pp, "st,smi-fast-mode", NULL))
+			pdata->board_flash_info->fast_mode = 1;
+
+		i++;
+	}
+
+	pdata->num_flashes = i;
+
+	return 0;
+}
+#else
+static int __devinit spear_smi_probe_config_dt(struct platform_device *pdev,
+					       struct device_node *np)
+{
+	return -ENOSYS;
+}
+#endif
+
+static int spear_smi_setup_banks(struct platform_device *pdev,
+				 u32 bank, struct device_node *np)
+{
 	struct spear_smi *dev = platform_get_drvdata(pdev);
+	struct mtd_part_parser_data ppdata = {};
 	struct spear_smi_flash_info *flash_info;
 	struct spear_smi_plat_data *pdata;
 	struct spear_snor_flash *flash;
+	struct mtd_partition *parts = NULL;
+	int count = 0;
 	int flash_index;
 	int ret = 0;
 
@@ -829,14 +838,14 @@ static int spear_smi_setup_banks(struct platform_device *pdev, u32 bank)
 	flash_index = spear_smi_probe_flash(dev, bank);
 	if (flash_index < 0) {
 		dev_info(&dev->pdev->dev, "smi-nor%d not found\n", bank);
-		kfree(flash);
-		return flash_index;
+		ret = flash_index;
+		goto err_probe;
 	}
 	/* map the memory for nor flash chip */
 	flash->base_addr = ioremap(flash_info->mem_base, flash_info->size);
 	if (!flash->base_addr) {
-		kfree(flash);
-		return -EIO;
+		ret = -EIO;
+		goto err_probe;
 	}
 
 	dev->flash[bank] = flash;
@@ -853,10 +862,11 @@ static int spear_smi_setup_banks(struct platform_device *pdev, u32 bank)
 	flash->mtd.size = flash_info->size;
 	flash->mtd.erasesize = flash_devices[flash_index].sectorsize;
 	flash->page_size = flash_devices[flash_index].pagesize;
+	flash->mtd.writebufsize = flash->page_size;
 	flash->erase_cmd = flash_devices[flash_index].erase_cmd;
-	flash->mtd.erase = spear_mtd_erase;
-	flash->mtd.read = spear_mtd_read;
-	flash->mtd.write = spear_mtd_write;
+	flash->mtd._erase = spear_mtd_erase;
+	flash->mtd._read = spear_mtd_read;
+	flash->mtd._write = spear_mtd_write;
 	flash->dev_id = flash_devices[flash_index].device_id;
 
 	dev_info(&dev->pdev->dev, "mtd .name=%s .size=%llx(%lluM)\n",
@@ -866,45 +876,28 @@ static int spear_smi_setup_banks(struct platform_device *pdev, u32 bank)
 	dev_info(&dev->pdev->dev, ".erasesize = 0x%x(%uK)\n",
 			flash->mtd.erasesize, flash->mtd.erasesize / 1024);
 
-	if (!mtd_has_partitions()) {
-		ret = add_mtd_device(&flash->mtd);
-		return ret;
+#ifndef CONFIG_OF
+	if (flash_info->partitions) {
+		parts = flash_info->partitions;
+		count = flash_info->nr_partitions;
 	}
+#endif
+	ppdata.of_node = np;
 
-	flash->num_parts = 0;
-	if (mtd_has_cmdlinepart()) {
-		flash->num_parts = parse_mtd_partitions(&flash->mtd,
-				part_probes, &flash->parts, 0);
-	}
-
-	if (flash->num_parts <= 0) {
-		if (flash_info->parts) {
-			flash->parts = flash_info->parts;
-			flash->num_parts = flash_info->num_parts;
-		} else {
-			/* choose from default ones */
-			switch (flash->mtd.size) {
-			case 0x800000:/* 8MB */
-				flash->parts = part_info_8M;
-				flash->num_parts =
-					ARRAY_SIZE(part_info_8M);
-				break;
-			case 0x1000000:/* 16MB */
-				flash->parts = part_info_16M;
-				flash->num_parts =
-					ARRAY_SIZE(part_info_16M);
-				break;
-			default:
-				dev_err(&pdev->dev, "undefined partition\n");
-			}
-		}
-	}
-
-	/* Register the partitions */
-	ret = add_mtd_partitions(&flash->mtd, flash->parts, flash->num_parts);
-	if (ret)
+	ret = mtd_device_parse_register(&flash->mtd, NULL, &ppdata, parts,
+					count);
+	if (ret) {
 		dev_err(&dev->pdev->dev, "Err MTD partition=%d\n", ret);
+		goto err_map;
+	}
 
+	return 0;
+
+err_map:
+	iounmap(flash->base_addr);
+
+err_probe:
+	kfree(flash);
 	return ret;
 }
 
@@ -919,17 +912,34 @@ static int spear_smi_setup_banks(struct platform_device *pdev, u32 bank)
  */
 static int __devinit spear_smi_probe(struct platform_device *pdev)
 {
-	struct spear_smi_plat_data *pdata;
+	struct device_node *np = pdev->dev.of_node;
+	struct spear_smi_plat_data *pdata = NULL;
 	struct spear_smi *dev;
 	struct resource *smi_base;
 	int irq, ret = 0;
 	int i;
 
-	pdata = dev_get_platdata(&pdev->dev);
-	if (pdata < 0) {
-		ret = -ENODEV;
-		dev_err(&pdev->dev, "no platform data\n");
-		goto err;
+	if (np) {
+		pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+		if (!pdata) {
+			pr_err("%s: ERROR: no memory", __func__);
+			ret = -ENOMEM;
+			goto err;
+		}
+		pdev->dev.platform_data = pdata;
+		ret = spear_smi_probe_config_dt(pdev, np);
+		if (ret) {
+			ret = -ENODEV;
+			dev_err(&pdev->dev, "no platform data\n");
+			goto err;
+		}
+	} else {
+		pdata = dev_get_platdata(&pdev->dev);
+		if (pdata < 0) {
+			ret = -ENODEV;
+			dev_err(&pdev->dev, "no platform data\n");
+			goto err;
+		}
 	}
 
 	smi_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -971,7 +981,7 @@ static int __devinit spear_smi_probe(struct platform_device *pdev)
 	dev->pdev = pdev;
 	dev->clk_rate = pdata->clk_rate;
 
-	if (dev->clk_rate < 0 || dev->clk_rate > SMI_MAX_CLOCK_FREQ)
+	if (dev->clk_rate > SMI_MAX_CLOCK_FREQ)
 		dev->clk_rate = SMI_MAX_CLOCK_FREQ;
 
 	dev->num_flashes = pdata->num_flashes;
@@ -987,9 +997,9 @@ static int __devinit spear_smi_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
-	ret = clk_enable(dev->clk);
+	ret = clk_prepare_enable(dev->clk);
 	if (ret)
-		goto err_clk_enable;
+		goto err_clk_prepare_enable;
 
 	ret = request_irq(irq, spear_smi_int_handler, 0, pdev->name, dev);
 	if (ret) {
@@ -1004,7 +1014,7 @@ static int __devinit spear_smi_probe(struct platform_device *pdev)
 
 	/* loop for each serial nor-flash which is connected to smi */
 	for (i = 0; i < dev->num_flashes; i++) {
-		ret = spear_smi_setup_banks(pdev, i);
+		ret = spear_smi_setup_banks(pdev, i, pdata->np[i]);
 		if (ret) {
 			dev_err(&dev->pdev->dev, "bank setup failed\n");
 			goto err_bank_setup;
@@ -1017,8 +1027,8 @@ err_bank_setup:
 	free_irq(irq, dev);
 	platform_set_drvdata(pdev, NULL);
 err_irq:
-	clk_disable(dev->clk);
-err_clk_enable:
+	clk_disable_unprepare(dev->clk);
+err_clk_prepare_enable:
 	clk_put(dev->clk);
 err_clk:
 	iounmap(dev->io_base);
@@ -1039,6 +1049,7 @@ err:
 static int __devexit spear_smi_remove(struct platform_device *pdev)
 {
 	struct spear_smi *dev;
+	struct spear_smi_plat_data *pdata;
 	struct spear_snor_flash *flash;
 	struct resource *smi_base;
 	int ret;
@@ -1050,6 +1061,8 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	pdata = dev_get_platdata(&pdev->dev);
+
 	/* clean up for all nor flash */
 	for (i = 0; i < dev->num_flashes; i++) {
 		flash = dev->flash[i];
@@ -1057,11 +1070,7 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 			continue;
 
 		/* clean up mtd stuff */
-		if (mtd_has_partitions())
-			ret = del_mtd_partitions(&flash->mtd);
-		else
-			ret = del_mtd_device(&flash->mtd);
-
+		ret = mtd_device_unregister(&flash->mtd);
 		if (ret)
 			dev_err(&pdev->dev, "error removing mtd\n");
 
@@ -1072,7 +1081,7 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, dev);
 
-	clk_disable(dev->clk);
+	clk_disable_unprepare(dev->clk);
 	clk_put(dev->clk);
 	iounmap(dev->io_base);
 	kfree(dev);
@@ -1090,7 +1099,7 @@ static int spear_smi_suspend(struct device *dev)
 	struct spear_smi *sdev = dev_get_drvdata(dev);
 
 	if (sdev && sdev->clk)
-		clk_disable(sdev->clk);
+		clk_disable_unprepare(sdev->clk);
 
 	return 0;
 }
@@ -1101,7 +1110,7 @@ static int spear_smi_resume(struct device *dev)
 	int ret = -EPERM;
 
 	if (sdev && sdev->clk)
-		ret = clk_enable(sdev->clk);
+		ret = clk_prepare_enable(sdev->clk);
 
 	if (!ret)
 		spear_smi_hw_init(sdev);
@@ -1111,11 +1120,20 @@ static int spear_smi_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(spear_smi_pm_ops, spear_smi_suspend, spear_smi_resume);
 #endif
 
+#ifdef CONFIG_OF
+static const struct of_device_id spear_smi_id_table[] = {
+	{ .compatible = "st,spear600-smi" },
+	{}
+};
+MODULE_DEVICE_TABLE(of, spear_smi_id_table);
+#endif
+
 static struct platform_driver spear_smi_driver = {
 	.driver = {
 		.name = "smi",
 		.bus = &platform_bus_type,
 		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(spear_smi_id_table),
 #ifdef CONFIG_PM
 		.pm = &spear_smi_pm_ops,
 #endif

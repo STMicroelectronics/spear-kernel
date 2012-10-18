@@ -27,14 +27,12 @@
 #include <linux/byteorder/little_endian.h>
 #include <linux/fb.h>
 #include <asm/setup.h>
-#include <mach/bitfield.h>
 
 #define to_db9000fb(info)	container_of(info, struct db9000fb_info, fb)
-#define TO_INF(ptr, member) container_of(ptr, struct db9000fb_info, member)
+#define TO_INF(ptr, member)	container_of(ptr, struct db9000fb_info, member)
 
-/*
- * LCD Controller Registers and Bits Definitions
- */
+/* LCD Controller Registers and Bits Definitions */
+
 /* LCD Controller Control Register 1 */
 #define DB9000_CR1	(0x000)
 /* Horizontal Timing Register */
@@ -75,7 +73,6 @@
 #define DB9000_PALT	(0x200)
 /* Palette Data Words - 2nd Port/2 Port TFT */
 #define DB9000_PALT_2P	(0x400)
-
 /* Overlay Window Registers  */
 #define DB9000_NUM_OW	(16)
 /* Overlay Window Enable Register */
@@ -106,29 +103,29 @@
 
 /* Control Register 1, Offset 0x000 */
 /* LCD Controller Enable */
-#define DB9000_CR1_ENB	(1 << 0)
+#define DB9000_CR1_ENB		(1 << 0)
 /* LCD Power Enable */
-#define DB9000_CR1_LPE	(1 << 1)
+#define DB9000_CR1_LPE		(1 << 1)
 /* LCD Bits per Pixel */
-#define DB9000_CR1_BPP(x)  (((x) & 0x7) << 2)
+#define DB9000_CR1_BPP(x)	(((x) & 0x7) << 2)
 /* RGB or BGR Format */
-#define DB9000_CR1_RGB	(1 << 5)
+#define DB9000_CR1_RGB		(1 << 5)
 /* Big or Little Endian Pixel Ordering */
-#define DB9000_CR1_EPO	(1 << 6)
+#define DB9000_CR1_EPO		(1 << 6)
 /* Big or Little Endian Byte Ordering  */
-#define DB9000_CR1_EBO	(1 << 7)
+#define DB9000_CR1_EBO		(1 << 7)
 /* Data Enable Polarity */
-#define DB9000_CR1_DEP	(1 << 8)
+#define DB9000_CR1_DEP		(1 << 8)
 /* Pixel Clock Polarity */
-#define DB9000_CR1_PCP	(1 << 9)
+#define DB9000_CR1_PCP		(1 << 9)
 /* Horizontal Sync Polarity */
-#define DB9000_CR1_HSP	(1 << 10)
+#define DB9000_CR1_HSP		(1 << 10)
 /* Vertical Sync Polarity */
-#define DB9000_CR1_VSP	(1 << 11)
+#define DB9000_CR1_VSP		(1 << 11)
 /* Output Pixel Select */
 #define DB9000_CR1_OPS(x)	(((x) & 0x7) << 12)
 /* Palette Load Source */
-#define DB9000_CR1_PSS	(1 << 15)
+#define DB9000_CR1_PSS		(1 << 15)
 /* FIFO DMA Request Words */
 #define DB9000_CR1_FDW(x)	(((x) & 0x3) << 16)
 /* LCD 1 or Port Select */
@@ -191,21 +188,21 @@
 #define DB9000_HVTER_VBPE(x)	((((x) >> 8) & 0x3) << 12)
 
 /* DB9000 Revisions */
-#define DB9000_REVISION_1_0		(0x00)
-#define DB9000_REVISION_1_1		(0x01)
-#define DB9000_REVISION_1_2		(0x02)
-#define DB9000_REVISION_1_3		(0x03)
-#define DB9000_REVISION_1_4		(0x04)
-#define DB9000_REVISION_1_5		(0x05)
-#define DB9000_REVISION_1_6		(0x06)
-#define DB9000_REVISION_1_7		(0x07)
-#define DB9000_REVISION_1_8		(0x08)
-#define DB9000_REVISION_1_9		(0x09)
-#define DB9000_REVISION_1_10		(0x0A)
-#define DB9000_REVISION_1_11		(0x0B)
-#define DB9000_REVISION_1_12		(0x0C)
-#define DB9000_REVISION_1_13		(0x0D)
-#define DB9000_REVISION_1_14		(0x0E)
+#define DB9000_REVISION_1_0	(0x00)
+#define DB9000_REVISION_1_1	(0x01)
+#define DB9000_REVISION_1_2	(0x02)
+#define DB9000_REVISION_1_3	(0x03)
+#define DB9000_REVISION_1_4	(0x04)
+#define DB9000_REVISION_1_5	(0x05)
+#define DB9000_REVISION_1_6	(0x06)
+#define DB9000_REVISION_1_7	(0x07)
+#define DB9000_REVISION_1_8	(0x08)
+#define DB9000_REVISION_1_9	(0x09)
+#define DB9000_REVISION_1_10	(0x0A)
+#define DB9000_REVISION_1_11	(0x0B)
+#define DB9000_REVISION_1_12	(0x0C)
+#define DB9000_REVISION_1_13	(0x0D)
+#define DB9000_REVISION_1_14	(0x0E)
 
 /* Vertical Timing Register 2, Offset 0x010 */
 /* Lines Per Panel */
@@ -231,11 +228,11 @@
 #define DB9000_ISR_VCT	(1 << 6) /* Vertical Compare Triggered */
 #define DB9000_ISR_BAU	(1 << 7) /* DMA Base Address Register Update to CAR */
 #define DB9000_ISR_LDD	(1 << 8) /* LCD Controller Disable Done */
-/* #ifdef CONFIG_AXI_BUS */
+
 #define DB9000_ISR_ABL	(1 << 9) /* AXI Master - Read Burst Length Error */
 #define DB9000_ISR_ARI	(1 << 10) /* AXI Master - Return ID Error */
 #define DB9000_ISR_ARS	(1 << 11) /* AXI Master - Response Signal Error */
-/* #endif */
+
 #define DB9000_ISR_FBE	(1 << 12) /* Frame Descriptor - Bus Error */
 #define DB9000_ISR_FNC	(1 << 13) /* Frame Descriptor - Node Complete */
 #define DB9000_ISR_FLC	(1 << 14) /* Frame Descriptor - List Complete */
@@ -251,20 +248,20 @@
 /* DMA Base Address Register Update to CAR - Mask */
 #define DB9000_ISR_BAUM	(1 << 7)
 #define DB9000_ISR_LDDM	(1 << 8)  /* LCD Controller Disable Done - Mask */
-/* #ifdef CONFIG_AXI_BUS */
+
 /* AXI Master - Read Burst Length Error - Mask */
 #define DB9000_ISR_ABLM	(1 << 9)
 /* AXI Master - Return ID Error - Mask */
 #define DB9000_ISR_ARIM	(1 << 10)
 /* AXI Master - Response Signal Error - Mask */
+
 #define DB9000_ISR_ARSM	(1 << 11)
-/* #endif */
 #define DB9000_ISR_FBEM	(1 << 12) /* Frame Descriptor - Bus Error - Mask */
 #define DB9000_ISR_FNCM	(1 << 13) /* Frame Descriptor - Node Complete - Mask */
 #define DB9000_ISR_FLCM	(1 << 14) /* Frame Descriptor - List Complete - Mask */
 
 /* Interrupt Scan Compare Register, Offset 0x024 */
-#define DB9000_ISCR_VSC(x)		((x) & 0x7)
+#define DB9000_ISCR_VSC(x)	((x) & 0x7)
 
 /* PWM Frequency Register, Offset 0x034 */
 #define DB9000_PWMFR_PWM_FCD(x)	(((x) & 0xfffff) << 0)
@@ -284,9 +281,7 @@
 /* End of Register description */
 
 
-/*
- * These are the lcd controller states & actions for set_ctrlr_state
- */
+/* These are the lcd controller states & actions for set_ctrlr_state */
 #define C_DISABLE		(0)
 #define C_ENABLE		(1)
 #define C_DISABLE_CLKCHANGE	(2)
@@ -305,14 +300,14 @@
 /*
  * Minimum X and Y resolutions
  */
-#define MIN_XRES	16
-#define MIN_YRES	64
+#define MIN_XRES		16
+#define MIN_YRES		64
 
-#define NUM_OF_FRAMEBUFFERS 2
-#define PALETTE_SIZE	(128 * 4)
-#define PANEL_MAX_XRES 1920
-#define PANEL_MAX_YRES 1080
-#define PANEL_MAX_BPP 32
+#define NUM_OF_FRAMEBUFFERS	2
+#define PALETTE_SIZE		(128 * 4)
+#define PANEL_MAX_XRES		1920
+#define PANEL_MAX_YRES		1080
+#define PANEL_MAX_BPP		32
 
 
 /* DB9000 LCD DMA Frame descriptor */
@@ -338,7 +333,6 @@ enum {
 	PAL_NONE	= -1,
 	PAL_STATIC	= 0,
 	PAL_IN_FB	= 1,
-/*	PAL_OV2		= 2, */
 	PAL_MAX,
 };
 
@@ -377,58 +371,47 @@ struct db9000fb_ctrl_info {
 struct db9000fb_mach_info {
 	struct fb_videomode *modes;
 	struct db9000fb_ctrl_info *ctrl_info;
+	struct clk *bus_clk;
+	struct clk *pixel_clk;
 	unsigned int num_modes;
 
 	unsigned int	lcd_conn;
 	unsigned long	mem_size;
-	unsigned long frame_buf_base;
-	char		*def_mode;
+	unsigned long	frame_buf_base;
+	void            *frame_buf_virt;
+
+	const char	*def_mode;
 	u_int		fixed_modes : 1,
 			cmap_inverse:1,
 			cmap_static:1,
 			acceleration_enabled:1,
 			unused:28;
-	void (*clcd_mux_selection) (bool);
-	struct clk *bus_clk;
-	struct clk *pixel_clk;
+	int (*clcd_plat_conf) (struct db9000fb_mach_info *data);
 	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
-	unsigned int ignore_cpufreq_notification;
+	bool ignore_cpufreq_notification;
 };
 
 struct db9000fb_info {
 	struct fb_info		fb;
 	struct device		*dev;
-	struct platform_device *pdev;
+	struct platform_device	*pdev;
 	struct clk		*clk;
 	struct clk		*bus_clk;
 	struct clk		*pixel_clk;
-	struct db9000fb_dma_descriptor	*f_descriptor;
 
-	void __iomem		*mmio_base;
-	void __iomem		*misc_io_base;
-	size_t			dma_buff_size;
-	dma_addr_t		dma_buff_phys;
+	struct pinctrl		*pinctrl;
+	struct pinctrl_state	*pins_default;
+	struct pinctrl_state	*pins_sleep;
 	unsigned long		frame_base;
 	bool			clk_enabled;
 
 	atomic_t		usage;
-	/*
-	 * These are the addresses we mapped
-	 * the framebuffer memory region to.
-	 */
+
 	/* raw memory addresses */
-	dma_addr_t		map_dma; /* physical */
-	u_char			*map_cpu; /* virtual */
-	u_int			map_size;
 	unsigned long		hsync_time;
 	unsigned long		cmap[16];
-/* virtual address of frame buffer */
-	void __iomem		*video_mem;
-/* physical address of frame buffer */
-	unsigned long		video_mem_phys;
 /* size of the frame buffer */
 	size_t			video_mem_size;
-	size_t			video_mem_size_used;
 /* virtual address of palette memory */
 	u16			*palette_cpu;
 	u_int			palette_size;
@@ -436,6 +419,7 @@ struct db9000fb_info {
 	u_int			cmap_inverse:1,
 				cmap_static:1,
 				unused:30;
+	void __iomem            *mmio_base;
 
 /* Local images/copies of device registers */
 	u32			reg_cr1;
@@ -459,30 +443,29 @@ struct db9000fb_info {
 
 	u32			palette[PALETTE_SIZE/4];
 
-	/*	unsigned long	hsync_time; */
-
 	u_char			state;
 	u_char			old_state;
 	u_char			task_state;
+	u16			db9000_rev;
 	struct mutex		ctrlr_lock;
 	wait_queue_head_t	ctrlr_wait;
 	struct work_struct	task;
 
 	struct completion	disable_done;
+	/* Completion - for PAN display alignment with VSYNC/BAU event */
+	struct completion vsync_notifier;
+
+	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
+	bool ignore_cpufreq_notification;
 
 #ifdef CONFIG_CPU_FREQ
 	struct notifier_block	freq_transition;
 	struct notifier_block	freq_policy;
 #endif
-	/* Completion - for PAN display alignment with VSYNC/BAU event */
-	struct completion vsync_notifier;
-	void (*setup_gpio)(bool);
+
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
 	struct backlight_device *backlight;
 	u8 bl_power;
 #endif
-	u16 db9000_rev;
-	/* ignore_cpufreq_notification is > 0 if cpu and clcd uses different pll */
-	unsigned int ignore_cpufreq_notification;
 };
 #endif /* __DB9000FB_H__ */

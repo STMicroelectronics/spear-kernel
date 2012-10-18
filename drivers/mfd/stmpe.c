@@ -8,9 +8,14 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/err.h>
+#include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/irqdomain.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/mfd/core.h>
@@ -297,6 +302,11 @@ static struct mfd_cell stmpe_gpio_cell = {
 	.num_resources	= ARRAY_SIZE(stmpe_gpio_resources),
 };
 
+static struct mfd_cell stmpe_gpio_cell_noirq = {
+	.name		= "stmpe-gpio",
+	/* gpio cell resources consist of an irq only so no resources here */
+};
+
 /*
  * Keypad (1601, 2401, 2403)
  */
@@ -345,6 +355,13 @@ static struct stmpe_variant_block stmpe801_blocks[] = {
 	},
 };
 
+static struct stmpe_variant_block stmpe801_blocks_noirq[] = {
+	{
+		.cell	= &stmpe_gpio_cell_noirq,
+		.block	= STMPE_BLOCK_GPIO,
+	},
+};
+
 static int stmpe801_enable(struct stmpe *stmpe, unsigned int blocks,
 			   bool enable)
 {
@@ -363,6 +380,17 @@ static struct stmpe_variant_info stmpe801 = {
 	.blocks		= stmpe801_blocks,
 	.num_blocks	= ARRAY_SIZE(stmpe801_blocks),
 	.num_irqs	= STMPE801_NR_INTERNAL_IRQS,
+	.enable		= stmpe801_enable,
+};
+
+static struct stmpe_variant_info stmpe801_noirq = {
+	.name		= "stmpe801",
+	.id_val		= STMPE801_ID,
+	.id_mask	= 0xffff,
+	.num_gpios	= 8,
+	.regs		= stmpe801_regs,
+	.blocks		= stmpe801_blocks_noirq,
+	.num_blocks	= ARRAY_SIZE(stmpe801_blocks_noirq),
 	.enable		= stmpe801_enable,
 };
 
@@ -711,13 +739,23 @@ static struct stmpe_variant_info stmpe2403 = {
 	.enable_autosleep	= stmpe1601_autosleep, /* same as stmpe1601 */
 };
 
-static struct stmpe_variant_info *stmpe_variant_info[] = {
+static struct stmpe_variant_info *stmpe_variant_info[STMPE_NBR_PARTS] = {
 	[STMPE610]	= &stmpe610,
 	[STMPE801]	= &stmpe801,
 	[STMPE811]	= &stmpe811,
 	[STMPE1601]	= &stmpe1601,
 	[STMPE2401]	= &stmpe2401,
 	[STMPE2403]	= &stmpe2403,
+};
+
+/*
+ * These devices can be connected in a 'no-irq' configuration - the irq pin
+ * is not used and the device cannot interrupt the CPU. Here we only list
+ * devices which support this configuration - the driver will fail probing
+ * for any devices not listed here which are configured in this way.
+ */
+static struct stmpe_variant_info *stmpe_noirq_variant_info[STMPE_NBR_PARTS] = {
+	[STMPE801]	= &stmpe801_noirq,
 };
 
 static irqreturn_t stmpe_irq(int irq, void *data)
@@ -763,16 +801,16 @@ static irqreturn_t stmpe_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void stmpe_irq_lock(unsigned int irq)
+static void stmpe_irq_lock(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
 
 	mutex_lock(&stmpe->irq_lock);
 }
 
-static void stmpe_irq_sync_unlock(unsigned int irq)
+static void stmpe_irq_sync_unlock(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
 	struct stmpe_variant_info *variant = stmpe->variant;
 	int num = DIV_ROUND_UP(variant->num_irqs, 8);
 	int i;
@@ -791,20 +829,20 @@ static void stmpe_irq_sync_unlock(unsigned int irq)
 	mutex_unlock(&stmpe->irq_lock);
 }
 
-static void stmpe_irq_mask(unsigned int irq)
+static void stmpe_irq_mask(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
-	int offset = irq - stmpe->irq_base;
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
+	int offset = data->irq - stmpe->irq_base;
 	int regoffset = offset / 8;
 	int mask = 1 << (offset % 8);
 
 	stmpe->ier[regoffset] &= ~mask;
 }
 
-static void stmpe_irq_unmask(unsigned int irq)
+static void stmpe_irq_unmask(struct irq_data *data)
 {
-	struct stmpe *stmpe = get_irq_chip_data(irq);
-	int offset = irq - stmpe->irq_base;
+	struct stmpe *stmpe = irq_data_get_irq_chip_data(data);
+	int offset = data->irq - stmpe->irq_base;
 	int regoffset = offset / 8;
 	int mask = 1 << (offset % 8);
 
@@ -813,10 +851,10 @@ static void stmpe_irq_unmask(unsigned int irq)
 
 static struct irq_chip stmpe_irq_chip = {
 	.name			= "stmpe",
-	.bus_lock		= stmpe_irq_lock,
-	.bus_sync_unlock	= stmpe_irq_sync_unlock,
-	.mask			= stmpe_irq_mask,
-	.unmask			= stmpe_irq_unmask,
+	.irq_bus_lock		= stmpe_irq_lock,
+	.irq_bus_sync_unlock	= stmpe_irq_sync_unlock,
+	.irq_mask		= stmpe_irq_mask,
+	.irq_unmask		= stmpe_irq_unmask,
 };
 
 static int __devinit stmpe_irq_init(struct stmpe *stmpe)
@@ -828,15 +866,17 @@ static int __devinit stmpe_irq_init(struct stmpe *stmpe)
 
 	if (stmpe->variant->id_val != STMPE801_ID)
 		chip = &stmpe_irq_chip;
+	else
+		chip = &dummy_irq_chip;
 
 	for (irq = base; irq < base + num_irqs; irq++) {
-		set_irq_chip_data(irq, stmpe);
-		set_irq_chip_and_handler(irq, chip, handle_edge_irq);
-		set_irq_nested_thread(irq, 1);
+		irq_set_chip_data(irq, stmpe);
+		irq_set_chip_and_handler(irq, chip, handle_edge_irq);
+		irq_set_nested_thread(irq, 1);
 #ifdef CONFIG_ARM
 		set_irq_flags(irq, IRQF_VALID);
 #else
-		set_irq_noprobe(irq);
+		irq_set_noprobe(irq);
 #endif
 	}
 
@@ -853,8 +893,8 @@ static void stmpe_irq_remove(struct stmpe *stmpe)
 #ifdef CONFIG_ARM
 		set_irq_flags(irq, 0);
 #endif
-		set_irq_chip_and_handler(irq, NULL, NULL);
-		set_irq_chip_data(irq, NULL);
+		irq_set_chip_and_handler(irq, NULL, NULL);
+		irq_set_chip_data(irq, NULL);
 	}
 }
 
@@ -863,7 +903,7 @@ static int __devinit stmpe_chip_init(struct stmpe *stmpe)
 	unsigned int irq_trigger = stmpe->pdata->irq_trigger;
 	int autosleep_timeout = stmpe->pdata->autosleep_timeout;
 	struct stmpe_variant_info *variant = stmpe->variant;
-	u8 icr;
+	u8 icr = 0;
 	unsigned int id;
 	u8 data[2];
 	int ret;
@@ -886,31 +926,33 @@ static int __devinit stmpe_chip_init(struct stmpe *stmpe)
 	if (ret)
 		return ret;
 
-	if (id == STMPE801_ID)
-		icr = STMPE801_REG_SYS_CTRL_INT_EN;
-	else
-		icr = STMPE_ICR_LSB_GIM;
-
-	/* STMPE801 doesn't support Edge interrupts */
-	if (id != STMPE801_ID) {
-		if (irq_trigger == IRQF_TRIGGER_FALLING ||
-				irq_trigger == IRQF_TRIGGER_RISING)
-			icr |= STMPE_ICR_LSB_EDGE;
-	}
-
-	if (irq_trigger == IRQF_TRIGGER_RISING ||
-			irq_trigger == IRQF_TRIGGER_HIGH) {
+	if (stmpe->irq >= 0) {
 		if (id == STMPE801_ID)
-			icr |= STMPE801_REG_SYS_CTRL_INT_HI;
+			icr = STMPE801_REG_SYS_CTRL_INT_EN;
 		else
-			icr |= STMPE_ICR_LSB_HIGH;
-	}
+			icr = STMPE_ICR_LSB_GIM;
 
-	if (stmpe->pdata->irq_invert_polarity) {
-		if (id == STMPE801_ID)
-			icr ^= STMPE801_REG_SYS_CTRL_INT_HI;
-		else
-			icr ^= STMPE_ICR_LSB_HIGH;
+		/* STMPE801 doesn't support Edge interrupts */
+		if (id != STMPE801_ID) {
+			if (irq_trigger == IRQF_TRIGGER_FALLING ||
+					irq_trigger == IRQF_TRIGGER_RISING)
+				icr |= STMPE_ICR_LSB_EDGE;
+		}
+
+		if (irq_trigger == IRQF_TRIGGER_RISING ||
+				irq_trigger == IRQF_TRIGGER_HIGH) {
+			if (id == STMPE801_ID)
+				icr |= STMPE801_REG_SYS_CTRL_INT_HI;
+			else
+				icr |= STMPE_ICR_LSB_HIGH;
+		}
+
+		if (stmpe->pdata->irq_invert_polarity) {
+			if (id == STMPE801_ID)
+				icr ^= STMPE801_REG_SYS_CTRL_INT_HI;
+			else
+				icr ^= STMPE_ICR_LSB_HIGH;
+		}
 	}
 
 	if (stmpe->pdata->autosleep) {
@@ -928,6 +970,257 @@ static int __devinit stmpe_add_device(struct stmpe *stmpe,
 	return mfd_add_devices(stmpe->dev, stmpe->pdata->id, cell, 1,
 			       NULL, stmpe->irq_base + irq);
 }
+
+#ifdef CONFIG_OF
+static const struct of_device_id stmpe_keypad_ids[] = {
+	{ .compatible = "stmpe,keypad", .data = (void *)0 },
+	{},
+};
+
+static const struct of_device_id stmpe_gpio_ids[] = {
+	{ .compatible = "stmpe,gpio", .data = (void *)0 },
+	{},
+};
+
+static const struct of_device_id stmpe_ts_ids[] = {
+	{ .compatible = "stmpe,ts", .data = (void *)0 },
+	{},
+};
+
+static const struct of_device_id stmpe_adc_ids[] = {
+	{ .compatible = "stmpe,adc", .data = (void *)0 },
+	{},
+};
+
+static const struct of_device_id stmpe_pwm_ids[] = {
+	{ .compatible = "stmpe,pwm", .data = (void *)0 },
+	{},
+};
+
+static const struct of_device_id stmpe_rotator_ids[] = {
+	{ .compatible = "stmpe,rotator", .data = (void *)0 },
+	{},
+};
+
+static struct stmpe_variant_block * stmpe_get_variant_block(
+		struct stmpe_variant_info *variant, enum stmpe_block blocks)
+{
+	int i;
+
+	for (i = 0; i < variant->num_blocks; i++) {
+		struct stmpe_variant_block *block = &variant->blocks[i];
+
+		if (blocks & block->block)
+			return block;
+	}
+	return NULL;
+}
+
+static int stmpe_probe_keyboard_dt(struct stmpe_keypad_platform_data *pdata,
+		struct device_node *np)
+{
+	u32 val;
+
+	if (of_property_read_u32(np, "keypad,scan_count", &val))
+		pdata->scan_count= val;
+	if (of_property_read_u32(np, "keypad,debounce_ms", &val))
+		pdata->debounce_ms= val;
+	if (of_property_read_bool(np, "keypad,no_autorepeat"))
+		pdata->no_autorepeat= true;
+
+	return 0;
+}
+
+static int stmpe_probe_gpio_dt(struct stmpe_gpio_platform_data *pdata,
+		struct device_node *np)
+{
+	u32 val;
+
+	if (of_property_read_u32(np, "gpio,norequest_mask", &val))
+		pdata->norequest_mask = val;
+
+	/* assign gpio numbers dynamically */
+	pdata->gpio_base = -1;
+
+	return 0;
+}
+
+static int stmpe_probe_touschscreen_dt(struct stmpe_ts_platform_data *pdata,
+		struct device_node *np)
+{
+	u32 val;
+
+	if (of_property_read_u32(np, "ts,sample_time", &val))
+		pdata->sample_time = val;
+	if (of_property_read_u32(np, "ts,mod_12b", &val))
+		pdata->mod_12b = val;
+	if (of_property_read_u32(np, "ts,ref_sel", &val))
+		pdata->ref_sel = val;
+	if (of_property_read_u32(np, "ts,adc_freq", &val))
+		pdata->adc_freq = val;
+	if (of_property_read_u32(np, "ts,ave_ctrl", &val))
+		pdata->ave_ctrl = val;
+	if (of_property_read_u32(np, "ts,touch_det_delay", &val))
+		pdata->touch_det_delay = val;
+	if (of_property_read_u32(np, "ts,settling", &val))
+		pdata->settling = val;
+	if (of_property_read_u32(np, "ts,fraction_z",&val))
+		pdata->fraction_z = val;
+	if (of_property_read_u32(np, "ts,i_drive", &val))
+		pdata->i_drive = val;
+
+	return 0;
+}
+
+static int stmpe_probe_config_dt(struct stmpe_platform_data *pdata, struct
+		device_node *np)
+{
+	static struct irq_domain *stmpe_irq_domain;
+	struct stmpe_ts_platform_data *ts_pdata = NULL;
+	struct stmpe_gpio_platform_data *gpio_pdata = NULL;
+	struct stmpe_keypad_platform_data *keypad_pdata = NULL;
+	int irq_base;
+	enum of_gpio_flags flags;
+
+	irq_base = irq_alloc_descs(-1, 0, STMPE_NR_IRQS, 0);
+	if (IS_ERR_VALUE(irq_base)) {
+		pr_err("%s: irq desc alloc failed\n", __func__);
+		return -ENXIO;
+	}
+
+	stmpe_irq_domain = irq_domain_add_legacy(np, STMPE_NR_IRQS, irq_base,
+			0, &irq_domain_simple_ops, NULL);
+	if (!stmpe_irq_domain) {
+		pr_warning("%s: irq domain init failed\n", __func__);
+		irq_free_descs(irq_base, 32);
+		return -ENXIO;
+	}
+
+	pdata->irq_base = irq_find_mapping(stmpe_irq_domain, 0);
+
+	if (of_get_property(np, "irq_over_gpio", NULL))
+		pdata->irq_over_gpio = true;
+
+	if (pdata->irq_over_gpio)
+		pdata->irq_gpio = of_get_named_gpio_flags(np, "irq-gpios",
+				0, &flags);
+
+	if(!pdata->irq_gpio)
+		pr_debug("unable to get irq_gpio from %s.", __func__);
+
+	if (of_property_read_u32(np, "irq_trigger", &pdata->irq_trigger))
+		pr_debug("unable to get irq_trigger\n");
+
+	if (of_get_property(np, "irq_invert_polarity", NULL))
+		pdata->irq_invert_polarity = true;
+
+	if (of_get_property(np, "autosleep", NULL))
+		pdata->autosleep = true;
+
+	if (of_property_read_u32(np, "blocks", &pdata->blocks))
+		pr_debug("unable to get blocks\n");
+
+	if (of_property_read_u32(np, "id", &pdata->id))
+		pr_debug("unable to get id\n");
+
+	/* enumerate keyboard plat data */
+	if (pdata->blocks & STMPE_BLOCK_KEYPAD) {
+		keypad_pdata = kzalloc(sizeof(*keypad_pdata), GFP_KERNEL);
+		if (!keypad_pdata) {
+			pr_warn("stmpe keypad kzalloc fail\n");
+			return -ENOMEM;
+		}
+		pdata->keypad = keypad_pdata;
+	}
+	if (pdata->blocks & STMPE_BLOCK_GPIO) {
+		gpio_pdata = kzalloc(sizeof(*gpio_pdata), GFP_KERNEL);
+		if (!gpio_pdata) {
+			pr_warn("stmpe gpio kzalloc fail\n");
+			return -ENOMEM;
+		}
+		pdata->gpio = gpio_pdata;
+	}
+	if (pdata->blocks & STMPE_BLOCK_TOUCHSCREEN) {
+		ts_pdata = kzalloc(sizeof(*ts_pdata), GFP_KERNEL);
+		if (!ts_pdata) {
+			pr_warn("stmpe ts kzalloc fail\n");
+			return -ENOMEM;
+		}
+		pdata->ts = ts_pdata;
+	}
+
+	return 0;
+}
+
+static int __devinit stmpe_of_devices_init(struct stmpe *stmpe)
+{
+	struct stmpe_variant_info *variant = stmpe->variant;
+	unsigned int platform_blocks = stmpe->pdata->blocks;
+	struct device_node *nc, *np = stmpe->dev->of_node;
+	struct stmpe_variant_block *block;
+	int ret = -EINVAL;
+
+	for_each_child_of_node(np, nc) {
+		if (of_match_node(stmpe_keypad_ids, nc)) {
+			stmpe_probe_keyboard_dt(stmpe->pdata->keypad, np);
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_KEYPAD);
+		} else if (of_match_node(stmpe_gpio_ids, nc)) {
+			stmpe_probe_gpio_dt(stmpe->pdata->gpio, np);
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_GPIO);
+		} else if (of_match_node(stmpe_ts_ids, nc)) {
+			stmpe_probe_touschscreen_dt(stmpe->pdata->ts, np);
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_TOUCHSCREEN);
+		} else if (of_match_node(stmpe_adc_ids, nc)) {
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_ADC);
+		} else if (of_match_node(stmpe_pwm_ids, nc)) {
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_PWM);
+		} else if (of_match_node(stmpe_rotator_ids, nc)) {
+			block = stmpe_get_variant_block(variant,
+					STMPE_BLOCK_ROTATOR);
+		} else {
+			dev_warn(stmpe->dev,
+					"no matching device nodes found\n");
+			return -EINVAL;
+		}
+
+		if(!block) {
+			dev_warn(stmpe->dev,
+					"no matching device block found\n");
+			continue;
+		}
+
+		block->cell->of_node = nc;
+		platform_blocks &= ~block->block;
+		ret = stmpe_add_device(stmpe, block->cell, block->irq);
+		if (ret)
+			return ret;
+	}
+
+	if (platform_blocks)
+		dev_warn(stmpe->dev,
+			 "platform wants blocks (%#x) not present on variant",
+			 platform_blocks);
+
+	return ret;
+}
+
+#else
+static int stmpe_probe_config_dt(struct stmpe_platform_data *pdata, struct
+		device_node *np)
+{
+	return -ENODEV;
+}
+
+static int __devinit stmpe_of_devices_init(struct stmpe *stmpe)
+{
+	return -ENODEV;
+}
+#endif
 
 static int __devinit stmpe_devices_init(struct stmpe *stmpe)
 {
@@ -957,14 +1250,28 @@ static int __devinit stmpe_devices_init(struct stmpe *stmpe)
 }
 
 /* Called from client specific probe routines */
-int stmpe_probe(struct stmpe_client_info *ci, int partnum)
+int __devinit stmpe_probe(struct stmpe_client_info *ci, int partnum)
 {
 	struct stmpe_platform_data *pdata = dev_get_platdata(ci->dev);
+	struct device_node *np = ci->dev->of_node;
 	struct stmpe *stmpe;
 	int ret;
 
-	if (!pdata)
+	if (!pdata && !np)
 		return -EINVAL;
+
+	if (!pdata && np) {
+		pdata = devm_kzalloc(ci->dev, sizeof(*pdata), GFP_KERNEL);
+		if (!pdata) {
+			pr_warn("stmpe kzalloc fail\n");
+			return -ENOMEM;
+		}
+		ret = stmpe_probe_config_dt(pdata, np);
+		if (ret) {
+			dev_err(ci->dev, "no platform data\n");
+			return ret;
+		}
+	}
 
 	stmpe = kzalloc(sizeof(struct stmpe), GFP_KERNEL);
 	if (!stmpe)
@@ -1000,22 +1307,44 @@ int stmpe_probe(struct stmpe_client_info *ci, int partnum)
 		stmpe->irq = ci->irq;
 	}
 
+	if (stmpe->irq < 0) {
+		/* use alternate variant info for no-irq mode, if supported */
+		dev_info(stmpe->dev,
+			"%s configured in no-irq mode by platform data\n",
+			stmpe->variant->name);
+		if (!stmpe_noirq_variant_info[stmpe->partnum]) {
+			dev_err(stmpe->dev,
+				"%s does not support no-irq mode!\n",
+				stmpe->variant->name);
+			ret = -ENODEV;
+			goto free_gpio;
+		}
+		stmpe->variant = stmpe_noirq_variant_info[stmpe->partnum];
+	}
+
 	ret = stmpe_chip_init(stmpe);
 	if (ret)
 		goto free_gpio;
 
-	ret = stmpe_irq_init(stmpe);
-	if (ret)
-		goto free_gpio;
+	if (stmpe->irq >= 0) {
+		ret = stmpe_irq_init(stmpe);
+		if (ret)
+			goto free_gpio;
 
-	ret = request_threaded_irq(stmpe->irq, NULL, stmpe_irq,
-			pdata->irq_trigger | IRQF_ONESHOT, "stmpe", stmpe);
-	if (ret) {
-		dev_err(stmpe->dev, "failed to request IRQ: %d\n", ret);
-		goto out_removeirq;
+		ret = request_threaded_irq(stmpe->irq, NULL, stmpe_irq,
+				pdata->irq_trigger | IRQF_ONESHOT,
+				"stmpe", stmpe);
+		if (ret) {
+			dev_err(stmpe->dev, "failed to request IRQ: %d\n",
+					ret);
+			goto out_removeirq;
+		}
 	}
 
-	ret = stmpe_devices_init(stmpe);
+	if (np)
+		ret = stmpe_of_devices_init(stmpe);
+	else
+		ret = stmpe_devices_init(stmpe);
 	if (ret) {
 		dev_err(stmpe->dev, "failed to add children\n");
 		goto out_removedevs;
@@ -1025,9 +1354,11 @@ int stmpe_probe(struct stmpe_client_info *ci, int partnum)
 
 out_removedevs:
 	mfd_remove_devices(stmpe->dev);
-	free_irq(stmpe->irq, stmpe);
+	if (stmpe->irq >= 0)
+		free_irq(stmpe->irq, stmpe);
 out_removeirq:
-	stmpe_irq_remove(stmpe);
+	if (stmpe->irq >= 0)
+		stmpe_irq_remove(stmpe);
 free_gpio:
 	if (pdata->irq_over_gpio)
 		gpio_free(pdata->irq_gpio);
@@ -1040,8 +1371,10 @@ int stmpe_remove(struct stmpe *stmpe)
 {
 	mfd_remove_devices(stmpe->dev);
 
-	free_irq(stmpe->irq, stmpe);
-	stmpe_irq_remove(stmpe);
+	if (stmpe->irq >= 0) {
+		free_irq(stmpe->irq, stmpe);
+		stmpe_irq_remove(stmpe);
+	}
 
 	if (stmpe->pdata->irq_over_gpio)
 		gpio_free(stmpe->pdata->irq_gpio);
@@ -1056,7 +1389,7 @@ static int stmpe_suspend(struct device *dev)
 {
 	struct stmpe *stmpe = dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev))
+	if (stmpe->irq >= 0 && device_may_wakeup(dev))
 		enable_irq_wake(stmpe->irq);
 
 	return 0;
@@ -1066,7 +1399,7 @@ static int stmpe_resume(struct device *dev)
 {
 	struct stmpe *stmpe = dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev))
+	if (stmpe->irq >= 0 && device_may_wakeup(dev))
 		disable_irq_wake(stmpe->irq);
 
 	return 0;

@@ -101,7 +101,7 @@ struct cpu_cache_fns {
 	void (*flush_user_range)(unsigned long, unsigned long, unsigned int);
 
 	void (*coherent_kern_range)(unsigned long, unsigned long);
-	void (*coherent_user_range)(unsigned long, unsigned long);
+	int  (*coherent_user_range)(unsigned long, unsigned long);
 	void (*flush_kern_dcache_area)(void *, size_t);
 
 	void (*dma_map_area)(const void *, size_t, int);
@@ -142,7 +142,7 @@ extern void __cpuc_flush_kern_all(void);
 extern void __cpuc_flush_user_all(void);
 extern void __cpuc_flush_user_range(unsigned long, unsigned long, unsigned int);
 extern void __cpuc_coherent_kern_range(unsigned long, unsigned long);
-extern void __cpuc_coherent_user_range(unsigned long, unsigned long);
+extern int  __cpuc_coherent_user_range(unsigned long, unsigned long);
 extern void __cpuc_flush_dcache_area(void *, size_t);
 
 /*
@@ -187,7 +187,8 @@ extern void copy_to_user_page(struct vm_area_struct *, struct page *,
  * Optimized __flush_icache_all for the common cases. Note that UP ARMv7
  * will fall through to use __flush_icache_all_generic.
  */
-#if (defined(CONFIG_CPU_V7) && defined(CONFIG_CPU_V6)) ||		\
+#if (defined(CONFIG_CPU_V7) && \
+     (defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V6K))) || \
 	defined(CONFIG_SMP_ON_UP)
 #define __flush_icache_preferred	__cpuc_flush_icache_all
 #elif __LINUX_ARM_ARCH__ >= 7 && defined(CONFIG_SMP)
@@ -248,7 +249,7 @@ extern void flush_cache_page(struct vm_area_struct *vma, unsigned long user_addr
  * Harvard caches are synchronised for the user space address range.
  * This is used for the ARM private sys_cacheflush system call.
  */
-#define flush_cache_user_range(vma,start,end) \
+#define flush_cache_user_range(start,end) \
 	__cpuc_coherent_user_range((start) & PAGE_MASK, PAGE_ALIGN(end))
 
 /*

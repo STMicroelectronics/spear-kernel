@@ -29,7 +29,7 @@ ENTRY(spear_wakeup)
 back:
 	bl	cache_invalidate
 	nop
-	ldr	r3, =SPEAR13XX_L2CC_BASE
+	ldr	r3, =L2CC_BASE
 	/* Program the Address filtering end address */
 	ldr	r6, =0x40000000
 	str	r6, [r3, #0xc04]
@@ -37,7 +37,7 @@ back:
 	ldr	r6, =0x1
 	str	r6, [r3, #0xc00]
 	ldr	r3, =SRAM_SCR_REG
-	ldr	r6, =SPEAR_SRAM_START_PA
+	ldr	r6, =SRAM_START_PA
 	ldr	r0, [r6, r3]
 	bx	r0
 cpux_sleep:

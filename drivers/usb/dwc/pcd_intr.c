@@ -649,8 +649,6 @@ static int dwc_otg_pcd_handle_usb_reset_intr(struct dwc_pcd *pcd)
 	u32 i;
 	u32 gintsts = 0;
 
-	pr_info("USB RESET\n");
-
 	/* reset the HNP settings */
 	dwc_otg_pcd_update_otg(pcd, 1);
 
@@ -953,10 +951,6 @@ static int dwc_otg_pcd_handle_ep_mismatch_intr(struct core_if *core_if)
 static void ep0_do_stall(struct dwc_pcd *pcd, const int val)
 {
 	struct pcd_ep *ep0 = &pcd->ep0;
-	struct usb_ctrlrequest *ctrl = &pcd->setup_pkt->req;
-
-	pr_warning("req %02x.%02x protocol STALL; err %d\n",
-		   ctrl->bRequestType, ctrl->bRequest, val);
 
 	ep0->dwc_ep.is_in = 1;
 	dwc_otg_ep_set_stall(pcd->otg_dev->core_if, &ep0->dwc_ep);
@@ -2145,8 +2139,6 @@ static int dwc_otg_pcd_handle_incomplete_isoc_in_intr(struct dwc_pcd *pcd)
 	u32 intr_mask = 0;
 	u32 gintsts = 0;
 
-	pr_info("Interrupt handler not implemented for IN ISOC "
-		"Incomplete\n");
 
 	/* Turn off and clear the interrupt */
 	intr_mask |= DWC_INTMSK_INCMP_IN_ATX;
@@ -2178,9 +2170,6 @@ static int dwc_otg_pcd_handle_incomplete_isoc_out_intr(struct dwc_pcd *pcd)
 {
 	u32 intr_mask = 0;
 	u32 gintsts = 0;
-
-	pr_info("Interrupt handler not implemented for OUT ISOC "
-		"Incomplete\n");
 
 	/* Turn off and clear the interrupt */
 	intr_mask |= DWC_INTMSK_INCMP_OUT_PTX;

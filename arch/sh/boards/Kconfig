@@ -3,6 +3,9 @@ menu "Board support"
 config SOLUTION_ENGINE
 	bool
 
+config SH_ALPHA_BOARD
+	bool
+
 config SH_SOLUTION_ENGINE
 	bool "SolutionEngine"
 	select SOLUTION_ENGINE
@@ -51,6 +54,7 @@ config SH_7724_SOLUTION_ENGINE
 	select SOLUTION_ENGINE
 	depends on CPU_SUBTYPE_SH7724
 	select ARCH_REQUIRE_GPIOLIB
+	select SND_SOC_AK4642 if SND_SIMPLE_CARD
 	help
 	  Select 7724 SolutionEngine if configuring for a Hitachi SH7724
 	  evaluation board.
@@ -130,7 +134,8 @@ config SH_RTS7751R2D
 
 config SH_RSK
 	bool "Renesas Starter Kit"
-	depends on CPU_SUBTYPE_SH7201 || CPU_SUBTYPE_SH7203
+	depends on CPU_SUBTYPE_SH7201 || CPU_SUBTYPE_SH7203 || \
+	  CPU_SUBTYPE_SH7264 || CPU_SUBTYPE_SH7269
 	help
 	 Select this option if configuring for any of the RSK+ MCU
 	 evaluation platforms.
@@ -220,6 +225,7 @@ config SH_ECOVEC
 	bool "EcoVec"
 	depends on CPU_SUBTYPE_SH7724
 	select ARCH_REQUIRE_GPIOLIB
+	select SND_SOC_DA7210 if SND_SIMPLE_CARD
 	help
 	  Renesas "R0P7724LC0011/21RL (EcoVec)" support.
 
@@ -320,7 +326,20 @@ config SH_SH2007
 	  Compact Flash socket, two serial ports and PC-104 bus.
 	  More information at <http://sh2000.sh-linux.org>.
 
-endmenu
+config SH_APSH4A3A
+	bool "AP-SH4A-3A"
+	select SH_ALPHA_BOARD
+	depends on CPU_SUBTYPE_SH7785
+	help
+	  Select AP-SH4A-3A if configuring for an ALPHAPROJECT AP-SH4A-3A.
+
+config SH_APSH4AD0A
+	bool "AP-SH4AD-0A"
+	select SH_ALPHA_BOARD
+	select SYS_SUPPORTS_PCI
+	depends on CPU_SUBTYPE_SH7786
+	help
+	  Select AP-SH4AD-0A if configuring for an ALPHAPROJECT AP-SH4AD-0A.
 
 source "arch/sh/boards/mach-r2d/Kconfig"
 source "arch/sh/boards/mach-highlander/Kconfig"
@@ -341,3 +360,5 @@ config SH_MAGIC_PANEL_R2_VERSION
 endmenu
 
 endif
+
+endmenu

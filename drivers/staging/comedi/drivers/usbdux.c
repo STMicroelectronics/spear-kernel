@@ -285,7 +285,7 @@ struct usbduxsub {
 	short int ao_cmd_running;
 	/* pwm is running */
 	short int pwm_cmd_running;
-	/* continous aquisition */
+	/* continous acquisition */
 	short int ai_continous;
 	short int ao_continous;
 	/* number of samples to acquire */
@@ -316,6 +316,8 @@ struct usbduxsub {
 static struct usbduxsub usbduxsub[NUMUSBDUX];
 
 static DEFINE_SEMAPHORE(start_stop_sem);
+
+static struct comedi_driver driver_usbdux;	/* see below for initializer */
 
 /*
  * Stops the data acquision
@@ -500,7 +502,7 @@ static void usbduxsub_ai_IsocIrq(struct urb *urb)
 
 	/* test, if we transmit only a fixed number of samples */
 	if (!(this_usbduxsub->ai_continous)) {
-		/* not continous, fixed number of samples */
+		/* not continuous, fixed number of samples */
 		this_usbduxsub->ai_sample_count--;
 		/* all samples received? */
 		if (this_usbduxsub->ai_sample_count < 0) {
@@ -653,7 +655,7 @@ static void usbduxsub_ao_IsocIrq(struct urb *urb)
 		/* timer zero */
 		this_usbduxsub->ao_counter = this_usbduxsub->ao_timer;
 
-		/* handle non continous aquisition */
+		/* handle non continous acquisition */
 		if (!(this_usbduxsub->ao_continous)) {
 			/* fixed number of samples */
 			this_usbduxsub->ao_sample_count--;
@@ -957,7 +959,7 @@ static int usbdux_ai_cmdtest(struct comedi_device *dev,
 	if (!cmd->scan_begin_src || tmp != cmd->scan_begin_src)
 		err++;
 
-	/* scanning is continous */
+	/* scanning is continuous */
 	tmp = cmd->convert_src;
 	cmd->convert_src &= TRIG_NOW;
 	if (!cmd->convert_src || tmp != cmd->convert_src)
@@ -1222,7 +1224,7 @@ static int usbdux_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 		up(&this_usbduxsub->sem);
 		return -EBUSY;
 	}
-	/* set current channel of the running aquisition to zero */
+	/* set current channel of the running acquisition to zero */
 	s->async->cur_chan = 0;
 
 	this_usbduxsub->dux_commands[1] = cmd->chanlist_len;
@@ -1284,7 +1286,7 @@ static int usbdux_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 		this_usbduxsub->ai_sample_count = cmd->stop_arg;
 		this_usbduxsub->ai_continous = 0;
 	} else {
-		/* continous aquisition */
+		/* continous acquisition */
 		this_usbduxsub->ai_continous = 1;
 		this_usbduxsub->ai_sample_count = 0;
 	}
@@ -1465,6 +1467,7 @@ static int usbdux_ao_inttrig(struct comedi_device *dev,
 		dev_err(&this_usbduxsub->interface->dev,
 			"comedi%d: usbdux_ao_inttrig: invalid trignum\n",
 			dev->minor);
+		up(&this_usbduxsub->sem);
 		return -EINVAL;
 	}
 	if (!(this_usbduxsub->ao_cmd_running)) {
@@ -1515,7 +1518,7 @@ static int usbdux_ao_cmdtest(struct comedi_device *dev,
 	/* just now we scan also in the high speed mode every frame */
 	/* this is due to ehci driver limitations */
 	if (0) {		/* (this_usbduxsub->high_speed) */
-		/* start immidiately a new scan */
+		/* start immediately a new scan */
 		/* the sampling rate is set by the coversion rate */
 		cmd->scan_begin_src &= TRIG_FOLLOW;
 	} else {
@@ -1525,12 +1528,12 @@ static int usbdux_ao_cmdtest(struct comedi_device *dev,
 	if (!cmd->scan_begin_src || tmp != cmd->scan_begin_src)
 		err++;
 
-	/* scanning is continous */
+	/* scanning is continuous */
 	tmp = cmd->convert_src;
 	/* we always output at 1kHz just now all channels at once */
 	if (0) {		/* (this_usbduxsub->high_speed) */
 		/*
-		 * in usb-2.0 only one conversion it tranmitted but with 8kHz/n
+		 * in usb-2.0 only one conversion it transmitted but with 8kHz/n
 		 */
 		cmd->convert_src &= TRIG_TIMER;
 	} else {
@@ -1645,7 +1648,7 @@ static int usbdux_ao_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 	dev_dbg(&this_usbduxsub->interface->dev,
 		"comedi%d: %s\n", dev->minor, __func__);
 
-	/* set current channel of the running aquisition to zero */
+	/* set current channel of the running acquisition to zero */
 	s->async->cur_chan = 0;
 	for (i = 0; i < cmd->chanlist_len; ++i) {
 		chan = CR_CHAN(cmd->chanlist[i]);
@@ -1694,7 +1697,7 @@ static int usbdux_ao_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 	this_usbduxsub->ao_counter = this_usbduxsub->ao_timer;
 
 	if (cmd->stop_src == TRIG_COUNT) {
-		/* not continous */
+		/* not continuous */
 		/* counter */
 		/* high speed also scans everything at once */
 		if (0) {	/* (this_usbduxsub->high_speed) */
@@ -1708,7 +1711,7 @@ static int usbdux_ao_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 		}
 		this_usbduxsub->ao_continous = 0;
 	} else {
-		/* continous aquisition */
+		/* continous acquisition */
 		this_usbduxsub->ao_continous = 1;
 		this_usbduxsub->ao_sample_count = 0;
 	}
@@ -1935,11 +1938,8 @@ static int usbdux_pwm_cancel(struct comedi_device *dev,
 	dev_dbg(&this_usbduxsub->interface->dev,
 		"comedi %d: sending pwm off command to the usb device.\n",
 		dev->minor);
-	res = send_dux_commands(this_usbduxsub, SENDPWMOFF);
-	if (res < 0)
-		return res;
 
-	return res;
+	return send_dux_commands(this_usbduxsub, SENDPWMOFF);
 }
 
 static void usbduxsub_pwm_irq(struct urb *urb)
@@ -2265,12 +2265,8 @@ static void tidy_up(struct usbduxsub *usbduxsub_tmp)
 			usbduxsub_unlink_OutURBs(usbduxsub_tmp);
 		}
 		for (i = 0; i < usbduxsub_tmp->numOfOutBuffers; i++) {
-			if (usbduxsub_tmp->urbOut[i]->transfer_buffer) {
-				kfree(usbduxsub_tmp->
-				      urbOut[i]->transfer_buffer);
-				usbduxsub_tmp->urbOut[i]->transfer_buffer =
-				    NULL;
-			}
+			kfree(usbduxsub_tmp->urbOut[i]->transfer_buffer);
+			usbduxsub_tmp->urbOut[i]->transfer_buffer = NULL;
 			if (usbduxsub_tmp->urbOut[i]) {
 				usb_kill_urb(usbduxsub_tmp->urbOut[i]);
 				usb_free_urb(usbduxsub_tmp->urbOut[i]);
@@ -2310,11 +2306,11 @@ static void usbdux_firmware_request_complete_handler(const struct firmware *fw,
 						     void *context)
 {
 	struct usbduxsub *usbduxsub_tmp = context;
-	struct usb_device *usbdev = usbduxsub_tmp->usbdev;
+	struct usb_interface *uinterf = usbduxsub_tmp->interface;
 	int ret;
 
 	if (fw == NULL) {
-		dev_err(&usbdev->dev,
+		dev_err(&uinterf->dev,
 			"Firmware complete handler without firmware!\n");
 		return;
 	}
@@ -2326,11 +2322,11 @@ static void usbdux_firmware_request_complete_handler(const struct firmware *fw,
 	ret = firmwareUpload(usbduxsub_tmp, fw->data, fw->size);
 
 	if (ret) {
-		dev_err(&usbdev->dev,
+		dev_err(&uinterf->dev,
 			"Could not upload firmware (err=%d)\n", ret);
 		goto out;
 	}
-	comedi_usb_auto_config(usbdev, BOARDNAME);
+	comedi_usb_auto_config(uinterf, &driver_usbdux);
  out:
 	release_firmware(fw);
 }
@@ -2398,7 +2394,7 @@ static int usbduxsub_probe(struct usb_interface *uinterf,
 	usbduxsub[index].dux_commands = kzalloc(SIZEOFDUXBUFFER, GFP_KERNEL);
 	if (!usbduxsub[index].dux_commands) {
 		dev_err(dev, "comedi_: usbdux: "
-			"error alloc space for dac commands\n");
+			"error alloc space for dux commands\n");
 		tidy_up(&(usbduxsub[index]));
 		up(&start_stop_sem);
 		return -ENOMEM;
@@ -2612,7 +2608,7 @@ static void usbduxsub_disconnect(struct usb_interface *intf)
 		dev_err(&intf->dev, "comedi_: BUG! called with wrong ptr!!!\n");
 		return;
 	}
-	comedi_usb_auto_unconfig(udev);
+	comedi_usb_auto_unconfig(intf);
 	down(&start_stop_sem);
 	down(&usbduxsub_tmp->sem);
 	tidy_up(usbduxsub_tmp);
@@ -2621,46 +2617,21 @@ static void usbduxsub_disconnect(struct usb_interface *intf)
 	dev_dbg(&intf->dev, "comedi_: disconnected from the usb\n");
 }
 
-/* is called when comedi-config is called */
-static int usbdux_attach(struct comedi_device *dev, struct comedi_devconfig *it)
+/* common part of attach and attach_usb */
+static int usbdux_attach_common(struct comedi_device *dev,
+				struct usbduxsub *udev,
+				void *aux_data, int aux_len)
 {
 	int ret;
-	int index;
-	int i;
-	struct usbduxsub *udev;
-
 	struct comedi_subdevice *s = NULL;
-	dev->private = NULL;
 
-	down(&start_stop_sem);
-	/* find a valid device which has been detected by the probe function of
-	 * the usb */
-	index = -1;
-	for (i = 0; i < NUMUSBDUX; i++) {
-		if ((usbduxsub[i].probed) && (!usbduxsub[i].attached)) {
-			index = i;
-			break;
-		}
-	}
-
-	if (index < 0) {
-		printk(KERN_ERR "comedi%d: usbdux: error: attach failed, no "
-		       "usbdux devs connected to the usb bus.\n", dev->minor);
-		up(&start_stop_sem);
-		return -ENODEV;
-	}
-
-	udev = &usbduxsub[index];
 	down(&udev->sem);
 	/* pointer back to the corresponding comedi device */
 	udev->comedidev = dev;
 
 	/* trying to upload the firmware into the chip */
-	if (comedi_aux_data(it->options, 0) &&
-	    it->options[COMEDI_DEVCONF_AUX_DATA_LENGTH]) {
-		firmwareUpload(udev, comedi_aux_data(it->options, 0),
-			       it->options[COMEDI_DEVCONF_AUX_DATA_LENGTH]);
-	}
+	if (aux_data)
+		firmwareUpload(udev, aux_data, aux_len);
 
 	dev->board_name = BOARDNAME;
 
@@ -2678,13 +2649,10 @@ static int usbdux_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	if (ret < 0) {
 		dev_err(&udev->interface->dev,
 			"comedi%d: error alloc space for subdev\n", dev->minor);
-		up(&start_stop_sem);
+		up(&udev->sem);
 		return ret;
 	}
 
-	dev_info(&udev->interface->dev,
-		 "comedi%d: usb-device %d is attached to comedi.\n",
-		 dev->minor, index);
 	/* private structure is also simply the usb-structure */
 	dev->private = udev;
 
@@ -2781,44 +2749,91 @@ static int usbdux_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 
 	up(&udev->sem);
 
-	up(&start_stop_sem);
-
 	dev_info(&udev->interface->dev, "comedi%d: attached to usbdux.\n",
 		 dev->minor);
 
 	return 0;
 }
 
-static int usbdux_detach(struct comedi_device *dev)
+/* is called when comedi-config is called */
+static int usbdux_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 {
-	struct usbduxsub *usbduxsub_tmp;
+	int ret;
+	int index;
+	int i;
+	void *aux_data;
+	int aux_len;
 
-	if (!dev) {
-		printk(KERN_ERR
-		       "comedi?: usbdux: detach without dev variable...\n");
-		return -EFAULT;
-	}
-
-	usbduxsub_tmp = dev->private;
-	if (!usbduxsub_tmp) {
-		printk(KERN_ERR
-		       "comedi?: usbdux: detach without ptr to usbduxsub[]\n");
-		return -EFAULT;
-	}
-
-	dev_dbg(&usbduxsub_tmp->interface->dev, "comedi%d: detach usb device\n",
-		dev->minor);
-
-	down(&usbduxsub_tmp->sem);
-	/* Don't allow detach to free the private structure */
-	/* It's one entry of of usbduxsub[] */
 	dev->private = NULL;
-	usbduxsub_tmp->attached = 0;
-	usbduxsub_tmp->comedidev = NULL;
-	dev_dbg(&usbduxsub_tmp->interface->dev,
-		"comedi%d: detach: successfully removed\n", dev->minor);
-	up(&usbduxsub_tmp->sem);
-	return 0;
+
+	aux_data = comedi_aux_data(it->options, 0);
+	aux_len = it->options[COMEDI_DEVCONF_AUX_DATA_LENGTH];
+	if (aux_data == NULL)
+		aux_len = 0;
+	else if (aux_len == 0)
+		aux_data = NULL;
+
+	down(&start_stop_sem);
+	/* find a valid device which has been detected by the probe function of
+	 * the usb */
+	index = -1;
+	for (i = 0; i < NUMUSBDUX; i++) {
+		if ((usbduxsub[i].probed) && (!usbduxsub[i].attached)) {
+			index = i;
+			break;
+		}
+	}
+
+	if (index < 0) {
+		printk(KERN_ERR
+		       "comedi%d: usbdux: error: attach failed, no usbdux devs connected to the usb bus.\n",
+		       dev->minor);
+		ret = -ENODEV;
+	} else
+		ret = usbdux_attach_common(dev, &usbduxsub[index],
+					   aux_data, aux_len);
+	up(&start_stop_sem);
+	return ret;
+}
+
+/* is called from comedi_usb_auto_config() */
+static int usbdux_attach_usb(struct comedi_device *dev,
+			     struct usb_interface *uinterf)
+{
+	int ret;
+	struct usbduxsub *this_usbduxsub;
+
+	dev->private = NULL;
+
+	down(&start_stop_sem);
+	this_usbduxsub = usb_get_intfdata(uinterf);
+	if (!this_usbduxsub || !this_usbduxsub->probed) {
+		printk(KERN_ERR
+		       "comedi%d: usbdux: error: attach_usb failed, not connected\n",
+		       dev->minor);
+		ret = -ENODEV;
+	} else if (this_usbduxsub->attached) {
+		printk(KERN_ERR
+		       "comedi%d: usbdux: error: attach_usb failed, already attached\n",
+		       dev->minor);
+		ret = -ENODEV;
+	} else
+		ret = usbdux_attach_common(dev, this_usbduxsub, NULL, 0);
+	up(&start_stop_sem);
+	return ret;
+}
+
+static void usbdux_detach(struct comedi_device *dev)
+{
+	struct usbduxsub *usb = dev->private;
+
+	if (usb) {
+		down(&usb->sem);
+		dev->private = NULL;
+		usb->attached = 0;
+		usb->comedidev = NULL;
+		up(&usb->sem);
+	}
 }
 
 /* main driver struct */
@@ -2827,6 +2842,7 @@ static struct comedi_driver driver_usbdux = {
 	.module = THIS_MODULE,
 	.attach = usbdux_attach,
 	.detach = usbdux_detach,
+	.attach_usb = usbdux_attach_usb,
 };
 
 /* Table with the USB-devices: just now only testing IDs */

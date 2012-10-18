@@ -224,7 +224,7 @@ struct dmm32at_private {
  */
 static int dmm32at_attach(struct comedi_device *dev,
 			  struct comedi_devconfig *it);
-static int dmm32at_detach(struct comedi_device *dev);
+static void dmm32at_detach(struct comedi_device *dev);
 static struct comedi_driver driver_dmm32at = {
 	.driver_name = "dmm32at",
 	.module = THIS_MODULE,
@@ -450,23 +450,12 @@ static int dmm32at_attach(struct comedi_device *dev,
 
 }
 
-/*
- * _detach is called to deconfigure a device.  It should deallocate
- * resources.
- * This function is also called when _attach() fails, so it should be
- * careful not to release resources that were not necessarily
- * allocated by _attach().  dev->private and dev->subdevices are
- * deallocated automatically by the core.
- */
-static int dmm32at_detach(struct comedi_device *dev)
+static void dmm32at_detach(struct comedi_device *dev)
 {
-	printk(KERN_INFO "comedi%d: dmm32at: remove\n", dev->minor);
 	if (dev->irq)
 		free_irq(dev->irq, dev);
 	if (dev->iobase)
 		release_region(dev->iobase, DMM32AT_MEMSIZE);
-
-	return 0;
 }
 
 /*
@@ -532,7 +521,7 @@ static int dmm32at_ai_rinsn(struct comedi_device *dev,
 		msb = dmm_inb(dev, DMM32AT_AIMSB);
 
 		/* invert sign bit to make range unsigned, this is an
-		   idiosyncracy of the diamond board, it return
+		   idiosyncrasy of the diamond board, it return
 		   conversions as a signed value, i.e. -32768 to
 		   32767, flipping the bit and interpreting it as
 		   signed gives you a range of 0 to 65535 which is

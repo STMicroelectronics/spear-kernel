@@ -156,9 +156,6 @@ static int __devinit platform_pci_init(struct pci_dev *pdev,
 	if (ret)
 		goto out;
 	xenbus_probe(NULL);
-	ret = xen_setup_shutdown_event();
-	if (ret)
-		goto out;
 	return 0;
 
 out:
@@ -189,11 +186,6 @@ static struct pci_driver platform_driver = {
 
 static int __init platform_pci_module_init(void)
 {
-	/* no unplug has been done, IGNORE hasn't been specified: just
-	 * return now */
-	if (!xen_platform_pci_unplug)
-		return -ENODEV;
-
 	return pci_register_driver(&platform_driver);
 }
 

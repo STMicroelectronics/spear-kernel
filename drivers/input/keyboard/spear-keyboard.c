@@ -19,13 +19,12 @@
 #include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_wakeup.h>
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <plat/keyboard.h>
-#include<linux/pm_runtime.h>
-#include <plat/hardware.h>
 
 /* Keyboard Registers */
 #define MODE_CTL_REG	0x00
@@ -34,6 +33,8 @@
 #define INTR_MASK	0x54
 
 /* Register Values */
+#define NUM_ROWS	16
+#define NUM_COLS	16
 #define MODE_CTL_PCLK_FREQ_SHIFT	9
 #define MODE_CTL_PCLK_FREQ_MSK		0x7F
 
@@ -58,12 +59,13 @@ struct spear_kbd {
 	void __iomem *io_base;
 	struct clk *clk;
 	unsigned int irq;
+	unsigned int mode;
 	unsigned int irq_wake;
 	unsigned short last_key;
-	unsigned int mode;
+	unsigned short keycodes[NUM_ROWS * NUM_COLS];
+	bool rep;
 	unsigned int suspended_rate;
 	u32 mode_ctl_reg;
-	unsigned short keycodes[256];
 };
 
 static irqreturn_t spear_kbd_interrupt(int irq, void *dev_id)
@@ -105,10 +107,9 @@ static int spear_kbd_open(struct input_dev *dev)
 	int error;
 	u32 val;
 
-	pm_runtime_get_sync(dev->dev.parent);
 	kbd->last_key = KEY_RESERVED;
 
-	error = clk_enable(kbd->clk);
+	error = clk_prepare_enable(kbd->clk);
 	if (error)
 		return error;
 
@@ -140,32 +141,56 @@ static void spear_kbd_close(struct input_dev *dev)
 	val &= ~MODE_CTL_START_SCAN;
 	writel_relaxed(val, kbd->io_base + MODE_CTL_REG);
 
-	clk_disable(kbd->clk);
+	clk_disable_unprepare(kbd->clk);
 
 	kbd->last_key = KEY_RESERVED;
-	pm_runtime_put_sync(dev->dev.parent);
 }
+
+#ifdef CONFIG_OF
+static int __devinit spear_kbd_parse_dt(struct platform_device *pdev,
+                                        struct spear_kbd *kbd)
+{
+	struct device_node *np = pdev->dev.of_node;
+	int error;
+	u32 val, suspended_rate;
+
+	if (!np) {
+		dev_err(&pdev->dev, "Missing DT data\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_bool(np, "autorepeat"))
+		kbd->rep = true;
+
+	if (of_property_read_u32(np, "suspended_rate", &suspended_rate))
+		kbd->suspended_rate = suspended_rate;
+
+	error = of_property_read_u32(np, "st,mode", &val);
+	if (error) {
+		dev_err(&pdev->dev, "DT: Invalid or missing mode\n");
+		return error;
+	}
+
+	kbd->mode = val;
+	return 0;
+}
+#else
+static inline int spear_kbd_parse_dt(struct platform_device *pdev,
+				     struct spear_kbd *kbd)
+{
+	return -ENOSYS;
+}
+#endif
 
 static int __devinit spear_kbd_probe(struct platform_device *pdev)
 {
-	const struct kbd_platform_data *pdata = pdev->dev.platform_data;
-	const struct matrix_keymap_data *keymap;
+	struct kbd_platform_data *pdata = dev_get_platdata(&pdev->dev);
+	const struct matrix_keymap_data *keymap = pdata ? pdata->keymap : NULL;
 	struct spear_kbd *kbd;
 	struct input_dev *input_dev;
 	struct resource *res;
 	int irq;
-	int error = -EINVAL;
-
-	if (!pdata) {
-		dev_err(&pdev->dev, "Invalid platform data\n");
-		return -EINVAL;
-	}
-
-	keymap = pdata->keymap;
-	if (!keymap) {
-		dev_err(&pdev->dev, "no keymap defined\n");
-		return -EINVAL;
-	}
+	int error;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -189,8 +214,16 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 
 	kbd->input = input_dev;
 	kbd->irq = irq;
-	kbd->mode = pdata->mode;
-	kbd->suspended_rate = pdata->suspended_rate;
+
+	if (!pdata) {
+		error = spear_kbd_parse_dt(pdev, kbd);
+		if (error)
+			goto err_free_mem;
+	} else {
+		kbd->mode = pdata->mode;
+		kbd->rep = pdata->rep;
+		kbd->suspended_rate = pdata->suspended_rate;
+	}
 
 	kbd->res = request_mem_region(res->start, resource_size(res),
 				      pdev->name);
@@ -223,17 +256,16 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 	input_dev->open = spear_kbd_open;
 	input_dev->close = spear_kbd_close;
 
-	__set_bit(EV_KEY, input_dev->evbit);
-	if (pdata->rep)
+	error = matrix_keypad_build_keymap(keymap, NULL, NUM_ROWS, NUM_COLS,
+					   kbd->keycodes, input_dev);
+	if (error) {
+		dev_err(&pdev->dev, "Failed to build keymap\n");
+		goto err_put_clk;
+	}
+
+	if (kbd->rep)
 		__set_bit(EV_REP, input_dev->evbit);
 	input_set_capability(input_dev, EV_MSC, MSC_SCAN);
-
-	input_dev->keycode = kbd->keycodes;
-	input_dev->keycodesize = sizeof(kbd->keycodes[0]);
-	input_dev->keycodemax = ARRAY_SIZE(kbd->keycodes);
-
-	matrix_keypad_build_keymap(keymap, ROW_SHIFT,
-			input_dev->keycode, input_dev->keybit);
 
 	input_set_drvdata(input_dev, kbd);
 
@@ -251,7 +283,6 @@ static int __devinit spear_kbd_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 	platform_set_drvdata(pdev, kbd);
-	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
@@ -281,7 +312,6 @@ static int __devexit spear_kbd_remove(struct platform_device *pdev)
 	release_mem_region(kbd->res->start, resource_size(kbd->res));
 	kfree(kbd);
 
-	pm_runtime_disable(&pdev->dev);
 	device_init_wakeup(&pdev->dev, 0);
 	platform_set_drvdata(pdev, NULL);
 
@@ -294,12 +324,14 @@ static int spear_kbd_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input;
-	unsigned int rate = 0, mode_ctl_reg, val;
+	unsigned int rate = 0, mode_ctl_reg, val, error;
 
 	mutex_lock(&input_dev->mutex);
 
 	/* explicitly enable clock as we may program device */
-	clk_enable(kbd->clk);
+	error = clk_prepare_enable(kbd->clk);
+	if (error)
+		return error;
 
 	mode_ctl_reg = readl_relaxed(kbd->io_base + MODE_CTL_REG);
 
@@ -324,7 +356,7 @@ static int spear_kbd_suspend(struct device *dev)
 		if (input_dev->users) {
 			writel_relaxed(mode_ctl_reg & ~MODE_CTL_START_SCAN,
 					kbd->io_base + MODE_CTL_REG);
-			clk_disable(kbd->clk);
+			clk_disable_unprepare(kbd->clk);
 		}
 	}
 
@@ -333,7 +365,7 @@ static int spear_kbd_suspend(struct device *dev)
 		kbd->mode_ctl_reg = mode_ctl_reg;
 
 	/* restore previous clk state */
-	clk_disable(kbd->clk);
+	clk_disable_unprepare(kbd->clk);
 
 	mutex_unlock(&input_dev->mutex);
 
@@ -345,6 +377,7 @@ static int spear_kbd_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct spear_kbd *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input;
+	int error;
 
 	mutex_lock(&input_dev->mutex);
 
@@ -354,8 +387,11 @@ static int spear_kbd_resume(struct device *dev)
 			disable_irq_wake(kbd->irq);
 		}
 	} else {
-		if (input_dev->users)
-			clk_enable(kbd->clk);
+		if (input_dev->users) {
+			error = clk_prepare_enable(kbd->clk);
+			if (error)
+				return error;
+		}
 	}
 
 	/* restore current configuration */
@@ -366,11 +402,16 @@ static int spear_kbd_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
-const struct dev_pm_ops spear_kbd_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(spear_kbd_suspend, spear_kbd_resume)
-	SET_RUNTIME_PM_OPS(spear_kbd_suspend, spear_kbd_resume, NULL)
+static SIMPLE_DEV_PM_OPS(spear_kbd_pm_ops, spear_kbd_suspend, spear_kbd_resume);
+
+#ifdef CONFIG_OF
+static const struct of_device_id spear_kbd_id_table[] = {
+	{ .compatible = "st,spear300-kbd" },
+	{}
 };
+MODULE_DEVICE_TABLE(of, spear_kbd_id_table);
 #endif
 
 static struct platform_driver spear_kbd_driver = {
@@ -379,23 +420,11 @@ static struct platform_driver spear_kbd_driver = {
 	.driver		= {
 		.name	= "keyboard",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm	= &spear_kbd_pm_ops,
-#endif
+		.of_match_table = of_match_ptr(spear_kbd_id_table),
 	},
 };
-
-static int __init spear_kbd_init(void)
-{
-	return platform_driver_register(&spear_kbd_driver);
-}
-module_init(spear_kbd_init);
-
-static void __exit spear_kbd_exit(void)
-{
-	platform_driver_unregister(&spear_kbd_driver);
-}
-module_exit(spear_kbd_exit);
+module_platform_driver(spear_kbd_driver);
 
 MODULE_AUTHOR("Rajeev Kumar");
 MODULE_DESCRIPTION("SPEAr Keyboard Driver");

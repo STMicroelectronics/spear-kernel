@@ -1,0 +1,22 @@
+* Digital Blocks clcd controller
+
+Required properties:
+- compatible : should be "st,db9000-clcd".
+- reg : Address range of the db9000-clcd registers:
+- interrupt-parent : the phandle for the interrupt controller that
+  services interrupts for this device.
+- interrupt: Should contain the sdhci interrupt number
+
+Optional properties:
+- mode : select a video mode:
+    <xres>x<yres>[-<bpp>][@<refresh>]
+-ignore_cpufreq_notification: if cpu and db9000fb share the same pll
+then mark it 0 other wise mark it 1.
+
+Example for digital blocks (db9000fb):
+	clcd@e1000000 {
+		compatible = "st,db9000-clcd";
+		reg = <0xe1000000  0x1000>;
+        interrupts = <0 13 0x4>;
+		mode = "1024x768-32@60";
+	};

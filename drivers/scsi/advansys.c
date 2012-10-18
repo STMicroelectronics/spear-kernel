@@ -41,7 +41,6 @@
 #include <linux/firmware.h>
 
 #include <asm/io.h>
-#include <asm/system.h>
 #include <asm/dma.h>
 
 #include <scsi/scsi_cmnd.h>
@@ -4544,7 +4543,7 @@ AscMemWordCopyPtrToLram(PortAddr iop_base, ushort s_addr,
  * Copy 4 bytes to LRAM.
  *
  * The source data is assumed to be in little-endian order in memory
- * and is maintained in little-endian order when writen to LRAM.
+ * and is maintained in little-endian order when written to LRAM.
  */
 static void
 AscMemDWordCopyPtrToLram(PortAddr iop_base,

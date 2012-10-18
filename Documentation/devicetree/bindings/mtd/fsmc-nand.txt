@@ -1,0 +1,65 @@
+* FSMC NAND
+
+Required properties:
+- compatible : "st,spear600-fsmc-nand"
+- reg : Address range of the mtd chip
+- reg-names: Should contain the reg names "fsmc_regs" and "nand_data"
+- st,ale-off : Chip specific offset to ALE
+- st,cle-off : Chip specific offset to CLE
+- maxbanks: Number of banks supported by SoC
+
+Optional properties:
+- bank-width : Width (in bytes) of the device.  If not present, the width
+  defaults to 1 byte
+- nand-skip-bbtscan: Indicates the the BBT scanning should be skipped
+
+- nand-timings-enabled: Indicates if the timing parameters are passed
+  via DT
+- nand-timings,tclr:
+- nand-timings,tar:
+- nand-timings,thiz:
+- nand-timings,thold:
+- nand-timings,twait:
+- nand-timings,tset: All these timing parameters come from the actual
+  nand device specification. Each of this represents a number of time
+  period of hclk ie a number 4 in thold with hclk = 166MHz means that
+  thold = (1000 / 166) * 4 ns = 24.09ns
+
+- st,ready-busy: Should contain either of "rb-gpio" or "rb-wait". When
+  this property is not defined, the default is to use rb-wait.
+- st,rb-gpios: When the st,ready-busy is defined as "rb-gpio", a gpio
+  pin number is defined in this property
+
+- nand-erasesize: Pass erasesize of the connected NAND device
+- nand-writesize: Pass writesize of the connected NAND device
+- nand-oobsize: Pass oobsize of the connected NAND device
+- nand-sw-ecc: boolean indicating whether s/w ecc is supported
+
+Example:
+
+	fsmc: flash@d1800000 {
+		compatible = "st,spear600-fsmc-nand";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0xd1800000 0x1000	/* FSMC Register */
+		       0xd2000000 0x4000>;	/* NAND Base */
+		reg-names = "fsmc_regs", "nand_data";
+		st,ale-off = <0x20000>;
+		st,cle-off = <0x10000>;
+		maxbanks = <1>;
+
+		nand-timings-enabled;
+		nand-timings,tclr = <1>;
+		nand-timings,tar = <1>;
+		nand-timings,thiz = <1>;
+		nand-timings,thold = <4>;
+		nand-timings,twait = <6>;
+		nand-timings,tset = <0>;
+
+		bank-width = <1>;
+		nand-skip-bbtscan;
+
+		partition@0 {
+			...
+		};
+	};

@@ -3,8 +3,8 @@
  *
  * DMAC pl080 definitions for SPEAr platform
  *
- * Copyright (C) 2011 ST Microelectronics
- * Viresh Kumar <viresh.kumar@st.com>
+ * Copyright (C) 2012 ST Microelectronics
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -14,13 +14,13 @@
 #include <linux/amba/pl08x.h>
 #include <linux/amba/bus.h>
 #include <linux/bug.h>
-#include <linux/device.h>
 #include <linux/err.h>
 #include <linux/io.h>
-#include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
+#include <mach/spear.h>
 #include <mach/misc_regs.h>
 
-static spinlock_t lock = SPIN_LOCK_UNLOCKED;
+static spinlock_t lock = __SPIN_LOCK_UNLOCKED(x);
 
 struct {
 	unsigned char busy;
@@ -44,7 +44,7 @@ int pl080_get_signal(struct pl08x_dma_chan *ch)
 
 	/* If acquiring for the first time, configure it */
 	if (!signals[signal].busy) {
-		val = readl(VA_DMA_CHN_CFG);
+		val = readl(DMA_CHN_CFG);
 
 		/*
 		 * Each request line has two bits in DMA_CHN_CFG register. To
@@ -53,7 +53,7 @@ int pl080_get_signal(struct pl08x_dma_chan *ch)
 		 */
 		val &= ~(0x3 << (signal * 2));
 		val |= cd->muxval << (signal * 2);
-		writel(val, VA_DMA_CHN_CFG);
+		writel(val, DMA_CHN_CFG);
 	}
 
 	signals[signal].busy++;
@@ -77,15 +77,4 @@ void pl080_put_signal(struct pl08x_dma_chan *ch)
 	signals[cd->min_signal].busy--;
 
 	spin_unlock_irqrestore(&lock, flags);
-}
-
-void pl080_set_slaveinfo(struct amba_device *pl080,
-		struct pl08x_channel_data *cd, u32 num)
-{
-	struct pl08x_platform_data *pdata = dev_get_platdata(&pl080->dev);
-
-	pdata->slave_channels = cd;
-	pdata->num_slave_channels = num;
-	pdata->get_signal = pl080_get_signal;
-	pdata->put_signal = pl080_put_signal;
 }

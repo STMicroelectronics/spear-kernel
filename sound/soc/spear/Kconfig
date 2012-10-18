@@ -28,13 +28,6 @@ config SND_SPEAR_SOC
 	 controllers (I2S/SPDIF). You will also need to select
 	 the audio interface codecs to support below.
 
-config SND_DESIGNWARE_I2S
-	tristate "Synopsys I2S Device Driver"
-	help
-	 Say Y or M if you want to add support for I2S driver for
-	 Synopsys desigwnware I2S device. The device supports upto
-	 maximum of 8 channels each for play, record or both.
-
 config SND_SPEAR_SPDIF_OUT
 	tristate "SPEAr SPDIF Out Device Driver"
 	help

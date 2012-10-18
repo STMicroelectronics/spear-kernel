@@ -15,6 +15,7 @@
 #ifndef __AA_MATCH_H
 #define __AA_MATCH_H
 
+#include <linux/kref.h>
 #include <linux/workqueue.h>
 
 #define DFA_NOMATCH			0
@@ -115,6 +116,9 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len);
 unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 			  const char *str);
+unsigned int aa_dfa_next(struct aa_dfa *dfa, unsigned int state,
+			 const char c);
+
 void aa_dfa_free_kref(struct kref *kref);
 
 /**

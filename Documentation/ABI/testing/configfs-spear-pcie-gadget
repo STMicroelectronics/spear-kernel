@@ -12,7 +12,7 @@ Description:
 	Nodes are only visible when configfs is mounted. To mount configfs
 	in /config directory use:
 	# mount -t configfs none /config/
-	
+
 	For nth PCIe Device Controller
 	/config/pcie-gadget.n/
 		link ... used to enable ltssm and read its status.

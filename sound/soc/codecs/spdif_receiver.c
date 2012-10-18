@@ -8,7 +8,7 @@
  *  in these configurations. SPEAr SPDIF IN Audio controller uses this driver.
  *
  * Author:      Vipin Kumar,  <vipin.kumar@st.com>
- * Copyright:   (C) 2011  ST Microelectronics
+ * Copyright:   (C) 2012  ST Microelectronics
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,8 +21,6 @@
 #include <sound/soc.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
-
-MODULE_LICENSE("GPL");
 
 #define STUB_RATES	SNDRV_PCM_RATE_8000_192000
 #define STUB_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE | \
@@ -40,6 +38,12 @@ static struct snd_soc_dai_driver dir_stub_dai = {
 		.formats	= STUB_FORMATS,
 	},
 };
+
+static const struct of_device_id spdif_dir_of_match[] = {
+	{ .compatible = "dummy,dir-hifi", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_dir_of_match);
 
 static int spdif_dir_probe(struct platform_device *pdev)
 {
@@ -59,18 +63,12 @@ static struct platform_driver spdif_dir_driver = {
 	.driver		= {
 		.name	= "spdif-dir",
 		.owner	= THIS_MODULE,
+		.of_match_table = spdif_dir_of_match,
 	},
 };
 
-static int __init dir_modinit(void)
-{
-	return platform_driver_register(&spdif_dir_driver);
-}
+module_platform_driver(spdif_dir_driver);
 
-static void __exit dir_exit(void)
-{
-	platform_driver_unregister(&spdif_dir_driver);
-}
-
-module_init(dir_modinit);
-module_exit(dir_exit);
+MODULE_DESCRIPTION("ASoC SPDIF DIR driver");
+MODULE_AUTHOR("Vipin Kumar <vipin.kumar@st.com>");
+MODULE_LICENSE("GPL");

@@ -10,8 +10,6 @@
 #include <linux/spinlock.h>
 #include <asm/types.h>
 
-#ifdef __KERNEL__
-
 #define LPM_ANYPATH 0xff
 #define __MAX_CSSID 0
 
@@ -183,7 +181,7 @@ struct esw3 {
  * The irb that is handed to the device driver when an interrupt occurs. For
  * solicited interrupts, the common I/O layer already performs checks whether
  * a field is valid; a field not being valid is always passed as %0.
- * If a unit check occured, @ecw may contain sense data; this is retrieved
+ * If a unit check occurred, @ecw may contain sense data; this is retrieved
  * by the common I/O layer itself if the device doesn't support concurrent
  * sense (so that the device driver never needs to perform basic sene itself).
  * For unsolicited interrupts, the irb is passed as-is (expect for sense data,
@@ -289,7 +287,5 @@ extern int cio_get_iplinfo(struct cio_iplinfo *iplinfo);
 /* Function from drivers/s390/cio/chsc.c */
 int chsc_sstpc(void *page, unsigned int op, u16 ctrl);
 int chsc_sstpi(void *page, void *result, size_t size);
-
-#endif
 
 #endif

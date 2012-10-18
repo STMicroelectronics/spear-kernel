@@ -1,7 +1,7 @@
 /*
  * ALSA SoC SPDIF In Audio Layer for spear processors
  *
- * Copyright (C) 2011 ST Microelectronics
+ * Copyright (C) 2012 ST Microelectronics
  * Vipin Kumar <vipin.kumar@st.com>
  *
  * This file is licensed under the terms of the GNU General Public
@@ -12,16 +12,17 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
+#include <linux/module.h>
 #include <linux/platform_device.h>
-#include <linux/spear_dma.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <mach/spdif.h>
+#include <sound/spear_dma.h>
+#include <sound/spear_spdif.h>
 #include "spdif_in_regs.h"
 
 struct spdif_in_params {
@@ -30,9 +31,10 @@ struct spdif_in_params {
 
 struct spdif_in_dev {
 	struct clk *clk;
-	struct dma_data dma_params;
+	struct spear_dma_data dma_params;
 	struct spdif_in_params saved_params;
 	void *io_base;
+	struct device *dev;
 	void (*reset_perip)(void);
 	int irq;
 };
@@ -118,7 +120,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		clk_enable(host->clk);
+		clk_prepare_enable(host->clk);
 		spdif_in_configure(host);
 		spdif_in_format(host, host->saved_params.format);
 
@@ -138,7 +140,7 @@ static int spdif_in_trigger(struct snd_pcm_substream *substream, int cmd,
 
 		if (host->reset_perip)
 			host->reset_perip();
-		clk_disable(host->clk);
+		clk_disable_unprepare(host->clk);
 		break;
 
 	default:
@@ -178,13 +180,13 @@ static irqreturn_t spdif_in_irq(int irq, void *arg)
 		return IRQ_NONE;
 
 	if (irq_status & SPDIF_IRQ_FIFOWRITE)
-		pr_err("spdif in: fifo write error\n");
+		dev_err(host->dev, "spdif in: fifo write error");
 	if (irq_status & SPDIF_IRQ_EMPTYFIFOREAD)
-		pr_err("spdif in: empty fifo read error\n");
+		dev_err(host->dev, "spdif in: empty fifo read error");
 	if (irq_status & SPDIF_IRQ_FIFOFULL)
-		pr_err("spdif in: fifo full error\n");
+		dev_err(host->dev, "spdif in: fifo full error");
 	if (irq_status & SPDIF_IRQ_OUTOFRANGE)
-		pr_err("spdif in: out of range error\n");
+		dev_err(host->dev, "spdif in: out of range error");
 
 	writel(0, host->io_base + SPDIF_IN_IRQ);
 
@@ -194,7 +196,7 @@ static irqreturn_t spdif_in_irq(int irq, void *arg)
 static int spdif_in_probe(struct platform_device *pdev)
 {
 	struct spdif_in_dev *host;
-	struct spdif_platform_data *pdata;
+	struct spear_spdif_platform_data *pdata;
 	struct resource *res, *res_fifo;
 	int ret;
 
@@ -202,7 +204,7 @@ static int spdif_in_probe(struct platform_device *pdev)
 	if (!res)
 		return -EINVAL;
 
-	res_fifo = platform_get_resource(pdev, IORESOURCE_IO, 0);
+	res_fifo = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!res_fifo)
 		return -EINVAL;
 
@@ -235,6 +237,9 @@ static int spdif_in_probe(struct platform_device *pdev)
 
 	pdata = dev_get_platdata(&pdev->dev);
 
+	if (!pdata)
+		return -EINVAL;
+
 	host->dma_params.data = pdata->dma_params;
 	host->dma_params.addr = res_fifo->start;
 	host->dma_params.max_burst = 16;
@@ -242,6 +247,7 @@ static int spdif_in_probe(struct platform_device *pdev)
 	host->dma_params.filter = pdata->filter;
 	host->reset_perip = pdata->reset_perip;
 
+	host->dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, host);
 
 	ret = devm_request_irq(&pdev->dev, host->irq, spdif_in_irq, 0,
@@ -273,7 +279,12 @@ static int spdif_in_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#define SPDIF_IN_DEV_PM_OPS NULL
+static const struct of_device_id spdif_in_of_match[]  = {
+	{ .compatible = "st,spdif-in", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, spdif_in_of_match);
+
 
 static struct platform_driver spdif_in_driver = {
 	.probe		= spdif_in_probe,
@@ -281,22 +292,13 @@ static struct platform_driver spdif_in_driver = {
 	.driver		= {
 		.name	= "spdif-in",
 		.owner	= THIS_MODULE,
-		.pm	= SPDIF_IN_DEV_PM_OPS,
+		.of_match_table = spdif_in_of_match,
 	},
 };
 
-static int __init spdif_in_init(void)
-{
-	return platform_driver_register(&spdif_in_driver);
-}
-module_init(spdif_in_init);
-
-static void __exit spdif_in_exit(void)
-{
-	platform_driver_unregister(&spdif_in_driver);
-}
-module_exit(spdif_in_exit);
+module_platform_driver(spdif_in_driver);
 
 MODULE_AUTHOR("Vipin Kumar <vipin.kumar@st.com>");
 MODULE_DESCRIPTION("SPEAr SPDIF IN SoC Interface");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:spdif_in");

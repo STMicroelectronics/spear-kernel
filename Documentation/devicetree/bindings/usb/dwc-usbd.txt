@@ -1,0 +1,21 @@
+SYNOPSYS USB20 controllers:
+-----------------------------
+
+DWC-USB20:
+--------
+
+Required properties:
+ -compatible: "snps, designware-usb""
+ -interrupts: Should contain the usb otg interrupt.
+ -reg: register base address.
+
+Example:
+
+usbd@e1100000 {
+			compatible = "snps,designware-udc";
+			reg = <0xe1100000 0x1000 	/* udc_csr_base */
+				0xe1200000 0x1000>;	/* udc_plug_base */
+			interrupts = <24>;
+			status = "disabled";
+		};
+

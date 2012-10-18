@@ -3,8 +3,8 @@
  *
  * DMAC pl080 definitions for SPEAr platform
  *
- * Copyright (C) 2011 ST Microelectronics
- * Viresh Kumar <viresh.kumar@st.com>
+ * Copyright (C) 2012 ST Microelectronics
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
@@ -14,10 +14,8 @@
 #ifndef __PLAT_PL080_H
 #define __PLAT_PL080_H
 
-struct amba_device;
-struct pl08x_channel_data;
-
-void pl080_set_slaveinfo(struct amba_device *pl080,
-		struct pl08x_channel_data *cd, u32 num);
+struct pl08x_dma_chan;
+int pl080_get_signal(struct pl08x_dma_chan *ch);
+void pl080_put_signal(struct pl08x_dma_chan *ch);
 
 #endif /* __PLAT_PL080_H */

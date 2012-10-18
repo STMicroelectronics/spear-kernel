@@ -10,8 +10,10 @@ commands:
 	--enable|-e option   Enable option
 	--disable|-d option  Disable option
 	--module|-m option   Turn option into a module
-	--set-str option value
-	                     Set option to "value"
+	--set-str option string
+	                     Set option to "string"
+	--set-val option value
+	                     Set option to value
 	--state|-s option    Print state of option (n,y,m,undef)
 
 	--enable-after|-E beforeopt option
@@ -86,7 +88,7 @@ while [ "$1" != "" ] ; do
 		B=$ARG
 		shift 2
 		;;
-	--*)
+	-*)
 		checkarg "$1"
 		shift
 		;;
@@ -105,7 +107,13 @@ while [ "$1" != "" ] ; do
 		;;
 
 	--set-str)
-		set_var "CONFIG_$ARG" "CONFIG_$ARG=\"$1\""
+		# sed swallows one level of escaping, so we need double-escaping
+		set_var "CONFIG_$ARG" "CONFIG_$ARG=\"${1//\"/\\\\\"}\""
+		shift
+		;;
+
+	--set-val)
+		set_var "CONFIG_$ARG" "CONFIG_$ARG=$1"
 		shift
 		;;
 
@@ -117,9 +125,11 @@ while [ "$1" != "" ] ; do
 			if [ $? != 0 ] ; then
 				echo undef
 			else
-				V="${V/CONFIG_$ARG=/}"
-				V="${V/\"/}"
-				echo "$V"
+				V="${V/#CONFIG_$ARG=/}"
+				V="${V/#\"/}"
+				V="${V/%\"/}"
+				V="${V/\\\"/\"}"
+				echo "${V}"
 			fi
 		fi
 		;;

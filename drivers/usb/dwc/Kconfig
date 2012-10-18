@@ -62,20 +62,6 @@ config DWC_DMA_MODE
 
 endchoice
 
-config DWC_OTG_REG_LE
-	bool "DWC Little Endian Register"
-	depends on USB_DWC_OTG
-	default y
-	help
-	  OTG core register access is Little-Endian.
-
-config DWC_OTG_FIFO_LE
-	bool "DWC FIFO Little Endian"
-	depends on USB_DWC_OTG
-	default n
-	help
-	  OTG core FIFO access is Little-Endian.
-
 config DWC_LIMITED_XFER_SIZE
 	bool "DWC Endpoint Limited Xfer Size"
 	depends on USB_GADGET_DWC_HDRC

@@ -29,8 +29,8 @@ Status: Works.  Only tested on DM7520-8.  Not SMP safe.
 
 Configuration options:
   [0] - PCI bus of device (optional)
-          If bus/slot is not specified, the first available PCI
-          device will be used.
+	If bus / slot is not specified, the first available PCI
+	device will be used.
   [1] - PCI slot of device (optional)
 */
 /*
@@ -59,7 +59,7 @@ Configuration options:
     Data sheet: http://www.rtdusa.com/pdf/dm7520.pdf
     Example source: http://www.rtdusa.com/examples/dm/dm7520.zip
     Call them and ask for the register level manual.
-    PCI chip: http://www.plxtech.com/products/io/pci9080 
+    PCI chip: http://www.plxtech.com/products/io/pci9080
 
     Notes:
     This board is memory mapped.  There is some IO stuff, but it isn't needed.
@@ -75,7 +75,7 @@ Configuration options:
     das1800, since they have the best documented code.  Driver
     cb_pcidas64.c uses the same DMA controller.
 
-    As far as I can tell, the About interrupt doesnt work if Sample is
+    As far as I can tell, the About interrupt doesn't work if Sample is
     also enabled.  It turns out that About really isn't needed, since
     we always count down samples read.
 
@@ -136,7 +136,7 @@ Configuration options:
 #define RTD_DMA_TIMEOUT	33000	/* 1 msec */
 #else
 /* by delaying, power and electrical noise are reduced somewhat */
-#define WAIT_QUIETLY	udelay (1)
+#define WAIT_QUIETLY	udelay(1)
 #define RTD_ADC_TIMEOUT	2000	/* in usec */
 #define RTD_DAC_TIMEOUT	2000	/* in usec */
 #define RTD_DMA_TIMEOUT	1000	/* in usec */
@@ -186,7 +186,7 @@ Configuration options:
 		       | PLX_DEMAND_MODE_BIT)
 
 #define DMA_TRANSFER_BITS (\
-/* descriptors in PCI memory*/ 	PLX_DESC_IN_PCI_BIT \
+/* descriptors in PCI memory*/  PLX_DESC_IN_PCI_BIT \
 /* interrupt at end of block */ | PLX_INTR_TERM_COUNT \
 /* from board to PCI */		| PLX_XFER_LOCAL_TO_PCI)
 
@@ -328,14 +328,6 @@ static const struct rtdBoard rtd520Boards[] = {
 	 },
 };
 
-static DEFINE_PCI_DEVICE_TABLE(rtd520_pci_table) = {
-	{ PCI_DEVICE(PCI_VENDOR_ID_RTD, 0x7520) },
-	{ PCI_DEVICE(PCI_VENDOR_ID_RTD, 0x4520) },
-	{ 0 }
-};
-
-MODULE_DEVICE_TABLE(pci, rtd520_pci_table);
-
 /*
  * Useful for shorthand access to the particular board structure
  */
@@ -347,13 +339,13 @@ MODULE_DEVICE_TABLE(pci, rtd520_pci_table);
 */
 struct rtdPrivate {
 	/* memory mapped board structures */
-	void *las0;
-	void *las1;
-	void *lcfg;
+	void __iomem *las0;
+	void __iomem *las1;
+	void __iomem *lcfg;
 
 	unsigned long intCount;	/* interrupt count */
 	long aiCount;		/* total transfer size (samples) */
-	int transCount;		/* # to tranfer data. 0->1/2FIFO */
+	int transCount;		/* # to transfer data. 0->1/2FIFO */
 	int flags;		/* flag event modes */
 
 	/* PCI device info */
@@ -370,15 +362,18 @@ struct rtdPrivate {
 	/* timer gate (when enabled) */
 	u8 utcGate[4];		/* 1 extra allows simple range check */
 
-	/* shadow registers affect other registers, but cant be read back */
+	/* shadow registers affect other registers, but can't be read back */
 	/* The macros below update these on writes */
 	u16 intMask;		/* interrupt mask */
 	u16 intClearMask;	/* interrupt clear mask */
 	u8 utcCtrl[4];		/* crtl mode for 3 utc + read back */
 	u8 dioStatus;		/* could be read back (dio0Ctrl) */
 #ifdef USE_DMA
-	/* Always DMA 1/2 FIFO.  Buffer (dmaBuff?) is (at least) twice that size.
-	   After transferring, interrupt processes 1/2 FIFO and passes to comedi */
+	/*
+	 * Always DMA 1/2 FIFO.  Buffer (dmaBuff?) is (at least) twice that
+	 * size.  After transferring, interrupt processes 1/2 FIFO and
+	 * passes to comedi
+	 */
 	s16 dma0Offset;		/* current processing offset (0, 1/2) */
 	uint16_t *dma0Buff[DMA_CHAIN_COUNT];	/* DMA buffers (for ADC) */
 	dma_addr_t dma0BuffPhysAddr[DMA_CHAIN_COUNT];	/* physical addresses */
@@ -414,312 +409,299 @@ struct rtdPrivate {
 
 /* Reset board */
 #define RtdResetBoard(dev) \
-    writel (0, devpriv->las0+LAS0_BOARD_RESET)
+	writel(0, devpriv->las0+LAS0_BOARD_RESET)
 
 /* Reset channel gain table read pointer */
 #define RtdResetCGT(dev) \
-    writel (0, devpriv->las0+LAS0_CGT_RESET)
+	writel(0, devpriv->las0+LAS0_CGT_RESET)
 
 /* Reset channel gain table read and write pointers */
 #define RtdClearCGT(dev) \
-    writel (0, devpriv->las0+LAS0_CGT_CLEAR)
+	writel(0, devpriv->las0+LAS0_CGT_CLEAR)
 
 /* Reset channel gain table read and write pointers */
 #define RtdEnableCGT(dev, v) \
-    writel ((v > 0) ? 1 : 0, devpriv->las0+LAS0_CGT_ENABLE)
+	writel((v > 0) ? 1 : 0, devpriv->las0+LAS0_CGT_ENABLE)
 
 /* Write channel gain table entry */
 #define RtdWriteCGTable(dev, v) \
-    writel (v, devpriv->las0+LAS0_CGT_WRITE)
+	writel(v, devpriv->las0+LAS0_CGT_WRITE)
 
 /* Write Channel Gain Latch */
 #define RtdWriteCGLatch(dev, v) \
-    writel (v, devpriv->las0+LAS0_CGL_WRITE)
+	writel(v, devpriv->las0+LAS0_CGL_WRITE)
 
 /* Reset ADC FIFO */
 #define RtdAdcClearFifo(dev) \
-    writel (0, devpriv->las0+LAS0_ADC_FIFO_CLEAR)
+	writel(0, devpriv->las0+LAS0_ADC_FIFO_CLEAR)
 
 /* Set ADC start conversion source select (write only) */
 #define RtdAdcConversionSource(dev, v) \
-    writel (v, devpriv->las0+LAS0_ADC_CONVERSION)
+	writel(v, devpriv->las0+LAS0_ADC_CONVERSION)
 
 /* Set burst start source select (write only) */
 #define RtdBurstStartSource(dev, v) \
-    writel (v, devpriv->las0+LAS0_BURST_START)
+	writel(v, devpriv->las0+LAS0_BURST_START)
 
 /* Set Pacer start source select (write only) */
 #define RtdPacerStartSource(dev, v) \
-    writel (v, devpriv->las0+LAS0_PACER_START)
+	writel(v, devpriv->las0+LAS0_PACER_START)
 
 /* Set Pacer stop source select (write only) */
 #define RtdPacerStopSource(dev, v) \
-    writel (v, devpriv->las0+LAS0_PACER_STOP)
+	writel(v, devpriv->las0+LAS0_PACER_STOP)
 
 /* Set Pacer clock source select (write only) 0=external 1=internal */
 #define RtdPacerClockSource(dev, v) \
-    writel ((v > 0) ? 1 : 0, devpriv->las0+LAS0_PACER_SELECT)
+	writel((v > 0) ? 1 : 0, devpriv->las0+LAS0_PACER_SELECT)
 
 /* Set sample counter source select (write only) */
 #define RtdAdcSampleCounterSource(dev, v) \
-    writel (v, devpriv->las0+LAS0_ADC_SCNT_SRC)
+	writel(v, devpriv->las0+LAS0_ADC_SCNT_SRC)
 
 /* Set Pacer trigger mode select (write only) 0=single cycle, 1=repeat */
 #define RtdPacerTriggerMode(dev, v) \
-    writel ((v > 0) ? 1 : 0, devpriv->las0+LAS0_PACER_REPEAT)
+	writel((v > 0) ? 1 : 0, devpriv->las0+LAS0_PACER_REPEAT)
 
 /* Set About counter stop enable (write only) */
 #define RtdAboutStopEnable(dev, v) \
-    writel ((v > 0) ? 1 : 0, devpriv->las0+LAS0_ACNT_STOP_ENABLE)
+	writel((v > 0) ? 1 : 0, devpriv->las0+LAS0_ACNT_STOP_ENABLE)
 
 /* Set external trigger polarity (write only) 0=positive edge, 1=negative */
 #define RtdTriggerPolarity(dev, v) \
-    writel ((v > 0) ? 1 : 0, devpriv->las0+LAS0_ETRG_POLARITY)
+	writel((v > 0) ? 1 : 0, devpriv->las0+LAS0_ETRG_POLARITY)
 
 /* Start single ADC conversion */
 #define RtdAdcStart(dev) \
-    writew (0, devpriv->las0+LAS0_ADC)
+	writew(0, devpriv->las0+LAS0_ADC)
 
 /* Read one ADC data value (12bit (with sign extend) as 16bit) */
 /* Note: matches what DMA would get.  Actual value >> 3 */
 #define RtdAdcFifoGet(dev) \
-    readw (devpriv->las1+LAS1_ADC_FIFO)
+	readw(devpriv->las1+LAS1_ADC_FIFO)
 
-/* Read two ADC data values (DOESNT WORK) */
+/* Read two ADC data values (DOESN'T WORK) */
 #define RtdAdcFifoGet2(dev) \
-    readl (devpriv->las1+LAS1_ADC_FIFO)
+	readl(devpriv->las1+LAS1_ADC_FIFO)
 
 /* FIFO status */
 #define RtdFifoStatus(dev) \
-    readl (devpriv->las0+LAS0_ADC)
+	readl(devpriv->las0+LAS0_ADC)
 
 /* pacer start/stop read=start, write=stop*/
 #define RtdPacerStart(dev) \
-    readl (devpriv->las0+LAS0_PACER)
+	readl(devpriv->las0+LAS0_PACER)
 #define RtdPacerStop(dev) \
-    writel (0, devpriv->las0+LAS0_PACER)
+	writel(0, devpriv->las0+LAS0_PACER)
 
 /* Interrupt status */
 #define RtdInterruptStatus(dev) \
-    readw (devpriv->las0+LAS0_IT)
+	readw(devpriv->las0+LAS0_IT)
 
 /* Interrupt mask */
 #define RtdInterruptMask(dev, v) \
-    writew ((devpriv->intMask = (v)), devpriv->las0+LAS0_IT)
+	writew((devpriv->intMask = (v)), devpriv->las0+LAS0_IT)
 
 /* Interrupt status clear (only bits set in mask) */
 #define RtdInterruptClear(dev) \
-    readw (devpriv->las0+LAS0_CLEAR)
+	readw(devpriv->las0+LAS0_CLEAR)
 
 /* Interrupt clear mask */
 #define RtdInterruptClearMask(dev, v) \
-    writew ((devpriv->intClearMask = (v)), devpriv->las0+LAS0_CLEAR)
+	writew((devpriv->intClearMask = (v)), devpriv->las0+LAS0_CLEAR)
 
 /* Interrupt overrun status */
 #define RtdInterruptOverrunStatus(dev) \
-    readl (devpriv->las0+LAS0_OVERRUN)
+	readl(devpriv->las0+LAS0_OVERRUN)
 
 /* Interrupt overrun clear */
 #define RtdInterruptOverrunClear(dev) \
-    writel (0, devpriv->las0+LAS0_OVERRUN)
+	writel(0, devpriv->las0+LAS0_OVERRUN)
 
 /* Pacer counter, 24bit */
 #define RtdPacerCount(dev) \
-    readl (devpriv->las0+LAS0_PCLK)
+	readl(devpriv->las0+LAS0_PCLK)
 #define RtdPacerCounter(dev, v) \
-    writel ((v) & 0xffffff, devpriv->las0+LAS0_PCLK)
+	writel((v) & 0xffffff, devpriv->las0+LAS0_PCLK)
 
 /* Burst counter, 10bit */
 #define RtdBurstCount(dev) \
-    readl (devpriv->las0+LAS0_BCLK)
+	readl(devpriv->las0+LAS0_BCLK)
 #define RtdBurstCounter(dev, v) \
-    writel ((v) & 0x3ff, devpriv->las0+LAS0_BCLK)
+	writel((v) & 0x3ff, devpriv->las0+LAS0_BCLK)
 
 /* Delay counter, 16bit */
 #define RtdDelayCount(dev) \
-    readl (devpriv->las0+LAS0_DCLK)
+	readl(devpriv->las0+LAS0_DCLK)
 #define RtdDelayCounter(dev, v) \
-    writel ((v) & 0xffff, devpriv->las0+LAS0_DCLK)
+	writel((v) & 0xffff, devpriv->las0+LAS0_DCLK)
 
 /* About counter, 16bit */
 #define RtdAboutCount(dev) \
-    readl (devpriv->las0+LAS0_ACNT)
+	readl(devpriv->las0+LAS0_ACNT)
 #define RtdAboutCounter(dev, v) \
-    writel ((v) & 0xffff, devpriv->las0+LAS0_ACNT)
+	writel((v) & 0xffff, devpriv->las0+LAS0_ACNT)
 
 /* ADC sample counter, 10bit */
 #define RtdAdcSampleCount(dev) \
-    readl (devpriv->las0+LAS0_ADC_SCNT)
+	readl(devpriv->las0+LAS0_ADC_SCNT)
 #define RtdAdcSampleCounter(dev, v) \
-    writel ((v) & 0x3ff, devpriv->las0+LAS0_ADC_SCNT)
+	writel((v) & 0x3ff, devpriv->las0+LAS0_ADC_SCNT)
 
 /* User Timer/Counter (8254) */
 #define RtdUtcCounterGet(dev, n) \
-    readb (devpriv->las0 \
-        + ((n <= 0) ? LAS0_UTC0 : ((1 == n) ? LAS0_UTC1 : LAS0_UTC2)))
+	readb(devpriv->las0 \
+		+ ((n <= 0) ? LAS0_UTC0 : ((1 == n) ? LAS0_UTC1 : LAS0_UTC2)))
 
 #define RtdUtcCounterPut(dev, n, v) \
-    writeb ((v) & 0xff, devpriv->las0 \
-        + ((n <= 0) ? LAS0_UTC0 : ((1 == n) ? LAS0_UTC1 : LAS0_UTC2)))
+	writeb((v) & 0xff, devpriv->las0 \
+		+ ((n <= 0) ? LAS0_UTC0 : ((1 == n) ? LAS0_UTC1 : LAS0_UTC2)))
 
 /* Set UTC (8254) control byte  */
 #define RtdUtcCtrlPut(dev, n, v) \
-    writeb (devpriv->utcCtrl[(n) & 3] = (((n) & 3) << 6) | ((v) & 0x3f), \
-      devpriv->las0 + LAS0_UTC_CTRL)
+	writeb(devpriv->utcCtrl[(n) & 3] = (((n) & 3) << 6) | ((v) & 0x3f), \
+		devpriv->las0 + LAS0_UTC_CTRL)
 
 /* Set UTCn clock source (write only) */
 #define RtdUtcClockSource(dev, n, v) \
-    writew (v, devpriv->las0 \
-        + ((n <= 0) ? LAS0_UTC0_CLOCK : \
-           ((1 == n) ? LAS0_UTC1_CLOCK : LAS0_UTC2_CLOCK)))
+	writew(v, devpriv->las0 \
+		+ ((n <= 0) ? LAS0_UTC0_CLOCK : \
+			((1 == n) ? LAS0_UTC1_CLOCK : LAS0_UTC2_CLOCK)))
 
 /* Set UTCn gate source (write only) */
 #define RtdUtcGateSource(dev, n, v) \
-    writew (v, devpriv->las0 \
-        + ((n <= 0) ? LAS0_UTC0_GATE : \
-           ((1 == n) ? LAS0_UTC1_GATE : LAS0_UTC2_GATE)))
+	writew(v, devpriv->las0 \
+		+ ((n <= 0) ? LAS0_UTC0_GATE : \
+			((1 == n) ? LAS0_UTC1_GATE : LAS0_UTC2_GATE)))
 
 /* User output N source select (write only) */
 #define RtdUsrOutSource(dev, n, v) \
-    writel (v, devpriv->las0+((n <= 0) ? LAS0_UOUT0_SELECT : LAS0_UOUT1_SELECT))
+	writel(v, devpriv->las0+((n <= 0) ? LAS0_UOUT0_SELECT : \
+				LAS0_UOUT1_SELECT))
 
 /* Digital IO */
 #define RtdDio0Read(dev) \
-    (readw (devpriv->las0+LAS0_DIO0) & 0xff)
+	(readw(devpriv->las0+LAS0_DIO0) & 0xff)
 #define RtdDio0Write(dev, v) \
-    writew ((v) & 0xff, devpriv->las0+LAS0_DIO0)
+	writew((v) & 0xff, devpriv->las0+LAS0_DIO0)
 
 #define RtdDio1Read(dev) \
-    (readw (devpriv->las0+LAS0_DIO1) & 0xff)
+	(readw(devpriv->las0+LAS0_DIO1) & 0xff)
 #define RtdDio1Write(dev, v) \
-    writew ((v) & 0xff, devpriv->las0+LAS0_DIO1)
+	writew((v) & 0xff, devpriv->las0+LAS0_DIO1)
 
 #define RtdDioStatusRead(dev) \
-    (readw (devpriv->las0+LAS0_DIO_STATUS) & 0xff)
+	(readw(devpriv->las0+LAS0_DIO_STATUS) & 0xff)
 #define RtdDioStatusWrite(dev, v) \
-    writew ((devpriv->dioStatus = (v)), devpriv->las0+LAS0_DIO_STATUS)
+	writew((devpriv->dioStatus = (v)), devpriv->las0+LAS0_DIO_STATUS)
 
 #define RtdDio0CtrlRead(dev) \
-    (readw (devpriv->las0+LAS0_DIO0_CTRL) & 0xff)
+	(readw(devpriv->las0+LAS0_DIO0_CTRL) & 0xff)
 #define RtdDio0CtrlWrite(dev, v) \
-    writew ((v) & 0xff, devpriv->las0+LAS0_DIO0_CTRL)
+	writew((v) & 0xff, devpriv->las0+LAS0_DIO0_CTRL)
 
 /* Digital to Analog converter */
 /* Write one data value (sign + 12bit + marker bits) */
 /* Note: matches what DMA would put.  Actual value << 3 */
 #define RtdDacFifoPut(dev, n, v) \
-    writew ((v), devpriv->las1 +(((n) == 0) ? LAS1_DAC1_FIFO : LAS1_DAC2_FIFO))
+	writew((v), devpriv->las1 + (((n) == 0) ? LAS1_DAC1_FIFO : \
+				LAS1_DAC2_FIFO))
 
 /* Start single DAC conversion */
 #define RtdDacUpdate(dev, n) \
-    writew (0, devpriv->las0 +(((n) == 0) ? LAS0_DAC1 : LAS0_DAC2))
+	writew(0, devpriv->las0 + (((n) == 0) ? LAS0_DAC1 : LAS0_DAC2))
 
 /* Start single DAC conversion on both DACs */
 #define RtdDacBothUpdate(dev) \
-    writew (0, devpriv->las0+LAS0_DAC)
+	writew(0, devpriv->las0+LAS0_DAC)
 
 /* Set DAC output type and range */
 #define RtdDacRange(dev, n, v) \
-    writew ((v) & 7, devpriv->las0 \
-	+(((n) == 0) ? LAS0_DAC1_CTRL : LAS0_DAC2_CTRL))
+	writew((v) & 7, devpriv->las0 \
+		+(((n) == 0) ? LAS0_DAC1_CTRL : LAS0_DAC2_CTRL))
 
 /* Reset DAC FIFO */
 #define RtdDacClearFifo(dev, n) \
-    writel (0, devpriv->las0+(((n) == 0) ? LAS0_DAC1_RESET : LAS0_DAC2_RESET))
+	writel(0, devpriv->las0+(((n) == 0) ? LAS0_DAC1_RESET : \
+				LAS0_DAC2_RESET))
 
 /* Set source for DMA 0 (write only, shadow?) */
 #define RtdDma0Source(dev, n) \
-    writel ((n) & 0xf, devpriv->las0+LAS0_DMA0_SRC)
+	writel((n) & 0xf, devpriv->las0+LAS0_DMA0_SRC)
 
 /* Set source for DMA 1 (write only, shadow?) */
 #define RtdDma1Source(dev, n) \
-    writel ((n) & 0xf, devpriv->las0+LAS0_DMA1_SRC)
+	writel((n) & 0xf, devpriv->las0+LAS0_DMA1_SRC)
 
 /* Reset board state for DMA 0 */
 #define RtdDma0Reset(dev) \
-    writel (0, devpriv->las0+LAS0_DMA0_RESET)
+	writel(0, devpriv->las0+LAS0_DMA0_RESET)
 
 /* Reset board state for DMA 1 */
 #define RtdDma1Reset(dev) \
-    writel (0, devpriv->las0+LAS0_DMA1_SRC)
+	writel(0, devpriv->las0+LAS0_DMA1_SRC)
 
 /* PLX9080 interrupt mask and status */
 #define RtdPlxInterruptRead(dev) \
-    readl (devpriv->lcfg+LCFG_ITCSR)
+	readl(devpriv->lcfg+LCFG_ITCSR)
 #define RtdPlxInterruptWrite(dev, v) \
-    writel (v, devpriv->lcfg+LCFG_ITCSR)
+	writel(v, devpriv->lcfg+LCFG_ITCSR)
 
 /* Set  mode for DMA 0 */
 #define RtdDma0Mode(dev, m) \
-    writel ((m), devpriv->lcfg+LCFG_DMAMODE0)
+	writel((m), devpriv->lcfg+LCFG_DMAMODE0)
 
 /* Set PCI address for DMA 0 */
 #define RtdDma0PciAddr(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMAPADR0)
+	writel((a), devpriv->lcfg+LCFG_DMAPADR0)
 
 /* Set local address for DMA 0 */
 #define RtdDma0LocalAddr(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMALADR0)
+	writel((a), devpriv->lcfg+LCFG_DMALADR0)
 
 /* Set byte count for DMA 0 */
 #define RtdDma0Count(dev, c) \
-    writel ((c), devpriv->lcfg+LCFG_DMASIZ0)
+	writel((c), devpriv->lcfg+LCFG_DMASIZ0)
 
 /* Set next descriptor for DMA 0 */
 #define RtdDma0Next(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMADPR0)
+	writel((a), devpriv->lcfg+LCFG_DMADPR0)
 
 /* Set  mode for DMA 1 */
 #define RtdDma1Mode(dev, m) \
-    writel ((m), devpriv->lcfg+LCFG_DMAMODE1)
+	writel((m), devpriv->lcfg+LCFG_DMAMODE1)
 
 /* Set PCI address for DMA 1 */
 #define RtdDma1PciAddr(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMAADR1)
+	writel((a), devpriv->lcfg+LCFG_DMAADR1)
 
 /* Set local address for DMA 1 */
 #define RtdDma1LocalAddr(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMALADR1)
+	writel((a), devpriv->lcfg+LCFG_DMALADR1)
 
 /* Set byte count for DMA 1 */
 #define RtdDma1Count(dev, c) \
-    writel ((c), devpriv->lcfg+LCFG_DMASIZ1)
+	writel((c), devpriv->lcfg+LCFG_DMASIZ1)
 
 /* Set next descriptor for DMA 1 */
 #define RtdDma1Next(dev, a) \
-    writel ((a), devpriv->lcfg+LCFG_DMADPR1)
+	writel((a), devpriv->lcfg+LCFG_DMADPR1)
 
 /* Set control for DMA 0 (write only, shadow?) */
 #define RtdDma0Control(dev, n) \
-    writeb (devpriv->dma0Control = (n), devpriv->lcfg+LCFG_DMACSR0)
+	writeb(devpriv->dma0Control = (n), devpriv->lcfg+LCFG_DMACSR0)
 
 /* Get status for DMA 0 */
 #define RtdDma0Status(dev) \
-    readb (devpriv->lcfg+LCFG_DMACSR0)
+	readb(devpriv->lcfg+LCFG_DMACSR0)
 
 /* Set control for DMA 1 (write only, shadow?) */
 #define RtdDma1Control(dev, n) \
-    writeb (devpriv->dma1Control = (n), devpriv->lcfg+LCFG_DMACSR1)
+	writeb(devpriv->dma1Control = (n), devpriv->lcfg+LCFG_DMACSR1)
 
 /* Get status for DMA 1 */
 #define RtdDma1Status(dev) \
-    readb (devpriv->lcfg+LCFG_DMACSR1)
-
-/*
- * The struct comedi_driver structure tells the Comedi core module
- * which functions to call to configure/deconfigure (attac/detach)
- * the board, and also about the kernel module that contains
- * the device code.
- */
-static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it);
-static int rtd_detach(struct comedi_device *dev);
-
-static struct comedi_driver rtd520Driver = {
-	.driver_name = DRV_NAME,
-	.module = THIS_MODULE,
-	.attach = rtd_attach,
-	.detach = rtd_detach,
-};
+	readb(devpriv->lcfg+LCFG_DMACSR1)
 
 static int rtd_ai_rinsn(struct comedi_device *dev, struct comedi_subdevice *s,
 			struct comedi_insn *insn, unsigned int *data);
@@ -737,7 +719,10 @@ static int rtd_ai_cmdtest(struct comedi_device *dev, struct comedi_subdevice *s,
 			  struct comedi_cmd *cmd);
 static int rtd_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s);
 static int rtd_ai_cancel(struct comedi_device *dev, struct comedi_subdevice *s);
-/* static int rtd_ai_poll (struct comedi_device *dev,struct comedi_subdevice *s); */
+/*
+ * static int rtd_ai_poll(struct comedi_device *dev,
+ *			  struct comedi_subdevice *s);
+ */
 static int rtd_ns_to_timer(unsigned int *ns, int roundMode);
 static irqreturn_t rtd_interrupt(int irq, void *d);
 static int rtd520_probe_fifo_depth(struct comedi_device *dev);
@@ -753,16 +738,16 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	struct comedi_subdevice *s;
 	struct pci_dev *pcidev;
 	int ret;
-	resource_size_t physLas0;	/* configuation */
+	resource_size_t physLas0;	/* configuration */
 	resource_size_t physLas1;	/* data area */
 	resource_size_t physLcfg;	/* PLX9080 */
 #ifdef USE_DMA
 	int index;
 #endif
 
-	printk("comedi%d: rtd520 attaching.\n", dev->minor);
+	printk(KERN_INFO "comedi%d: rtd520 attaching.\n", dev->minor);
 
-#if defined (CONFIG_COMEDI_DEBUG) && defined (USE_DMA)
+#if defined(CONFIG_COMEDI_DEBUG) && defined(USE_DMA)
 	/* You can set this a load time: modprobe comedi comedi_debug=1 */
 	if (0 == comedi_debug)	/* force DMA debug printks */
 		comedi_debug = 1;
@@ -800,10 +785,10 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	}
 	if (!pcidev) {
 		if (it->options[0] && it->options[1]) {
-			printk("No RTD card at bus=%d slot=%d.\n",
+			printk(KERN_INFO "No RTD card at bus=%d slot=%d.\n",
 			       it->options[0], it->options[1]);
 		} else {
-			printk("No RTD card found.\n");
+			printk(KERN_INFO "No RTD card found.\n");
 		}
 		return -EIO;
 	}
@@ -812,7 +797,7 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 
 	ret = comedi_pci_enable(pcidev, DRV_NAME);
 	if (ret < 0) {
-		printk("Failed to enable PCI device and request regions.\n");
+		printk(KERN_INFO "Failed to enable PCI device and request regions.\n");
 		return ret;
 	}
 	devpriv->got_regions = 1;
@@ -830,9 +815,9 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	devpriv->las1 = ioremap_nocache(physLas1, LAS1_PCISIZE);
 	devpriv->lcfg = ioremap_nocache(physLcfg, LCFG_PCISIZE);
 
-	if (!devpriv->las0 || !devpriv->las1 || !devpriv->lcfg) {
+	if (!devpriv->las0 || !devpriv->las1 || !devpriv->lcfg)
 		return -ENOMEM;
-	}
+
 
 	DPRINTK("%s: LAS0=%llx, LAS1=%llx, CFG=%llx.\n", dev->board_name,
 		(unsigned long long)physLas0, (unsigned long long)physLas1,
@@ -849,7 +834,7 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 		pci_read_config_byte(devpriv->pci_dev,
 				     PCI_LATENCY_TIMER, &pci_latency);
 		if (pci_latency < 32) {
-			printk("%s: PCI latency changed from %d to %d\n",
+			printk(KERN_INFO "%s: PCI latency changed from %d to %d\n",
 			       dev->board_name, pci_latency, 32);
 			pci_write_config_byte(devpriv->pci_dev,
 					      PCI_LATENCY_TIMER, 32);
@@ -857,7 +842,9 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 			DPRINTK("rtd520: PCI latency = %d\n", pci_latency);
 		}
 
-		/* Undocumented EPLD version (doesnt match RTD driver results) */
+		/*
+		 * Undocumented EPLD version (doesn't match RTD driver results)
+		 */
 		/*DPRINTK ("rtd520: Reading epld from %p\n",
 		   devpriv->las0+0);
 		   epld_version = readl (devpriv->las0+0);
@@ -869,15 +856,15 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	}
 
 	/* Show board configuration */
-	printk("%s:", dev->board_name);
+	printk(KERN_INFO "%s:", dev->board_name);
 
 	/*
 	 * Allocate the subdevice structures.  alloc_subdevice() is a
 	 * convenient macro defined in comedidev.h.
 	 */
-	if (alloc_subdevices(dev, 4) < 0) {
+	if (alloc_subdevices(dev, 4) < 0)
 		return -ENOMEM;
-	}
+
 
 	s = dev->subdevices + 0;
 	dev->read_subdev = s;
@@ -887,11 +874,11 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	    SDF_READABLE | SDF_GROUND | SDF_COMMON | SDF_DIFF | SDF_CMD_READ;
 	s->n_chan = thisboard->aiChans;
 	s->maxdata = (1 << thisboard->aiBits) - 1;
-	if (thisboard->aiMaxGain <= 32) {
+	if (thisboard->aiMaxGain <= 32)
 		s->range_table = &rtd_ai_7520_range;
-	} else {
+	else
 		s->range_table = &rtd_ai_4520_range;
-	}
+
 	s->len_chanlist = RTD_MAX_CHANLIST;	/* devpriv->fifoLen */
 	s->insn_read = rtd_ai_rinsn;
 	s->do_cmd = rtd_ai_cmd;
@@ -958,21 +945,23 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 		return ret;
 	}
 	dev->irq = devpriv->pci_dev->irq;
-	printk("( irq=%u )", dev->irq);
+	printk(KERN_INFO "( irq=%u )", dev->irq);
 
 	ret = rtd520_probe_fifo_depth(dev);
-	if (ret < 0) {
+	if (ret < 0)
 		return ret;
-	}
+
 	devpriv->fifoLen = ret;
 	printk("( fifoLen=%d )", devpriv->fifoLen);
 
 #ifdef USE_DMA
 	if (dev->irq > 0) {
 		printk("( DMA buff=%d )\n", DMA_CHAIN_COUNT);
-		/* The PLX9080 has 2 DMA controllers, but there could be 4 sources:
-		   ADC, digital, DAC1, and DAC2.  Since only the ADC supports cmd mode
-		   right now, this isn't an issue (yet) */
+		/*
+		 * The PLX9080 has 2 DMA controllers, but there could be
+		 * 4 sources: ADC, digital, DAC1, and DAC2.  Since only the
+		 * ADC supports cmd mode right now, this isn't an issue (yet)
+		 */
 		devpriv->dma0Offset = 0;
 
 		for (index = 0; index < DMA_CHAIN_COUNT; index++) {
@@ -988,10 +977,14 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 			}
 			/*DPRINTK ("buff[%d] @ %p virtual, %x PCI\n",
 			   index,
-			   devpriv->dma0Buff[index], devpriv->dma0BuffPhysAddr[index]); */
+			   devpriv->dma0Buff[index],
+			   devpriv->dma0BuffPhysAddr[index]); */
 		}
 
-		/* setup DMA descriptor ring (use cpu_to_le32 for byte ordering?) */
+		/*
+		 * setup DMA descriptor ring (use cpu_to_le32 for byte
+		 * ordering?)
+		 */
 		devpriv->dma0Chain =
 		    pci_alloc_consistent(devpriv->pci_dev,
 					 sizeof(struct plx_dma_desc) *
@@ -1026,9 +1019,10 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 		}
 
 		RtdDma0Mode(dev, DMA_MODE_BITS);
-		RtdDma0Source(dev, DMAS_ADFIFO_HALF_FULL);	/* set DMA trigger source */
+		/* set DMA trigger source */
+		RtdDma0Source(dev, DMAS_ADFIFO_HALF_FULL);
 	} else {
-		printk("( no IRQ->no DMA )");
+		printk(KERN_INFO "( no IRQ->no DMA )");
 	}
 #endif /* USE_DMA */
 
@@ -1071,45 +1065,27 @@ static int rtd_attach(struct comedi_device *dev, struct comedi_devconfig *it)
 	}
 
 	/* release all regions that were allocated */
-	if (devpriv->las0) {
+	if (devpriv->las0)
 		iounmap(devpriv->las0);
-	}
-	if (devpriv->las1) {
+
+	if (devpriv->las1)
 		iounmap(devpriv->las1);
-	}
-	if (devpriv->lcfg) {
+
+	if (devpriv->lcfg)
 		iounmap(devpriv->lcfg);
-	}
-	if (devpriv->pci_dev) {
+
+	if (devpriv->pci_dev)
 		pci_dev_put(devpriv->pci_dev);
-	}
+
 	return ret;
 #endif
 }
 
-/*
- * _detach is called to deconfigure a device.  It should deallocate
- * resources.
- * This function is also called when _attach() fails, so it should be
- * careful not to release resources that were not necessarily
- * allocated by _attach().  dev->private and dev->subdevices are
- * deallocated automatically by the core.
- */
-static int rtd_detach(struct comedi_device *dev)
+static void rtd_detach(struct comedi_device *dev)
 {
 #ifdef USE_DMA
 	int index;
 #endif
-
-	DPRINTK("comedi%d: rtd520: removing (%ld ints)\n",
-		dev->minor, (devpriv ? devpriv->intCount : 0L));
-	if (devpriv && devpriv->lcfg) {
-		DPRINTK
-		    ("(int status 0x%x, overrun status 0x%x, fifo status 0x%x)...\n",
-		     0xffff & RtdInterruptStatus(dev),
-		     0xffff & RtdInterruptOverrunStatus(dev),
-		     (0xffff & RtdFifoStatus(dev)) ^ 0x6666);
-	}
 
 	if (devpriv) {
 		/* Shut down any board ops by resetting it */
@@ -1147,37 +1123,24 @@ static int rtd_detach(struct comedi_device *dev)
 			devpriv->dma0Chain = NULL;
 		}
 #endif /* USE_DMA */
-
-		/* release IRQ */
 		if (dev->irq) {
-			/* disable interrupt controller */
 			RtdPlxInterruptWrite(dev, RtdPlxInterruptRead(dev)
 					     & ~(ICS_PLIE | ICS_DMA0_E |
 						 ICS_DMA1_E));
 			free_irq(dev->irq, dev);
 		}
-
-		/* release all regions that were allocated */
-		if (devpriv->las0) {
+		if (devpriv->las0)
 			iounmap(devpriv->las0);
-		}
-		if (devpriv->las1) {
+		if (devpriv->las1)
 			iounmap(devpriv->las1);
-		}
-		if (devpriv->lcfg) {
+		if (devpriv->lcfg)
 			iounmap(devpriv->lcfg);
-		}
 		if (devpriv->pci_dev) {
-			if (devpriv->got_regions) {
+			if (devpriv->got_regions)
 				comedi_pci_disable(devpriv->pci_dev);
-			}
 			pci_dev_put(devpriv->pci_dev);
 		}
 	}
-
-	printk("comedi%d: rtd520: removed.\n", dev->minor);
-
-	return 0;
 }
 
 /*
@@ -1202,11 +1165,13 @@ static unsigned short rtdConvertChanGain(struct comedi_device *dev,
 		CHAN_ARRAY_SET(devpriv->chanBipolar, chanIndex);
 	} else if (range < thisboard->rangeUniStart) {	/* second batch are +-10 */
 		r |= 0x100;	/* +-10 range */
-		r |= ((range - thisboard->range10Start) & 0x7) << 4;	/* gain */
+		/* gain */
+		r |= ((range - thisboard->range10Start) & 0x7) << 4;
 		CHAN_ARRAY_SET(devpriv->chanBipolar, chanIndex);
 	} else {		/* last batch is +10 */
 		r |= 0x200;	/* +10 range */
-		r |= ((range - thisboard->rangeUniStart) & 0x7) << 4;	/* gain */
+		/* gain */
+		r |= ((range - thisboard->rangeUniStart) & 0x7) << 4;
 		CHAN_ARRAY_CLEAR(devpriv->chanBipolar, chanIndex);
 	}
 
@@ -1275,13 +1240,14 @@ static int rtd520_probe_fifo_depth(struct comedi_device *dev)
 		}
 	}
 	if (i == limit) {
-		printk("\ncomedi: %s: failed to probe fifo size.\n", DRV_NAME);
+		printk(KERN_INFO "\ncomedi: %s: failed to probe fifo size.\n",
+		       DRV_NAME);
 		return -EIO;
 	}
 	RtdAdcClearFifo(dev);
 	if (fifo_size != 0x400 && fifo_size != 0x2000) {
 		printk
-		    ("\ncomedi: %s: unexpected fifo size of %i, expected 1024 or 8192.\n",
+		    (KERN_INFO "\ncomedi: %s: unexpected fifo size of %i, expected 1024 or 8192.\n",
 		     DRV_NAME, fifo_size);
 		return -EIO;
 	}
@@ -1291,7 +1257,7 @@ static int rtd520_probe_fifo_depth(struct comedi_device *dev)
 /*
   "instructions" read/write data in "one-shot" or "software-triggered"
   mode (simplest case).
-  This doesnt use interrupts.
+  This doesn't use interrupts.
 
   Note, we don't do any settling delays.  Use a instruction list to
   select, delay, then read.
@@ -1335,11 +1301,11 @@ static int rtd_ai_rinsn(struct comedi_device *dev,
 		d = RtdAdcFifoGet(dev);	/* get 2s comp value */
 		/*printk ("rtd520: Got 0x%x after %d usec\n", d, ii+1); */
 		d = d >> 3;	/* low 3 bits are marker lines */
-		if (CHAN_ARRAY_TEST(devpriv->chanBipolar, 0)) {
-			data[n] = d + 2048;	/* convert to comedi unsigned data */
-		} else {
+		if (CHAN_ARRAY_TEST(devpriv->chanBipolar, 0))
+			/* convert to comedi unsigned data */
+			data[n] = d + 2048;
+		else
 			data[n] = d;
-		}
 	}
 
 	/* return the number of samples read/written */
@@ -1376,10 +1342,11 @@ static int ai_read_n(struct comedi_device *dev, struct comedi_subdevice *s,
 
 		d = d >> 3;	/* low 3 bits are marker lines */
 		if (CHAN_ARRAY_TEST(devpriv->chanBipolar, s->async->cur_chan)) {
-			sample = d + 2048;	/* convert to comedi unsigned data */
-		} else {
+			/* convert to comedi unsigned data */
+			sample = d + 2048;
+		} else
 			sample = d;
-		}
+
 		if (!comedi_buf_put(s->async, sample))
 			return -1;
 
@@ -1404,10 +1371,11 @@ static int ai_read_dregs(struct comedi_device *dev, struct comedi_subdevice *s)
 
 		d = d >> 3;	/* low 3 bits are marker lines */
 		if (CHAN_ARRAY_TEST(devpriv->chanBipolar, s->async->cur_chan)) {
-			sample = d + 2048;	/* convert to comedi unsigned data */
-		} else {
+			/* convert to comedi unsigned data */
+			sample = d + 2048;
+		} else
 			sample = d;
-		}
+
 		if (!comedi_buf_put(s->async, sample))
 			return -1;
 
@@ -1493,9 +1461,9 @@ static int ai_process_dma(struct comedi_device *dev, struct comedi_subdevice *s)
 
 		if (CHAN_ARRAY_TEST(devpriv->chanBipolar, s->async->cur_chan)) {
 			sample = (*dp >> 3) + 2048;	/* convert to comedi unsigned data */
-		} else {
+		else
 			sample = *dp >> 3;	/* low 3 bits are marker lines */
-		}
+
 		*dp++ = sample;	/* put processed value back */
 
 		if (++s->async->cur_chan >= s->async->cmd.chanlist_len)
@@ -1522,7 +1490,9 @@ static int ai_process_dma(struct comedi_device *dev, struct comedi_subdevice *s)
 	comedi_buf_memcpy_to(s->async, 0, dp, n);
 	comedi_buf_write_free(s->async, n);
 
-	/* always at least 1 scan -- 1/2 FIFO is larger than our max scan list */
+	/*
+	 * always at least 1 scan -- 1/2 FIFO is larger than our max scan list
+	 */
 	s->async->events |= COMEDI_CB_BLOCK | COMEDI_CB_EOS;
 
 	if (++devpriv->dma0Offset >= DMA_CHAIN_COUNT) {	/* next buffer */
@@ -1546,9 +1516,8 @@ static irqreturn_t rtd_interrupt(int irq,	/* interrupt number (ignored) */
 	u16 fifoStatus;
 	struct comedi_subdevice *s = dev->subdevices + 0;	/* analog in subdevice */
 
-	if (!dev->attached) {
+	if (!dev->attached)
 		return IRQ_NONE;
-	}
 
 	devpriv->intCount++;	/* DEBUG statistics */
 
@@ -1594,9 +1563,8 @@ static irqreturn_t rtd_interrupt(int irq,	/* interrupt number (ignored) */
 
 	status = RtdInterruptStatus(dev);
 	/* if interrupt was not caused by our board, or handled above */
-	if (0 == status) {
+	if (0 == status)
 		return IRQ_HANDLED;
-	}
 
 	if (status & IRQM_ADC_ABOUT_CNT) {	/* sample count -> read FIFO */
 		/* since the priority interrupt controller may have queued a sample
@@ -1734,33 +1702,32 @@ static int rtd_ai_cmdtest(struct comedi_device *dev,
 
 	tmp = cmd->start_src;
 	cmd->start_src &= TRIG_NOW;
-	if (!cmd->start_src || tmp != cmd->start_src) {
+	if (!cmd->start_src || tmp != cmd->start_src)
 		err++;
-	}
 
 	tmp = cmd->scan_begin_src;
 	cmd->scan_begin_src &= TRIG_TIMER | TRIG_EXT;
-	if (!cmd->scan_begin_src || tmp != cmd->scan_begin_src) {
+	if (!cmd->scan_begin_src || tmp != cmd->scan_begin_src)
 		err++;
-	}
+
 
 	tmp = cmd->convert_src;
 	cmd->convert_src &= TRIG_TIMER | TRIG_EXT;
-	if (!cmd->convert_src || tmp != cmd->convert_src) {
+	if (!cmd->convert_src || tmp != cmd->convert_src)
 		err++;
-	}
+
 
 	tmp = cmd->scan_end_src;
 	cmd->scan_end_src &= TRIG_COUNT;
-	if (!cmd->scan_end_src || tmp != cmd->scan_end_src) {
+	if (!cmd->scan_end_src || tmp != cmd->scan_end_src)
 		err++;
-	}
+
 
 	tmp = cmd->stop_src;
 	cmd->stop_src &= TRIG_COUNT | TRIG_NONE;
-	if (!cmd->stop_src || tmp != cmd->stop_src) {
+	if (!cmd->stop_src || tmp != cmd->stop_src)
 		err++;
-	}
+
 
 	if (err)
 		return 1;
@@ -1772,16 +1739,14 @@ static int rtd_ai_cmdtest(struct comedi_device *dev,
 	    cmd->scan_begin_src != TRIG_EXT) {
 		err++;
 	}
-	if (cmd->convert_src != TRIG_TIMER && cmd->convert_src != TRIG_EXT) {
+	if (cmd->convert_src != TRIG_TIMER && cmd->convert_src != TRIG_EXT)
 		err++;
-	}
-	if (cmd->stop_src != TRIG_COUNT && cmd->stop_src != TRIG_NONE) {
-		err++;
-	}
 
-	if (err) {
+	if (cmd->stop_src != TRIG_COUNT && cmd->stop_src != TRIG_NONE)
+		err++;
+
+	if (err)
 		return 2;
-	}
 
 	/* step 3: make sure arguments are trivially compatible */
 
@@ -1882,9 +1847,9 @@ static int rtd_ai_cmdtest(struct comedi_device *dev,
 		}
 	}
 
-	if (err) {
+	if (err)
 		return 3;
-	}
+
 
 	/* step 4: fix up any arguments */
 
@@ -1896,17 +1861,17 @@ static int rtd_ai_cmdtest(struct comedi_device *dev,
 		tmp = cmd->scan_begin_arg;
 		rtd_ns_to_timer(&cmd->scan_begin_arg,
 				cmd->flags & TRIG_ROUND_MASK);
-		if (tmp != cmd->scan_begin_arg) {
+		if (tmp != cmd->scan_begin_arg)
 			err++;
-		}
+
 	}
 	if (cmd->convert_src == TRIG_TIMER) {
 		tmp = cmd->convert_arg;
 		rtd_ns_to_timer(&cmd->convert_arg,
 				cmd->flags & TRIG_ROUND_MASK);
-		if (tmp != cmd->convert_arg) {
+		if (tmp != cmd->convert_arg)
 			err++;
-		}
+
 		if (cmd->scan_begin_src == TRIG_TIMER
 		    && (cmd->scan_begin_arg
 			< (cmd->convert_arg * cmd->scan_end_arg))) {
@@ -1916,9 +1881,8 @@ static int rtd_ai_cmdtest(struct comedi_device *dev,
 		}
 	}
 
-	if (err) {
+	if (err)
 		return 4;
-	}
 
 	return 0;
 }
@@ -1992,7 +1956,7 @@ static int rtd_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 			    (TRANS_TARGET_PERIOD * cmd->chanlist_len) /
 			    cmd->scan_begin_arg;
 			if (devpriv->transCount < cmd->chanlist_len) {
-				/* tranfer after each scan (and avoid 0) */
+				/* transfer after each scan (and avoid 0) */
 				devpriv->transCount = cmd->chanlist_len;
 			} else {	/* make a multiple of scan length */
 				devpriv->transCount =
@@ -2008,12 +1972,12 @@ static int rtd_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 			devpriv->transCount = 0;
 			devpriv->flags &= ~SEND_EOS;
 		} else {
-			/* interrupt for each tranfer */
+			/* interrupt for each transfer */
 			RtdAboutCounter(dev, devpriv->transCount - 1);
 		}
 
 		DPRINTK
-		    ("rtd520: scanLen=%d tranferCount=%d fifoLen=%d\n  scanTime(ns)=%d flags=0x%x\n",
+		    ("rtd520: scanLen=%d transferCount=%d fifoLen=%d\n  scanTime(ns)=%d flags=0x%x\n",
 		     cmd->chanlist_len, devpriv->transCount, devpriv->fifoLen,
 		     cmd->scan_begin_arg, devpriv->flags);
 	} else {		/* unknown timing, just use 1/2 FIFO */
@@ -2127,7 +2091,7 @@ static int rtd_ai_cmd(struct comedi_device *dev, struct comedi_subdevice *s)
 }
 
 /*
-  Stop a running data aquisition.
+  Stop a running data acquisition.
 */
 static int rtd_ai_cancel(struct comedi_device *dev, struct comedi_subdevice *s)
 {
@@ -2221,7 +2185,7 @@ static int rtd_ao_winsn(struct comedi_device *dev,
 		/* VERIFY: comedi range and offset conversions */
 
 		if ((range > 1)	/* bipolar */
-		    &&(data[i] < 2048)) {
+		    && (data[i] < 2048)) {
 			/* offset and sign extend */
 			val = (((int)data[i]) - 2048) << 3;
 		} else {	/* unipolor */
@@ -2267,9 +2231,9 @@ static int rtd_ao_rinsn(struct comedi_device *dev,
 	int i;
 	int chan = CR_CHAN(insn->chanspec);
 
-	for (i = 0; i < insn->n; i++) {
+	for (i = 0; i < insn->n; i++)
 		data[i] = devpriv->aoValue[chan];
-	}
+
 
 	return i;
 }
@@ -2351,47 +2315,38 @@ static int rtd_dio_insn_config(struct comedi_device *dev,
 	return 1;
 }
 
-/*
- * A convenient macro that defines init_module() and cleanup_module(),
- * as necessary.
- */
-static int __devinit rtd520Driver_pci_probe(struct pci_dev *dev,
-					    const struct pci_device_id *ent)
+static struct comedi_driver rtd520_driver = {
+	.driver_name	= "rtd520",
+	.module		= THIS_MODULE,
+	.attach		= rtd_attach,
+	.detach		= rtd_detach,
+};
+
+static int __devinit rtd520_pci_probe(struct pci_dev *dev,
+				      const struct pci_device_id *ent)
 {
-	return comedi_pci_auto_config(dev, rtd520Driver.driver_name);
+	return comedi_pci_auto_config(dev, &rtd520_driver);
 }
 
-static void __devexit rtd520Driver_pci_remove(struct pci_dev *dev)
+static void __devexit rtd520_pci_remove(struct pci_dev *dev)
 {
 	comedi_pci_auto_unconfig(dev);
 }
 
-static struct pci_driver rtd520Driver_pci_driver = {
-	.id_table = rtd520_pci_table,
-	.probe = &rtd520Driver_pci_probe,
-	.remove = __devexit_p(&rtd520Driver_pci_remove)
+static DEFINE_PCI_DEVICE_TABLE(rtd520_pci_table) = {
+	{ PCI_DEVICE(PCI_VENDOR_ID_RTD, 0x7520) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_RTD, 0x4520) },
+	{ 0 }
 };
+MODULE_DEVICE_TABLE(pci, rtd520_pci_table);
 
-static int __init rtd520Driver_init_module(void)
-{
-	int retval;
-
-	retval = comedi_driver_register(&rtd520Driver);
-	if (retval < 0)
-		return retval;
-
-	rtd520Driver_pci_driver.name = (char *)rtd520Driver.driver_name;
-	return pci_register_driver(&rtd520Driver_pci_driver);
-}
-
-static void __exit rtd520Driver_cleanup_module(void)
-{
-	pci_unregister_driver(&rtd520Driver_pci_driver);
-	comedi_driver_unregister(&rtd520Driver);
-}
-
-module_init(rtd520Driver_init_module);
-module_exit(rtd520Driver_cleanup_module);
+static struct pci_driver rtd520_pci_driver = {
+	.name		= "rtd520",
+	.id_table	= rtd520_pci_table,
+	.probe		= rtd520_pci_probe,
+	.remove		= __devexit_p(rtd520_pci_remove),
+};
+module_comedi_pci_driver(rtd520_driver, rtd520_pci_driver);
 
 MODULE_AUTHOR("Comedi http://www.comedi.org");
 MODULE_DESCRIPTION("Comedi low-level driver");

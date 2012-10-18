@@ -6,7 +6,6 @@
 #include <linux/net.h>
 #include <linux/radix-tree.h>
 #include <linux/uio.h>
-#include <linux/version.h>
 #include <linux/workqueue.h>
 
 #include "types.h"
@@ -14,8 +13,6 @@
 
 struct ceph_msg;
 struct ceph_connection;
-
-extern struct workqueue_struct *ceph_msgr_wq;       /* receive work queue */
 
 /*
  * Ceph defines these callbacks for handling connection events.
@@ -28,9 +25,9 @@ struct ceph_connection_operations {
 	void (*dispatch) (struct ceph_connection *con, struct ceph_msg *m);
 
 	/* authorize an outgoing connection */
-	int (*get_authorizer) (struct ceph_connection *con,
-			       void **buf, int *len, int *proto,
-			       void **reply_buf, int *reply_len, int force_new);
+	struct ceph_auth_handshake *(*get_authorizer) (
+				struct ceph_connection *con,
+			       int *proto, int force_new);
 	int (*verify_authorizer_reply) (struct ceph_connection *con, int len);
 	int (*invalidate_authorizer)(struct ceph_connection *con);
 
@@ -55,7 +52,6 @@ struct ceph_connection_operations {
 struct ceph_messenger {
 	struct ceph_entity_inst inst;    /* my name+address */
 	struct ceph_entity_addr my_enc_addr;
-	struct page *zero_page;          /* used in certain error cases */
 
 	bool nocrc;
 
@@ -94,6 +90,7 @@ struct ceph_msg {
 	bool more_to_follow;
 	bool needs_out_seq;
 	int front_max;
+	unsigned long ack_stamp;        /* tx: when we were acked */
 
 	struct ceph_msgpool *pool;
 };
@@ -101,7 +98,7 @@ struct ceph_msg {
 struct ceph_msg_pos {
 	int page, page_pos;  /* which page; offset in page */
 	int data_pos;        /* offset in data payload */
-	int did_page_crc;    /* true if we've calculated crc for current page */
+	bool did_page_crc;   /* true if we've calculated crc for current page */
 };
 
 /* ceph connection fault delay defaults, for exponential backoff */
@@ -110,17 +107,12 @@ struct ceph_msg_pos {
 
 /*
  * ceph_connection state bit flags
- *
- * QUEUED and BUSY are used together to ensure that only a single
- * thread is currently opening, reading or writing data to the socket.
  */
 #define LOSSYTX         0  /* we can close channel or drop messages on errors */
 #define CONNECTING	1
 #define NEGOTIATING	2
 #define KEEPALIVE_PENDING      3
 #define WRITE_PENDING	4  /* we have data ready to send */
-#define QUEUED          5  /* there is work queued on this connection */
-#define BUSY            6  /* work is being done */
 #define STANDBY		8  /* no outgoing messages, socket closed.  we keep
 			    * the ceph_connection around to maintain shared
 			    * state with the peer. */
@@ -128,6 +120,7 @@ struct ceph_msg_pos {
 #define SOCK_CLOSED	11 /* socket state changed to closed */
 #define OPENING         13 /* open connection w/ (possibly new) peer */
 #define DEAD            14 /* dead, about to kfree */
+#define BACKOFF         15
 
 /*
  * A single connection with another host.
@@ -165,22 +158,13 @@ struct ceph_connection {
 	struct list_head out_queue;
 	struct list_head out_sent;   /* sending or sent but unacked */
 	u64 out_seq;		     /* last message queued for send */
-	bool out_keepalive_pending;
 
 	u64 in_seq, in_seq_acked;  /* last message received, acked */
 
 	/* connection negotiation temps */
 	char in_banner[CEPH_BANNER_MAX_LEN];
-	union {
-		struct {  /* outgoing connection */
-			struct ceph_msg_connect out_connect;
-			struct ceph_msg_connect_reply in_reply;
-		};
-		struct {  /* incoming */
-			struct ceph_msg_connect in_connect;
-			struct ceph_msg_connect_reply out_reply;
-		};
-	};
+	struct ceph_msg_connect out_connect;
+	struct ceph_msg_connect_reply in_reply;
 	struct ceph_entity_addr actual_peer_addr;
 
 	/* message out temps */
@@ -242,7 +226,8 @@ extern void ceph_con_keepalive(struct ceph_connection *con);
 extern struct ceph_connection *ceph_con_get(struct ceph_connection *con);
 extern void ceph_con_put(struct ceph_connection *con);
 
-extern struct ceph_msg *ceph_msg_new(int type, int front_len, gfp_t flags);
+extern struct ceph_msg *ceph_msg_new(int type, int front_len, gfp_t flags,
+				     bool can_fail);
 extern void ceph_msg_kfree(struct ceph_msg *m);
 
 

@@ -60,13 +60,12 @@ static int lgs8gxx_write_reg(struct lgs8gxx_state *priv, u8 reg, u8 data)
 		msg.addr += 0x02;
 
 	if (debug >= 2)
-		printk(KERN_DEBUG "%s: reg=0x%02X, data=0x%02X\n",
-			__func__, reg, data);
+		dprintk("%s: reg=0x%02X, data=0x%02X\n", __func__, reg, data);
 
 	ret = i2c_transfer(priv->i2c, &msg, 1);
 
 	if (ret != 1)
-		dprintk(KERN_DEBUG "%s: error reg=0x%x, data=0x%x, ret=%i\n",
+		dprintk("%s: error reg=0x%x, data=0x%x, ret=%i\n",
 			__func__, reg, data, ret);
 
 	return (ret != 1) ? -1 : 0;
@@ -91,15 +90,13 @@ static int lgs8gxx_read_reg(struct lgs8gxx_state *priv, u8 reg, u8 *p_data)
 
 	ret = i2c_transfer(priv->i2c, msg, 2);
 	if (ret != 2) {
-		dprintk(KERN_DEBUG "%s: error reg=0x%x, ret=%i\n",
-			__func__, reg, ret);
+		dprintk("%s: error reg=0x%x, ret=%i\n", __func__, reg, ret);
 		return -1;
 	}
 
 	*p_data = b1[0];
 	if (debug >= 2)
-		printk(KERN_DEBUG "%s: reg=0x%02X, data=0x%02X\n",
-			__func__, reg, b1[0]);
+		dprintk("%s: reg=0x%02X, data=0x%02X\n", __func__, reg, b1[0]);
 	return 0;
 }
 
@@ -265,7 +262,6 @@ static int lgs8gxx_set_mode_auto(struct lgs8gxx_state *priv)
 
 static int lgs8gxx_set_mode_manual(struct lgs8gxx_state *priv)
 {
-	int ret = 0;
 	u8 t;
 
 	if (priv->config->prod == LGS8GXX_PROD_LGS8G75) {
@@ -299,7 +295,7 @@ static int lgs8gxx_set_mode_manual(struct lgs8gxx_state *priv)
 	if (priv->config->prod == LGS8GXX_PROD_LGS8913)
 		lgs8gxx_write_reg(priv, 0xC1, 0);
 
-	ret = lgs8gxx_read_reg(priv, 0xC5, &t);
+	lgs8gxx_read_reg(priv, 0xC5, &t);
 	t = (t & 0xE0) | 0x06;
 	lgs8gxx_write_reg(priv, 0xC5, t);
 
@@ -672,16 +668,16 @@ static int lgs8gxx_write(struct dvb_frontend *fe, const u8 buf[], int len)
 	return lgs8gxx_write_reg(priv, buf[0], buf[1]);
 }
 
-static int lgs8gxx_set_fe(struct dvb_frontend *fe,
-			  struct dvb_frontend_parameters *fe_params)
+static int lgs8gxx_set_fe(struct dvb_frontend *fe)
 {
+
 	struct lgs8gxx_state *priv = fe->demodulator_priv;
 
 	dprintk("%s\n", __func__);
 
 	/* set frequency */
 	if (fe->ops.tuner_ops.set_params) {
-		fe->ops.tuner_ops.set_params(fe, fe_params);
+		fe->ops.tuner_ops.set_params(fe);
 		if (fe->ops.i2c_gate_ctrl)
 			fe->ops.i2c_gate_ctrl(fe, 0);
 	}
@@ -694,9 +690,9 @@ static int lgs8gxx_set_fe(struct dvb_frontend *fe,
 	return 0;
 }
 
-static int lgs8gxx_get_fe(struct dvb_frontend *fe,
-			  struct dvb_frontend_parameters *fe_params)
+static int lgs8gxx_get_fe(struct dvb_frontend *fe)
 {
+	struct dtv_frontend_properties *fe_params = &fe->dtv_property_cache;
 	dprintk("%s\n", __func__);
 
 	/* TODO: get real readings from device */
@@ -704,21 +700,21 @@ static int lgs8gxx_get_fe(struct dvb_frontend *fe,
 	fe_params->inversion = INVERSION_OFF;
 
 	/* bandwidth */
-	fe_params->u.ofdm.bandwidth = BANDWIDTH_8_MHZ;
+	fe_params->bandwidth_hz = 8000000;
 
-	fe_params->u.ofdm.code_rate_HP = FEC_AUTO;
-	fe_params->u.ofdm.code_rate_LP = FEC_AUTO;
+	fe_params->code_rate_HP = FEC_AUTO;
+	fe_params->code_rate_LP = FEC_AUTO;
 
-	fe_params->u.ofdm.constellation = QAM_AUTO;
+	fe_params->modulation = QAM_AUTO;
 
 	/* transmission mode */
-	fe_params->u.ofdm.transmission_mode = TRANSMISSION_MODE_AUTO;
+	fe_params->transmission_mode = TRANSMISSION_MODE_AUTO;
 
 	/* guard interval */
-	fe_params->u.ofdm.guard_interval = GUARD_INTERVAL_AUTO;
+	fe_params->guard_interval = GUARD_INTERVAL_AUTO;
 
 	/* hierarchy */
-	fe_params->u.ofdm.hierarchy_information = HIERARCHY_NONE;
+	fe_params->hierarchy = HIERARCHY_NONE;
 
 	return 0;
 }
@@ -997,9 +993,9 @@ static int lgs8gxx_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 }
 
 static struct dvb_frontend_ops lgs8gxx_ops = {
+	.delsys = { SYS_DMBTH },
 	.info = {
 		.name = "Legend Silicon LGS8913/LGS8GXX DMB-TH",
-		.type = FE_OFDM,
 		.frequency_min = 474000000,
 		.frequency_max = 858000000,
 		.frequency_stepsize = 10000,

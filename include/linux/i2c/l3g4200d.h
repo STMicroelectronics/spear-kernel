@@ -48,14 +48,14 @@ struct l3g4200d_gyr_platform_data {
 	int min_interval;
 
 	int fs_range;
+	u32 axis_map_x;
+	u32 axis_map_y;
+	u32 axis_map_z;
 
-	u8 axis_map_x;
-	u8 axis_map_y;
-	u8 axis_map_z;
+	u32 negate_x;
+	u32 negate_y;
+	u32 negate_z;
 
-	u8 negate_x;
-	u8 negate_y;
-	u8 negate_z;
 };
 
 #endif /* __KERNEL__ */

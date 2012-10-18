@@ -20,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_wakeup.h>
 #include <linux/pm.h>
@@ -36,16 +37,13 @@
 #endif
 #include "designware_udc.h"
 
-static const char driver_name[] = "designware_udc";
+static const char driver_name[] = "designware-udc";
 
 #ifdef DEBUG
 static void show_queues(struct dw_udc_ep *ep)
 {
 	struct dw_udc_request *req;
-	unsigned size;
 	int t = ep->addr;
-
-	size = PAGE_SIZE;
 
 	DW_UDC_DBG(DBG_QUEUES, "%s (ep%d %s)\n",
 			ep->ep.name, t, (t & USB_DIR_IN) ? "in" : "out");
@@ -75,9 +73,8 @@ static void show_chain(struct dw_udc_ep *ep)
 		tmp_desc = ep->desc_out_ptr;
 
 	while (tmp_desc != 0x0) {
-		DW_UDC_DBG(DBG_REGISTERS, "%08x %08x %08x %08x\n",
+		DW_UDC_DBG(DBG_REGISTERS, "%08x %08x %08x\n",
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
@@ -95,10 +92,10 @@ static void show_global(struct dw_udc_dev *udev)
 
 	DW_UDC_DBG(DBG_REGISTERS, "Global registers:\n");
 	DW_UDC_DBG(DBG_REGISTERS, "Config:%08x Control:%08x Status:%08x\n",
-			readl(&glob->udev_conf),
-			readl(&glob->udev_control), readl(&glob->udev_status));
+			readl(&glob->dev_conf),
+			readl(&glob->dev_control), readl(&glob->dev_status));
 	DW_UDC_DBG(DBG_REGISTERS, "D.Int:%08x mask=%08x E.Int:%08x mask=%08x\n",
-			readl(&glob->udev_int), readl(&glob->udev_int_mask),
+			readl(&glob->dev_int), readl(&glob->dev_int_mask),
 			readl(&glob->endp_int), readl(&glob->endp_int_mask));
 }
 
@@ -162,7 +159,6 @@ static inline void desc_init(struct dw_udc_bulkd *desc, dma_addr_t dma)
 	desc->dma_addr = dma;
 	desc->status = cpu_to_le32(DMAUSB_HOSTRDY);
 	desc->bufp = 0x0;
-	desc->reserved = cpu_to_le32(0xf0cacc1a);
 	wmb();
 	INIT_LIST_HEAD(&desc->desc_list);
 }
@@ -327,12 +323,10 @@ static void udc_config_ep(struct dw_udc_dev *udev, struct dw_udc_ep *ep)
 {
 	struct dw_udc_epin_regs *in_regs;
 	struct dw_udc_epout_regs *out_regs;
-	struct dw_udc_glob_regs *glob;
 	u32 tmp;
 
 	in_regs = ep->in_regs;
 	out_regs = ep->out_regs;
-	glob = ep->udev->glob_base;
 
 	switch (ep->attrib) {
 	case USB_ENDPOINT_XFER_CONTROL:
@@ -497,12 +491,10 @@ static int udc_ep0_disable(struct dw_udc_ep *ep)
 {
 	struct dw_udc_dev *udev;
 	struct dw_udc_glob_regs *glob;
-	struct dw_udc_epin_regs *epregs;
 	unsigned int tmp;
 
 	udev = ep->udev;
 	glob = udev->glob_base;
-	epregs = ep->in_regs;
 
 	udc_put_descrs(udev, ep->setup_ptr);
 	writel(0, &ep->out_regs->setup_ptr);
@@ -592,10 +584,8 @@ static void udc_enable(struct dw_udc_dev *udev)
 	u32 val;
 #endif
 	struct dw_udc_glob_regs *glob = udev->glob_base;
-	struct usb_gadget_driver *driver;
 
 	udev->gadget.speed = USB_SPEED_UNKNOWN;
-	driver = (struct usb_gadget_driver *)udev->driver;
 
 	writel(~0, &glob->dev_int_mask);
 	writel(~0, &glob->endp_int_mask);
@@ -1140,7 +1130,6 @@ static int dw_ep_queue(struct usb_ep *_ep,
 		struct usb_request *_req, gfp_t gfp_flags)
 {
 	struct dw_udc_epout_regs *out_regs;
-	struct dw_udc_epin_regs *in_regs;
 	struct dw_udc_glob_regs *glob;
 	struct dw_udc_dev *udev;
 	struct dw_udc_request *req;
@@ -1153,7 +1142,6 @@ static int dw_ep_queue(struct usb_ep *_ep,
 	req = container_of(_req, struct dw_udc_request, req);
 	ep = container_of(_ep, struct dw_udc_ep, ep);
 
-	in_regs = ep->in_regs;
 	out_regs = ep->out_regs;
 	is_in = is_ep_in(ep);
 	udev = ep->udev;
@@ -1279,7 +1267,6 @@ static int dw_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	struct dw_udc_ep *ep;
 	unsigned long flags;
 	struct dw_udc_request *req;
-	struct dw_udc_request *request;
 	struct dw_udc_dev *udev;
 	u32 tmp;
 
@@ -1287,7 +1274,6 @@ static int dw_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 		return -EINVAL;
 
 	ep = container_of(_ep, struct dw_udc_ep, ep);
-	request = container_of(_req, struct dw_udc_request, req);
 
 	if (!_ep || ep->ep.name == driver_name)
 		return -EINVAL;
@@ -1396,13 +1382,11 @@ static int dw_ep_fifo_status(struct usb_ep *_ep)
 static void dw_ep_fifo_flush(struct usb_ep *_ep)
 {
 	struct dw_udc_epin_regs *regs;
-	struct dw_udc_dev *udev;
 	struct dw_udc_ep *ep;
 	u32 tmp;
 
 	ep = container_of(_ep, struct dw_udc_ep, ep);
 
-	udev = ep->udev;
 	regs = ep->in_regs;
 
 	if (is_ep_in(ep)) {
@@ -2273,13 +2257,6 @@ dw_udc_ioctl(struct usb_gadget *gadget, unsigned code, unsigned long param)
 	return 0;
 }
 
-static const struct usb_gadget_ops dw_udc_ops = {
-	.get_frame = dw_udc_get_frame,
-	.wakeup = dw_udc_wakeup,
-	.set_selfpowered = dw_udc_set_selfpowered,
-	.ioctl = dw_udc_ioctl,
-};
-
 static void dw_udc_release(struct device *dev)
 {
 	pr_debug("%s %s\n", __func__, dev_name(dev));
@@ -2287,9 +2264,8 @@ static void dw_udc_release(struct device *dev)
 
 static struct dw_udc_dev the_controller = {
 	.gadget = {
-		.ops = &dw_udc_ops,
 		.ep_list = LIST_HEAD_INIT(the_controller.gadget.ep_list),
-		.is_dualspeed = 1,
+		.max_speed = USB_SPEED_HIGH,
 		.name = driver_name,
 		.dev = {
 			.init_name = "gadget",
@@ -2298,6 +2274,28 @@ static struct dw_udc_dev the_controller = {
 	},
 };
 
+static int dw_udc_pullup(struct usb_gadget *_gadget, int is_on)
+{
+	struct dw_udc_dev *udev = &the_controller;
+	unsigned long		flags;
+
+	if (!_gadget)
+		return -ENODEV;
+	if (!udev)
+		return -ENODEV;
+
+	spin_lock_irqsave(&udev->lock, flags);
+
+	if (is_on)
+		udc_connect(udev);
+	else
+		udc_disconnect(udev);
+
+	spin_unlock_irqrestore(&udev->lock, flags);
+
+	return 0;
+}
+
 /*
  * when a driver is successfully registered, it will receive
  * control requests including set_configuration(), which enables
@@ -2305,7 +2303,7 @@ static struct dw_udc_dev the_controller = {
  * disconnect is reported. then a host may connect again, or
  * the driver might get unbound.
  */
-int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
+int dw_udc_start(struct usb_gadget_driver *driver,
 		int (*bind)(struct usb_gadget *))
 {
 	struct dw_udc_dev *udev = &the_controller;
@@ -2313,7 +2311,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	unsigned long flags;
 
 	/* Paranoid */
-	if (!driver || driver->speed < USB_SPEED_FULL || !bind ||
+	if (!driver || driver->max_speed < USB_SPEED_FULL || !bind ||
 			!driver->disconnect || !driver->setup)
 		return -EINVAL;
 	if (!udev || !udev->dev)
@@ -2362,9 +2360,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 	return 0;
 }
-EXPORT_SYMBOL(usb_gadget_probe_driver);
 
-int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
+int dw_udc_stop(struct usb_gadget_driver *driver)
 {
 	struct dw_udc_dev *udev = &the_controller;
 
@@ -2383,7 +2380,15 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	return 0;
 }
-EXPORT_SYMBOL(usb_gadget_unregister_driver);
+static const struct usb_gadget_ops dw_udc_ops = {
+	.get_frame = dw_udc_get_frame,
+	.wakeup = dw_udc_wakeup,
+	.set_selfpowered = dw_udc_set_selfpowered,
+	.ioctl = dw_udc_ioctl,
+	.pullup = dw_udc_pullup,
+	.start = dw_udc_start,
+	.stop = dw_udc_stop,
+};
 
 #ifdef CONFIG_USB_GADGET_DEBUG_FILES
 static const char proc_node_name[] = "driver/synudc";
@@ -2561,9 +2566,8 @@ dw_udc_proc_out_chain(char *page, char **start, off_t off, int count,
 	tmp_desc = ep->desc_out_ptr;
 	while (tmp_desc != 0x0) {
 
-		t = scnprintf(next, size, "%08x %08x %08x %08x\n",
+		t = scnprintf(next, size, "%08x %08x %08x\n",
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
@@ -2610,10 +2614,9 @@ dw_udc_proc_in_chain(char *page, char **start, off_t off, int count,
 	tmp_desc = ep->curr_chain_in;
 	while (tmp_desc != 0x0) {
 
-		t = scnprintf(next, size, "%08x %08x %08x %08x %08x\n",
+		t = scnprintf(next, size, "%08x %08x %08x %08x\n",
 				tmp_desc->dma_addr,
 				le32_to_cpu(tmp_desc->status),
-				le32_to_cpu(tmp_desc->reserved),
 				le32_to_cpu(tmp_desc->bufp),
 				le32_to_cpu(tmp_desc->nextd));
 
@@ -2668,6 +2671,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	pdata = dev_get_platdata(&pdev->dev);
 	if (!pdata)
 		return -ENXIO;
+
 	csr = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!csr) {
 		dev_err(&pdev->dev, "no csr resource defined\n");
@@ -2697,7 +2701,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 		goto err_release_plug_region;
 	}
 
-	retval = clk_enable(udev->clk);
+	retval = clk_prepare_enable(udev->clk);
 	if (retval < 0)
 		goto err_clk_put;
 
@@ -2724,6 +2728,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 			UDC_GLOB_REG_OFF);
 
 	udev->num_ep = pdata->num_ep;
+
 	udev->ep = kzalloc(pdata->num_ep * sizeof(struct dw_udc_ep),
 			GFP_ATOMIC);
 	if (!udev->ep) {
@@ -2731,6 +2736,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 		goto err_iounmap_plug;
 	}
 
+	udev->gadget.ops = &dw_udc_ops,
 	udev->gadget.ep0 = &udev->ep[0].ep;
 	for (i = 0; i < pdata->num_ep; i++) {
 		ep = &udev->ep[i];
@@ -2755,7 +2761,7 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 	dev_set_name(&udev->gadget.dev, "gadget");
 	udev->gadget.dev.parent = &pdev->dev;
 	udev->gadget.dev.dma_mask = pdev->dev.dma_mask;
-	udev->gadget.is_dualspeed = 1;
+	udev->gadget.max_speed = USB_SPEED_HIGH;
 	udev->int_cmd = 0;
 
 	platform_set_drvdata(pdev, udev);
@@ -2790,9 +2796,12 @@ static int __devinit dw_udc_probe(struct platform_device *pdev)
 		goto err_mem_pool_remove;
 	}
 
+	retval = usb_add_gadget_udc(&pdev->dev, &udev->gadget);
+	if (retval)
+		goto err_mem_pool_remove;
+
 	dev_info(&pdev->dev, "Device Synopsys UDC probed csr %p: plug %p\n",
 			udev->csr_base, udev->plug_base);
-
 	return 0;
 
 err_mem_pool_remove:
@@ -2805,7 +2814,7 @@ err_iounmap_plug:
 err_iounmap_csr:
 	iounmap(udev->csr_base);
 err_disable_clock:
-	clk_disable(udev->clk);
+	clk_disable_unprepare(udev->clk);
 err_clk_put:
 	clk_put(udev->clk);
 err_release_plug_region:
@@ -2818,11 +2827,9 @@ err_release_csr_region:
 
 static int __devexit dw_udc_remove(struct platform_device *pdev)
 {
-	struct udc_platform_data *pdata;
 	struct dw_udc_dev *udev = platform_get_drvdata(pdev);
 	int irq;
 
-	pdata = dev_get_platdata(&pdev->dev);
 	irq = platform_get_irq(pdev, 0);
 
 	/* Donot forget to disable endpoint 0 */
@@ -2836,7 +2843,7 @@ static int __devexit dw_udc_remove(struct platform_device *pdev)
 	usb_gadget_unregister_driver(udev->driver);
 
 	free_irq(irq, udev);
-	clk_disable(udev->clk);
+	clk_disable_unprepare(udev->clk);
 	platform_set_drvdata(pdev, NULL);
 
 	/* release memory */
@@ -2902,12 +2909,24 @@ static const struct dev_pm_ops dw_udc_pm_ops = {
 
 #endif
 
+#if defined(CONFIG_OF)
+static const struct of_device_id dwc_usbd_match[] = {
+	{.compatible = "snps,designware-udc",},
+	{}
+};
+MODULE_DEVICE_TABLE(of, dwc_usbd_match);
+#endif
+
 static struct platform_driver dw_udc_driver = {
 	.probe = dw_udc_probe,
 	.remove = __devexit_p(dw_udc_remove),
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = (char *)driver_name,
+#if defined(CONFIG_OF)
+		   .of_match_table = dwc_usbd_match,
+#endif
+
 #ifdef CONFIG_PM
 	.pm = &dw_udc_pm_ops,
 #endif

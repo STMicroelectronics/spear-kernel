@@ -16,7 +16,7 @@
  * make it not entierly compatible with the PL080 specification from
  * ARM. When in doubt, check the Samsung documentation first.
  *
- * The Samsung defines are PL080S, and add an extra controll register,
+ * The Samsung defines are PL080S, and add an extra control register,
  * the ability to move more than 2^11 counts of data and some extra
  * OneNAND features.
 */
@@ -102,6 +102,8 @@
 #define PL080_WIDTH_16BIT			(0x1)
 #define PL080_WIDTH_32BIT			(0x2)
 
+#define PL080N_CONFIG_ITPROT			(1 << 20)
+#define PL080N_CONFIG_SECPROT			(1 << 19)
 #define PL080_CONFIG_HALT			(1 << 18)
 #define PL080_CONFIG_ACTIVE			(1 << 17)  /* RO */
 #define PL080_CONFIG_LOCK			(1 << 16)

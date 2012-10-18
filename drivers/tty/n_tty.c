@@ -50,7 +50,6 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 
-#include <asm/system.h>
 
 /* number of characters left in xmit buffer before select has we have room */
 #define WAKEUP_CHARS 256
@@ -61,7 +60,7 @@
  * controlling the space in the read buffer.
  */
 #define TTY_THRESHOLD_THROTTLE		128 /* now based on remaining room */
-#define TTY_THRESHOLD_UNTHROTTLE 	128
+#define TTY_THRESHOLD_UNTHROTTLE	128
 
 /*
  * Special byte codes used in the echo buffer to represent operations
@@ -95,6 +94,7 @@ static void n_tty_set_room(struct tty_struct *tty)
 {
 	/* tty->read_cnt is not read locked ? */
 	int	left = N_TTY_BUF_SIZE - tty->read_cnt - 1;
+	int old_left;
 
 	/*
 	 * If we are doing input canonicalization, and there are no
@@ -104,7 +104,12 @@ static void n_tty_set_room(struct tty_struct *tty)
 	 */
 	if (left <= 0)
 		left = tty->icanon && !tty->canon_data;
+	old_left = tty->receive_room;
 	tty->receive_room = left;
+
+	/* Did this open up the receive buffer? We may need to flip */
+	if (left && !old_left)
+		schedule_work(&tty->buf.work);
 }
 
 static void put_tty_queue_nolock(unsigned char c, struct tty_struct *tty)
@@ -179,7 +184,6 @@ static void reset_buffer_flags(struct tty_struct *tty)
 	tty->canon_head = tty->canon_data = tty->erasing = 0;
 	memset(&tty->read_flags, 0, sizeof tty->read_flags);
 	n_tty_set_room(tty);
-	check_unthrottle(tty);
 }
 
 /**
@@ -400,7 +404,7 @@ static ssize_t process_output_block(struct tty_struct *tty,
 				    const unsigned char *buf, unsigned int nr)
 {
 	int	space;
-	int 	i;
+	int	i;
 	const unsigned char *cp;
 
 	mutex_lock(&tty->output_lock);
@@ -1581,6 +1585,7 @@ static int n_tty_open(struct tty_struct *tty)
 			return -ENOMEM;
 	}
 	reset_buffer_flags(tty);
+	tty_unthrottle(tty);
 	tty->column = 0;
 	n_tty_set_termios(tty, NULL);
 	tty->minimum_to_wake = 1;
@@ -1601,7 +1606,7 @@ static inline int input_available_p(struct tty_struct *tty, int amt)
 }
 
 /**
- * 	copy_from_read_buf	-	copy read data directly
+ *	copy_from_read_buf	-	copy read data directly
  *	@tty: terminal device
  *	@b: user data
  *	@nr: size of data
@@ -1625,6 +1630,7 @@ static int copy_from_read_buf(struct tty_struct *tty,
 	int retval;
 	size_t n;
 	unsigned long flags;
+	bool is_eof;
 
 	retval = 0;
 	spin_lock_irqsave(&tty->read_lock, flags);
@@ -1634,15 +1640,15 @@ static int copy_from_read_buf(struct tty_struct *tty,
 	if (n) {
 		retval = copy_to_user(*b, &tty->read_buf[tty->read_tail], n);
 		n -= retval;
+		is_eof = n == 1 &&
+			tty->read_buf[tty->read_tail] == EOF_CHAR(tty);
 		tty_audit_add_data(tty, &tty->read_buf[tty->read_tail], n);
 		spin_lock_irqsave(&tty->read_lock, flags);
 		tty->read_tail = (tty->read_tail + n) & (N_TTY_BUF_SIZE-1);
 		tty->read_cnt -= n;
 		/* Turn single EOF into zero-length read */
-		if (L_EXTPROC(tty) && tty->icanon && n == 1) {
-			if (!tty->read_cnt && (*b)[n-1] == EOF_CHAR(tty))
-				n--;
-		}
+		if (L_EXTPROC(tty) && tty->icanon && is_eof && !tty->read_cnt)
+			n = 0;
 		spin_unlock_irqrestore(&tty->read_lock, flags);
 		*b += n;
 		*nr -= n;
@@ -1809,6 +1815,7 @@ do_it_again:
 			/* FIXME: does n_tty_set_room need locking ? */
 			n_tty_set_room(tty);
 			timeout = schedule_timeout(timeout);
+			BUG_ON(!tty->read_buf);
 			continue;
 		}
 		__set_current_state(TASK_RUNNING);
@@ -1902,7 +1909,7 @@ do_it_again:
 		if (nr)
 			clear_bit(TTY_PUSH, &tty->flags);
 	} else if (test_and_clear_bit(TTY_PUSH, &tty->flags))
-		 goto do_it_again;
+		goto do_it_again;
 
 	n_tty_set_room(tty);
 	return retval;

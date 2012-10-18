@@ -3,8 +3,8 @@
  *
  * Serial port stubs for kernel decompress status messages
  *
- * Copyright (C) 2010 ST Microelectronics
- * Shiraz Hashim <shiraz.hashim@st.com>
+ * Copyright (C) 2012 ST Microelectronics
+ * Viresh Kumar <viresh.linux@gmail.com>
  *
  * This file is licensed under the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
