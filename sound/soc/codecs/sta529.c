@@ -221,15 +221,15 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		pdata = 1;
-		bclk_to_fs_ratio = 0;
+		bclk_to_fs_ratio = 0; /* for 32fs */
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		pdata = 2;
-		bclk_to_fs_ratio = 1;
+		bclk_to_fs_ratio = 1; /* for 64fs */
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		pdata = 3;
-		bclk_to_fs_ratio = 2;
+		bclk_to_fs_ratio = 1; /* for 64fs */
 		break;
 	default:
 		dev_err(codec->dev, "Unsupported format\n");
