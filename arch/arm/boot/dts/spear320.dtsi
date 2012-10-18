@@ -85,6 +85,15 @@
 			status = "disabled";
 		};
 
+		i2s@a9400000 {
+			compatible = "snps,designware-i2s";
+			reg = <0xa9400000 0x1000>;
+			play;
+			record;
+			channel = <2>;
+			status = "disabled";
+		};
+
 		macb1: eth@aa000000 {
 			compatible = "st,spear320-macb";
 			reg = <0xaa000000 0x2000>;

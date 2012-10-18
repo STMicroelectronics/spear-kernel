@@ -135,6 +135,21 @@
 			status = "okay";
 		};
 
+		i2s:i2s@a9400000 {
+			status = "okay";
+		};
+
+		sound {
+			compatible = "spear,spear-evb";
+			audio-controllers = <&i2s>;
+			audio-codecs = <&sta529>;
+			codec_dai_name = "sta529-audio";
+			stream_name = "pcm";
+			dai_name = "sta529-pcm";
+			nr_controllers = <1>;
+		        status = "okay";
+		};
+
 		sdhci@70000000 {
 			power-gpio = <&gpiopinctrl 50 1>;
 			power_always_enb;
@@ -277,6 +292,11 @@
 						ts,i_drive = <1>;
 					};
 				};
+
+					sta529:	sta529@1a {
+						compatible = "st,sta529";
+						reg = <0x1a>;
+					};
 			};
 
 			i2c1: i2c@a7000000 {
