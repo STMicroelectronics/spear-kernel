@@ -48,6 +48,10 @@
 					st,pins = "i2c0_grp";
 					st,function = "i2c0";
 				};
+				i2s0 {
+					st,pins = "i2s0_grp";
+					st,function = "i2s0";
+				};
 				i2s1 {
 					st,pins = "i2s1_grp";
 					st,function = "i2s1";
