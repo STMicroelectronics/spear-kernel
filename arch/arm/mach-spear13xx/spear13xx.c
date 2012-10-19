@@ -268,14 +268,14 @@ int audio_clk_config(struct i2s_hw_config_data *config)
 
 	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_mclk");
 	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_ref_mclk\n", __func__);
 		ret = PTR_ERR(i2s_ref_clk);
 		goto put_i2s_sclk_gclk;
 	}
 
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_mclk\n", __func__);
 		ret = PTR_ERR(i2s_src_clk);
 		goto put_i2s_ref_clk;
 	}
@@ -381,7 +381,7 @@ void i2s_clk_init(void)
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
 
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_mclk\n", __func__);
 		goto put_src_pclk;
 	}
 
