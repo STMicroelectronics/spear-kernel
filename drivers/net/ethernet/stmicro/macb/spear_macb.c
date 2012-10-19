@@ -1773,12 +1773,12 @@ static int __exit macb_remove(struct platform_device *pdev)
 		iounmap(bp->regs);
 
 		if (bp->hclk) {
-			clk_disable(bp->hclk);
+			clk_disable_unprepare(bp->hclk);
 			clk_put(bp->hclk);
 		}
 
 		if (bp->pclk) {
-			clk_disable(bp->pclk);
+			clk_disable_unprepare(bp->pclk);
 			clk_put(bp->pclk);
 		}
 		free_netdev(dev);
@@ -1794,12 +1794,14 @@ static int macb_suspend(struct platform_device *pdev, pm_message_t state)
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct macb *bp = netdev_priv(netdev);
 
-	netif_device_detach(netdev);
+	if (!netdev || !netif_running(netdev))
+		return 0;
 
+	netif_device_detach(netdev);
 	if (bp->hclk)
-		clk_disable(bp->hclk);
+		clk_disable_unprepare(bp->hclk);
 	if (bp->pclk)
-		clk_disable(bp->pclk);
+		clk_disable_unprepare(bp->pclk);
 
 	return 0;
 }
@@ -1808,6 +1810,9 @@ static int macb_resume(struct platform_device *pdev)
 {
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct macb *bp = netdev_priv(netdev);
+
+	if (!netdev || !netif_running(netdev))
+		return 0;
 
 #ifdef MACB_PCLK
 	if (bp->pclk)
