@@ -319,6 +319,20 @@ static struct aux_clk_masks i2s_sclk_masks = {
 /* i2s prs1 aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl i2s_prs1_rtbl[] = {
 	/* For parent clk = 49.152 MHz */
+	{.xscale = 1, .yscale = 12, .eq = 0}, /* 2.048 MHz, smp freq = 8Khz */
+	{.xscale = 11, .yscale = 96, .eq = 0}, /* 2.816 MHz, smp freq = 11Khz */
+	{.xscale = 1, .yscale = 6, .eq = 0}, /* 4.096 MHz, smp freq = 16Khz */
+	{.xscale = 11, .yscale = 48, .eq = 0}, /* 5.632 MHz, smp freq = 22Khz */
+
+	/*
+	 * with parent clk = 49.152, freq gen is 8.192 MHz, smp freq = 32Khz
+	 * with parent clk = 12.288, freq gen is 2.048 MHz, smp freq = 8Khz
+	 */
+	{.xscale = 1, .yscale = 3, .eq = 0},
+
+	/* For parent clk = 49.152 MHz */
+	{.xscale = 17, .yscale = 37, .eq = 0}, /* 11.289 MHz, smp freq = 44Khz*/
+
 	{.xscale = 1, .yscale = 2, .eq = 0}, /* 12.288 MHz */
 };
 
@@ -660,7 +674,7 @@ void __init spear1310_clk_init(void)
 			ARRAY_SIZE(i2s_src_parents), 0, SPEAR1310_I2S_CLK_CFG,
 			SPEAR1310_I2S_SRC_CLK_SHIFT, SPEAR1310_I2S_SRC_CLK_MASK,
 			0, &_lock);
-	clk_register_clkdev(clk, "i2s_src_clk", NULL);
+	clk_register_clkdev(clk, "i2s_src_mclk", NULL);
 
 	clk = clk_register_aux("i2s_prs1_clk", NULL, "i2s_src_mclk", 0,
 			SPEAR1310_I2S_CLK_CFG, &i2s_prs1_masks, i2s_prs1_rtbl,
@@ -668,10 +682,10 @@ void __init spear1310_clk_init(void)
 	clk_register_clkdev(clk, "i2s_prs1_clk", NULL);
 
 	clk = clk_register_mux(NULL, "i2s_ref_mclk", i2s_ref_parents,
-			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR1310_I2S_CLK_CFG,
-			SPEAR1310_I2S_REF_SHIFT, SPEAR1310_I2S_REF_SEL_MASK, 0,
-			&_lock);
-	clk_register_clkdev(clk, "i2s_ref_clk", NULL);
+			ARRAY_SIZE(i2s_ref_parents), CLK_SET_RATE_PARENT,
+			SPEAR1310_I2S_CLK_CFG, SPEAR1310_I2S_REF_SHIFT,
+			SPEAR1310_I2S_REF_SEL_MASK, 0, &_lock);
+	clk_register_clkdev(clk, "i2s_ref_mclk", NULL);
 
 	clk = clk_register_gate(NULL, "i2s_ref_pad_clk", "i2s_ref_mclk", 0,
 			SPEAR1310_PERIP2_CLK_ENB, SPEAR1310_I2S_REF_PAD_CLK_ENB,
@@ -679,8 +693,8 @@ void __init spear1310_clk_init(void)
 	clk_register_clkdev(clk, "i2s_ref_pad_clk", NULL);
 
 	clk = clk_register_aux("i2s_sclk_clk", "i2s_sclk_gclk",
-			"i2s_ref_pad_clk", 0, SPEAR1310_I2S_CLK_CFG,
-			&i2s_sclk_masks, i2s_sclk_rtbl,
+			"i2s_ref_mclk", 0 ,
+			SPEAR1310_I2S_CLK_CFG,  &i2s_sclk_masks, i2s_sclk_rtbl,
 			ARRAY_SIZE(i2s_sclk_rtbl), &_lock, &clk1);
 	clk_register_clkdev(clk, "i2s_sclk_clk", NULL);
 	clk_register_clkdev(clk1, "i2s_sclk_gclk", NULL);
