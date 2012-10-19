@@ -15,6 +15,7 @@
 
 #include <linux/ahci_platform.h>
 #include <linux/delay.h>
+#include <linux/dw_dmac.h>
 #include <linux/amba/pl022.h>
 #include <linux/clk.h>
 #include <linux/of_platform.h>
@@ -25,14 +26,19 @@
 #include <asm/hardware/gic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
+#include <mach/dma.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+#include <sound/designware_i2s.h>
+#include <sound/pcm.h>
 
 /* Base addresses */
 #define SPEAR1310_GETH1_BASE			UL(0x6D000000)
 #define SPEAR1310_GETH2_BASE			UL(0x6D100000)
 #define SPEAR1310_GETH3_BASE			UL(0x6D200000)
 #define SPEAR1310_GETH4_BASE			UL(0x6D300000)
+#define SPEAR1310_I2S0_BASE			UL(0xE0180000)
+#define SPEAR1310_I2S1_BASE			UL(0xE0200000)
 #define SPEAR1310_SSP1_BASE			UL(0x5D400000)
 #define SPEAR1310_SATA0_BASE			UL(0xB1000000)
 #define SPEAR1310_SATA1_BASE			UL(0xB1800000)
@@ -484,6 +490,79 @@ static struct dwc_otg_plat_data spear1310_otg_plat_data = {
 	.phy_init = spear1310_otg_phy_init,
 };
 
+/* i2s0 device registeration */
+static struct dw_dma_slave i2s0_dma_data[] = {
+	{
+		/* Play */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1310_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = DMA_MASTER_MEMORY,
+		.dst_master = SPEAR1310_DMA_MASTER_I2S,
+	}, {
+		/* Record */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1310_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1310_DMA_MASTER_I2S,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static struct i2s_platform_data i2s0_data = {
+	.snd_fmts = (SNDRV_PCM_FMTBIT_S16_LE | \
+		    SNDRV_PCM_FMTBIT_S32_LE),
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
+	.play_dma_data = &i2s0_dma_data[0],
+	.capture_dma_data = &i2s0_dma_data[1],
+	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
+	.clk_init = i2s_clk_init,
+};
+
+/* i2s1 device registeration */
+static struct dw_dma_slave i2s1_dma_data[] = {
+	{
+		/* Play */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1310_DMA_REQ_I2S_TX),
+		.cfg_lo = 0,
+		.src_master = DMA_MASTER_MEMORY,
+		.dst_master = SPEAR1310_DMA_MASTER_I2S,
+	}, {
+		/* Record */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_SRC_PER(SPEAR1310_DMA_REQ_I2S_RX),
+		.cfg_lo = 0,
+		.src_master = SPEAR1310_DMA_MASTER_I2S,
+		.dst_master = DMA_MASTER_MEMORY,
+
+	}
+};
+
+static struct i2s_platform_data i2s1_data = {
+	.snd_fmts = (SNDRV_PCM_FMTBIT_S16_LE | \
+		    SNDRV_PCM_FMTBIT_S32_LE),
+	.snd_rates = (SNDRV_PCM_RATE_8000 | \
+		 SNDRV_PCM_RATE_11025 | \
+		 SNDRV_PCM_RATE_16000 | \
+		 SNDRV_PCM_RATE_22050 | \
+		 SNDRV_PCM_RATE_32000 | \
+		 SNDRV_PCM_RATE_44100 | \
+		 SNDRV_PCM_RATE_48000),
+	.play_dma_data = &i2s1_dma_data[0],
+	.capture_dma_data = &i2s1_dma_data[1],
+	.filter = dw_dma_filter,
+	.i2s_clk_cfg = audio_clk_config,
+	.clk_init = i2s_clk_init,
+};
+
 /* Add SPEAr1310 auxdata to pass platform data */
 static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("st,spear-adc", SPEAR13XX_ADC_BASE, NULL, &adc_pdata),
@@ -509,6 +588,11 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 			&clcd_plat_info),
 	OF_DEV_AUXDATA("snps,spear-ahci", SPEAR1310_SATA0_BASE, NULL,
 			&sata_pdata),
+	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR1310_I2S0_BASE, NULL,
+			&i2s0_data),
+	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR1310_I2S1_BASE, NULL,
+			&i2s1_data),
+
 	{}
 };
 
