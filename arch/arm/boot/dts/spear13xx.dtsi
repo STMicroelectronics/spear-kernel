@@ -303,24 +303,6 @@
 				status = "disabled";
 			};
 
-			i2s@e0180000 {
-				compatible = "st,designware-i2s";
-				reg = <0xe0180000 0x1000>;
-				interrupt-names = "play_irq", "record_irq";
-				interrupts = <0 10 0x4
-					      0 11 0x4 >;
-				status = "disabled";
-			};
-
-			i2s@e0200000 {
-				compatible = "st,designware-i2s";
-				reg = <0xe0200000 0x1000>;
-				interrupt-names = "play_irq", "record_irq";
-				interrupts = <0 26 0x4
-					      0 53 0x4>;
-				status = "disabled";
-			};
-
 			adc@e0080000 {
 				compatible = "st,spear-adc";
 				reg = <0xe0080000 0x1000>;
