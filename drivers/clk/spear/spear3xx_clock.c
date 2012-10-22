@@ -579,7 +579,7 @@ void __init spear3xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "jpeg_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			JPEG_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "jpeg");
+	clk_register_clkdev(clk, NULL, "d0800000.jpeg");
 
 	clk = clk_register_gate(NULL, "smi_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			SMI_CLK_ENB, 0, &_lock);
