@@ -98,7 +98,8 @@
 			compatible = "st,spear320-macb";
 			reg = <0xaa000000 0x2000>;
 			interrupt-parent = <&shirq>;
-			interrupts = <17>;
+			interrupts = <17 19>;
+			interrupt-names = "macb1_irq", "macb1_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
 			local-mac-address = [f2 f2 f2 45 67 89];
@@ -108,7 +109,8 @@
 			compatible = "st,spear320-macb";
 			reg = <0xab000000 0x2000>;
 			interrupt-parent = <&shirq>;
-			interrupts = <18>;
+			interrupts = <18 20>;
+			interrupt-names = "macb2_irq", "macb2_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
 			local-mac-address = [f2 f2 f2 45 67 8a];
