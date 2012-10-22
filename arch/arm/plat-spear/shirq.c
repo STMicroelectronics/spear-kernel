@@ -152,10 +152,10 @@ static struct spear_shirq *spear320_shirq_blocks[] = {
 	&spear320_shirq_intrcomm_ras,
 };
 
-static void shirq_irq_mask_unmask(struct irq_data *d, bool mask)
+static void shirq_irq_mask_unmask(struct irq_data *data, bool mask)
 {
-	struct spear_shirq *shirq = irq_data_get_irq_chip_data(d);
-	u32 val, offset = d->irq - shirq->irq_base;
+	struct spear_shirq *shirq = irq_data_get_irq_chip_data(data);
+	u32 val, offset = data->irq - shirq->irq_base;
 	unsigned long flags;
 
 	if (shirq->regs.enb_reg == -1)
@@ -174,14 +174,26 @@ static void shirq_irq_mask_unmask(struct irq_data *d, bool mask)
 
 }
 
-static void shirq_irq_mask(struct irq_data *d)
+static void shirq_irq_mask(struct irq_data *data)
 {
-	shirq_irq_mask_unmask(d, 1);
+	shirq_irq_mask_unmask(data, 1);
 }
 
-static void shirq_irq_unmask(struct irq_data *d)
+static void shirq_irq_unmask(struct irq_data *data)
 {
-	shirq_irq_mask_unmask(d, 0);
+	shirq_irq_mask_unmask(data, 0);
+}
+
+static int shirq_set_wake(struct irq_data *data, unsigned int enable)
+{
+	struct spear_shirq *shirq = irq_data_get_irq_chip_data(data);
+
+	if (enable)
+		enable_irq_wake(shirq->irq);
+	else
+		disable_irq_wake(shirq->irq);
+
+	return 0;
 }
 
 static struct irq_chip shirq_chip = {
@@ -189,6 +201,7 @@ static struct irq_chip shirq_chip = {
 	.irq_ack	= shirq_irq_mask,
 	.irq_mask	= shirq_irq_mask,
 	.irq_unmask	= shirq_irq_unmask,
+	.irq_set_wake	= shirq_set_wake,
 };
 
 static void shirq_handler(unsigned irq, struct irq_desc *desc)
