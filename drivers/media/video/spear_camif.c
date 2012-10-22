@@ -275,8 +275,8 @@ enum camif_burst_size {
  * some other format (for e.g. say the planar V4L2_PIX_FMT_YUV422P format)
  */
 static const struct soc_mbus_pixelfmt camif_formats[] = {
-	/* added */
-	[V4L2_MBUS_FMT_UYVY8_2X8] = {
+	/* added V4L2_MBUS_FMT_UYVY8_2X8 */
+	{
 		.fourcc			= V4L2_PIX_FMT_YUYV,
 		.name			= "YUYV",
 		.bits_per_sample	= 8,
@@ -284,16 +284,22 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 		.order			= SOC_MBUS_ORDER_BE,
 	},
 
-	/* 3-byte RGB-888 received -> 4-byte RGBa stored */
-	[V4L2_MBUS_FMT_RGB24_2X8_LE] = {
+	/*
+	 * 3-byte RGB-888 received -> 4-byte RGBa stored
+	 * V4L2_MBUS_FMT_RGB24_2X8_LE
+	 */
+	{
 		.fourcc			= V4L2_PIX_FMT_RGB32,
 		.name			= "RGBa 32 bit",
 		.bits_per_sample	= 8,
 		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
 		.order			= SOC_MBUS_ORDER_LE,
 	},
-	/* 3-byte BGR-888 received -> 4-byte BGRa stored */
-	[V4L2_MBUS_FMT_BGR24_2X8_LE] = {
+	/*
+	 * 3-byte BGR-888 received -> 4-byte BGRa stored
+	 * V4L2_MBUS_FMT_BGR24_2X8_LE
+	 */
+	{
 		.fourcc			= V4L2_PIX_FMT_BGR32,
 		.name			= "BGRa 32 bit",
 		.bits_per_sample	= 8,
@@ -1271,14 +1277,23 @@ static int camif_get_formats(struct soc_camera_device *icd, unsigned int idx,
 
 	switch (code) {
 	case V4L2_MBUS_FMT_RGB24_2X8_LE:
-	case V4L2_MBUS_FMT_BGR24_2X8_LE:
 		formats++;
 		if (xlate) {
-			xlate->host_fmt	= &camif_formats[code];
+			xlate->host_fmt	= &camif_formats[1];
 			xlate->code = code;
 			xlate++;
 			dev_dbg(dev, "providing format %s using code %d\n",
-					camif_formats[code].name, code);
+					camif_formats[1].name, code);
+		}
+
+	case V4L2_MBUS_FMT_BGR24_2X8_LE:
+		formats++;
+		if (xlate) {
+			xlate->host_fmt	= &camif_formats[2];
+			xlate->code = code;
+			xlate++;
+			dev_dbg(dev, "providing format %s using code %d\n",
+					camif_formats[2].name, code);
 		}
 	default:
 		if (xlate)
