@@ -279,6 +279,10 @@
 			status = "okay";
 		};
 
+		jpeg@b2000000 {
+			status = "okay";
+		};
+
 		apb {
 			adc@e0080000 {
 				status = "okay";

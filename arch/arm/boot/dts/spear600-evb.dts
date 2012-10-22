@@ -89,6 +89,10 @@
 			status = "okay";
 		};
 
+		jpeg@d0800000 {
+			status = "okay";
+		};
+
 		apb {
 			serial@d0000000 {
 				status = "okay";

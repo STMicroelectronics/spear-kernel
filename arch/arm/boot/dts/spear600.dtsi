@@ -133,6 +133,14 @@
 			status = "disabled";
 		};
 
+		jpeg@d0800000 {
+			compatible = "st,designware-jpeg";
+			reg = <0xd0800000 0x2000>;
+			interrupt-parent = <&vic1>;
+			interrupts = <20>;
+			status = "disabled";
+		};
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
