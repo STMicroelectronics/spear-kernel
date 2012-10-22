@@ -288,6 +288,8 @@ static struct of_dev_auxdata spear310_auxdata_lookup[] __initdata = {
 			&spear310_uart_data[4]),
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR3XX_GETH_BASE, NULL,
 			&eth_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR3XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 

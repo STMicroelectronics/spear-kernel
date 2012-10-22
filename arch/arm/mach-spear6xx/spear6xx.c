@@ -28,8 +28,12 @@
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
 #include <plat/pl080.h>
+#include <plat/jpeg.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+
+#define VA_SPEAR6XX_PERIP1_SW_RST	(VA_SPEAR6XX_ICM3_MISC_REG_BASE + 0x038)
+	#define SPEAR6XX_JPEG_SOF_RST	(1 << 8)
 
 /* dmac device registration */
 static struct pl08x_channel_data spear600_dma_info[] = {
@@ -474,6 +478,19 @@ static struct plat_stmmacenet_data eth_data = {
 	.clk_csr = STMMAC_CSR_150_250M,
 };
 
+/* jpeg dma platform data */
+static void jpeg_plat_reset(void)
+{
+	jpeg_ip_reset(VA_SPEAR6XX_PERIP1_SW_RST, SPEAR6XX_JPEG_SOF_RST);
+}
+
+static struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.mem2jpeg_slave = "to_jpeg",
+	.jpeg2mem_slave = "from_jpeg",
+	.plat_reset = jpeg_plat_reset,
+};
+
 /* This will create static memory mapping for selected devices */
 void __init spear6xx_map_io(void)
 {
@@ -521,6 +538,8 @@ struct of_dev_auxdata spear6xx_auxdata_lookup[] __initdata = {
 			&pl110_plat_data),
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR6XX_GETH_BASE, NULL,
 			&eth_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR6XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 

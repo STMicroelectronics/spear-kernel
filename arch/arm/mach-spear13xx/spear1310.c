@@ -31,6 +31,7 @@
 #include <mach/spear.h>
 #include <sound/designware_i2s.h>
 #include <sound/pcm.h>
+#include <plat/jpeg.h>
 
 /* Base addresses */
 #define SPEAR1310_GETH1_BASE			UL(0x6D000000)
@@ -42,6 +43,7 @@
 #define SPEAR1310_SSP1_BASE			UL(0x5D400000)
 #define SPEAR1310_SATA0_BASE			UL(0xB1000000)
 #define SPEAR1310_SATA1_BASE			UL(0xB1800000)
+#define SPEAR1310_JPEG_BASE			UL(0xB2000000)
 #define SPEAR1310_SATA2_BASE			UL(0xB4000000)
 
 #define SPEAR1310_RAS_GRP1_BASE			UL(0xD8000000)
@@ -60,7 +62,9 @@
 #define SPEAR1310_PHY_SMII_VAL		0x6
 
 #define SPEAR1310_PCM_CFG			(VA_MISC_BASE + 0x100)
-
+#define VA_SPEAR1310_PERIP1_SW_RST		(VA_MISC_BASE + 0x308)
+	#define SPEAR1310_JPEG_SOF_RST		(1 << 28)
+#define VA_SPEAR1310_DMAC_FLOW_SEL		(VA_MISC_BASE + 0x388)
 #define VA_SPEAR1310_USBPHY_GEN_CFG		(VA_MISC_BASE + 0x394)
 	#define USBPLLLOCK			(1 << 24)
 	#define USBPHYRST			(1 << 15)
@@ -374,6 +378,49 @@ static struct plat_stmmacenet_data eth4_data = {
 	.clk_csr = STMMAC_CSR_150_250M,
 };
 
+/* jpeg device registeration */
+static struct dw_dma_slave jpeg_dma_param[] = {
+	{
+		/* mem2jpeg */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1310_DMA_REQ_TO_JPEG),
+		.cfg_lo = 0,
+		.src_master = DMA_MASTER_MEMORY,
+		.dst_master = SPEAR1310_DMA_MASTER_JPEG,
+	}, {
+		/* jpeg2mem */
+		.dma_master_id = 0,
+		.cfg_hi = DWC_CFGH_DST_PER(SPEAR1310_DMA_REQ_FROM_JPEG),
+		.cfg_lo = 0,
+		.src_master = SPEAR1310_DMA_MASTER_JPEG,
+		.dst_master = DMA_MASTER_MEMORY,
+	}
+};
+
+static bool jpeg_dma_filter(struct dma_chan *chan, void *slave)
+{
+	if (dw_dma_filter(chan, slave)) {
+		/* setting Peripheral flow controller for jpeg */
+		writel(1 << SPEAR1310_DMA_REQ_FROM_JPEG,
+				VA_SPEAR1310_DMAC_FLOW_SEL);
+		return true;
+	} else
+		return false;
+
+}
+
+static void jpeg_plat_reset(void)
+{
+	jpeg_ip_reset(VA_SPEAR1310_PERIP1_SW_RST, SPEAR1310_JPEG_SOF_RST);
+}
+
+struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = jpeg_dma_filter,
+	.mem2jpeg_slave = &jpeg_dma_param[0],
+	.jpeg2mem_slave = &jpeg_dma_param[1],
+	.plat_reset = jpeg_plat_reset,
+};
+
 /* sata platfrom data */
 static void sata_miphy_exit(struct device *dev)
 {
@@ -567,6 +614,8 @@ static struct i2s_platform_data i2s1_data = {
 static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("st,spear-adc", SPEAR13XX_ADC_BASE, NULL, &adc_pdata),
 	OF_DEV_AUXDATA("arasan,cf-spear1340", MCIF_CF_BASE, NULL, &cf_pdata),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR1310_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC0_BASE, NULL, &dmac_plat_data0),
 	OF_DEV_AUXDATA("snps,dma-spear1340", DMAC1_BASE, NULL, &dmac_plat_data1),
 	OF_DEV_AUXDATA("arm,pl022", SSP_BASE, NULL, &pl022_plat_data),

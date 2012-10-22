@@ -568,6 +568,8 @@ static struct of_dev_auxdata spear320_hmi_auxdata_lookup[] __initdata = {
 			&udc_plat_data),
 	OF_DEV_AUXDATA("snps,designware-i2s", SPEAR320_I2S_BASE, NULL,
 			&i2s_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR3XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 
@@ -593,6 +595,8 @@ static struct of_dev_auxdata spear320_evb_auxdata_lookup[] __initdata = {
 			&eth_data),
 	OF_DEV_AUXDATA("snps,designware-udc", SPEAR3XX_USBD_CSR_BASE, NULL,
 			&udc_plat_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR3XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 

@@ -20,6 +20,7 @@
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <plat/adc.h>
+#include <plat/jpeg.h>
 #include <plat/pl080.h>
 #include <plat/shirq.h>
 #include <mach/generic.h>
@@ -31,6 +32,22 @@ struct adc_plat_data adc_pdata = {
 	.dma_data = "adc",
 	.config = {CONTINUOUS_CONVERSION, EXTERNAL_VOLT, 2500, INTERNAL_SCAN,
 		NORMAL_RESOLUTION, 14000000, 0},
+};
+
+#define VA_SPEAR3XX_PERIP1_SW_RST	(VA_SPEAR3XX_ICM3_MISC_REG_BASE + 0x038)
+	#define SPEAR3XX_JPEG_SOF_RST	(1 << 8)
+/* jpeg dma platform data */
+static void jpeg_plat_reset(void)
+{
+	jpeg_ip_reset((void __iomem *) VA_SPEAR3XX_PERIP1_SW_RST,
+			SPEAR3XX_JPEG_SOF_RST);
+}
+
+struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.mem2jpeg_slave = "to_jpeg",
+	.jpeg2mem_slave = "from_jpeg",
+	.plat_reset = jpeg_plat_reset,
 };
 
 /* ssp device registration */
