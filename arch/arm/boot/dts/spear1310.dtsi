@@ -106,20 +106,6 @@
 			status = "disabled";
 		};
 
-		can0@5d5000000 {
-			compatible = "st,can";
-			reg = <0x5d500000 0x1000>;
-			interrupts = <0 76 0x4>;
-			status = "disabled";
-		};
-
-		can1@5d6000000 {
-			compatible = "st,can";
-			reg = <0x5d600000 0x1000>;
-			interrupts = <0 77 0x4>;
-			status = "disabled";
-		};
-
 		i2s@e0180000 {
 				compatible = "snps,designware-i2s";
 				reg = <0xe0180000 0x1000>;
@@ -145,6 +131,22 @@
 			};
 
 		apb {
+			can0@5d500000 {
+				compatible = "bosch,c_can";
+				reg = <0x5d500000 0x1000>;
+				reg_alignment = <0x18>;
+				interrupts = <0 76 0x4>;
+				status = "disabled";
+			};
+
+			can1@5d600000 {
+				compatible = "bosch,c_can";
+				reg = <0x5d600000 0x1000>;
+				reg_alignment = <0x18>;
+				interrupts = <0 77 0x4>;
+				status = "disabled";
+			};
+
 			i2c0: i2c@e0280000 {
 				stop-control;
 				recovery,gpio;

@@ -280,16 +280,16 @@
 			status = "okay";
 		};
 
-		can0@5d5000000 {
-			status = "okay";
-		};
-
-		can1@5d6000000 {
-			status = "okay";
-		};
-
 		apb {
 			adc@e0080000 {
+				status = "okay";
+			};
+
+			can0@5d500000 {
+				status = "okay";
+			};
+
+			can1@5d600000 {
 				status = "okay";
 			};
 
