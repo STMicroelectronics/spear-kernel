@@ -334,7 +334,7 @@ struct fsmc_nand_data {
 	struct device		*dev;
 	struct clk		*clk;
 	struct fsmc_eccplace	*ecc_place;
-	unsigned int		bank;
+	int			bank;
 
 	/* DMA related objects */
 	struct dma_chan		*read_dma_chan;
@@ -362,16 +362,24 @@ static void fsmc_select_chip(struct mtd_info *mtd, int chipnr)
 	struct fsmc_nand_data *host;
 
 	host = container_of(mtd, struct fsmc_nand_data, mtd);
+	if (host->bank == chipnr)
+		return;
 
 	host->bank = chipnr;
 	switch (chipnr) {
 	case -1:
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0 | NAND_CTRL_CHANGE);
+		clk_disable_unprepare(host->clk);
 		break;
 	case 0:
 	case 1:
 	case 2:
 	case 3:
+		if (clk_prepare_enable(host->clk)) {
+			dev_err(host->dev, "couldn't enable clock\n");
+			return;
+		}
+
 		if (host->select_chip)
 			host->select_chip(chipnr,
 					chip->options & NAND_BUSWIDTH_16);
@@ -1127,6 +1135,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 	host->fsmc_board_data.dev_timings = &pdata->nand_timings;
 	host->fsmc_board_data.rbpin = &pdata->rbpin;
 
+	host->bank = -1; /* initially chip select is de-activated */
 	host->mode = pdata->mode;
 	host->max_banks = pdata->max_banks;
 
@@ -1343,6 +1352,7 @@ static int __init fsmc_nand_probe(struct platform_device *pdev)
 		goto err_probe;
 
 	platform_set_drvdata(pdev, host);
+	clk_disable_unprepare(host->clk);
 	dev_info(&pdev->dev, "FSMC NAND driver registration successful\n");
 	return 0;
 
@@ -1382,7 +1392,6 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 			dma_release_channel(host->write_dma_chan);
 			dma_release_channel(host->read_dma_chan);
 		}
-		clk_disable_unprepare(host->clk);
 		clk_put(host->clk);
 	}
 
@@ -1392,9 +1401,6 @@ static int fsmc_nand_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int fsmc_nand_suspend(struct device *dev)
 {
-	struct fsmc_nand_data *host = dev_get_drvdata(dev);
-	if (host)
-		clk_disable_unprepare(host->clk);
 	return 0;
 }
 
@@ -1402,15 +1408,22 @@ static int fsmc_nand_resume(struct device *dev)
 {
 	struct fsmc_nand_data *host = dev_get_drvdata(dev);
 	uint32_t bank;
+	int ret;
 
 	if (host) {
-		clk_prepare_enable(host->clk);
+		ret = clk_prepare_enable(host->clk);
+		if (ret) {
+			dev_err(host->dev, "couldn't enable clock\n");
+			return ret;
+		}
 
 		for (bank = 0; bank < host->max_banks; bank++)
 			fsmc_nand_setup(host->regs_va, bank,
 					host->nand.options & NAND_BUSWIDTH_16,
 					host->fsmc_board_data.dev_timings,
 					host->fsmc_board_data.rbpin);
+
+		clk_disable_unprepare(host->clk);
 	}
 	return 0;
 }
