@@ -90,6 +90,25 @@ static const struct of_device_id c_can_of_table[] = {
 	{ /* sentinel */ },
 };
 
+#ifdef CONFIG_OF
+static int __devinit c_can_probe_config_dt(struct platform_device *pdev,
+					struct device_node *np)
+{
+	struct c_can_platform_data *pdata = dev_get_platdata(&pdev->dev);
+
+	of_property_read_u32(np, "rx_split", &pdata->rx_split);
+	of_property_read_u32(np, "tx_num", &pdata->tx_num);
+
+	return 0;
+}
+#else
+static int __devinit c_can_probe_config_dt(struct platform_device *pdev,
+		struct device_node *np)
+{
+	return -ENOSYS;
+}
+#endif
+
 static int __devinit c_can_plat_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -98,6 +117,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	struct c_can_priv *priv;
 	const struct of_device_id *match;
 	const struct platform_device_id *id;
+	struct c_can_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct pinctrl *pinctrl;
 	struct resource *mem;
 	int irq;
@@ -113,12 +133,36 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		}
 		id = match->data;
 
+		pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+		pdev->dev.platform_data = pdata;
+		ret = c_can_probe_config_dt(pdev, pdev->dev.of_node);
+
+		if (ret) {
+			dev_err(&pdev->dev, "Missing platform data\n");
+			return -ENOSYS;
+		} else if (!(pdata->rx_split && pdata->tx_num)) {
+			dev_info(&pdev->dev,
+					"invalid plat data, using default\n");
+			pdata->rx_split = 9;
+			pdata->tx_num = 16;
+		}
+
 		if (of_property_read_u32(pdev->dev.of_node,
 				"reg_alignment", &reg_alignment))
 			dev_warn(&pdev->dev, "Register alignment not provided, \
 					using 32-bit as default\n");
 	} else {
 		id = platform_get_device_id(pdev);
+
+		/*
+		 * get the device specific details like Rx/Tx message object
+		 * configurations from the platform data.
+		 */
+		pdata = pdev->dev.platform_data;
+		if (!pdata) {
+			dev_err(&pdev->dev, "platform data is NULL\n");
+			return -EINVAL;
+		}
 	}
 
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
@@ -160,7 +204,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		reg_alignment = mem->flags;
 
 	/* allocate the c_can device */
-	dev = alloc_c_can_dev();
+	dev = alloc_c_can_dev(pdata->tx_num);
 	if (!dev) {
 		ret = -ENOMEM;
 		goto exit_iounmap;
@@ -170,6 +214,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	switch (id->driver_data) {
 	case BOSCH_C_CAN:
 		priv->regs = reg_map_c_can;
+		priv->pdata = pdata;
 		switch (reg_alignment & IORESOURCE_MEM_TYPE_MASK) {
 		case IORESOURCE_MEM_32BIT:
 			priv->read_reg = c_can_plat_read_reg_aligned_to_32bit;

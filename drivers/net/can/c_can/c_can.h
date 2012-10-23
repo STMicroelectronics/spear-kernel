@@ -150,12 +150,26 @@ enum c_can_dev_id {
 	BOSCH_D_CAN,
 };
 
+/**
+ * struct c_can_platform_data - Depending on the underlying platform,
+ *                             the message object configuration
+ *                             for c_can controller can change
+ * @rx_split: defines the split point for the lower and upper Rx msg
+ *            object buckets.
+ * @tx_num: number of objs kept aside for TX purposes
+ */
+struct c_can_platform_data {
+	unsigned int rx_split;
+	unsigned int tx_num;
+};
+
 /* c_can private data structure */
 struct c_can_priv {
 	struct can_priv can;	/* must be the first member */
 	struct napi_struct napi;
 	struct net_device *dev;
 	struct device *device;
+	struct c_can_platform_data *pdata;
 	int tx_object;
 	int current_status;
 	int last_status;
@@ -171,7 +185,7 @@ struct c_can_priv {
 	enum c_can_dev_id type;
 };
 
-struct net_device *alloc_c_can_dev(void);
+struct net_device *alloc_c_can_dev(unsigned int echo_count);
 void free_c_can_dev(struct net_device *dev);
 int register_c_can_dev(struct net_device *dev);
 void unregister_c_can_dev(struct net_device *dev);
