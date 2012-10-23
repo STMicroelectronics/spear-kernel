@@ -148,8 +148,6 @@
 
 #define C_CAN_MSG_OBJ_TX_LAST	C_CAN_NO_OF_OBJECTS
 
-#define RECEIVE_OBJECT_BITS	0x0000ffff
-
 /* status interrupt */
 #define STATUS_INTERRUPT	0x8000
 
