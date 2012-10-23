@@ -293,11 +293,11 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "can0_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "c_can_platform.0");
+	clk_register_clkdev(clk, NULL, "a1000000.can0");
 
 	clk = clk_register_fixed_factor(NULL, "can1_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "c_can_platform.1");
+	clk_register_clkdev(clk, NULL, "a2000000.can1");
 
 	clk = clk_register_fixed_factor(NULL, "i2s_clk", "ras_apb_clk", 0, 1,
 			1);
