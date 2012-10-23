@@ -915,12 +915,12 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "can0_clk", "apb_clk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_CAN0_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "c_can_platform.0");
+	clk_register_clkdev(clk, NULL, "5d600000.0");
 
 	clk = clk_register_gate(NULL, "can1_clk", "apb_clk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_CAN1_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "c_can_platform.1");
+	clk_register_clkdev(clk, NULL, "5d700000.1");
 
 	clk = clk_register_gate(NULL, "ras_smii0_clk", "ras_ahb_clk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_MII0_CLK_ENB, 0,
