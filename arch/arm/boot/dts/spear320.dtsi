@@ -128,6 +128,24 @@
 			ranges = <0x40000000 0x40000000 0x80000000
 				  0xd0000000 0xd0000000 0x30000000>;
 
+			can0@a1000000 {
+				compatible = "bosch,c_can";
+				reg = <0xa1000000 0x1000>;
+				interrupts = <11>;
+				interrupt-parent = <&shirq>;
+				reg_alignment = <0x18>;
+				status = "disabled";
+			};
+
+			can1@a2000000 {
+				compatible = "bosch,c_can";
+				reg = <0xa2000000 0x1000>;
+				interrupts = <12>;
+				interrupt-parent = <&shirq>;
+				reg_alignment = <0x18>;
+				status = "disabled";
+			};
+
 			i2c1: i2c@a7000000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
