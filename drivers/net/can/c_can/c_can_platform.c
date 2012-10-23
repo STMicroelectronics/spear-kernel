@@ -101,6 +101,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	struct pinctrl *pinctrl;
 	struct resource *mem;
 	int irq;
+	u32 reg_alignment = IORESOURCE_MEM_32BIT;
 	struct clk *clk;
 
 	if (pdev->dev.of_node) {
@@ -111,6 +112,11 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 			goto exit;
 		}
 		id = match->data;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"reg_alignment", &reg_alignment))
+			dev_warn(&pdev->dev, "Register alignment not provided, \
+					using 32-bit as default\n");
 	} else {
 		id = platform_get_device_id(pdev);
 	}
@@ -150,6 +156,9 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit_release_mem;
 	}
 
+	if (!pdev->dev.of_node)
+		reg_alignment = mem->flags;
+
 	/* allocate the c_can device */
 	dev = alloc_c_can_dev();
 	if (!dev) {
@@ -161,7 +170,7 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 	switch (id->driver_data) {
 	case BOSCH_C_CAN:
 		priv->regs = reg_map_c_can;
-		switch (mem->flags & IORESOURCE_MEM_TYPE_MASK) {
+		switch (reg_alignment & IORESOURCE_MEM_TYPE_MASK) {
 		case IORESOURCE_MEM_32BIT:
 			priv->read_reg = c_can_plat_read_reg_aligned_to_32bit;
 			priv->write_reg = c_can_plat_write_reg_aligned_to_32bit;

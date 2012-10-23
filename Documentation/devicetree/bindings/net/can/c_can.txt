@@ -12,6 +12,10 @@ Required properties:
 Optional properties:
 - ti,hwmods		: Must be "d_can<n>" or "c_can<n>", n being the
 			  instance number
+- reg_alignment : Signifies register alignment. Must be either of
+                        1. 0x8 or 0x10 - If registers are 16-bit aligned
+                        2. 0x18 - If registers are 32-bit aligned
+                Default is 32-bit alignment.
 
 Note: "ti,hwmods" field is used to fetch the base address and irq
 resources from TI, omap hwmod data base during device registration.
