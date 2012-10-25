@@ -339,10 +339,6 @@
 			status = "okay";
 		};
 
-		c3@e1800000 {
-			status = "okay";
-		};
-
 		cec0@d0600000 {
 			status = "okay";
 		};

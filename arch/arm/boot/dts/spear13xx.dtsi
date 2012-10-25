@@ -218,13 +218,6 @@
 			status = "disabled";
 		};
 
-		c3@e1800000 {
-			compatible = "st,c3";
-			reg = <0xe1800000 0x1000>;
-			interrupts = <0 32 0x4>;
-			status = "disabled";
-		};
-
 		jpeg@b2000000 {
 			compatible = "st,designware-jpeg";
 			reg = <0xb2000000 0x2000>;
