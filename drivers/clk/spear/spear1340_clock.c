@@ -718,7 +718,7 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk",
 			CLK_SET_RATE_PARENT, SPEAR1340_PERIP1_CLK_ENB,
 			SPEAR1340_C3_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "e1800000.c3");
+	clk_register_clkdev(clk, NULL, "c3");
 
 	/* gmac */
 	clk = clk_register_mux(NULL, "phy_input_mclk", gmac_phy_input_parents,
