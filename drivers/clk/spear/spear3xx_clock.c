@@ -221,7 +221,7 @@ static void __init spear310_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "tdm_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "tdm");
+	clk_register_clkdev(clk, NULL, "b2800000.tdm_hdlc");
 
 	clk = clk_register_fixed_factor(NULL, "uart1_clk", "ras_apb_clk", 0, 1,
 			1);

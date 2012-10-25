@@ -1117,10 +1117,10 @@ void __init spear1310_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "tdm1_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "tdm1_clk", "tdm1_mclk", 0,
-			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_TDM1_CLK_ENB, 0,
-			&_lock);
-	clk_register_clkdev(clk, NULL, "tdm_hdlc.0");
+	clk = clk_register_gate(NULL, "tdm1_clk", "tdm1_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1310_RAS_SW_CLK_CTRL,
+			SPEAR1310_TDM1_CLK_ENB, 0, &_lock);
+	clk_register_clkdev(clk, NULL, "d8200000.tdm_hdlc");
 
 	clk = clk_register_mux(NULL, "tdm2_mclk", tdm_parents,
 			ARRAY_SIZE(tdm_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1128,8 +1128,8 @@ void __init spear1310_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "tdm2_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "tdm2_clk", "tdm2_mclk", 0,
-			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_TDM2_CLK_ENB, 0,
-			&_lock);
-	clk_register_clkdev(clk, NULL, "tdm_hdlc.1");
+	clk = clk_register_gate(NULL, "tdm2_clk", "tdm2_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1310_RAS_SW_CLK_CTRL,
+			SPEAR1310_TDM2_CLK_ENB, 0, &_lock);
+	clk_register_clkdev(clk, NULL, "d8300000.tdm_hdlc");
 }
