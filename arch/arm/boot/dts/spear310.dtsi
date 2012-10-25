@@ -49,6 +49,14 @@
 			status = "disabled";
 		};
 
+		tdm_hdlc@b2800000 {
+			compatible = "st,tdm_hdlc";
+			reg = <0xb2800000 0x1000>;
+			interrupts = <14>;
+			interrupt-parent = <&shirq>;
+			status = "disabled";
+		};
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -136,6 +144,22 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0xb2200000 0x1000>;
 				interrupts = <12>;
+				interrupt-parent = <&shirq>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3000000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xb3000000 0x1000>;
+				interrupts = <15>;
+				interrupt-parent = <&shirq>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3800000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xb3800000 0x1000>;
+				interrupts = <16>;
 				interrupt-parent = <&shirq>;
 				status = "disabled";
 			};

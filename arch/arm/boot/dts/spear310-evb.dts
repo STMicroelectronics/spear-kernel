@@ -155,6 +155,13 @@
 			status = "okay";
 		};
 
+		tdm_hdlc@b2800000 {
+			ip_type = <1>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
+		};
+
 		apb {
 			adc@d0080000 {
 				status = "okay";
@@ -222,6 +229,22 @@
 			       status = "okay";
 				pinctrl-names = "default";
 				pinctrl-0 = <>;
+			};
+
+			rs485_hdlc@b3000000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <24>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3800000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <24>;
+				status = "disabled";
 			};
 
 			timer@f0000000 {

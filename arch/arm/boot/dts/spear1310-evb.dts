@@ -283,6 +283,20 @@
 			status = "okay";
 		};
 
+		tdm_hdlc@D8200000 {
+			ip_type = <0>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
+		};
+
+		tdm_hdlc@D8300000 {
+			ip_type = <1>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
+		};
+
 		apb {
 			adc@e0080000 {
 				status = "okay";
@@ -394,6 +408,22 @@
 				       reg = <0x1a>;
 			      };
 
+			};
+
+			rs485_hdlc@D8000000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <50>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@D8100000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <50>;
+				status = "disabled";
 			};
 
 			kbd@e0300000 {

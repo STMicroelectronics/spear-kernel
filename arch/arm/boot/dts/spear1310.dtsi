@@ -92,14 +92,14 @@
 			status = "disabled";
 		};
 
-		tdm_hdlc0@D8200000 {
+		tdm_hdlc@D8200000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xD8200000 0x1000>;
 			interrupts = <0 80 0x4>;
 			status = "disabled";
 		};
 
-		tdm_hdlc1@D8300000 {
+		tdm_hdlc@D8300000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xD8300000 0x1000>;
 			interrupts = <0 81 0x4>;
@@ -251,6 +251,20 @@
 				interrupts = <0 99 0x4>;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@D8000000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xD8000000 0x1000>;
+				interrupts = <0 78 0x4>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@D8100000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xD8100000 0x1000>;
+				interrupts = <0 79 0x4>;
 				status = "disabled";
 			};
 
