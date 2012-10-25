@@ -223,6 +223,14 @@ static void __init spear310_clk_init(void)
 			1);
 	clk_register_clkdev(clk, NULL, "b2800000.tdm_hdlc");
 
+	clk = clk_register_fixed_factor(NULL, "rs485_0_clk", "ras_apb_clk",
+			0, 1, 1);
+	clk_register_clkdev(clk, NULL, "b3000000.rs485_hdlc");
+
+	clk = clk_register_fixed_factor(NULL, "rs485_1_clk", "ras_apb_clk",
+			0, 1, 1);
+	clk_register_clkdev(clk, NULL, "b3800000.rs485_hdlc");
+
 	clk = clk_register_fixed_factor(NULL, "uart1_clk", "ras_apb_clk", 0, 1,
 			1);
 	clk_register_clkdev(clk, NULL, "b2000000.serial");

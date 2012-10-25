@@ -1132,4 +1132,14 @@ void __init spear1310_clk_init(void)
 			CLK_SET_RATE_PARENT, SPEAR1310_RAS_SW_CLK_CTRL,
 			SPEAR1310_TDM2_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "d8300000.tdm_hdlc");
+
+	clk = clk_register_gate(NULL, "rs485_1_clk", "ras_apb_clk", 0,
+			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_RS485_0_CLK_ENB, 0,
+			&_lock);
+	clk_register_clkdev(clk, NULL, "d8000000.rs485_hdlc");
+
+	clk = clk_register_gate(NULL, "rs485_2_clk", "ras_apb_clk", 0,
+			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_RS485_1_CLK_ENB, 0,
+			&_lock);
+	clk_register_clkdev(clk, NULL, "d8100000.rs485_hdlc");
 }
