@@ -21,6 +21,7 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/platform_data/spear_thermal.h>
 #include <linux/thermal.h>
@@ -104,6 +105,7 @@ static int spear_thermal_probe(struct platform_device *pdev)
 	struct thermal_zone_device *spear_thermal = NULL;
 	struct spear_thermal_dev *stdev;
 	struct spear_thermal_pdata *pdata;
+	struct device_node *np = pdev->dev.of_node;
 	int ret = 0;
 	struct resource *stres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
@@ -112,10 +114,22 @@ static int spear_thermal_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	pdata = dev_get_platdata(&pdev->dev);
-	if (!pdata) {
-		dev_err(&pdev->dev, "platform data is NULL\n");
-		return -EINVAL;
+	if (np) {
+		pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+		if (!pdata) {
+			dev_err(&pdev->dev, "kzalloc fail\n");
+			return -ENOMEM;
+		}
+
+		if (!of_property_read_u32(np, "st,thermal_flags",
+					&pdata->thermal_flags))
+			pr_debug("Unable to read thermal_flag\n");
+	} else {
+		pdata = dev_get_platdata(&pdev->dev);
+		if (!pdata) {
+			dev_err(&pdev->dev, "platform data is NULL\n");
+			return -EINVAL;
+		}
 	}
 
 	stdev = devm_kzalloc(&pdev->dev, sizeof(*stdev), GFP_KERNEL);
@@ -189,6 +203,14 @@ static int spear_thermal_exit(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+static const struct of_device_id thermal_id_table[] = {
+	{ .compatible = "st,thermal" },
+	{}
+};
+MODULE_DEVICE_TABLE(of, thermal_id_table);
+#endif
+
 static struct platform_driver spear_thermal_driver = {
 	.probe = spear_thermal_probe,
 	.remove = spear_thermal_exit,
@@ -196,6 +218,7 @@ static struct platform_driver spear_thermal_driver = {
 		.name = "spear_thermal",
 		.owner = THIS_MODULE,
 		.pm = &spear_thermal_pm_ops,
+		.of_match_table = of_match_ptr(thermal_id_table),
 	},
 };
 
