@@ -140,9 +140,8 @@
 
 #define SPEAR1310_PERIP2_CLK_ENB		(VA_MISC_BASE + 0x304)
 	/* PERIP2_CLK_ENB register masks */
-	#define SPEAR1310_THSENS_CLK_ENB		8
 	#define SPEAR1310_I2S_REF_PAD_CLK_ENB		7
-	#define SPEAR1310_ACP_CLK_ENB			6
+	#define SPEAR1310_THSENS_CLK_ENB		6
 	#define SPEAR1310_GPT3_CLK_ENB			5
 	#define SPEAR1310_GPT2_CLK_ENB			4
 	#define SPEAR1310_KBD_CLK_ENB			3
@@ -496,7 +495,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "thermal_gclk", "thermal_clk", 0,
 			SPEAR1310_PERIP2_CLK_ENB, SPEAR1310_THSENS_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "spear_thermal");
+	clk_register_clkdev(clk, NULL, "e07008c4.thermal");
 
 	/* clock derived from pll4 clk */
 	clk = clk_register_fixed_factor(NULL, "ddr_clk", "pll4_clk", 0, 1,
