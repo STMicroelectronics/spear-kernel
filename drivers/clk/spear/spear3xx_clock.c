@@ -203,6 +203,22 @@ static void __init spear310_clk_init(void)
 			1);
 	clk_register_clkdev(clk, NULL, "44000000.flash");
 
+	clk = clk_register_fixed_factor(NULL, "macb0_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b0000000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb1_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b0800000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb2_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b1000000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb3_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b1800000.eth");
+
 	clk = clk_register_fixed_factor(NULL, "tdm_clk", "ras_ahb_clk", 0, 1,
 			1);
 	clk_register_clkdev(clk, NULL, "tdm");
