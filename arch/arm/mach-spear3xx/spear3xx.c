@@ -24,6 +24,7 @@
 #include <plat/pl080.h>
 #include <plat/shirq.h>
 #include <mach/generic.h>
+#include <mach/misc_regs.h>
 #include <mach/spear.h>
 
 /* adc device registeration */
@@ -126,6 +127,15 @@ void spear3xx_macb_setup(void)
 		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
 		clk_put(amem_clk);
 		return;
+	}
+	if (of_machine_is_compatible("st,spear310")) {
+		/*
+		 * Program the pad strengths of PLGPIO to drive the IO's
+		 * The Magic number being used have direct correlations
+		 * with the driving capabilities of the IO pads.
+		 */
+		writel(0x2f7bc210, PLGPIO3_PAD_PRG);
+		writel(0x017bdef6, PLGPIO4_PAD_PRG);
 	}
 }
 
