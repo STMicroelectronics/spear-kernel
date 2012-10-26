@@ -502,6 +502,11 @@
 				status = "okay";
 			};
 
+			thermal@e07008c4 {
+				st,thermal-flags = <0x7000>;
+				status = "okay";
+			};
+
 			wdt@ec800620 {
 			       status = "okay";
 			};

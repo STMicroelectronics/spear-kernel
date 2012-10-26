@@ -645,6 +645,11 @@
 			wdt@ec800620 {
 			       status = "okay";
 			};
+
+			thermal@e07008c4 {
+				st,thermal-flags = <0x2a00>;
+				status = "okay";
+			};
 		};
 	};
 };
