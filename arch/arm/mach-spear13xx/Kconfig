@@ -16,5 +16,17 @@ config MACH_SPEAR1340
 	select PINCTRL_SPEAR1340
 	help
 	  Supports ST SPEAr1340 machine configured via the device-tree
+
 endmenu
+
+config SPEAR13XX_PCI
+	bool "PCI Express support"
+	select PCI
+	select PCIEPORTBUS
+	select ARCH_SUPPORTS_MSI
+	select PCI_MSI
+	select NEED_MACH_IO_H
+	help
+	  Support SPEAr13xx PCIe Dual controler as a host
+
 endif #ARCH_SPEAR13XX
