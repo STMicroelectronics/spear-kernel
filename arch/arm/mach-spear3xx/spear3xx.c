@@ -111,6 +111,24 @@ struct map_desc spear3xx_io_desc[] __initdata = {
 	},
 };
 
+void spear3xx_macb_setup(void)
+{
+	struct clk *amem_clk;
+
+	/* Enable memory Port-1 clock */
+	amem_clk = clk_get(NULL, "amem_clk");
+	if (IS_ERR(amem_clk)) {
+		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
+		return;
+	}
+
+	if (clk_prepare_enable(amem_clk)) {
+		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
+		clk_put(amem_clk);
+		return;
+	}
+}
+
 /* This will create static memory mapping for selected devices */
 void __init spear3xx_map_io(void)
 {

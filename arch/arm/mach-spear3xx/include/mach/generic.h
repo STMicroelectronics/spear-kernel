@@ -40,6 +40,7 @@ void __init spear3xx_map_io(void);
 void __init spear3xx_dt_init_irq(void);
 int clcd_panel_setup(struct clcd_panel *panel);
 int audio_clk_config(struct i2s_hw_config_data *config);
+void spear3xx_macb_setup(void);
 
 void spear_restart(char, const char *);
 

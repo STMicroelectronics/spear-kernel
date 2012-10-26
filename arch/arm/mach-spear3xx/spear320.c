@@ -53,25 +53,6 @@ void spear320_macb_plat_mdio_control(struct platform_device *pdev)
 	writel(tmp, reg);
 }
 
-void spear320_macb_setup(void)
-{
-	struct clk *amem_clk;
-
-	/* Enable memory Port-1 clock */
-	amem_clk = clk_get(NULL, "amem_clk");
-	if (IS_ERR(amem_clk)) {
-		pr_err("%s:couldn't get %s\n", __func__, "amem_clk");
-		return;
-	}
-
-	if (clk_prepare_enable(amem_clk)) {
-		pr_err("%s:couldn't enable %s\n", __func__, "amem_clk");
-		clk_put(amem_clk);
-		return;
-	}
-
-}
-
 /* MACB platform data for SPEAr320 HMI board*/
 static struct macb_platform_data spear320_hmi_macb_data[] = {
 	{
@@ -618,7 +599,7 @@ static void __init spear320_dt_init(void)
 	}
 
 	/* initialize macb related data in macb plat data */
-	spear320_macb_setup();
+	spear3xx_macb_setup();
 }
 
 static const char * const spear320_dt_board_compat[] = {
