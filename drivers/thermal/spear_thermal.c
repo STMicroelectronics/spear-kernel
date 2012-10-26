@@ -66,7 +66,7 @@ static int spear_thermal_suspend(struct device *dev)
 	actual_mask = readl_relaxed(stdev->thermal_base);
 	writel_relaxed(actual_mask & ~stdev->flags, stdev->thermal_base);
 
-	clk_disable(stdev->clk);
+	clk_disable_unprepare(stdev->clk);
 	dev_info(dev, "Suspended.\n");
 
 	return 0;
@@ -80,7 +80,7 @@ static int spear_thermal_resume(struct device *dev)
 	unsigned int actual_mask = 0;
 	int ret = 0;
 
-	ret = clk_enable(stdev->clk);
+	ret = clk_prepare_enable(stdev->clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Can't enable clock\n");
 		return ret;
@@ -138,7 +138,7 @@ static int spear_thermal_probe(struct platform_device *pdev)
 		return PTR_ERR(stdev->clk);
 	}
 
-	ret = clk_enable(stdev->clk);
+	ret = clk_prepare_enable(stdev->clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Can't enable clock\n");
 		goto put_clk;
@@ -163,7 +163,7 @@ static int spear_thermal_probe(struct platform_device *pdev)
 	return 0;
 
 disable_clk:
-	clk_disable(stdev->clk);
+	clk_disable_unprepare(stdev->clk);
 put_clk:
 	clk_put(stdev->clk);
 
@@ -183,7 +183,7 @@ static int spear_thermal_exit(struct platform_device *pdev)
 	actual_mask = readl_relaxed(stdev->thermal_base);
 	writel_relaxed(actual_mask & ~stdev->flags, stdev->thermal_base);
 
-	clk_disable(stdev->clk);
+	clk_disable_unprepare(stdev->clk);
 	clk_put(stdev->clk);
 
 	return 0;
