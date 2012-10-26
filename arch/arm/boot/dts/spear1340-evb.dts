@@ -274,7 +274,7 @@
 		};
 
 		mali {
-			status = "okay";
+			status = "disabled";
 		};
 
 		soc-camera {
@@ -296,16 +296,16 @@
 			};
 		};
 
-		cam3@d05000000 {
+		cam3@d0500000 {
 			status = "okay";
 		};
 
-		video-dec@ebc000000 {
-			status = "okay";
+		video-dec@ebc00000 {
+			status = "disabled";
 		};
 
-		video-enc@ebd000000 {
-			status = "okay";
+		video-enc@ebd00000 {
+			status = "disabled";
 		};
 
 		ehci@e5800000 {

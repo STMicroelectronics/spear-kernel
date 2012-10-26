@@ -108,7 +108,7 @@
 			status = "disable";
 		};
 
-		cam0@d02000000 {
+		cam0@d0200000 {
 			compatible = "st,camif";
 			reg = <0xd0200000 0x1000>;
 			interrupts = <0 87 0x4
@@ -117,7 +117,7 @@
 			status = "disabled";
 		};
 
-		cam1@d03000000 {
+		cam1@d0300000 {
 			compatible = "st,camif";
 			reg = <0xd0300000 0x1000>;
 			interrupts = <0 89 0x4
@@ -126,7 +126,7 @@
 			status = "disabled";
 		};
 
-		cam2@d04000000 {
+		cam2@d0400000 {
 			compatible = "st,camif";
 			reg = <0xd0400000 0x1000>;
 			interrupts = <0 91 0x4
@@ -135,7 +135,7 @@
 			status = "disabled";
 		};
 
-		cam3@d05000000 {
+		cam3@d0500000 {
 			compatible = "st,camif";
 			reg = <0xd0500000 0x1000>;
 			interrupts = <0 93 0x4
@@ -144,14 +144,14 @@
 			status = "disabled";
 		};
 
-		video-dec@ebd000000 {
+		video-dec@ebd00000 {
 			compatible = "st,video-dec";
 			reg = <0xebd00000 0x1000>;
 			interrupts = <0 81 0x4>;
 			status = "disabled";
 		};
 
-		video-enc@ebc000000 {
+		video-enc@ebc00000 {
 			compatible = "st,video-enc";
 			reg = <0xebc00000 0x1000>;
 			interrupts = <0 82 0x4>;
