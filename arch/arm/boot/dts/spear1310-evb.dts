@@ -271,10 +271,6 @@
 			st,mode = "480x272-32@0";
 		};
 
-		pcie1@b1800000 {
-			status = "okay";
-		};
-
 		pcie2@b4000000 {
 			status = "okay";
 		};
