@@ -76,7 +76,8 @@
 		#size-cells = <1>;
 		compatible = "simple-bus";
 		ranges = <0x50000000 0x50000000 0x10000000
-			  0xb0000000 0xb0000000 0x10000000
+			  0x80000000 0x80000000 0x20000000
+			  0xb0000000 0xb0000000 0x20000000
 			  0xd0000000 0xd0000000 0x02000000
 			  0xd8000000 0xd8000000 0x01000000
 			  0xe0000000 0xe0000000 0x10000000>;
@@ -194,7 +195,7 @@
 		pcie0@b1000000 {
 			compatible = "st,pcie-host";
 			reg = < 0xb1000000 0x4000
-				0x80000000 0x2000
+				0x80000000 0x10000000
 				0xeb800000 0x1000 >;
 			interrupts = <0 68 0x4>;
 			status = "disabled";
@@ -203,7 +204,7 @@
 		pcie1@b1800000 {
 			compatible = "st,pcie-host";
 			reg = < 0xb1800000 0x4000
-				0x90000000 0x2000
+				0x90000000 0x10000000
 				0xeb804000 0x1000 >;
 			interrupts = <0 69 0x4>;
 			status = "disabled";
@@ -212,7 +213,7 @@
 		pcie2@b4000000 {
 			compatible = "st,pcie-host";
 			reg = < 0xb4000000 0x4000
-				0xc0000000 0x2000
+				0xc0000000 0x10000000
 				0xeb808000 0x1000 >;
 			interrupts = <0 70 0x4>;
 			status = "disabled";
