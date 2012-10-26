@@ -162,6 +162,10 @@
 			status = "disabled";
 		};
 
+		usbd@e1100000 {
+			status = "disabled";
+		};
+
 		apb {
 			adc@d0080000 {
 				status = "okay";
