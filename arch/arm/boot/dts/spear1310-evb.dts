@@ -132,6 +132,11 @@
 			status = "okay";
 		};
 
+		flash@a0000000 {
+			bank-width = <4>;
+			status = "disabled";
+		};
+
 		nand@b0000000 {
 			status = "okay";
 
