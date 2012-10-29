@@ -23,6 +23,7 @@
 #include <plat/jpeg.h>
 #include <plat/pl080.h>
 #include <plat/shirq.h>
+#include <mach/emi.h>
 #include <mach/generic.h>
 #include <mach/misc_regs.h>
 #include <mach/spear.h>
@@ -143,6 +144,106 @@ void spear3xx_macb_setup(void)
 void __init spear3xx_map_io(void)
 {
 	iotable_init(spear3xx_io_desc, ARRAY_SIZE(spear3xx_io_desc));
+}
+
+int __init spear3xx_emi_init(u32 base, int numbanks)
+{
+	struct device_node *flash_node;
+	void __iomem *regs;
+	struct clk *clk;
+	const char *status, *devid;
+	int ret;
+	u32 bank;
+	u32 ctrl, ack_reg, width;
+	/* u32 timeout_reg, irq_reg; */
+
+	/* fixing machine dependent values */
+	if (of_machine_is_compatible("st,spear310")) {
+		devid = "50000000.flash";
+		ack_reg = SPEAR310_ACK_REG;
+		/* timeout_reg = SPEAR310_TIMEOUT_REG; */
+		/* irq_reg = SPEAR310_IRQ_REG; */
+	} else if (of_machine_is_compatible("st,spear320")) {
+		devid = "44000000.flash";
+		ack_reg = SPEAR320_ACK_REG;
+		/* timeout_reg = SPEAR320_TIMEOUT_REG; */
+		/* irq_reg = SPEAR320_IRQ_REG; */
+	} else
+		return -EINVAL;
+
+	flash_node = of_find_compatible_node(NULL, NULL, "cfi-flash");
+
+	if (!flash_node)
+		/* cfi-flash node not found */
+		return -ENOENT;
+
+	if (!of_property_read_string(flash_node, "status", &status) &&
+			!strcmp(status, "disabled"))
+		return -ENOENT;
+
+	clk = clk_get_sys(devid, NULL);
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		pr_err("emi-nor: clock get failed\n");
+		goto eclkgetsys;
+	}
+
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		pr_err("emi-nor: clock enable failed\n");
+		goto eclkenable;
+	}
+
+	if (of_property_read_u32(flash_node, "bank-width", &width)) {
+		pr_err("emi-nor: Initialization failed\n");
+		goto epropread;
+	}
+
+	regs = ioremap(base, 0x100);
+	if (!regs) {
+		pr_err("emi-nor: ioremap failed\n");
+		goto eioremap;
+	}
+
+	ctrl = EMI_CNTL_ENBBYTERW;
+
+	if (width == 1)
+		ctrl |= EMI_CNTL_WIDTH8;
+	else if (width == 2)
+		ctrl |= EMI_CNTL_WIDTH16;
+	else if (width == 4)
+		ctrl |= EMI_CNTL_WIDTH32;
+
+	/*
+	 * Note: These are relaxed NOR device timings. Nor devices on spear
+	 * eval machines are working fine with these timings. Specific board
+	 * files can optimize these timings based on devices found on board.
+	 */
+	for (bank = 0; bank < numbanks; bank++) {
+		writel(0x10, EMI_REG(regs, bank, TAP));
+		writel(0x05, EMI_REG(regs, bank, TSDP));
+		writel(0x0a, EMI_REG(regs, bank, TDPW));
+		writel(0x0a, EMI_REG(regs, bank, TDPR));
+		writel(0x05, EMI_REG(regs, bank, TDCS));
+
+		writel(ctrl, EMI_REG(regs, bank, CTRL));
+	}
+
+	/* disable all the acks */
+	writel(0x3f, regs + ack_reg);
+
+	iounmap(regs);
+	of_node_put(flash_node);
+	return 0;
+
+eioremap:
+epropread:
+	clk_disable_unprepare(clk);
+eclkenable:
+	clk_put(clk);
+eclkgetsys:
+	of_node_put(flash_node);
+	return ret;
 }
 
 static void __init spear3xx_timer_init(void)

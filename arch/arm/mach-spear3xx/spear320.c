@@ -598,6 +598,8 @@ static void __init spear320_dt_init(void)
 				spear320_hmi_auxdata_lookup, NULL);
 	}
 
+	spear3xx_emi_init(SPEAR320_SOC_EMI_BASE, 4);
+
 	/* initialize macb related data in macb plat data */
 	spear3xx_macb_setup();
 }

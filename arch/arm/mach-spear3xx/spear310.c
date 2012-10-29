@@ -367,6 +367,7 @@ static void __init spear310_dt_init(void)
 			spear310_auxdata_lookup, NULL);
 
 	spear3xx_macb_setup();
+	spear3xx_emi_init(SPEAR310_SOC_EMI_BASE, 6);
 }
 
 static const char * const spear310_dt_board_compat[] = {
