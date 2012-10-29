@@ -197,7 +197,7 @@ static void __init spear310_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "emi_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, "emi", NULL);
+	clk_register_clkdev(clk, "50000000.flash", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
@@ -293,7 +293,7 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "emi_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, "emi", NULL);
+	clk_register_clkdev(clk, "44000000.flash", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
