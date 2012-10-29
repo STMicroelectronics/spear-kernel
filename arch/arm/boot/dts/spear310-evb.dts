@@ -90,7 +90,7 @@
 			status = "okay";
 		};
 
-		fsmc: flash@44000000 {
+		nand@44000000 {
 			status = "okay";
 		};
 

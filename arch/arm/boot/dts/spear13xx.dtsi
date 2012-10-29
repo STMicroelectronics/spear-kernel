@@ -110,7 +110,7 @@
 			status = "disabled";
 		};
 
-		fsmc: flash@b0000000 {
+		nand@b0000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;

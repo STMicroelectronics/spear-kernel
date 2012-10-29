@@ -317,7 +317,7 @@ void __init spear6xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "fsmc_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			FSMC_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "d1800000.flash");
+	clk_register_clkdev(clk, NULL, "d1800000.nand");
 
 	clk = clk_register_gate(NULL, "gmac_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			GMAC_CLK_ENB, 0, &_lock);

@@ -173,7 +173,7 @@ static void __init spear300_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "94000000.flash");
+	clk_register_clkdev(clk, NULL, "94000000.nand");
 
 	clk = clk_register_fixed_factor(NULL, "sdhci_clk", "ras_ahb_clk", 0, 1,
 			1);
@@ -201,7 +201,7 @@ static void __init spear310_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "44000000.flash");
+	clk_register_clkdev(clk, NULL, "44000000.nand");
 
 	clk = clk_register_fixed_factor(NULL, "macb0_clk", "ras_apb_clk", 0, 1,
 			1);
@@ -297,7 +297,7 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "4c000000.flash");
+	clk_register_clkdev(clk, NULL, "4c000000.nand");
 
 	clk = clk_register_fixed_factor(NULL, "i2c1_clk", "ras_ahb_clk", 0, 1,
 			1);

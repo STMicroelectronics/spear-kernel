@@ -132,7 +132,7 @@
 			status = "okay";
 		};
 
-		fsmc: flash@b0000000 {
+		nand@b0000000 {
 			status = "okay";
 
 			partition@0 {

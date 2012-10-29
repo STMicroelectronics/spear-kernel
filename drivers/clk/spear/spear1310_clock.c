@@ -723,7 +723,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "fsmc_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_FSMC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "b0000000.flash");
+	clk_register_clkdev(clk, NULL, "b0000000.nand");
 
 	clk = clk_register_gate(NULL, "smi_clk", "ahb_clk", 0,
 			SPEAR1310_PERIP1_CLK_ENB, SPEAR1310_SMI_CLK_ENB, 0,
