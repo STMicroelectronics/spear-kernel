@@ -37,6 +37,7 @@
 #include <linux/interrupt.h>
 #include <linux/of_gpio.h>
 #include <linux/of_i2c.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
@@ -226,6 +227,21 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 			kfree(dw_recovery_info);
 			adap->bus_recovery_info = NULL;
 		}
+	}
+
+	dev->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(dev->pinctrl)) {
+		dev_dbg(&pdev->dev, "could not get pinctrl instance\n");
+	} else {
+		dev->pins_default = pinctrl_lookup_state(dev->pinctrl,
+						 PINCTRL_STATE_DEFAULT);
+		if (IS_ERR(dev->pins_default))
+			dev_dbg(&pdev->dev, "could not get default pinstate\n");
+
+		dev->pins_sleep = pinctrl_lookup_state(dev->pinctrl,
+						PINCTRL_STATE_SLEEP);
+		if (IS_ERR(dev->pins_sleep))
+			dev_dbg(&pdev->dev, "could not get sleep pinstate\n");
 	}
 
 	r = i2c_add_numbered_adapter(adap);

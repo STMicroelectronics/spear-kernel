@@ -31,6 +31,7 @@
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
 #include "i2c-designware-core.h"
@@ -582,15 +583,13 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	if (ret == 0) {
 		dev_err(dev->dev, "controller timed out\n");
 		/* disable controller */
-		dw_writel(dev, 0, DW_IC_ENABLE);
-		clk_disable(dev->clk);
+		i2c_dw_disable(dev);
 		if (adap->bus_recovery_info &&
 				adap->bus_recovery_info->recover_bus) {
 			dev_dbg(dev->dev, "try i2c bus recovery\n");
 			adap->bus_recovery_info->recover_bus(adap);
 		}
-		clk_enable(dev->clk);
-		i2c_dw_init(dev);
+		i2c_dw_enable(dev);
 		ret = -ETIMEDOUT;
 		goto done;
 	} else if (ret < 0)
@@ -739,7 +738,14 @@ tx_aborted:
 
 void i2c_dw_enable(struct dw_i2c_dev *dev)
 {
-       /* Enable the adapter */
+	if (!IS_ERR(dev->pins_default)) {
+		if (pinctrl_select_state(dev->pinctrl, dev->pins_default))
+			dev_dbg(dev->dev, "could not set default pins\n");
+	}
+	clk_enable(dev->clk);
+	i2c_dw_init(dev);
+
+	/* Enable the adapter */
 	dw_writel(dev, 1, DW_IC_ENABLE);
 }
 
@@ -756,6 +762,12 @@ void i2c_dw_disable(struct dw_i2c_dev *dev)
 	/* Disable all interupts */
 	dw_writel(dev, 0, DW_IC_INTR_MASK);
 	dw_readl(dev, DW_IC_CLR_INTR);
+
+	clk_disable(dev->clk);
+	if (!IS_ERR(dev->pins_sleep)) {
+		if (pinctrl_select_state(dev->pinctrl, dev->pins_sleep))
+			dev_dbg(dev->dev, "could not set sleep pins\n");
+	}
 }
 
 void i2c_dw_clear_int(struct dw_i2c_dev *dev)
