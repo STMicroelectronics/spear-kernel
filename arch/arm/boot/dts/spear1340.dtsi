@@ -22,6 +22,13 @@
 			compatible = "st,spear1340-pinmux";
 			reg = <0xe0700000 0x1000>;
 			#gpio-range-cells = <2>;
+
+			i2c_default: i2c-default {
+				i2c-default {
+					st,pins = "i2c0_grp";
+					st,function = "i2c0";
+				};
+			};
 		};
 
 		spics: spics@e0700000{
@@ -184,6 +191,9 @@
 				recovery,gpio;
 				recovery,scl-gpio = <&gpiopinctrl 134 0>;
 				recovery,sda-gpio = <&gpiopinctrl 133 1>;
+				pinctrl-names = "default", "sleep";
+				pinctrl-0 = <&i2c_default>;
+				pinctrl-1 = <>;
 			};
 
 			i2c1: i2c@b4000000 {

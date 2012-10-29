@@ -25,6 +25,13 @@
 			compatible = "st,spear320-pinmux";
 			reg = <0xb3000000 0x1000>;
 			#gpio-range-cells = <2>;
+
+			i2c_default: i2c-default {
+				i2c-default {
+					st,pins = "i2c0_grp";
+					st,function = "i2c0";
+				};
+			};
 		};
 
 		shirq: interrupt-controller@0xb3000000 {
@@ -152,6 +159,15 @@
 				interrupt-parent = <&shirq>;
 				reg_alignment = <0x18>;
 				status = "disabled";
+			};
+
+			i2c0: i2c@d0180000 {
+				pinctrl-names = "default", "sleep";
+				pinctrl-0 = <&i2c_default>;
+				pinctrl-1 = <>;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 4 0>;
+				recovery,sda-gpio = <&gpiopinctrl 5 1>;
 			};
 
 			i2c1: i2c@a7000000 {
