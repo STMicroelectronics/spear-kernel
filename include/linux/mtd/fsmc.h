@@ -40,6 +40,7 @@
 	#define NOR_DEV			(2 << 2)
 	#define WIDTH_8			(0 << 4)
 	#define WIDTH_16		(1 << 4)
+	#define WIDTH_32		(2 << 4)
 	#define RSTPWRDWN		(1 << 6)
 	#define WPROT			(1 << 7)
 	#define WRT_ENABLE		(1 << 12)

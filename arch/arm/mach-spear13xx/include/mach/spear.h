@@ -56,6 +56,7 @@
 #define SPEAR13XX_CLCD_BASE			UL(0xE1000000)
 #define GPIO0_BASE				UL(0xE0600000)
 #define XGPIO_BASE				UL(0xE2800000)
+#define FSMC_REGS_BASE				UL(0xB0000000)
 
 /* Debug uart for linux, will be used for debug and uncompress messages */
 #define SPEAR_DBG_UART_BASE			UART_BASE

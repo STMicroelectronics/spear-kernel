@@ -18,6 +18,7 @@
 #include <linux/dw_dmac.h>
 #include <linux/err.h>
 #include <linux/irq.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/phy.h>
@@ -239,6 +240,79 @@ fail_get_phy_clk:
 fail_get_input_clk:
 	clk_put(input_pclk);
 fail_get_input_pclk:
+	return ret;
+}
+
+ /* Initialize fsmc controller for NOR */
+int __init spear13xx_fsmcnor_init(int numbanks)
+{
+	struct device_node *fsmc_flash_node;
+	void __iomem *regs;
+	struct clk *clk;
+	const char *status;
+	int ret;
+	u32 ctrl, bank, width;
+
+	fsmc_flash_node = of_find_compatible_node(NULL, NULL, "cfi-flash");
+
+	if (!fsmc_flash_node)
+		/* cfi-flash node not found */
+		return -ENOENT;
+
+	if (!of_property_read_string(fsmc_flash_node, "status", &status) &&
+			!strcmp(status, "disabled"))
+		return -ENOENT;
+
+	clk = clk_get_sys("a0000000.flash", NULL);
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		pr_err("fsmc-nor: clock get failed\n");
+		goto eclkgetsys;
+	}
+
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		pr_err("fsmc-nor: clock enable failed\n");
+		goto eclkenable;
+	}
+
+	if (of_property_read_u32(fsmc_flash_node, "bank-width", &width)) {
+		pr_err("fsmc-nor: Initialization failed\n");
+		goto epropread;
+	}
+
+	regs = ioremap(FSMC_REGS_BASE, 0x100);
+	if (!regs) {
+		pr_err("fsmc-nor: ioremap failed\n");
+		goto eioremap;
+	}
+
+	ctrl = WAIT_ENB | WRT_ENABLE | WPROT | NOR_DEV | BANK_ENABLE;
+
+	if (width == 1)
+		ctrl |= WIDTH_8;
+	else if (width == 2)
+		ctrl |= WIDTH_16;
+	else if (width == 4)
+		ctrl |= WIDTH_32;
+
+	for (bank = 0; bank < numbanks; bank++) {
+		writel(ctrl, FSMC_NOR_REG(regs, bank, CTRL));
+		writel(0x0FFFFFFF, FSMC_NOR_REG(regs, bank, CTRL_TIM));
+		writel(ctrl | RSTPWRDWN, FSMC_NOR_REG(regs, bank, CTRL));
+	}
+	iounmap(regs);
+
+	of_node_put(fsmc_flash_node);
+	return 0;
+
+eioremap:
+epropread:
+	clk_disable_unprepare(clk);
+eclkenable:
+	clk_put(clk);
+eclkgetsys:
+	of_node_put(fsmc_flash_node);
 	return ret;
 }
 

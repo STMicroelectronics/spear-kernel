@@ -638,6 +638,8 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 static void __init spear1340_dt_init(void)
 {
 	spear13xx_l2x0_init();
+	spear13xx_fsmcnor_init(2);
+
 	of_platform_populate(NULL, of_default_bus_match_table,
 			spear1340_auxdata_lookup, NULL);
 }
