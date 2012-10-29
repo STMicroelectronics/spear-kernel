@@ -247,29 +247,6 @@ static void handle_msi(struct pcie_port *pp)
 	}
 }
 
-static int find_valid_pos0(int port, int nvec, int pos, int *pos0)
-{
-	int flag = 1;
-	do {
-		pos = find_next_zero_bit(msi_irq_in_use[port],
-				NUM_MSI_IRQS, pos);
-		/* if you have reached to the end then get out from here. */
-		if (pos == NUM_MSI_IRQS)
-			return -ENOSPC;
-		/*
-		 * Check if this position is at correct offset.nvec is always a
-		 * power of two. pos0 must be nvec bit aligned.
-		 */
-		if (pos % nvec)
-			pos += nvec - (pos % nvec);
-		else
-			flag = 0;
-	} while (flag);
-
-	*pos0 = pos;
-	return 0;
-}
-
 static void msi_nop(struct irq_data *d)
 {
 	return;
@@ -285,9 +262,9 @@ static struct irq_chip msi_chip = {
 };
 
 /* Dynamic irq allocate and deallocation */
-static int get_irq(int nvec, struct msi_desc *desc, int *pos)
+static int get_irq(struct msi_desc *desc, int *pos)
 {
-	int res, bit, irq, pos0, pos1, i;
+	int res, bit, irq, pos0;
 	u32 val;
 	struct pcie_port *pp = bus_to_port(desc->dev->bus->number);
 
@@ -298,50 +275,29 @@ static int get_irq(int nvec, struct msi_desc *desc, int *pos)
 
 	pos0 = find_first_zero_bit(msi_irq_in_use[pp->controller],
 			NUM_MSI_IRQS);
-	if (pos0 % nvec) {
-		if (find_valid_pos0(pp->controller, nvec, pos0, &pos0))
-			goto no_valid_irq;
-	}
-
-	if (nvec > 1) {
-		pos1 = find_next_bit(msi_irq_in_use[pp->controller],
-				NUM_MSI_IRQS, pos0);
-		/* there must be nvec number of consecutive free bits */
-		while ((pos1 - pos0) < nvec) {
-			if (find_valid_pos0(pp->controller, nvec, pos1, &pos0))
-				goto no_valid_irq;
-			pos1 = find_next_bit(msi_irq_in_use[pp->controller],
-					NUM_MSI_IRQS, pos0);
-		}
-	}
 
 	irq = pp->virt_irq_base + NUM_INTX_IRQS + pos0;
 
-	if ((pos0 + nvec) > NUM_MSI_IRQS)
+	if (pos0 > NUM_MSI_IRQS)
 		goto no_valid_irq;
 
-	i = 0;
-	while (i < nvec) {
-		set_bit(pos0 + i, msi_irq_in_use[pp->controller]);
+	set_bit(pos0, msi_irq_in_use[pp->controller]);
 
-		dynamic_irq_init(irq + i);
-		irq_set_msi_desc(irq + i, desc);
-		irq_set_chip_and_handler(irq + i, &msi_chip,
-				handle_simple_irq);
-		set_irq_flags(irq + i, IRQF_VALID);
-		irq_set_chip_data(irq + i, pp);
+	dynamic_irq_init(irq);
+	irq_set_msi_desc(irq, desc);
+	irq_set_chip_and_handler(irq, &msi_chip, handle_simple_irq);
+	set_irq_flags(irq, IRQF_VALID);
+	irq_set_chip_data(irq, pp);
 
-		/*
-		 * Enable corresponding interrupt on MSI interrupt
-		 * controller.
-		 */
-		res = ((pos0 + i) / 32) * 12;
-		bit = (pos0 + i) % 32;
-		pcie_rd_own_conf(pp, PCIE_MSI_INTR0_ENABLE + res, 4, &val);
-		val |= 1 << bit;
-		pcie_wr_own_conf(pp, PCIE_MSI_INTR0_ENABLE + res, 4, val);
-		i++;
-	}
+	/*
+	 * Enable corresponding interrupt on MSI interrupt
+	 * controller.
+	 */
+	res = (pos0 / 32) * 12;
+	bit = pos0 % 32;
+	pcie_rd_own_conf(pp, PCIE_MSI_INTR0_ENABLE + res, 4, &val);
+	val |= 1 << bit;
+	pcie_wr_own_conf(pp, PCIE_MSI_INTR0_ENABLE + res, 4, val);
 
 	*pos = pos0;
 	return irq;
@@ -383,9 +339,8 @@ static void clean_irq(unsigned int irq)
 
 int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
 {
-	int cvec, rvec, irq, pos;
+	int irq, pos;
 	struct msi_msg msg;
-	uint16_t control;
 	struct pcie_port *pp = bus_to_port(pdev->bus->number);
 
 	if (!pp) {
@@ -393,54 +348,10 @@ int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
 		return -EINVAL;
 	}
 
-	/*
-	 * Read the MSI config to figure out how many IRQs this device
-	 * wants.Most devices only want 1, which will give
-	 * configured_private_bits and request_private_bits equal 0.
-	 */
-	pci_read_config_word(pdev, desc->msi_attrib.pos + PCI_MSI_FLAGS,
-			&control);
+	irq = get_irq(desc, &pos);
 
-	/*
-	 * If the number of private bits has been configured then use
-	 * that value instead of the requested number. This gives the
-	 * driver the chance to override the number of interrupts
-	 * before calling pci_enable_msi().
-	 */
-
-	cvec = (control & PCI_MSI_FLAGS_QSIZE) >> 4;
-
-	if (cvec == 0) {
-		/* Nothing is configured, so use the hardware requested size */
-		rvec = (control & PCI_MSI_FLAGS_QMASK) >> 1;
-	} else {
-		/*
-		 * Use the number of configured bits, assuming the
-		 * driver wanted to override the hardware request
-		 * value.
-		 */
-		rvec = cvec;
-	}
-
-	/*
-	 * The PCI 2.3 spec mandates that there are at most 32
-	 * interrupts. If this device asks for more, only give it one.
-	 */
-	if (rvec > 5)
-		rvec = 0;
-
-	irq = get_irq((1 << rvec), desc, &pos);
-
-	 if (irq < 0)
+	if (irq < 0)
 		return irq;
-
-	 /* Update the number of IRQs the device has available to it */
-	 control &= ~PCI_MSI_FLAGS_QSIZE;
-	 control |= rvec << 4;
-	 pci_write_config_word(pdev, desc->msi_attrib.pos + PCI_MSI_FLAGS,
-			 control);
-	 desc->msi_attrib.multiple = rvec;
-
 	/*
 	 * An EP will modify lower 8 bits(max) of msi data while
 	 * sending any msi interrupt
