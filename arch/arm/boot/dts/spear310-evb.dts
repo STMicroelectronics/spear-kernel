@@ -90,6 +90,11 @@
 			status = "okay";
 		};
 
+		flash@50000000 {
+			bank-width = <4>;
+			status = "okay";
+		};
+
 		nand@44000000 {
 			status = "okay";
 		};

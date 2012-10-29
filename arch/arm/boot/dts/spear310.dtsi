@@ -49,6 +49,12 @@
 			status = "disabled";
 		};
 
+		flash@50000000 {
+			compatible = "cfi-flash";
+			reg = <0x50000000 0x10000000>;
+			status = "disabled";
+		};
+
 		tdm_hdlc@b2800000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xb2800000 0x1000>;

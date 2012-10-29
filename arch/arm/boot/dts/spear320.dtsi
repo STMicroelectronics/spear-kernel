@@ -44,6 +44,12 @@
 			status = "disabled";
 		};
 
+		flash@44000000 {
+			compatible = "cfi-flash";
+			reg = <0x44000000 0x01000000>;
+			status = "disabled";
+		};
+
 		nand@4c000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
