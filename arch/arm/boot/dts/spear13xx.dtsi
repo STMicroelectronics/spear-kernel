@@ -192,7 +192,7 @@
 		};
 
 		pcie0@b1000000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb1000000 0x4000
 				0x80000000 0x2000
 				0xeb800000 0x1000 >;
@@ -201,7 +201,7 @@
 		};
 
 		pcie1@b1800000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb1800000 0x4000
 				0x90000000 0x2000
 				0xeb804000 0x1000 >;
@@ -210,7 +210,7 @@
 		};
 
 		pcie2@b4000000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb4000000 0x4000
 				0xc0000000 0x2000
 				0xeb808000 0x1000 >;
