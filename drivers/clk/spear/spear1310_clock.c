@@ -967,7 +967,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uart1_clk", "uart1_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_UART1_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5c800000.serial");
+	clk_register_clkdev(clk, NULL, "5cf00000.serial");
 
 	clk = clk_register_mux(NULL, "uart2_mclk", uart_parents,
 			ARRAY_SIZE(uart_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -978,7 +978,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uart2_clk", "uart2_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_UART2_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5c900000.serial");
+	clk_register_clkdev(clk, NULL, "5d000000.serial");
 
 	clk = clk_register_mux(NULL, "uart3_mclk", uart_parents,
 			ARRAY_SIZE(uart_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -989,7 +989,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uart3_clk", "uart3_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_UART3_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5ca00000.serial");
+	clk_register_clkdev(clk, NULL, "5d100000.serial");
 
 	clk = clk_register_mux(NULL, "uart4_mclk", uart_parents,
 			ARRAY_SIZE(uart_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1000,7 +1000,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uart4_clk", "uart4_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_UART4_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5cb00000.serial");
+	clk_register_clkdev(clk, NULL, "5d200000.serial");
 
 	clk = clk_register_mux(NULL, "uart5_mclk", uart_parents,
 			ARRAY_SIZE(uart_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1011,7 +1011,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "uart5_clk", "uart5_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_UART5_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5cc00000.serial");
+	clk_register_clkdev(clk, NULL, "5d300000.serial");
 
 	clk = clk_register_mux(NULL, "i2c1_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1022,7 +1022,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c1_clk", "i2c1_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C1_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5cd00000.i2c");
+	clk_register_clkdev(clk, NULL, "5c800000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c2_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1033,7 +1033,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c2_clk", "i2c2_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C2_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5ce00000.i2c");
+	clk_register_clkdev(clk, NULL, "5c900000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c3_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1044,7 +1044,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c3_clk", "i2c3_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C3_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5cf00000.i2c");
+	clk_register_clkdev(clk, NULL, "5ca00000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c4_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1055,7 +1055,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c4_clk", "i2c4_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C4_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5d000000.i2c");
+	clk_register_clkdev(clk, NULL, "5cb00000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c5_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1066,7 +1066,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c5_clk", "i2c5_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C5_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5d100000.i2c");
+	clk_register_clkdev(clk, NULL, "5cc00000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c6_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1077,7 +1077,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c6_clk", "i2c6_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C6_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5d200000.i2c");
+	clk_register_clkdev(clk, NULL, "5cd00000.i2c");
 
 	clk = clk_register_mux(NULL, "i2c7_mclk", i2c_parents,
 			ARRAY_SIZE(i2c_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1088,7 +1088,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "i2c7_clk", "i2c7_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_I2C7_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5d300000.i2c");
+	clk_register_clkdev(clk, NULL, "5ce00000.i2c");
 
 	clk = clk_register_mux(NULL, "ssp1_mclk", ssp1_parents,
 			ARRAY_SIZE(ssp1_parents), 0, SPEAR1310_RAS_CTRL_REG0,
@@ -1099,7 +1099,7 @@ void __init spear1310_clk_init(void)
 	clk = clk_register_gate(NULL, "ssp1_clk", "ssp1_mclk", 0,
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_SSP1_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "5d400000.spi");
+	clk_register_clkdev(clk, NULL, "5d500000.spi");
 
 	clk = clk_register_mux(NULL, "pci_mclk", pci_parents,
 			ARRAY_SIZE(pci_parents), 0, SPEAR1310_RAS_CTRL_REG0,
