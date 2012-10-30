@@ -57,10 +57,6 @@
 					st,pins = "uart0_grp";
 					st,function = "uart0";
 				};
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
-				};
 				i2c1 {
 					st,pins = "i2c1_grp";
 					st,function = "i2c1";

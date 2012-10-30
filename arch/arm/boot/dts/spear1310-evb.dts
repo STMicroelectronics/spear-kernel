@@ -44,10 +44,6 @@
 			pinctrl-0 = <&state_default>;
 
 			state_default: pinmux {
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
-				};
 				i2s0 {
 					st,pins = "i2s0_grp";
 					st,function = "i2s0";
