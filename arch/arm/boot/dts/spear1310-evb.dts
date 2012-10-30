@@ -303,11 +303,11 @@
 				status = "okay";
 			};
 
-			can0@5d500000 {
+			can0@5d600000 {
 				status = "okay";
 			};
 
-			can1@5d600000 {
+			can1@5d700000 {
 				status = "okay";
 			};
 
