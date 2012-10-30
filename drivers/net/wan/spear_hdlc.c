@@ -430,7 +430,7 @@ inline void write_tx_cmd(struct port_t *port, int chan, int cmd)
 /* Write Rx DMA cmd */
 inline void write_rx_cmd(struct port_t *port, int chan, int cmd)
 {
-	reg_writel(port, HTCR_OFFSET, chan << HXCR_CHAN_SHIFT |
+	reg_writel(port, HRCR_OFFSET, chan << HXCR_CHAN_SHIFT |
 			(*port->htcr)(port) | cmd);
 }
 
