@@ -3410,35 +3410,6 @@ static struct spear_function *spear320_functions[] = {
 	&i2c2_function,
 };
 
-static void gpio_request_endisable(struct spear_pmx *pmx, int pin,
-		bool enable)
-{
-	unsigned long regoffset, regindex, bitoffset;
-	unsigned long val;
-
-	/* Each pin is described by 3 bits in 320s ioselect group of registers
-	 * register and each register (32bit) carries pin configuration
-	 * for 10 gpios
-	 */
-	regindex = pin / 10;
-	regoffset = IP_SEL_PAD_0_9_REG + regindex * sizeof(int *);
-
-	bitoffset = (pin % 10) * 3;
-
-	val = pmx_readl(pmx, regoffset);
-	/* one must write 0x0 to enable a pad as gpio, while there are
-	 * multiple options (in terms of functions) for non-gpio
-	 * configuration. Just switch to a reserved configuration when
-	 * asked to disable.
-	 */
-	if (enable)
-		val &= ~(0x7 << bitoffset);
-	else
-		val |= 0x7 << bitoffset;
-
-	pmx_writel(pmx, val, regoffset);
-}
-
 static struct of_device_id spear320_pinctrl_of_match[] __devinitdata = {
 	{
 		.compatible = "st,spear320-pinmux",
@@ -3454,7 +3425,6 @@ static int __devinit spear320_pinctrl_probe(struct platform_device *pdev)
 	spear3xx_machdata.ngroups = ARRAY_SIZE(spear320_pingroups);
 	spear3xx_machdata.functions = spear320_functions;
 	spear3xx_machdata.nfunctions = ARRAY_SIZE(spear320_functions);
-	spear3xx_machdata.gpio_request_endisable = gpio_request_endisable;
 
 	spear3xx_machdata.modes_supported = true;
 	spear3xx_machdata.pmx_modes = spear320_pmx_modes;
