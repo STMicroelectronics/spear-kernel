@@ -57,7 +57,7 @@
 					st,function = "arm_gpio";
 				};
 				clcd {
-					st,pins = "clcd_grp" , "clcd_high_res_grp";
+					st,pins = "clcd_grp";
 					st,function = "clcd";
 				};
 				eth {
@@ -83,18 +83,6 @@
 				uart0 {
 					st,pins = "uart0_grp";
 					st,function = "uart0";
-				};
-				rs485 {
-					st,pins = "rs485_0_1_tdm_0_1_grp";
-					st,function = "rs485_0_1_tdm_0_1";
-				};
-				i2c1_2 {
-					st,pins = "i2c_1_2_grp";
-					st,function = "i2c_1_2";
-				};
-				smii {
-					st,pins = "smii_0_1_2_grp";
-					st,function = "smii_0_1_2";
 				};
 				nand {
 					st,pins = "nand_8bit_grp",
