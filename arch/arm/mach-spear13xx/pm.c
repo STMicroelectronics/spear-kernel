@@ -48,6 +48,9 @@ static int spear_pm_on(void)
 static int spear_sys_suspend(unsigned long arg)
 {
 	suspend_state_t state = (suspend_state_t)(arg);
+#ifdef CONFIG_PCI
+	spear_pcie_suspend();
+#endif
 	/* Flush the cache */
 	flush_cache_all();
 	outer_disable();
@@ -65,6 +68,9 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Resume operations */
 	outer_resume();
+#ifdef CONFIG_PCI
+	spear_pcie_resume();
+#endif
 	/* Explicit set all the power domain to on */
 	writel((readl(VA_PCM_CFG) | pcm_set_cfg),
 		VA_PCM_CFG);
