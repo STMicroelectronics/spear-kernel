@@ -701,7 +701,7 @@ static int spear1310_pcie_clk_init(struct pcie_port *pp)
 
 	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
 
-	switch (pp->controller) {
+	switch (pp->config.id) {
 	case 0:
 		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
 		temp |= SPEAR1310_PCIE_CFG_VAL(0);
@@ -728,7 +728,7 @@ static int spear1310_pcie_clk_exit(struct pcie_port *pp)
 
 	temp = readl(VA_SPEAR1310_PCIE_SATA_CFG);
 
-	switch (pp->controller) {
+	switch (pp->config.id) {
 	case 0:
 		temp &= ~SPEAR1310_PCIE_CFG_MASK(0);
 		break;

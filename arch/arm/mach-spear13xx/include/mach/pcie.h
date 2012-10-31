@@ -22,6 +22,7 @@
 struct pcie_port;
 
 struct pcie_port_info {
+	u32	id;
 	u32	is_host;
 	u32	is_gen1;
 	u32	cfg0_size;

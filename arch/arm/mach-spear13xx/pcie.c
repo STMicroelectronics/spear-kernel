@@ -982,6 +982,7 @@ static int __devinit pcie_probe(struct platform_device *pdev)
 
 	memcpy(&pp->config, pdev->dev.platform_data, (sizeof(pp->config)));
 	pp->config.io_size = IO_SIZE_PER_PORT;
+	of_property_read_u32(np, "pcie-host,pcie_id", &pp->config.id);
 	of_property_read_u32(np, "pcie-host,is_host", &pp->config.is_host);
 	of_property_read_u32(np, "pcie-host,is_gen1", &pp->config.is_gen1);
 	of_property_read_u32(np, "pcie-host,cfg0_size", &pp->config.cfg0_size);
