@@ -205,6 +205,7 @@
 				0xeb800000 0x1000 >;
 			interrupts = <0 68 0x4>;
 			status = "disabled";
+			pcie-host,pcie_id = <0>;
 			pcie-host,is_host = <1>;
 			pcie-host,is_gen1 = <0>;
 			pcie-host,cfg0_size = <0x100000>;
@@ -222,6 +223,7 @@
 				0xeb804000 0x1000 >;
 			interrupts = <0 69 0x4>;
 			status = "disabled";
+			pcie-host,pcie_id = <1>;
 			pcie-host,is_host = <1>;
 			pcie-host,is_gen1 = <0>;
 			pcie-host,cfg0_size = <0x100000>;
@@ -239,6 +241,7 @@
 				0xeb808000 0x1000 >;
 			interrupts = <0 70 0x4>;
 			status = "disabled";
+			pcie-host,pcie_id = <2>;
 			pcie-host,is_host = <1>;
 			pcie-host,is_gen1 = <0>;
 			pcie-host,cfg0_size = <0x100000>;
