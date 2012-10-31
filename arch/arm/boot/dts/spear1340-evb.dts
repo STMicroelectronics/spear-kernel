@@ -230,7 +230,6 @@
 		};
 
 		pcie0@b1000000 {
-			status = "okay";
 		};
 
 		ehci@e4800000 {
