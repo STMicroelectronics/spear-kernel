@@ -418,7 +418,7 @@ put_i2s_sclk_gclk:
 void i2s_clk_init(void)
 {
 	int ret;
-	struct clk *i2s_ref_pad_clk, *i2s_sclk_clk, *i2s_src_clk, *i2s_ref_clk;
+	struct clk *i2s_ref_pad_clk, *i2s_sclk_gclk, *i2s_src_clk, *i2s_ref_clk;
 	struct clk *src_pclk, *ref_pclk;
 	char *src_pclk_name, *ref_pclk_name;
 
@@ -503,9 +503,9 @@ void i2s_clk_init(void)
 		goto put_i2s_ref_clk;
 	}
 
-	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-	if (IS_ERR(i2s_sclk_clk)) {
-		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+	i2s_sclk_gclk = clk_get_sys(NULL, "i2s_sclk_gclk");
+	if (IS_ERR(i2s_sclk_gclk)) {
+		pr_err("%s:couldn't get i2s_sclk_gclk\n", __func__);
 		goto put_i2s_ref_clk;
 	}
 
@@ -520,14 +520,14 @@ void i2s_clk_init(void)
 		goto put_ref_pad_clk;
 	}
 
-	if (clk_prepare_enable(i2s_sclk_clk)) {
-		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+	if (clk_prepare_enable(i2s_sclk_gclk)) {
+		pr_err("%s:error enabling i2s_sclk_gclk\n", __func__);
 		goto put_ref_pad_clk;
 	}
 put_ref_pad_clk:
 	clk_put(i2s_ref_pad_clk);
 put_sclk_clk:
-	clk_put(i2s_sclk_clk);
+	clk_put(i2s_sclk_gclk);
 put_i2s_ref_clk:
 	clk_put(i2s_ref_clk);
 put_ref_pclk:
