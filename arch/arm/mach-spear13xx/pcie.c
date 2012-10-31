@@ -1039,24 +1039,22 @@ static int __devinit pcie_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-int spear_pcie_suspend(void)
+void spear_pcie_suspend(void)
 {
 	struct pcie_port *pp;
 	int i;
 
 	for (i = 0; i < pci.nr_controllers; i++) {
 		pp = controller_to_port(i);
-		if (pcie_link_up(pp->va_app_base)) {
+		if (pcie_link_up(pp->va_app_base))
 			pcie_host_exit(pp);
-			pp->config.clk_exit(pp);
-			pp->susp_state = 1;
-		}
+		pp->config.clk_exit(pp);
+		pp->susp_state = 1;
 	}
 
-	return 0;
 }
 
-int spear_pcie_resume(void)
+void spear_pcie_resume(void)
 {
 	struct pcie_port *pp;
 	int i;
@@ -1071,8 +1069,10 @@ int spear_pcie_resume(void)
 		}
 	}
 
-	return 0;
 }
+#else
+void spear_pcie_suspend(void) { }
+void spear_pcie_resume(void) { }
 #endif
 
 static const struct of_device_id pcie_of_match[] = {
