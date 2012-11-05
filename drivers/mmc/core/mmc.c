@@ -1005,6 +1005,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	/*
 	 * Activate high speed (if supported)
 	 */
+#ifndef CONFIG_DISABLE_HS_SWITCH
 	if (card->ext_csd.hs_max_dtr != 0) {
 		err = 0;
 		if (card->ext_csd.hs_max_dtr > 52000000 &&
@@ -1034,6 +1035,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			}
 		}
 	}
+#endif
 
 	/*
 	 * Compute bus speed.

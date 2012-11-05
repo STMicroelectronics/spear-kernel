@@ -27,3 +27,13 @@ config MMC_CLKGATE
 	  support handling this in order for it to be of any use.
 
 	  If unsure, say N.
+
+config DISABLE_HS_SWITCH
+	bool "Prevent switching MMC/SD to high speed operations"
+	default n
+	help
+	  If you say Y here, the MMC core would not switch to high speed
+	  for cards that support these operations.
+
+	  This option is just for situation where high speed timings are
+	  not met and users would want to continue with normal functionality.
