@@ -16,3 +16,12 @@ config MMC_UNSAFE_RESUME
 
 	  This option sets a default which can be overridden by the
 	  module parameter "removable=0" or "removable=1".
+
+config DISABLE_HS_SWITCH
+	bool "Prevent switching MMC/SD to high speed operations"
+	help
+	  If you say Y here, the MMC core would not switch to high speed
+	  for cards that support these operations.
+
+	  This option is just for situation where high speed timings are
+	  not met and users would want to continue with normal functionality.
