@@ -373,7 +373,8 @@ static int patch_txdetectrx_spear1340(struct pcie_port *pp)
 	u32 tempa;
 	u8 tempm;
 	u32 miphy = (u32)pp->va_phy_base;
-	struct pcie_app_reg *app_reg = pp->va_app_base;
+	struct pcie_app_reg *app_reg = pp->va_app_base
+		+ PCIE_APP_SPECIFIC_OFFSET;
 	int ucount = 0;
 
 	tempa = readl(&app_reg->app_status_1);
