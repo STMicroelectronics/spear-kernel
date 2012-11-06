@@ -298,6 +298,52 @@ static struct amba_pl011_data spear320_uart_data[] = {
 	},
 };
 
+int spear320_evb_uart_clk_config(void)
+{
+	struct clk *uart1_clk, *ras_apb_clk, *uart2_clk;
+	int ret;
+
+	/* Get the ahb clock */
+	ras_apb_clk = clk_get(NULL, "ras_apb_clk");
+	if (IS_ERR(ras_apb_clk)) {
+		ret = PTR_ERR(ras_apb_clk);
+		return ret;
+	}
+
+	uart1_clk = clk_get_sys("a3000000.serial", NULL);
+	if (IS_ERR(uart1_clk)) {
+		ret = PTR_ERR(uart1_clk);
+		goto fail_get_uart1_clk;
+	}
+
+	uart2_clk = clk_get_sys("a4000000.serial", NULL);
+	if (IS_ERR(uart2_clk)) {
+		ret = PTR_ERR(uart2_clk);
+		goto fail_get_uart2_clk;
+	}
+
+	if (clk_set_parent(uart1_clk, ras_apb_clk)) {
+		ret = -EPERM;
+		pr_err("SPEAr320_evb: Failed to set uart1 parent clk\n");
+		goto fail_set_parent_clk;
+	}
+
+	if (clk_set_parent(uart2_clk, ras_apb_clk)) {
+		ret = -EPERM;
+		pr_err("SPEAr320_evb: Failed to set uart2 parent clk\n");
+		goto fail_set_parent_clk;
+	}
+
+fail_set_parent_clk:
+	clk_put(uart2_clk);
+fail_get_uart2_clk:
+	clk_put(uart1_clk);
+fail_get_uart1_clk:
+	clk_put(ras_apb_clk);
+
+	return ret;
+}
+
 /*
  * configure i2s ref clk and sclk
  *
