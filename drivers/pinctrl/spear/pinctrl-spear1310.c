@@ -904,6 +904,10 @@ static struct spear_muxreg keyboard_6x6_muxreg[] = {
 			PMX_NFCE1_MASK | PMX_NFCE2_MASK | PMX_NFWPRT1_MASK |
 			PMX_NFWPRT2_MASK,
 		.val = PMX_KEYBOARD_6X6_MASK,
+	}, {
+		.reg = PAD_DIRECTION_SEL_1,
+		.mask = PMX_KEYBOARD_6X6_MASK,
+		.val = PMX_KEYBOARD_6X6_MASK,
 	},
 };
 
