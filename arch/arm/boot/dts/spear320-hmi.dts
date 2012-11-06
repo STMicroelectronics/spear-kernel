@@ -267,6 +267,11 @@
 			i2c0: i2c@d0180000 {
 				status = "okay";
 
+				eeprom0@50 {
+					compatible = "m24lr64";
+					reg = <0x50>;
+				};
+
 				stmpe811@41 {
 					compatible = "st,stmpe811";
 					#address-cells = <1>;
