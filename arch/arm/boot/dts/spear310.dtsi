@@ -77,7 +77,6 @@
 				interrupts = <0 4>;
 				interrupt-names = "macb1_irq", "macb1_wakeirq";
 				phy-mode = "smii";
-				local-mac-address = [f2 f2 f2 45 67 89];
 				status = "disabled";
 			};
 
@@ -88,7 +87,6 @@
 				interrupts = <1 5>;
 				interrupt-names = "macb2_irq", "macb2_wakeirq";
 				phy-mode = "smii";
-				local-mac-address = [f2 f2 f2 45 67 8a];
 				status = "disabled";
 			};
 
@@ -99,7 +97,6 @@
 				interrupts = <2 6>;
 				interrupt-names = "macb3_irq", "macb3_wakeirq";
 				phy-mode = "smii";
-				local-mac-address = [f2 f2 f2 45 67 8b];
 				status = "disabled";
 			};
 
@@ -110,7 +107,6 @@
 				interrupts = <3 7>;
 				interrupt-names = "macb4_irq", "macb4_wakeirq";
 				phy-mode = "smii";
-				local-mac-address = [f2 f2 f2 45 67 8c];
 				status = "disabled";
 			};
 

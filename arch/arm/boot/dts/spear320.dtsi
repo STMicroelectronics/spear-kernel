@@ -115,7 +115,6 @@
 			interrupt-names = "macb1_irq", "macb1_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
-			local-mac-address = [f2 f2 f2 45 67 89];
 		};
 
 		macb2: eth@ab000000 {
@@ -126,7 +125,6 @@
 			interrupt-names = "macb2_irq", "macb2_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
-			local-mac-address = [f2 f2 f2 45 67 8a];
 		};
 
 		pwm: pwm@a8000000 {
