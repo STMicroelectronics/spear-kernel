@@ -902,9 +902,9 @@ void __init spear1310_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "ras_48m_clk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_ahb_clk", "ahb_clk", 0,
-			SPEAR1310_RAS_CLK_ENB, SPEAR1310_ACLK_CLK_ENB, 0,
-			&_lock);
+	clk = clk_register_gate(NULL, "ras_ahb_clk", "ahb_clk",
+			CLK_IGNORE_UNUSED, SPEAR1310_RAS_CLK_ENB,
+			SPEAR1310_ACLK_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, "ras_ahb_clk", NULL);
 
 	clk = clk_register_gate(NULL, "ras_apb_clk", "apb_clk", 0,
