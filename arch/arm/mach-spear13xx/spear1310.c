@@ -56,6 +56,7 @@
 #define VA_SPEAR1310_RAS_BASE			IOMEM(UL(0xFA400000))
 /* RAS Area Control Register */
 #define VA_SPEAR1310_RAS_CTRL_REG1	(VA_SPEAR1310_RAS_BASE + 0x4)
+#define VA_SPEAR1310_RAS_SW_RST_CTRL	(VA_SPEAR1310_RAS_BASE + 0x14C)
 
 #define SPEAR1310_GETH1_PHY_INTF_MASK	(0x7 << 4)
 #define SPEAR1310_GETH2_PHY_INTF_MASK	(0x7 << 7)
@@ -795,6 +796,9 @@ static struct of_dev_auxdata spear1310_auxdata_lookup[] __initdata = {
 
 static void __init spear1310_dt_init(void)
 {
+	/* Deactivate SW reset of all RAS IPs */
+	writel(0, VA_SPEAR1310_RAS_SW_RST_CTRL);
+
 	spear13xx_l2x0_init();
 	spear13xx_fsmcnor_init(8);
 
