@@ -15,6 +15,7 @@
 #include <linux/init.h>
 #include <linux/i2c.h>
 #include <linux/io.h>
+#include <linux/workqueue.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/pm.h>
@@ -110,7 +111,10 @@ static const struct reg_default sta529_reg_defaults[] = {
 };
 
 struct sta529 {
+	struct snd_soc_codec *codec;
 	struct regmap *regmap;
+	struct work_struct work;
+	bool stream_active;
 };
 
 static bool sta529_writeable(struct device *dev, unsigned int reg)
@@ -316,7 +320,45 @@ static int sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	return 0;
 }
 
+static void sta529_sched_work(struct work_struct *work)
+{
+	struct sta529 *sta529 = container_of(work, struct sta529, work);
+	struct snd_soc_codec *codec = sta529->codec;
+
+	if (sta529->stream_active)
+		sta529_set_bias_level(codec, SND_SOC_BIAS_ON);
+	else
+		sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
+}
+
+static int sta529_trigger(struct snd_pcm_substream *substream, int cmd,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+		sta529->stream_active = true;
+		schedule_work(&sta529->work);
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+		sta529->stream_active = false;
+		schedule_work(&sta529->work);
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	return 0;
+
+}
+
 static const struct snd_soc_dai_ops sta529_dai_ops = {
+	.trigger	=	sta529_trigger,
 	.hw_params	=	sta529_hw_params,
 	.set_fmt	=	sta529_set_dai_fmt,
 	.digital_mute	=	sta529_mute,
@@ -346,6 +388,7 @@ static int sta529_probe(struct snd_soc_codec *codec)
 	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
+	sta529->codec = codec;
 	codec->control_data = sta529->regmap;
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
 
@@ -366,6 +409,7 @@ static int sta529_probe(struct snd_soc_codec *codec)
 	regmap_write(sta529->regmap, STA529_CKOCFG, 0x40);
 	regmap_write(sta529->regmap, STA529_MISC, 0x21);
 
+	INIT_WORK(&sta529->work, sta529_sched_work);
 	sta529_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;
