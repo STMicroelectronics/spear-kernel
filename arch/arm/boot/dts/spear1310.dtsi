@@ -141,7 +141,7 @@
 			can0@5d600000 {
 				compatible = "bosch,c_can";
 				reg = <0x5d600000 0x1000>;
-				reg_alignment = <0x18>;
+				reg_alignment = <0x8>;
 				interrupts = <0 76 0x4>;
 				status = "disabled";
 			};
@@ -149,7 +149,7 @@
 			can1@5d700000 {
 				compatible = "bosch,c_can";
 				reg = <0x5d700000 0x1000>;
-				reg_alignment = <0x18>;
+				reg_alignment = <0x8>;
 				interrupts = <0 77 0x4>;
 				status = "disabled";
 			};
