@@ -83,6 +83,10 @@
 					st,pins = "pwm2_pin_34_grp";
 					st,function = "pwm2";
 				};
+				gpio0 {
+					st,pins = "gpio0_pin1_grp";
+					st,function = "gpio0";
+				};
 			};
 		};
 
