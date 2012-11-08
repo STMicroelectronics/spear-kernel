@@ -178,6 +178,12 @@ static int __devinit c_can_plat_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		dev_err(&pdev->dev, "could not prepare CAN clock\n");
+		goto exit_no_clk_en;
+	}
+
 	/* get the platform data */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	irq = platform_get_irq(pdev, 0);
@@ -267,6 +273,8 @@ exit_iounmap:
 exit_release_mem:
 	release_mem_region(mem->start, resource_size(mem));
 exit_free_clk:
+	clk_disable_unprepare(clk);
+exit_no_clk_en:
 	clk_put(clk);
 exit:
 	dev_err(&pdev->dev, "probe failed\n");
