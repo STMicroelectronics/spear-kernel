@@ -394,11 +394,6 @@ void __init spear1310_clk_init(void)
 	struct clk *clk, *clk1;
 	u32 val;
 
-	/* Following must be always enabled */
-	val = readl(SPEAR1310_RAS_CLK_ENB);
-	val |= 0x1 << SPEAR1310_ACLK_CLK_ENB;
-	writel(val, SPEAR1310_RAS_CLK_ENB);
-
 	clk = clk_register_fixed_rate(NULL, "osc_32k_clk", NULL, CLK_IS_ROOT,
 			32000);
 	clk_register_clkdev(clk, "osc_32k_clk", NULL);
@@ -902,10 +897,13 @@ void __init spear1310_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, "ras_48m_clk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_ahb_clk", "ahb_clk",
-			CLK_IGNORE_UNUSED, SPEAR1310_RAS_CLK_ENB,
-			SPEAR1310_ACLK_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "ras_ahb_clk", "ahb_clk", 0,
+			SPEAR1310_RAS_CLK_ENB, SPEAR1310_ACLK_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, "ras_ahb_clk", NULL);
+
+	/* Enable ras_ahb_clk permanently as it is required for RAS IPs */
+	clk_prepare_enable(clk);
 
 	clk = clk_register_gate(NULL, "ras_apb_clk", "apb_clk", 0,
 			SPEAR1310_RAS_CLK_ENB, SPEAR1310_PCLK_CLK_ENB, 0,
