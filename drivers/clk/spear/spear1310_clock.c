@@ -392,7 +392,6 @@ static const char *tdm_parents[] = { "ras_pll3_clk", "gen_syn1_clk", };
 void __init spear1310_clk_init(void)
 {
 	struct clk *clk, *clk1;
-	u32 val;
 
 	clk = clk_register_fixed_rate(NULL, "osc_32k_clk", NULL, CLK_IS_ROOT,
 			32000);
