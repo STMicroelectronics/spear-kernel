@@ -2223,6 +2223,26 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int camif_shutdown(struct platform_device *pdev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(&pdev->dev);
+	struct camif *camif = container_of(ici, struct camif, ici);
+	int ret = 0;
+
+	if (camif->is_running) {
+		camif_stop_capture(camif, CAMIF_SHUTDOWN);
+
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			ret = v4l2_subdev_call(sd, core, s_power, 0);
+			if (ret == -ENOIOCTLCMD)
+				ret = 0;
+		}
+	}
+
+	return ret;
+}
+
 #ifdef CONFIG_OF
 static struct of_device_id camif_id_match[] = {
 	{ .compatible = "st,camif", },
@@ -2234,6 +2254,7 @@ MODULE_DEVICE_TABLE(of, camif_id_match);
 static struct platform_driver camif_driver = {
 	.probe = camif_probe,
 	.remove = __devexit_p(camif_remove),
+	.shutdown = camif_shutdown,
 	.driver = {
 		.name = "spear_camif",
 		.owner = THIS_MODULE,
