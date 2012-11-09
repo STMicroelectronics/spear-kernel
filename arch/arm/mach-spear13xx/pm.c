@@ -11,7 +11,9 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/async.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -178,8 +180,10 @@ static const struct platform_suspend_ops spear_pm_ops = {
 #ifdef CONFIG_HIBERNATION
 static void spear_power_off(void)
 {
-	while (1)
-		;
+	while (1) {
+		msleep(20);
+		async_synchronize_full();
+	}
 }
 
 static int empty_enter(void)
