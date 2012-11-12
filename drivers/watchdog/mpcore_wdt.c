@@ -151,10 +151,8 @@ static int mpcore_wdt_stop(struct watchdog_device *wdd)
 
 	__mpcore_wdt_stop(wdt);
 
-	if (!IS_ERR(wdt->clk)) {
-		clk_disable(wdt->clk);
-		clk_unprepare(wdt->clk);
-	}
+	if (!IS_ERR(wdt->clk))
+		clk_disable_unprepare(wdt->clk);
 
 	return 0;
 }
@@ -168,16 +166,9 @@ static int mpcore_wdt_start(struct watchdog_device *wdd)
 	dev_info(wdt->dev, "enabling watchdog.\n");
 
 	if (!IS_ERR(wdt->clk)) {
-		ret = clk_prepare(wdt->clk);
-		if (ret) {
-			dev_err(wdt->dev, "clock prepare fail");
-			return ret;
-		}
-
-		ret = clk_enable(wdt->clk);
+		ret = clk_prepare_enable(wdt->clk);
 		if (ret) {
 			dev_err(wdt->dev, "Clock enable failed\n");
-			clk_unprepare(wdt->clk);
 			return ret;
 		}
 	}
@@ -328,16 +319,9 @@ static int __devinit mpcore_wdt_probe(struct platform_device *pdev)
 	} else {
 		wdt->clk_rate = clk_get_rate(wdt->clk);
 
-		ret = clk_prepare(wdt->clk);
+		ret = clk_prepare_enable(wdt->clk);
 		if (ret) {
 			dev_err(wdt->dev, "clock prepare fail");
-			goto err_put_clk;
-		}
-
-		ret = clk_enable(wdt->clk);
-		if (ret) {
-			dev_err(&pdev->dev, "Clock enable failed\n");
-			clk_unprepare(wdt->clk);
 			goto err_put_clk;
 		}
 	}
