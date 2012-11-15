@@ -265,9 +265,10 @@ static int spear_smi_read_sr(struct spear_smi *dev, u32 bank)
 static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 		unsigned long timeout)
 {
-	unsigned long finish;
+	unsigned long now, finish;
 	int status;
 
+	now = jiffies;
 	finish = jiffies + timeout;
 	do {
 		status = spear_smi_read_sr(dev, bank);
@@ -278,9 +279,9 @@ static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 		} else if (!(status & SR_WIP)) {
 			return 0;
 		}
-
+		now = jiffies;
 		cond_resched();
-	} while (!time_after_eq(jiffies, finish));
+	} while (!time_after_eq(now, finish));
 
 	dev_err(&dev->pdev->dev, "smi controller is busy, timeout\n");
 	return -EBUSY;
