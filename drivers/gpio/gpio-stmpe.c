@@ -216,6 +216,11 @@ static void stmpe_gpio_irq_unmask(struct irq_data *d)
 	stmpe_gpio->regs[REG_IE][regoffset] |= mask;
 }
 
+static int stmpe_gpio_irq_set_wake(struct irq_data *d, unsigned int on)
+{
+	return 0;
+}
+
 static struct irq_chip stmpe_gpio_irq_chip = {
 	.name			= "stmpe-gpio",
 	.irq_bus_lock		= stmpe_gpio_irq_lock,
@@ -223,6 +228,7 @@ static struct irq_chip stmpe_gpio_irq_chip = {
 	.irq_mask		= stmpe_gpio_irq_mask,
 	.irq_unmask		= stmpe_gpio_irq_unmask,
 	.irq_set_type		= stmpe_gpio_irq_set_type,
+	.irq_set_wake		= stmpe_gpio_irq_set_wake,
 };
 
 static irqreturn_t stmpe_gpio_irq(int irq, void *dev)
