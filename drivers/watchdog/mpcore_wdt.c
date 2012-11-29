@@ -256,7 +256,7 @@ mpcore_wdt_set_heartbeat(struct watchdog_device *wdd, unsigned int timeout)
 
 	/* get appropriate value of psc and load */
 	bsearch(&psc, TWD_WDOG_CONTROL_PRESCALE_MIN,
-			TWD_WDOG_CONTROL_PRESCALE_MAX, TWD_WDOG_LOAD_MAX,
+			TWD_WDOG_CONTROL_PRESCALE_MAX, TWD_WDOG_LOAD_MAX / 2,
 			timeout, rate);
 	bsearch((u32 *)&load, TWD_WDOG_LOAD_MIN, TWD_WDOG_LOAD_MAX, psc,
 			timeout, rate);
