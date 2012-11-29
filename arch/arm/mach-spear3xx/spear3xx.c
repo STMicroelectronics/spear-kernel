@@ -253,8 +253,8 @@ static void __init spear3xx_timer_init(void)
 
 	spear3xx_clk_init();
 
-	if (of_machine_is_compatible("st,spear320-evb"))
-		spear320_evb_uart_clk_config();
+	if (of_machine_is_compatible("st,spear320"))
+		spear320_uart_clk_config();
 
 	/* get the system timer clock */
 	gpt_clk = clk_get_sys("gpt0", NULL);

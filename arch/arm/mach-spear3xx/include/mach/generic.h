@@ -44,7 +44,7 @@ int audio_clk_config(struct i2s_hw_config_data *config);
 void spear3xx_macb_setup(void);
 
 /* Add SPEAr320 function declaration here */
-int spear320_evb_uart_clk_config(void);
+int spear320_uart_clk_config(void);
 
 void spear_restart(char, const char *);
 
