@@ -298,7 +298,7 @@ static struct amba_pl011_data spear320_uart_data[] = {
 	},
 };
 
-int spear320_evb_uart_clk_config(void)
+int spear320_uart_clk_config(void)
 {
 	struct clk *uart1_clk, *ras_apb_clk, *uart2_clk;
 	int ret;
