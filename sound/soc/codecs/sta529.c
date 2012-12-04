@@ -115,6 +115,11 @@ struct sta529 {
 	struct regmap *regmap;
 	struct work_struct work;
 	bool stream_active;
+	/* context save */
+	int ffxcg0;
+	int s2pcfg1;
+	int p2scfg1;
+	int misc;
 };
 
 static bool sta529_writeable(struct device *dev, unsigned int reg)
@@ -138,7 +143,6 @@ static bool sta529_writeable(struct device *dev, unsigned int reg)
 		return false;
 	}
 }
-
 
 static const char *pwm_mode_text[] = {"Phase-shift", "Ternary", "Binary",
 	"Headphone"};
@@ -165,14 +169,21 @@ static int sta529_set_bias_level(struct snd_soc_codec *codec, enum
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
-		snd_soc_update_bits(codec, STA529_FFXCFG0, POWER_CNTLMSAK,
-				POWER_UP);
+		regmap_write(sta529->regmap, STA529_FFXCFG0, sta529->ffxcg0);
+		regmap_write(sta529->regmap, STA529_S2PCFG1, sta529->s2pcfg1);
+		regmap_write(sta529->regmap, STA529_P2SCFG1, sta529->p2scfg1);
+		regmap_write(sta529->regmap, STA529_MISC, sta529->misc);
+
+		snd_soc_update_bits(codec, STA529_FFXCFG0,
+				(AUDIO_MUTE_MSK | POWER_CNTLMSAK), 0);
 		snd_soc_update_bits(codec, STA529_MISC,	FFX_CLK_MSK,
 				FFX_CLK_ENB);
+
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF)
 			regcache_sync(sta529->regmap);
+
 		snd_soc_update_bits(codec, STA529_FFXCFG0,
 					POWER_CNTLMSAK, POWER_STDBY);
 		/* Making FFX output to zero */
@@ -282,6 +293,11 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 		snd_soc_update_bits(codec, STA529_MISC, CAP_FREQ_RANGE_MSK,
 				(record_freq_val << 2 | audio_freq_val << 4));
 	}
+
+	regmap_read(sta529->regmap, STA529_FFXCFG0, &sta529->ffxcg0);
+	regmap_read(sta529->regmap, STA529_S2PCFG1, &sta529->s2pcfg1);
+	regmap_read(sta529->regmap, STA529_P2SCFG1, &sta529->p2scfg1);
+	regmap_read(sta529->regmap, STA529_MISC, &sta529->misc);
 
 	return 0;
 }
