@@ -17,9 +17,45 @@
 #include <linux/io.h>
 #include <linux/of_platform.h>
 #include <linux/spinlock_types.h>
+#include <linux/syscore_ops.h>
+#include <plat/pm.h>
 #include <mach/spear.h>
 #include <mach/system.h>
 #include "clk.h"
+
+#ifdef CONFIG_PM_SLEEP
+static struct sleep_save spear1340_clock_save[] = {
+	SAVE_ITEM(VA_MISC_BASE + 0x208),
+	SAVE_ITEM(VA_MISC_BASE + 0x20C),
+	SAVE_ITEM(VA_MISC_BASE + 0x244),
+	SAVE_ITEM(VA_MISC_BASE + 0x248),
+	SAVE_ITEM(VA_MISC_BASE + 0x24C),
+	SAVE_ITEM(VA_MISC_BASE + 0x250),
+	SAVE_ITEM(VA_MISC_BASE + 0x254),
+	SAVE_ITEM(VA_MISC_BASE + 0x258),
+	SAVE_ITEM(VA_MISC_BASE + 0x25C),
+	SAVE_ITEM(VA_MISC_BASE + 0x260),
+	SAVE_ITEM(VA_MISC_BASE + 0x264),
+	SAVE_ITEM(VA_MISC_BASE + 0x270),
+	SAVE_ITEM(VA_MISC_BASE + 0x274),
+	SAVE_ITEM(VA_MISC_BASE + 0x278),
+	SAVE_ITEM(VA_MISC_BASE + 0x27C),
+	SAVE_ITEM(VA_MISC_BASE + 0x280),
+	SAVE_ITEM(VA_MISC_BASE + 0x284),
+	SAVE_ITEM(VA_MISC_BASE + 0x288),
+	SAVE_ITEM(VA_MISC_BASE + 0x28C),
+	SAVE_ITEM(VA_MISC_BASE + 0x290),
+	SAVE_ITEM(VA_MISC_BASE + 0x294),
+	SAVE_ITEM(VA_MISC_BASE + 0x298),
+	SAVE_ITEM(VA_MISC_BASE + 0x29C),
+	SAVE_ITEM(VA_MISC_BASE + 0x300),
+	SAVE_ITEM(VA_MISC_BASE + 0x304),
+	SAVE_ITEM(VA_MISC_BASE + 0x308),
+	SAVE_ITEM(VA_MISC_BASE + 0x30C),
+	SAVE_ITEM(VA_MISC_BASE + 0x310),
+	SAVE_ITEM(VA_MISC_BASE + 0x314),
+};
+#endif
 
 /* Clock Configuration Registers */
 #define SPEAR1340_SYS_CLK_CTRL			(VA_MISC_BASE + 0x200)
@@ -444,6 +480,30 @@ static const char *gen_synth0_1_parents[] = { "vco1div4_clk", "vco3div2_clk",
 	"pll3_clk", };
 static const char *gen_synth2_3_parents[] = { "vco1div4_clk", "vco2div2_clk",
 	"pll2_clk", };
+
+#ifdef CONFIG_PM
+static int spear1340_clock_suspend(void)
+{
+	spear_pm_do_save(spear1340_clock_save,
+			ARRAY_SIZE(spear1340_clock_save));
+
+	return 0;
+}
+
+static void spear1340_clock_resume(void)
+{
+	spear_pm_do_restore_core(spear1340_clock_save,
+			ARRAY_SIZE(spear1340_clock_save));
+}
+#else
+#define spear1340_clock_suspend NULL
+#define spear1340_clock_resume NULL
+#endif
+
+struct syscore_ops spear1340_clock_syscore_ops = {
+	.suspend	= spear1340_clock_suspend,
+	.resume		= spear1340_clock_resume,
+};
 
 void __init spear1340_clk_init(void)
 {
@@ -1024,6 +1084,8 @@ void __init spear1340_clk_init(void)
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_PWM_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "e0180000.pwm");
+
+	register_syscore_ops(&spear1340_clock_syscore_ops);
 }
 
 int __init spear1340_sys_clk_init(void)

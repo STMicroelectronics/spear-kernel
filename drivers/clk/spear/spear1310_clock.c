@@ -17,8 +17,41 @@
 #include <linux/io.h>
 #include <linux/of_platform.h>
 #include <linux/spinlock_types.h>
+#include <linux/syscore_ops.h>
+#include <plat/pm.h>
 #include <mach/spear.h>
 #include "clk.h"
+
+#ifdef CONFIG_PM_SLEEP
+static struct sleep_save spear1310_clock_save[] = {
+	SAVE_ITEM(VA_MISC_BASE + 0x208),
+	SAVE_ITEM(VA_MISC_BASE + 0x20C),
+	SAVE_ITEM(VA_MISC_BASE + 0x244),
+	SAVE_ITEM(VA_MISC_BASE + 0x248),
+	SAVE_ITEM(VA_MISC_BASE + 0x24C),
+	SAVE_ITEM(VA_MISC_BASE + 0x250),
+	SAVE_ITEM(VA_MISC_BASE + 0x254),
+	SAVE_ITEM(VA_MISC_BASE + 0x258),
+	SAVE_ITEM(VA_MISC_BASE + 0x25C),
+	SAVE_ITEM(VA_MISC_BASE + 0x260),
+	SAVE_ITEM(VA_MISC_BASE + 0x264),
+	SAVE_ITEM(VA_MISC_BASE + 0x268),
+	SAVE_ITEM(VA_MISC_BASE + 0x26C),
+	SAVE_ITEM(VA_MISC_BASE + 0x270),
+	SAVE_ITEM(VA_MISC_BASE + 0x274),
+	SAVE_ITEM(VA_MISC_BASE + 0x280),
+	SAVE_ITEM(VA_MISC_BASE + 0x284),
+	SAVE_ITEM(VA_MISC_BASE + 0x288),
+	SAVE_ITEM(VA_MISC_BASE + 0x28C),
+	SAVE_ITEM(VA_MISC_BASE + 0x290),
+	SAVE_ITEM(VA_MISC_BASE + 0x294),
+	SAVE_ITEM(VA_MISC_BASE + 0x298),
+	SAVE_ITEM(VA_MISC_BASE + 0x29C),
+	SAVE_ITEM(VA_MISC_BASE + 0x300),
+	SAVE_ITEM(VA_MISC_BASE + 0x304),
+	SAVE_ITEM(VA_MISC_BASE + 0x310),
+};
+#endif
 
 #define VA_SPEAR1310_RAS_BASE			IOMEM(UL(0xFA400000))
 /* PLL related registers and bit values */
@@ -388,6 +421,30 @@ static const char *ssp1_parents[] = { "ras_apb_clk", "gen_syn1_clk",
 	"ras_plclk0_clk", };
 static const char *pci_parents[] = { "ras_pll3_clk", "gen_syn2_clk", };
 static const char *tdm_parents[] = { "ras_pll3_clk", "gen_syn1_clk", };
+
+#ifdef CONFIG_PM
+static int spear1310_clock_suspend(void)
+{
+	spear_pm_do_save(spear1310_clock_save,
+			ARRAY_SIZE(spear1310_clock_save));
+
+	return 0;
+}
+
+static void spear1310_clock_resume(void)
+{
+	spear_pm_do_restore_core(spear1310_clock_save,
+			ARRAY_SIZE(spear1310_clock_save));
+}
+#else
+#define spear1310_clock_suspend NULL
+#define spear1310_clock_resume NULL
+#endif
+
+struct syscore_ops spear1310_clock_syscore_ops = {
+	.suspend	= spear1310_clock_suspend,
+	.resume		= spear1310_clock_resume,
+};
 
 void __init spear1310_clk_init(void)
 {
@@ -1146,4 +1203,6 @@ void __init spear1310_clk_init(void)
 			SPEAR1310_RAS_SW_CLK_CTRL, SPEAR1310_RS485_1_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d8100000.rs485_hdlc");
+
+	register_syscore_ops(&spear1310_clock_syscore_ops);
 }
