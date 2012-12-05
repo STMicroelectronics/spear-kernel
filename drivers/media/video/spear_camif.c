@@ -2223,24 +2223,19 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int camif_shutdown(struct platform_device *pdev)
+static void camif_shutdown(struct platform_device *pdev)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(&pdev->dev);
 	struct camif *camif = container_of(ici, struct camif, ici);
-	int ret = 0;
 
 	if (camif->is_running) {
 		camif_stop_capture(camif, CAMIF_SHUTDOWN);
 
 		if(camif->icd) {
 			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
-			ret = v4l2_subdev_call(sd, core, s_power, 0);
-			if (ret == -ENOIOCTLCMD)
-				ret = 0;
+			v4l2_subdev_call(sd, core, s_power, 0);
 		}
 	}
-
-	return ret;
 }
 
 #ifdef CONFIG_OF
