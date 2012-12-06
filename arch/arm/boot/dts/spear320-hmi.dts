@@ -303,8 +303,8 @@
 						ts,ref_sel = <0>;
 						ts,adc_freq = <1>;
 						ts,ave_ctrl = <1>;
-						ts,touch_det_delay = <3>;
-						ts,settling = <4>;
+						ts,touch_det_delay = <2>;
+						ts,settling = <2>;
 						ts,fraction_z = <7>;
 						ts,i_drive = <1>;
 					};
