@@ -152,7 +152,7 @@ static const struct snd_kcontrol_new sta529_snd_controls[] = {
 			127, 1, out_gain_tlv),
 	SOC_SINGLE_TLV("Master Playback Volume", STA529_MVOL, 0, 127, 1,
 			master_vol_tlv),
-	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
+	SOC_SINGLE("master mute", STA529_FFXCFG0, 6, 1, 0),
 	SOC_SINGLE("Adc Capture Gain", STA529_ADCCFG, 5, 7, 0),
 };
 
