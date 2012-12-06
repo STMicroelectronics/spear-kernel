@@ -29,6 +29,7 @@ extern void spear_pcie_resume(void);
 extern void spear_pcie_suspend(void);
 #endif
 
+#define GPIO_1310_BASE		UL(0xD8400000)
 #define PCM_SET_WAKEUP_CFG	0xfffff
 /* Wake up Configurations */
 #define PCIE_WKUP	0x20

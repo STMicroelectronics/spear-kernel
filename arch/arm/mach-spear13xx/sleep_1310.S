@@ -54,17 +54,50 @@ mmu_off:
 	orr	r0, r0, #0x00800000
 	str	r0, [r6, #0x300]
 
-	ldr	r6, =GPIO0_BASE
-	/* Set the Direction of GPIO-2 as output */
-	ldr	r0, [r6, #0x400]
+	/* enable plgpio clock */
+	ldr     r0, [r6, #0x310]
+	orr     r0, r0, #0x1
+	str     r0, [r6, #0x310]
+
+	/* Set the config for plGPIO-145/146 */
+	ldr	r5, =GPIO_1310_BASE
+	ldr	r0, [r5, #0xE0]
+	orr	r0, r0, #0x60000
+	str	r0, [r5, #0xE0]
+
+	/* Set the value of plGPIO-145/146 */
+	ldr	r0, [r5, #0xA0]
+	orr	r0, r0, #0x60000
+	str	r0, [r5, #0xA0]
+
+	/* Set the Direction of plgpio-145/146 as output */
+	ldr	r0, [r5, #0xC0]
+	bic	r0, r0, #0x60000
+	str	r0, [r5, #0xC0]
+
+	/* Set the direction of arm gpio-2/3 as output */
+	ldr	r5, =GPIO0_BASE
+	ldr	r0, [r5, #0x400]
 	orr	r0, r0, #0xc
-	str	r0, [r6, #0x400]
+	str	r0, [r5, #0x400]
 
 	/* Set the value of GPIO-2/3 */
-	ldr	r0, [r6, #0x3fc]
+	ldr	r0, [r5, #0x3fc]
 	orr	r0, r0, #0xc
-	str	r0, [r6, #0x3fc]
-	ldr	r6, =MISC_BASE
+	str	r0, [r5, #0x3fc]
+
+	/* revert the control back from pl-gpio to gpio */
+	ldr	r0, [r6, #0x650]
+	orr	r0, r0, #0x300
+	str	r0, [r6, #0x650]
+
+	mov	r0, #0
+ddr_in_srefresh:
+	/* Add some delay */
+	add	r0, r0, #0x1
+	cmp	r0, #0x60000
+	bne	ddr_in_srefresh
+
 	/* Stop the MPMC controller */
 	ldr	r0, [r7, #0x2c]
 	bic	r0, r0, #0x1000000
@@ -155,6 +188,27 @@ spear_sleep_restore:
 	/* Move the system into normal mode */
 	put_system_to_normal_mode r0, r6
 
+	/* Set the config for plGPIO-145/146 */
+	ldr	r5, =GPIO_1310_BASE
+	ldr	r0, [r5, #0xE0]
+	orr	r0, r0, #0x60000
+	str	r0, [r5, #0xE0]
+
+	/* Set the value of plGPIO-145/146 */
+	ldr	r0, [r5, #0xA0]
+	orr	r0, r0, #0x60000
+	str	r0, [r5, #0xA0]
+
+	/* Set the Direction of plgpio-145/146 as output */
+	ldr	r0, [r5, #0xC0]
+	bic	r0, r0, #0x60000
+	str	r0, [r5, #0xC0]
+
+	/* revert the control back from gpio to pl-gpio */
+	ldr	r0, [r6, #0x650]
+	bic	r0, r0, #0x300
+	str	r0, [r6, #0x650]
+
 	ldr	r7, =MISC_BASE
 	/* Enable the MPMC clock */
 	ldr	r1, [r7, #0x304]
@@ -174,16 +228,22 @@ spear_sleep_restore:
 	/* Restor the mpmc registers */
 	mpmc_restore_regs r0, r2, r6, r7, r1
 
-	ldr	r7, =GPIO0_BASE
-	/* Set the Direction of GPIO-2 as output */
-	ldr	r0, [r7, #0x400]
-	orr	r0, r0, #0xc
-	str	r0, [r7, #0x400]
+	/* Set the MPMC controller for Power up self refresh exit */
+	ldr	r0, [r7, #0x18]
+	orr	r0, r0, #0x100
+	str	r0, [r7, #0x18]
+	mov	r0, #0
 
+	ldr	r7, =GPIO_1310_BASE
 	/* Set the value of GPIO-2 DDR CLKEN*/
-	ldr	r0, [r7, #0x3fc]
-	bic	r0, r0, #0x7
-	str	r0, [r7, #0x3fc]
+	ldr	r0, [r7, #0xA0]
+	bic	r0, r0, #0x20000
+	str	r0, [r7, #0xA0]
+
+	/* Set the Direction of GPIO-2 as output */
+	ldr	r0, [r7, #0xC0]
+	bic	r0, r0, #0x20000
+	str	r0, [r7, #0xC0]
 
 	mov	r0, #0
 ddr_out_srefresh:
@@ -195,12 +255,6 @@ ddr_out_srefresh:
 	/* Move the DDR out of self refresh mode */
 	ldr	r7, =A9SM_AND_MPMC_BASE
 	ldr	r8, =SRAM_STACK_PA
-
-	/* Exit from SR (bit 8) */
-	ldr	r1, [r7, #0x18]
-	orr	r1, r1, #0x100
-	str	r1, [r7, #0x18]
-
 	/* Set the MPMC controller to exit from Self-Refresh */
 	ldr	r0, [r7, #0x2c]
 	orr	r0, r0, #0x100
@@ -215,7 +269,6 @@ ddr_out_srefresh:
 	ldr	r1, [r7, #0x2c]
 	orr	r1, r1, #0x1000000
 	str	r1, [r7, #0x2c]
-
 	dsb
 	isb
 
@@ -240,10 +293,16 @@ wait_for_srefresh_exit_r0:
 	ldr	r0, [r6, #0x3DC]
 	tst	r0, #0x2000
 	beq	wait_for_srefresh_exit_r0
-	ldr	r7, =GPIO0_BASE
-	ldr	r0, [r7, #0x3fc]
-	bic	r0, r0, #0x8
-	str	r0, [r7, #0x3fc]
+
+	ldr	r7, =GPIO_1310_BASE
+	ldr	r0, [r7, #0xA0]
+	bic	r0, r0, #0x40000
+	str	r0, [r7, #0xA0]
+
+	/* Set the Direction of GPIO-3 as output */
+	ldr	r0, [r7, #0xC0]
+	bic	r0, r0, #0x40000
+	str	r0, [r7, #0xC0]
 
 	mov	r0, #0
 ddr_out_srefresh1:
