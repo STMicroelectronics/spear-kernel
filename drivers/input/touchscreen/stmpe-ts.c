@@ -87,6 +87,9 @@ static int __stmpe_reset_fifo(struct stmpe *stmpe)
 	if (ret)
 		return ret;
 
+	/* add a delay before reset fifo */
+	usleep_range(1, 10);
+
 	return stmpe_set_bits(stmpe, STMPE_REG_FIFO_STA,
 			STMPE_FIFO_STA_RESET, 0);
 }
