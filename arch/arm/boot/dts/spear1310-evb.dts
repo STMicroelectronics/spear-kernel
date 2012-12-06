@@ -56,6 +56,10 @@
 					st,pins = "arm_gpio_grp";
 					st,function = "arm_gpio";
 				};
+				ddr_rst_clken_gpio_pins {
+					st,pins = "pads_as_gpio_grp";
+					st,function = "pads_as_gpio";
+				};
 				clcd {
 					st,pins = "clcd_grp";
 					st,function = "clcd";
