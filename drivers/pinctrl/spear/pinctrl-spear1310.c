@@ -233,6 +233,49 @@ static const struct pinctrl_pin_desc spear1310_pins[] = {
 				SATA##x##_CFG_POWERUP_RESET |	\
 				SATA##x##_CFG_RX_CLK_EN |	\
 				SATA##x##_CFG_TX_CLK_EN)
+/*
+ * Pad multiplexing for making all pads as gpio's. This is done to override the
+ * values passed from bootloader and start from scratch.
+ */
+
+/*
+ * Plgpio's 145 and a46 are configured to use as DDR Reset and Clk_en
+ * control pins.
+ */
+static const unsigned pads_as_gpio_pins[] = { 145, 146 };
+static struct spear_muxreg pads_as_gpio_muxreg[] = {
+	{
+		.reg = PAD_FUNCTION_EN_0,
+		.mask = (PMX_EGPIO02_MASK | PMX_EGPIO03_MASK),
+		.val = 0,
+	}, {
+		.reg = PAD_DIRECTION_SEL_0,
+		.mask = (PMX_EGPIO02_MASK | PMX_EGPIO03_MASK),
+		.val = (PMX_EGPIO02_MASK | PMX_EGPIO03_MASK),
+	},
+};
+
+static struct spear_modemux pads_as_gpio_modemux[] = {
+	{
+		.muxregs = pads_as_gpio_muxreg,
+		.nmuxregs = ARRAY_SIZE(pads_as_gpio_muxreg),
+	},
+};
+
+static struct spear_pingroup pads_as_gpio_pingroup = {
+	.name = "pads_as_gpio_grp",
+	.pins = pads_as_gpio_pins,
+	.npins = ARRAY_SIZE(pads_as_gpio_pins),
+	.modemuxs = pads_as_gpio_modemux,
+	.nmodemuxs = ARRAY_SIZE(pads_as_gpio_modemux),
+};
+
+static const char *const pads_as_gpio_grps[] = { "pads_as_gpio_grp" };
+static struct spear_function pads_as_gpio_function = {
+	.name = "pads_as_gpio",
+	.groups = pads_as_gpio_grps,
+	.ngroups = ARRAY_SIZE(pads_as_gpio_grps),
+};
 
 /* Pad multiplexing for i2c0 device */
 static const unsigned i2c0_pins[] = { 102, 103 };
@@ -2320,6 +2363,7 @@ static struct spear_function gpt64_function = {
 
 /* pingroups */
 static struct spear_pingroup *spear1310_pingroups[] = {
+	&pads_as_gpio_pingroup,
 	&i2c0_pingroup,
 	&ssp0_pingroup,
 	&i2s0_pingroup,
@@ -2383,6 +2427,7 @@ static struct spear_pingroup *spear1310_pingroups[] = {
 
 /* functions */
 static struct spear_function *spear1310_functions[] = {
+	&pads_as_gpio_function,
 	&i2c0_function,
 	&ssp0_function,
 	&i2s0_function,
