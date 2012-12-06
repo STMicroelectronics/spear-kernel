@@ -144,19 +144,14 @@ static bool sta529_writeable(struct device *dev, unsigned int reg)
 	}
 }
 
-static const char *pwm_mode_text[] = {"Phase-shift", "Ternary", "Binary",
-	"Headphone"};
-
 static const DECLARE_TLV_DB_SCALE(out_gain_tlv, -9150, 50, 0);
 static const DECLARE_TLV_DB_SCALE(master_vol_tlv, -12750, 50, 0);
-static const SOC_ENUM_SINGLE_DECL(pwm_src, STA529_FFXCFG1, 4, pwm_mode_text);
 
 static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_DOUBLE_R_TLV("Digital Playback Volume", STA529_LVOL, STA529_RVOL, 0,
 			127, 1, out_gain_tlv),
 	SOC_SINGLE_TLV("Master Playback Volume", STA529_MVOL, 0, 127, 1,
 			master_vol_tlv),
-	SOC_ENUM("PWM Select", pwm_src),
 	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
 	SOC_SINGLE("Adc Capture Gain", STA529_ADCCFG, 5, 7, 0),
 };
