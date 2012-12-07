@@ -815,10 +815,12 @@ static void camif_rx_dma_complete(void *arg)
 	spin_unlock_irqrestore(&camif->lock, flags);
 }
 
-static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
+static int camif_submit_dma(struct camif *camif, struct camif_buffer *buf)
 {
 	int direction = DMA_FROM_DEVICE;
 	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
+	dma_cookie_t cookie;
+	int ret;
 
 	buf->desc =
 		camif->chan->device->device_prep_slave_sg(
@@ -833,6 +835,16 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 
 	buf->desc->callback = camif_rx_dma_complete;
 	buf->desc->callback_param = camif;
+
+	/* submit the DMA descriptor */
+	cookie = buf->desc->tx_submit(buf->desc);
+	ret = dma_submit_error(cookie);
+	if (ret) {
+		dev_err(camif->ici.v4l2_dev.dev,
+				"dma submit error %d\n", cookie);
+		return ret;
+	}
+
 
 	return 0;
 }
@@ -1050,7 +1062,6 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		struct videobuf_buffer *vb)
 {
 	int ret;
-	dma_cookie_t cookie;
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
@@ -1069,19 +1080,10 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	 * prepare DMA SG requests for the buffer just
 	 * requested by user-land
 	 */
-	ret = camif_init_dma_channel(camif, buf);
+	ret = camif_submit_dma(camif, buf);
 	if (ret) {
 		dev_err(icd->parent,
 				"DMA initialization failed\n");
-		return;
-	}
-
-	/* submit the DMA descriptor */
-	cookie = buf->desc->tx_submit(buf->desc);
-	ret = dma_submit_error(cookie);
-	if (ret) {
-		dev_err(icd->parent,
-				"dma submit error %d\n", cookie);
 		return;
 	}
 
@@ -2005,7 +2007,6 @@ static int camif_resume(struct device *dev)
 	struct camif *camif = ici->priv;
 	struct videobuf_buffer *vb;
 	struct camif_buffer *buf;
-	dma_cookie_t cookie;
 	int ret = 0;
 
 	/* check if CAMIF is in power-save state */
@@ -2018,20 +2019,10 @@ static int camif_resume(struct device *dev)
 		if (!ret && !list_empty(&camif->dma_queue)) {
 			list_for_each_entry(vb, &camif->dma_queue, queue) {
 				buf = container_of(vb, struct camif_buffer, vb);
-				ret = camif_init_dma_channel(camif, buf);
+				ret = camif_submit_dma(camif, buf);
 				if (ret) {
 					dev_err(camif->icd->parent,
 						"DMA initialization failed\n");
-					goto out;
-				}
-
-				/* submit the DMA descriptor */
-				cookie = buf->desc->tx_submit(buf->desc);
-				ret = dma_submit_error(cookie);
-				if (ret) {
-					dev_err(camif->icd->parent,
-						"dma submit error %d\n",
-						cookie);
 					goto out;
 				}
 			}
