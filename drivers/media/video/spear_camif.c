@@ -803,12 +803,6 @@ static void camif_rx_dma_complete(void *arg)
 
 	spin_lock_irqsave(&camif->lock, flags);
 
-	/* cur_frm should not be NULL in DMA handler */
-	if (!camif->cur_frm) {
-		spin_unlock_irqrestore(&camif->lock, flags);
-		goto out;
-	}
-
 	/* mark current frame as done */
 	vb = &camif->cur_frm->vb;
 	buf = container_of(vb, struct camif_buffer, vb);
@@ -819,9 +813,6 @@ static void camif_rx_dma_complete(void *arg)
 	mod_timer(&camif->idle_timer, jiffies + 3 * HZ);
 
 	spin_unlock_irqrestore(&camif->lock, flags);
-
-out:
-	return;
 }
 
 static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
