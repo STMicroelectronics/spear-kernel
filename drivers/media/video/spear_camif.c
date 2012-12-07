@@ -905,6 +905,13 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 			goto out;
 		}
 
+		if (list_empty(&camif->dma_queue)) {
+			/* put camif in a SW recovery state */
+			camif_set_sw_recovery_state(camif);
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto out;
+		}
+
 		/* from 2nd frame onwards, enable DMA engine */
 		camif->cur_frm =
 			list_first_entry(&camif->dma_queue,
