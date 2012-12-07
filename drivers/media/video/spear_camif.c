@@ -1048,15 +1048,13 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 	if (vb->state == VIDEOBUF_NEEDS_INIT) {
 		ret = videobuf_iolock(vq, vb, NULL);
 		if (ret)
-			goto fail;
+			goto out;
 
 		vb->state = VIDEOBUF_PREPARED;
 	}
 	buf->inwork = 0;
 
 	return 0;
-fail:
-	free_buffer(vq, buf);
 out:
 	buf->inwork = 0;
 
