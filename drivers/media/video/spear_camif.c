@@ -806,7 +806,6 @@ static void camif_rx_dma_complete(void *arg)
 	/* mark current frame as done */
 	vb = &camif->cur_frm->vb;
 	buf = container_of(vb, struct camif_buffer, vb);
-	WARN_ON(buf->inwork || list_empty(&vb->queue));
 	camif_process_buffer_complete(camif, vb, buf);
 
 	/* schedule timer again */
