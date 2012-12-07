@@ -945,30 +945,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-static void free_buffer(struct videobuf_queue *vq, struct camif_buffer *buf)
-{
-	struct soc_camera_device *icd = vq->priv_data;
-	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
-	struct videobuf_buffer *vb = &buf->vb;
-
-	BUG_ON(in_interrupt());
-
-	dev_dbg(icd->parent, "(vb=0x%p) 0x%08lx %d\n",
-			&buf->vb, buf->vb.baddr, buf->vb.bsize);
-
-	vb->state = VIDEOBUF_DONE;
-
-	/*
-	 * This waits until this buffer is out of danger, i.e., until it is no
-	 * longer in STATE_QUEUED or STATE_ACTIVE
-	 */
-	videobuf_waiton(vq, &buf->vb, 0, 0);
-	videobuf_dma_unmap(vq->dev, dma);
-	videobuf_dma_free(dma);
-
-	buf->vb.state = VIDEOBUF_NEEDS_INIT;
-}
-
 static int camif_videobuf_setup(struct videobuf_queue *vq,
 		unsigned int *count, unsigned int *size)
 {
@@ -1123,30 +1099,32 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 {
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
-	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
+	struct videobuf_dmabuf *dma = videobuf_to_dma(vb);
 	struct camif *camif = ici->priv;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
+	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED)) {
+		struct camif_buffer *buf;
 
-	if (camif->cur_frm == buf) {
-		/* stop DMA transfers */
-		camif_configure_interrupts(camif, DISABLE_EVEN_FIELD_DMA);
-		if (camif->chan)
-			dmaengine_terminate_all(camif->chan);
+		dmaengine_terminate_all(camif->chan);
 
-		camif->cur_frm = NULL;
+		/* Empty the dma_queue and enable sw_workaround */
+		list_for_each_entry(buf, &camif->dma_queue, vb.queue)
+			vb->state = VIDEOBUF_ERROR;
+		camif_set_sw_recovery_state(camif);
 	}
-
-	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED) &&
-			!list_empty(&vb->queue)) {
-		vb->state = VIDEOBUF_ERROR;
-		list_del_init(&vb->queue);
-	}
-
 	spin_unlock_irqrestore(&camif->lock, flags);
 
-	free_buffer(vq, buf);
+	/*
+	 * This waits until this buffer is out of danger, i.e., until it is no
+	 * longer in STATE_QUEUED or STATE_ACTIVE
+	 */
+	videobuf_waiton(vq, vb, 0, 0);
+	videobuf_dma_unmap(vq->dev, dma);
+	videobuf_dma_free(dma);
+
+	vb->state = VIDEOBUF_NEEDS_INIT;
 }
 
 static struct videobuf_queue_ops camif_videobuf_ops = {
