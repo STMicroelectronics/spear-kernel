@@ -227,7 +227,7 @@ static int __init spear_pm_init(void)
 		spear_sleep_fn_addr = (void *)spear1310_sleep_mode;
 		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
 		pcm_set_cfg &= ~(PWR_DOM_ON | USB_WKUP);
-		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP);
+		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP | PCIE_WKUP);
 	} else
 		return -ENODEV;
 
