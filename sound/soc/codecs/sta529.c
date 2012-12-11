@@ -117,7 +117,9 @@ struct sta529 {
 	bool stream_active;
 	/* context save */
 	int ffxcg0;
+	int s2pcfg0;
 	int s2pcfg1;
+	int p2scfg0;
 	int p2scfg1;
 	int misc;
 };
@@ -165,7 +167,9 @@ static int sta529_set_bias_level(struct snd_soc_codec *codec, enum
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
 		regmap_write(sta529->regmap, STA529_FFXCFG0, sta529->ffxcg0);
+		regmap_write(sta529->regmap, STA529_S2PCFG0, sta529->s2pcfg0);
 		regmap_write(sta529->regmap, STA529_S2PCFG1, sta529->s2pcfg1);
+		regmap_write(sta529->regmap, STA529_P2SCFG0, sta529->p2scfg0);
 		regmap_write(sta529->regmap, STA529_P2SCFG1, sta529->p2scfg1);
 		regmap_write(sta529->regmap, STA529_MISC, sta529->misc);
 
@@ -290,7 +294,9 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	regmap_read(sta529->regmap, STA529_FFXCFG0, &sta529->ffxcg0);
+	regmap_read(sta529->regmap, STA529_S2PCFG0, &sta529->s2pcfg0);
 	regmap_read(sta529->regmap, STA529_S2PCFG1, &sta529->s2pcfg1);
+	regmap_read(sta529->regmap, STA529_P2SCFG0, &sta529->p2scfg0);
 	regmap_read(sta529->regmap, STA529_P2SCFG1, &sta529->p2scfg1);
 	regmap_read(sta529->regmap, STA529_MISC, &sta529->misc);
 
