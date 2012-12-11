@@ -1945,15 +1945,14 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 	u32 tmp, dev_int, status;
 
 	dev_int = readl(&glob->dev_int);
+	/* clear interrupts */
+	writel(dev_int, &glob->dev_int);
 
 	if (!dev_int)
 		return;
 
 	/* USB Reset detected on cable */
 	if (dev_int & DEV_INT_USBRESET) {
-		/* Clear interrupt */
-		writel(DEV_INT_USBRESET, &glob->dev_int);
-
 		DW_UDC_DBG(DBG_INTS, "USB RESET\n");
 
 		/* all endpoint irq disabled */
@@ -1990,9 +1989,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 	}
 	/* Device Enumeration completed */
 	if (dev_int & DEV_INT_ENUM) {
-		/* Clear interrupt */
-		writel(DEV_INT_ENUM, &glob->dev_int);
-
 		DW_UDC_DBG(DBG_INTS, "USB Enumeration\n");
 
 		status = readl(&glob->dev_status);
@@ -2022,8 +2018,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 
 	if (dev_int & DEV_INT_INACTIVE) {
 		/* The USB will be in SUSPEND in 3 ms */
-		/* Clear interrupt */
-		writel(DEV_INT_INACTIVE, &glob->dev_int);
 		if (udev->gadget.speed != USB_SPEED_UNKNOWN && udev->driver
 				&& udev->driver->suspend)
 			udev->driver->suspend(&udev->gadget);
@@ -2037,7 +2031,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 	if (dev_int & DEV_INT_SETCFG) {
 		struct usb_ctrlrequest u_ctrl_req;
 
-		writel(DEV_INT_SETCFG, &glob->dev_int);
 		DW_UDC_DBG(DBG_INTS, "Set Configuration\n");
 
 		/*
@@ -2075,7 +2068,6 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 	if (dev_int & DEV_INT_SETINTF) {
 		struct usb_ctrlrequest u_ctrl_req;
 
-		writel(DEV_INT_SETINTF, &glob->dev_int);
 		DW_UDC_DBG(DBG_INTS, "Set Interface\n");
 
 		/*
@@ -2100,16 +2092,12 @@ static void udc_handle_device_irq(struct dw_udc_dev *udev)
 		udc_handle_internal_cmds(udev, u_ctrl_req);
 	}
 
-	if (dev_int & DEV_INT_SUSPUSB)
-		writel(DEV_INT_SUSPUSB, &glob->dev_int);
-
 	if (dev_int & DEV_INT_SOF) {
 		/*
 		 * There is no direct interrupt for RESUME
 		 * So SOF is enabled only after suspend
 		 * On receiving SOF interrupt RESUME is assumed
 		 */
-		writel(DEV_INT_SOF, &glob->dev_int);
 		/* Now disable SOF interrupt */
 		tmp = readl(&glob->dev_int_mask);
 		tmp |= DEV_INT_SOF;
