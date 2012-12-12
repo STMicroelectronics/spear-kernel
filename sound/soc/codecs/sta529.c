@@ -227,12 +227,8 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 			* SoCs, bit clock would not be shared for play
 			* and record lines of sta529.
 			*/
-			regmap_write(sta529->regmap, STA529_S2PCFG0, 0x12);
+			regmap_write(sta529->regmap, STA529_S2PCFG0, 0x92);
 			regmap_write(sta529->regmap, STA529_P2SCFG0, 0x93);
-		} else {
-			/* Restore playback registers */
-			regmap_write(sta529->regmap, STA529_S2PCFG0, 0xb2);
-			regmap_write(sta529->regmap, STA529_P2SCFG0, 0x92);
 		}
 	}
 
