@@ -1,7 +1,7 @@
 VERSION = 3
 PATCHLEVEL = 5
 SUBLEVEL = 0
-EXTRAVERSION =-lsp-3.3.1-rc3
+EXTRAVERSION =-lsp-3.3.1-rc4
 NAME = Saber-toothed Squirrel
 
 # *DOCUMENTATION*
