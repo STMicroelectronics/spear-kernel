@@ -9,6 +9,7 @@
  * SPEAr clk - Common routines
  */
 
+#include <linux/clk-private.h>
 #include <linux/clk-provider.h>
 #include <linux/types.h>
 #include "clk.h"
@@ -36,4 +37,22 @@ long clk_round_rate_index(struct clk_hw *hw, unsigned long drate,
 		(*index)--;
 
 	return rate;
+}
+
+struct clk *clk_lookup_subtree(const char *name, struct clk *clk)
+{
+	struct clk *ret_clk;
+	struct clk *child;
+	struct hlist_node *tmp;
+
+	if (!strcmp(clk->name, name))
+		return clk;
+
+	hlist_for_each_entry(child, tmp, &clk->children, child_node) {
+		ret_clk = clk_lookup_subtree(name, child);
+		if (ret_clk)
+			return ret_clk;
+	}
+
+	return NULL;
 }

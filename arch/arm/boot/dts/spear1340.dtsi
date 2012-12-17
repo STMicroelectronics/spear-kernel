@@ -22,6 +22,26 @@
 			compatible = "st,spear1340-pinmux";
 			reg = <0xe0700000 0x1000>;
 			#gpio-range-cells = <2>;
+
+			i2c_default: i2c-default {
+				i2c-default {
+					st,pins = "i2c0_grp";
+					st,function = "i2c0";
+				};
+			};
+		};
+
+		spics: spics@e0700000{
+			compatible = "st,spear-spics-gpio";
+			reg = <0xe0700000 0x1000>;
+			st-spics,peripcfg-reg = <0x42c>;
+			st-spics,sw-enable-bit = <21>;
+			st-spics,cs-value-bit = <20>;
+			st-spics,cs-enable-mask = <3>;
+			st-spics,cs-enable-shift = <18>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			status = "disabled";
 		};
 
 		ahci@b1000000 {
@@ -95,7 +115,7 @@
 			status = "disable";
 		};
 
-		cam0@d02000000 {
+		cam0@d0200000 {
 			compatible = "st,camif";
 			reg = <0xd0200000 0x1000>;
 			interrupts = <0 87 0x4
@@ -104,7 +124,7 @@
 			status = "disabled";
 		};
 
-		cam1@d03000000 {
+		cam1@d0300000 {
 			compatible = "st,camif";
 			reg = <0xd0300000 0x1000>;
 			interrupts = <0 89 0x4
@@ -113,7 +133,7 @@
 			status = "disabled";
 		};
 
-		cam2@d04000000 {
+		cam2@d0400000 {
 			compatible = "st,camif";
 			reg = <0xd0400000 0x1000>;
 			interrupts = <0 91 0x4
@@ -122,7 +142,7 @@
 			status = "disabled";
 		};
 
-		cam3@d05000000 {
+		cam3@d0500000 {
 			compatible = "st,camif";
 			reg = <0xd0500000 0x1000>;
 			interrupts = <0 93 0x4
@@ -131,14 +151,14 @@
 			status = "disabled";
 		};
 
-		video-dec@ebd000000 {
+		video-dec@ebd00000 {
 			compatible = "st,video-dec";
 			reg = <0xebd00000 0x1000>;
 			interrupts = <0 81 0x4>;
 			status = "disabled";
 		};
 
-		video-enc@ebc000000 {
+		video-enc@ebc00000 {
 			compatible = "st,video-enc";
 			reg = <0xebc00000 0x1000>;
 			interrupts = <0 82 0x4>;
@@ -159,10 +179,10 @@
 			status = "disabled";
 		};
 
-		pwm@e0180000 {
-			compatible = "st,pwm";
+		pwm: pwm@e0180000 {
+			compatible ="st,spear13xx-pwm";
 			reg = <0xe0180000 0x1000>;
-			interrupts = <0 0x4>;
+			#pwm-cells = <2>;
 			status = "disabled";
 		};
 
@@ -171,6 +191,9 @@
 				recovery,gpio;
 				recovery,scl-gpio = <&gpiopinctrl 134 0>;
 				recovery,sda-gpio = <&gpiopinctrl 133 1>;
+				pinctrl-names = "default", "sleep";
+				pinctrl-0 = <&i2c_default>;
+				pinctrl-1 = <>;
 			};
 
 			i2c1: i2c@b4000000 {
@@ -188,10 +211,6 @@
 				reg = <0xb4100000 0x1000>;
 				interrupts = <0 105 0x4>;
 				status = "disabled";
-			};
-
-			thermal@e07008c4 {
-				st,thermal-flags = <0x2a00>;
 			};
 
 			gpiopinctrl: gpio@e2800000 {

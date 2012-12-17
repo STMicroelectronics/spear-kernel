@@ -558,6 +558,8 @@ struct macb {
 	phy_interface_t		phy_interface;
 
 	struct spear_timer_ops *timer_ops;
+	int wol_irq;
+	int wolopts;
 };
 
 

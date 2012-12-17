@@ -25,8 +25,11 @@ extern void spear1310_sleep_mode(suspend_state_t state, unsigned long *saveblk);
 extern unsigned int spear1310_sleep_mode_sz;
 extern void spear_wakeup(void);
 extern unsigned int spear_wakeup_sz;
+extern void spear_pcie_resume(void);
+extern void spear_pcie_suspend(void);
 #endif
 
+#define GPIO_1310_BASE		UL(0xD8400000)
 #define PCM_SET_WAKEUP_CFG	0xfffff
 /* Wake up Configurations */
 #define PCIE_WKUP	0x20

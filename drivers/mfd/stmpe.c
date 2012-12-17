@@ -1021,9 +1021,9 @@ static int stmpe_probe_keyboard_dt(struct stmpe_keypad_platform_data *pdata,
 {
 	u32 val;
 
-	if (of_property_read_u32(np, "keypad,scan_count", &val))
+	if (!of_property_read_u32(np, "keypad,scan_count", &val))
 		pdata->scan_count= val;
-	if (of_property_read_u32(np, "keypad,debounce_ms", &val))
+	if (!of_property_read_u32(np, "keypad,debounce_ms", &val))
 		pdata->debounce_ms= val;
 	if (of_property_read_bool(np, "keypad,no_autorepeat"))
 		pdata->no_autorepeat= true;
@@ -1036,7 +1036,7 @@ static int stmpe_probe_gpio_dt(struct stmpe_gpio_platform_data *pdata,
 {
 	u32 val;
 
-	if (of_property_read_u32(np, "gpio,norequest_mask", &val))
+	if (!of_property_read_u32(np, "gpio,norequest_mask", &val))
 		pdata->norequest_mask = val;
 
 	/* assign gpio numbers dynamically */
@@ -1050,23 +1050,23 @@ static int stmpe_probe_touschscreen_dt(struct stmpe_ts_platform_data *pdata,
 {
 	u32 val;
 
-	if (of_property_read_u32(np, "ts,sample_time", &val))
+	if (!of_property_read_u32(np, "ts,sample_time", &val))
 		pdata->sample_time = val;
-	if (of_property_read_u32(np, "ts,mod_12b", &val))
+	if (!of_property_read_u32(np, "ts,mod_12b", &val))
 		pdata->mod_12b = val;
-	if (of_property_read_u32(np, "ts,ref_sel", &val))
+	if (!of_property_read_u32(np, "ts,ref_sel", &val))
 		pdata->ref_sel = val;
-	if (of_property_read_u32(np, "ts,adc_freq", &val))
+	if (!of_property_read_u32(np, "ts,adc_freq", &val))
 		pdata->adc_freq = val;
-	if (of_property_read_u32(np, "ts,ave_ctrl", &val))
+	if (!of_property_read_u32(np, "ts,ave_ctrl", &val))
 		pdata->ave_ctrl = val;
-	if (of_property_read_u32(np, "ts,touch_det_delay", &val))
+	if (!of_property_read_u32(np, "ts,touch_det_delay", &val))
 		pdata->touch_det_delay = val;
-	if (of_property_read_u32(np, "ts,settling", &val))
+	if (!of_property_read_u32(np, "ts,settling", &val))
 		pdata->settling = val;
-	if (of_property_read_u32(np, "ts,fraction_z",&val))
+	if (!of_property_read_u32(np, "ts,fraction_z",&val))
 		pdata->fraction_z = val;
-	if (of_property_read_u32(np, "ts,i_drive", &val))
+	if (!of_property_read_u32(np, "ts,i_drive", &val))
 		pdata->i_drive = val;
 
 	return 0;
@@ -1162,15 +1162,15 @@ static int __devinit stmpe_of_devices_init(struct stmpe *stmpe)
 
 	for_each_child_of_node(np, nc) {
 		if (of_match_node(stmpe_keypad_ids, nc)) {
-			stmpe_probe_keyboard_dt(stmpe->pdata->keypad, np);
+			stmpe_probe_keyboard_dt(stmpe->pdata->keypad, nc);
 			block = stmpe_get_variant_block(variant,
 					STMPE_BLOCK_KEYPAD);
 		} else if (of_match_node(stmpe_gpio_ids, nc)) {
-			stmpe_probe_gpio_dt(stmpe->pdata->gpio, np);
+			stmpe_probe_gpio_dt(stmpe->pdata->gpio, nc);
 			block = stmpe_get_variant_block(variant,
 					STMPE_BLOCK_GPIO);
 		} else if (of_match_node(stmpe_ts_ids, nc)) {
-			stmpe_probe_touschscreen_dt(stmpe->pdata->ts, np);
+			stmpe_probe_touschscreen_dt(stmpe->pdata->ts, nc);
 			block = stmpe_get_variant_block(variant,
 					STMPE_BLOCK_TOUCHSCREEN);
 		} else if (of_match_node(stmpe_adc_ids, nc)) {

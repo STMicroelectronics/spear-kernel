@@ -593,9 +593,13 @@ static int db9000fb_open(struct fb_info *info, int user)
 	struct db9000fb_info *fbi = to_db9000fb(info);
 
 	/* Enable Controller only if its uses is zero*/
-	if (atomic_inc_return(&fbi->usage) == 1)
+	if (atomic_inc_return(&fbi->usage) == 1) {
 		set_ctrlr_state(fbi, C_ENABLE);
 
+#ifdef CONFIG_BACKLIGHT_DB9000_LCD
+		init_backlight(fbi);
+#endif
+	}
 	return 0;
 }
 
@@ -1317,6 +1321,7 @@ static void db9000fb_decode_mach_info(struct db9000fb_info *fbi,
 	fbi->reg_pctr		= inf->ctrl_info->pctr;
 	fbi->reg_dear		= inf->ctrl_info->dear;
 #ifdef CONFIG_BACKLIGHT_DB9000_LCD
+	fbi->reg_pwmdcr		= DEF_BRIGHTNESS;
 	fbi->reg_pwmfr		= inf->ctrl_info->pwmfr;
 #endif
 }
@@ -1835,6 +1840,7 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		goto err_free_mmio_base;
 	}
 
+	fbi->pdev = pdev;
 	fbi->fb.screen_base	= addr;
 	fbi->fb.fix.smem_start	= fbi->frame_base;
 	fbi->fb.fix.smem_len	= fbi->video_mem_size;
@@ -1856,12 +1862,6 @@ static int __devinit db9000fb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "request_irq failed: %d\n", ret);
 		goto err_free_framebuffer_addr;
 	}
-
-#ifdef CONFIG_BACKLIGHT_DB9000_LCD
-	fbi->reg_pwmdcr = DEF_BRIGHTNESS;
-	fbi->pdev = pdev;
-	init_backlight(fbi);
-#endif
 
 	ret = db9000fb_check_var(&fbi->fb.var, &fbi->fb);
 	if (ret) {

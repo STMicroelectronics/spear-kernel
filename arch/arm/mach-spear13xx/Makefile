@@ -9,3 +9,4 @@ obj-$(CONFIG_ARCH_SPEAR13XX)	+= spear13xx.o
 obj-$(CONFIG_SUSPEND)		+= pm.o wakeup.o sleep_1340.o sleep_1310.o
 obj-$(CONFIG_MACH_SPEAR1310)	+= spear1310.o
 obj-$(CONFIG_MACH_SPEAR1340)	+= spear1340.o
+obj-$(CONFIG_SPEAR13XX_PCI)	+= pcie.o

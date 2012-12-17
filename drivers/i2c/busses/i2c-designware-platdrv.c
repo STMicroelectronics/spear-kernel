@@ -37,8 +37,10 @@
 #include <linux/interrupt.h>
 #include <linux/of_gpio.h>
 #include <linux/of_i2c.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <linux/io.h>
 #include <linux/slab.h>
 #include "i2c-designware-core.h"
@@ -227,13 +229,29 @@ static int __devinit dw_i2c_probe(struct platform_device *pdev)
 		}
 	}
 
+	dev->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(dev->pinctrl)) {
+		dev_dbg(&pdev->dev, "could not get pinctrl instance\n");
+	} else {
+		dev->pins_default = pinctrl_lookup_state(dev->pinctrl,
+						 PINCTRL_STATE_DEFAULT);
+		if (IS_ERR(dev->pins_default))
+			dev_dbg(&pdev->dev, "could not get default pinstate\n");
+
+		dev->pins_sleep = pinctrl_lookup_state(dev->pinctrl,
+						PINCTRL_STATE_SLEEP);
+		if (IS_ERR(dev->pins_sleep))
+			dev_dbg(&pdev->dev, "could not get sleep pinstate\n");
+	}
+
 	r = i2c_add_numbered_adapter(adap);
 	if (r) {
 		dev_err(&pdev->dev, "failure adding adapter\n");
 		goto err_free_recovery;
 	}
 	of_i2c_register_devices(adap);
-
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
 	return 0;
 
 err_free_recovery:
@@ -274,6 +292,7 @@ static int __devexit dw_i2c_remove(struct platform_device *pdev)
 	dev->clk = NULL;
 
 	i2c_dw_disable(dev);
+	pm_runtime_disable(&pdev->dev);
 	free_irq(dev->irq, dev);
 	kfree(dev);
 
@@ -296,6 +315,7 @@ static int dw_i2c_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
 
+	pm_runtime_get_sync(dev);
 	clk_disable_unprepare(i_dev->clk);
 
 	return 0;
@@ -308,12 +328,40 @@ static int dw_i2c_resume(struct device *dev)
 
 	clk_prepare_enable(i_dev->clk);
 	i2c_dw_init(i_dev);
+	pm_runtime_put(dev);
 
 	return 0;
 }
+
+static int dw_i2c_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
+
+	clk_disable_unprepare(i_dev->clk);
+	return 0;
+}
+
+static int dw_i2c_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct dw_i2c_dev *i_dev = platform_get_drvdata(pdev);
+
+	return clk_prepare_enable(i_dev->clk);
+}
+
+static int dw_i2c_runtime_idle(struct device *dev)
+{
+	return pm_schedule_suspend(dev, 500);
+}
+
 #endif
 
-static SIMPLE_DEV_PM_OPS(dw_i2c_dev_pm_ops, dw_i2c_suspend, dw_i2c_resume);
+const struct dev_pm_ops dw_i2c_dev_pm_ops = {
+        SET_SYSTEM_SLEEP_PM_OPS(dw_i2c_suspend, dw_i2c_resume)
+        SET_RUNTIME_PM_OPS(dw_i2c_runtime_suspend, dw_i2c_runtime_resume, dw_i2c_runtime_idle)
+};
+
 
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:i2c_designware");

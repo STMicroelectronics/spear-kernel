@@ -17,13 +17,13 @@
 	cpus {
 		cpu@0 {
 			compatible = "arm,arm926ejs";
-            operating-freqs = <
-                /* kHz */
-                166000
-                266000
-                332000
-            >;
-           clock-latency = <250000>;
+			operating-freqs = <
+				/* kHz */
+				166000
+				266000
+				332000
+			>;
+			clock-latency = <250000>;
 		};
 	};
 
@@ -70,7 +70,7 @@
 			status = "disabled";
 		};
 
-		fsmc: flash@d1800000 {
+		nand@d1800000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -130,6 +130,14 @@
 			reg = <0xfc200000 0x1000>;
 			interrupt-parent = <&vic1>;
 			interrupts = <12>;
+			status = "disabled";
+		};
+
+		jpeg@d0800000 {
+			compatible = "st,designware-jpeg";
+			reg = <0xd0800000 0x2000>;
+			interrupt-parent = <&vic1>;
+			interrupts = <20>;
 			status = "disabled";
 		};
 

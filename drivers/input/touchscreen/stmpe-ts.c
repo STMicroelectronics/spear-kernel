@@ -87,6 +87,9 @@ static int __stmpe_reset_fifo(struct stmpe *stmpe)
 	if (ret)
 		return ret;
 
+	/* add a delay before reset fifo */
+	usleep_range(1, 10);
+
 	return stmpe_set_bits(stmpe, STMPE_REG_FIFO_STA,
 			STMPE_FIFO_STA_RESET, 0);
 }
@@ -118,6 +121,7 @@ static void stmpe_work(struct work_struct *work)
 	__stmpe_reset_fifo(ts->stmpe);
 
 	input_report_abs(ts->idev, ABS_PRESSURE, 0);
+	input_report_key(ts->idev, BTN_TOUCH, 0);
 	input_sync(ts->idev);
 }
 
@@ -151,6 +155,7 @@ static irqreturn_t stmpe_ts_handler(int irq, void *data)
 	input_report_abs(ts->idev, ABS_X, x);
 	input_report_abs(ts->idev, ABS_Y, y);
 	input_report_abs(ts->idev, ABS_PRESSURE, z);
+	input_report_key(ts->idev, BTN_TOUCH, 1);
 	input_sync(ts->idev);
 
        /* flush the FIFO after we have read out our values. */

@@ -1725,8 +1725,6 @@ static int vs6725_s_mbus_config(struct v4l2_subdev *sd,
 					const struct v4l2_mbus_config *cfg)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct soc_camera_link *icl = soc_camera_i2c_to_link(client);
-	unsigned long flags = soc_camera_apply_board_flags(icl, cfg);
 	int ret;
 
 	ret = vs6725_reg_write(client,

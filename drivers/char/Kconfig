@@ -27,6 +27,12 @@ config SPEAR_ADC_DMA_IF
 	help
 	  This enables DMA transfers on ADC Channel 0
 
+config DESIGNWARE_JPEG
+	tristate "Synopsys JPEG Designware support"
+	default y
+	help
+	  Support the Synopsys JPEG Designware
+
 config STALDRV
 	bool "Stallion multiport serial support"
 	depends on SERIAL_NONSTANDARD
@@ -596,6 +602,7 @@ config DEVPORT
 	default y
 
 source "drivers/s390/char/Kconfig"
+source "drivers/char/c3/Kconfig"
 
 config MSM_SMD_PKT
 	bool "Enable device interface for some SMD packet ports"

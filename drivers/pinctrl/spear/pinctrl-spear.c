@@ -313,7 +313,7 @@ static int gpio_request_endisable(struct pinctrl_dev *pctldev,
 	 * groups, rather than a single pin.
 	 */
 	gpio_pingroup = get_gpio_pingroup(pmx, offset);
-	if (gpio_pingroup) {
+	if (gpio_pingroup && !IS_ERR(gpio_pingroup)) {
 		struct spear_muxreg *reg;
 
 		/* first program the required mux */

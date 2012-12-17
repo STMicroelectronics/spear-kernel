@@ -1,0 +1,96 @@
+Bosch C_CAN/D_CAN controller Device Tree Bindings
+-------------------------------------------------
+
+Required properties:
+- compatible		: Should be "bosch,c_can" for C_CAN controllers and
+			  "bosch,d_can" for D_CAN controllers.
+- reg			: physical base address and size of the C_CAN/D_CAN
+			  registers map
+- interrupts		: property with a value describing the interrupt
+			  number
+Optional properties:
+
+- ti,hwmods		: Must be "d_can<n>" or "c_can<n>", n being the
+			  instance number
+- rx_split      : Receive message objects lying in the lower bucket
+- tx_num        : Total number of transmit message objects
+- reg_alignment : Signifies register alignment. Must be either of
+                        1. 0x8 or 0x10 - If registers are 16-bit aligned
+                        2. 0x18 - If registers are 32-bit aligned
+                Default is 32-bit alignment.
+
+Note:
+1. "ti,hwmods" field is used to fetch the base address and irq resources from
+   TI, omap hwmod data base during device registration.  Future plan is to
+   migrate hwmod data base contents into device tree blob so that, all the
+   required data will be used from device tree dts file.
+2. Bosch C_CAN controller has 32 total message objects. RX first message object
+   starts from 1. Depending upon the application, rx_split should lie somewhere
+   between rx_first and rx_last (32 - tx_num)
+
+Example:
+
+Step1: SoC common .dtsi file
+
+	dcan1: d_can@481d0000 {
+		compatible = "bosch,d_can";
+		reg = <0x481d0000 0x2000>;
+		interrupts = <55>;
+		interrupt-parent = <&intc>;
+		status = "disabled";
+	};
+
+(or)
+
+	dcan1: d_can@481d0000 {
+		compatible = "bosch,d_can";
+		ti,hwmods = "d_can1";
+		reg = <0x481d0000 0x2000>;
+		interrupts = <55>;
+		interrupt-parent = <&intc>;
+		status = "disabled";
+	};
+
+(or)
+
+	can0@a1000000 {
+		compatible = "bosch,c_can";
+		ti,hwmods = "c_can0";
+		reg = <0xa1000000 0x1000>;
+		interrupts = <55>;
+		interrupt-parent = <&intc>;
+		reg_alignment = <0x10>;
+		status = "disabled";
+	};
+
+(or)
+
+	can1@a2000000 {
+		compatible = "bosch,c_can";
+		ti,hwmods = "c_can1";
+		reg = <0xa2000000 0x1000>;
+		interrupts = <55>;
+		interrupt-parent = <&intc>;
+		reg_alignment = <0x18>;
+		status = "disabled";
+	};
+
+Step 2: board specific .dts file
+
+	can0@a1000000 {
+		rx_split = <16>;
+		tx_num = <6>;
+		status = "okay";
+	};
+
+(or)
+
+	can1@a2000000 {
+		status = "okay";
+	};
+
+(or)
+
+	&dcan1 {
+		status = "okay";
+	};

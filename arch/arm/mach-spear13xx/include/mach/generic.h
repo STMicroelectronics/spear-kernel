@@ -42,6 +42,9 @@ int spear13xx_eth_phy_clk_cfg(struct platform_device *pdev);
 void spear_restart(char, const char *);
 void spear13xx_secondary_startup(void);
 void spear13xx_reserve_mem(void);
+int spear13xx_fsmcnor_init(int numbanks);
+int sata_resume(struct device *dev);
+int sata_suspend(struct device *dev);
 
 #ifdef CONFIG_MACH_SPEAR1310
 void __init spear1310_clk_init(void);

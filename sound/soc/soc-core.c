@@ -1822,6 +1822,7 @@ const struct dev_pm_ops snd_soc_pm_ops = {
 	.resume = snd_soc_resume,
 	.freeze = snd_soc_suspend,
 	.thaw = snd_soc_resume,
+	.poweroff = snd_soc_poweroff,
 	.restore = snd_soc_resume,
 };
 EXPORT_SYMBOL_GPL(snd_soc_pm_ops);

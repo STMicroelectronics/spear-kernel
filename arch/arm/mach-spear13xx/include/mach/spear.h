@@ -56,14 +56,7 @@
 #define SPEAR13XX_CLCD_BASE			UL(0xE1000000)
 #define GPIO0_BASE				UL(0xE0600000)
 #define XGPIO_BASE				UL(0xE2800000)
-
-/* Devices present in SPEAr1310 */
-#ifdef CONFIG_MACH_SPEAR1310
-#define SPEAR1310_RAS_GRP1_BASE			UL(0xD8000000)
-#define VA_SPEAR1310_RAS_GRP1_BASE		UL(0xFA000000)
-#define SPEAR1310_RAS_BASE			UL(0xD8400000)
-#define VA_SPEAR1310_RAS_BASE			IOMEM(UL(0xFA400000))
-#endif /* CONFIG_MACH_SPEAR1310 */
+#define FSMC_REGS_BASE				UL(0xB0000000)
 
 /* Debug uart for linux, will be used for debug and uncompress messages */
 #define SPEAR_DBG_UART_BASE			UART_BASE

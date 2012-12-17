@@ -29,9 +29,9 @@ enum dma_master_info {
 #ifdef CONFIG_MACH_SPEAR1310
 	/* Accessible from only one master */
 	SPEAR1310_DMA_MASTER_JPEG = 1,
+	SPEAR1310_DMA_MASTER_I2S = 1,
 
 	/* Accessible from both 0 & 1 */
-	SPEAR1310_DMA_MASTER_I2S = 0,
 	SPEAR1310_DMA_MASTER_UART1 = 0,
 	SPEAR1310_DMA_MASTER_UART2 = 0,
 	SPEAR1310_DMA_MASTER_UART3 = 0,

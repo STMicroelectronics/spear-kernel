@@ -260,8 +260,23 @@ static int clk_vco_set_rate(struct clk_hw *hw, unsigned long drate,
 
 	clk_round_rate_index(hw, drate, prate, vco_calc_rate,
 			vco->rtbl_cnt, &i);
+
 	if (vco->lock)
 		spin_lock_irqsave(vco->lock, flags);
+
+	/* Check if the DDR is run on this vco */
+	if (clk_lookup_subtree("ddr_clk", hw->clk)) {
+		/*
+		 * For the system on which the DDR is being shared with
+		 * the VCO driving system clocks, the rate change at the
+		 * vco level has to be done by moving the DDR into
+		 * selfrefresh mode.
+		 * This requires to make the low level code work out of
+		 * cache memory, with cahe in lock down mode.
+		 */
+		vco_set_rate(rtbl[i].m, rtbl[i].n);
+		goto vco_unlock;
+	}
 
 	val = readl_relaxed(vco->mode_reg);
 	val &= ~(PLL_MODE_MASK << PLL_MODE_SHIFT);
@@ -282,6 +297,7 @@ static int clk_vco_set_rate(struct clk_hw *hw, unsigned long drate,
 
 	writel_relaxed(val, vco->cfg_reg);
 
+vco_unlock:
 	if (vco->lock)
 		spin_unlock_irqrestore(vco->lock, flags);
 

@@ -21,6 +21,25 @@
 			compatible = "st,spear1310-pinmux";
 			reg = <0xe0700000 0x1000>;
 			#gpio-range-cells = <2>;
+
+			i2c_default: i2c-default {
+				i2c-default {
+					st,pins = "i2c0_grp";
+					st,function = "i2c0";
+				};
+			};
+		};
+
+		spics: spics@e0700000{
+			compatible = "st,spear-spics-gpio";
+			reg = <0xe0700000 0x1000>;
+			st-spics,peripcfg-reg = <0x3b0>;
+			st-spics,sw-enable-bit = <12>;
+			st-spics,cs-value-bit = <11>;
+			st-spics,cs-enable-mask = <3>;
+			st-spics,cs-enable-shift = <8>;
+			gpio-controller;
+			#gpio-cells = <2>;
 		};
 
 		ahci@b1000000 {
@@ -80,47 +99,76 @@
 			status = "disabled";
 		};
 
-		tdm_hdlc0@D8200000 {
+		tdm_hdlc@D8200000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xD8200000 0x1000>;
 			interrupts = <0 80 0x4>;
 			status = "disabled";
 		};
 
-		tdm_hdlc1@D8300000 {
+		tdm_hdlc@D8300000 {
 			compatible = "st,tdm_hdlc";
 			reg = <0xD8300000 0x1000>;
 			interrupts = <0 81 0x4>;
 			status = "disabled";
 		};
 
-		can0@5d5000000 {
-			compatible = "st,can";
-			reg = <0x5d500000 0x1000>;
-			interrupts = <0 76 0x4>;
-			status = "disabled";
-		};
+		i2s@e0180000 {
+				compatible = "snps,designware-i2s";
+				reg = <0xe0180000 0x1000>;
+				interrupt-names = "play_irq", "record_irq";
+				interrupts = <0 10 0x4
+					      0 11 0x4 >;
+				play;
+				record;
+				channel = <4>;
+				status = "disabled";
+			};
 
-		can1@5d6000000 {
-			compatible = "st,can";
-			reg = <0x5d600000 0x1000>;
-			interrupts = <0 77 0x4>;
-			status = "disabled";
-		};
+		i2s@e0200000 {
+				compatible = "snps,designware-i2s";
+				reg = <0xe0200000 0x1000>;
+				interrupt-names = "play_irq", "record_irq";
+				interrupts = <0 26 0x4
+					      0 53 0x4>;
+				play;
+				record;
+				channel = <4>;
+				status = "disabled";
+			};
 
 		apb {
+			can0@5d600000 {
+				compatible = "bosch,c_can";
+				reg = <0x5d600000 0x1000>;
+				reg_alignment = <0x8>;
+				interrupts = <0 76 0x4>;
+				status = "disabled";
+			};
+
+			can1@5d700000 {
+				compatible = "bosch,c_can";
+				reg = <0x5d700000 0x1000>;
+				reg_alignment = <0x8>;
+				interrupts = <0 77 0x4>;
+				status = "disabled";
+			};
+
 			i2c0: i2c@e0280000 {
 				stop-control;
 				recovery,gpio;
 				recovery,scl-gpio = <&gpiopinctrl 103 0>;
 				recovery,sda-gpio = <&gpiopinctrl 102 1>;
+				pinctrl-names = "default", "sleep";
+				pinctrl-0 = <&i2c_default>;
+				pinctrl-1 = <>;
 			};
 
-			i2c1: i2c@5cd00000 {
+			i2c1: i2c@5c800000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5cd00000 0x1000>;
+				reg = <0x5c800000 0x1000>;
 				interrupts = <0 87 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -129,11 +177,11 @@
 				status = "disabled";
 			};
 
-			i2c2: i2c@5ce00000 {
+			i2c2: i2c@5c900000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5ce00000 0x1000>;
+				reg = <0x5c900000 0x1000>;
 				interrupts = <0 88 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -142,11 +190,11 @@
 				status = "disabled";
 			};
 
-			i2c3: i2c@5cf00000 {
+			i2c3: i2c@5ca00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5cf00000 0x1000>;
+				reg = <0x5ca00000 0x1000>;
 				interrupts = <0 89 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -155,11 +203,11 @@
 				status = "disabled";
 			};
 
-			i2c4: i2c@5d000000 {
+			i2c4: i2c@5cb00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5d000000 0x1000>;
+				reg = <0x5cb00000 0x1000>;
 				interrupts = <0 90 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -168,11 +216,11 @@
 				status = "disabled";
 			};
 
-			i2c5: i2c@5d100000 {
+			i2c5: i2c@5cc00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5d100000 0x1000>;
+				reg = <0x5cc00000 0x1000>;
 				interrupts = <0 91 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -181,11 +229,11 @@
 				status = "disabled";
 			};
 
-			i2c6: i2c@5d200000 {
+			i2c6: i2c@5cd00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5d200000 0x1000>;
+				reg = <0x5cd00000 0x1000>;
 				interrupts = <0 92 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -194,11 +242,11 @@
 				status = "disabled";
 			};
 
-			i2c7: i2c@5d300000 {
+			i2c7: i2c@5ce00000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,designware-i2c";
-				reg = <0x5d300000 0x1000>;
+				reg = <0x5ce00000 0x1000>;
 				interrupts = <0 93 0x4>;
 				stop-control;
 				recovery,gpio;
@@ -207,52 +255,62 @@
 				status = "disabled";
 			};
 
-			spi1: spi@5d400000 {
+			spi1: spi@5d500000 {
 				compatible = "arm,pl022", "arm,primecell";
-				reg = <0x5d400000 0x1000>;
+				reg = <0x5d500000 0x1000>;
 				interrupts = <0 99 0x4>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";
 			};
 
-			serial@5c800000 {
+			rs485_hdlc@D8000000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xD8000000 0x1000>;
+				interrupts = <0 78 0x4>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@D8100000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xD8100000 0x1000>;
+				interrupts = <0 79 0x4>;
+				status = "disabled";
+			};
+
+			serial@5cf00000 {
 				compatible = "arm,pl011", "arm,primecell";
-				reg = <0x5c800000 0x1000>;
+				reg = <0x5cf00000 0x1000>;
 				interrupts = <0 82 0x4>;
 				status = "disabled";
 			};
 
-			serial@5c900000 {
+			serial@5d000000 {
 				compatible = "arm,pl011", "arm,primecell";
-				reg = <0x5c900000 0x1000>;
+				reg = <0x5d000000 0x1000>;
 				interrupts = <0 83 0x4>;
 				status = "disabled";
 			};
 
-			serial@5ca00000 {
+			serial@5d100000 {
 				compatible = "arm,pl011", "arm,primecell";
-				reg = <0x5ca00000 0x1000>;
+				reg = <0x5d100000 0x1000>;
 				interrupts = <0 84 0x4>;
 				status = "disabled";
 			};
 
-			serial@5cb00000 {
+			serial@5d200000 {
 				compatible = "arm,pl011", "arm,primecell";
-				reg = <0x5cb00000 0x1000>;
+				reg = <0x5d200000 0x1000>;
 				interrupts = <0 85 0x4>;
 				status = "disabled";
 			};
 
-			serial@5cc00000 {
+			serial@5d300000 {
 				compatible = "arm,pl011", "arm,primecell";
-				reg = <0x5cc00000 0x1000>;
+				reg = <0x5d300000 0x1000>;
 				interrupts = <0 86 0x4>;
 				status = "disabled";
-			};
-
-			thermal@e07008c4 {
-				st,thermal-flags = <0x7000>;
 			};
 
 			gpiopinctrl: gpio@d8400000 {

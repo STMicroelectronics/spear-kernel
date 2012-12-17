@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo  $"Loading C3 Driver: "
+
+depmod -a
+modprobe c3_driver
+
+minor=0
+major=`awk "\\$2==\"C3\" {print \\$1}" /proc/devices`
+mknod /dev/C3_0 c ${major} ${minor}
+chmod 666 /dev/C3_0
+
+echo  $"C3 Ready: "
+
+

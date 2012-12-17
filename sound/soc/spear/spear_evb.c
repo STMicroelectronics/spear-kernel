@@ -29,7 +29,7 @@ static __devinit int spear_evb_probe(struct platform_device *pdev)
 {
 	struct snd_soc_dai_link *evb_dai;
 	struct device_node *np = pdev->dev.of_node;
-	struct device_node *spear_np, *codec_np;
+	struct device_node *spear_audio_np, *codec_np;
 	int i, nr_controllers, ret = 0;
 
 	if (!np)
@@ -51,28 +51,28 @@ static __devinit int spear_evb_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < nr_controllers ; i++) {
-		spear_np = of_parse_phandle(np, "audio-controllers", i);
+		spear_audio_np = of_parse_phandle(np, "audio-controllers", i);
 		codec_np = of_parse_phandle(np, "audio-codecs", i);
-		if (!spear_np || !codec_np) {
+		if (!spear_audio_np || !codec_np) {
 			dev_err(&pdev->dev, "phandle missing or invalid\n");
 			return -EINVAL;
 		}
 
-		ret = of_property_read_string_index(np, "dai_name", i,
+		ret = of_property_read_string_index(np, "dai_names", i,
 				&evb_dai[i].name);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Cannot parse names: %d\n", ret);
 			goto err;
 		}
 
-		ret = of_property_read_string_index(np, "codec_dai_name", i,
+		ret = of_property_read_string_index(np, "codec_dai_names", i,
 				&evb_dai[i].codec_dai_name);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "Cannot parse codec-dai-name: %d\n",
+			dev_err(&pdev->dev, "Can't parse codec-dai-names: %d\n",
 					ret);
 			goto err;
 		}
-		ret = of_property_read_string_index(np, "stream_name", i,
+		ret = of_property_read_string_index(np, "stream_names", i,
 				&evb_dai[i].stream_name);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Cannot parse stream names: %d\n",
@@ -81,14 +81,14 @@ static __devinit int spear_evb_probe(struct platform_device *pdev)
 		}
 
 		evb_dai[i].cpu_dai_name = NULL;
-		evb_dai[i].cpu_dai_of_node = spear_np;
+		evb_dai[i].cpu_dai_of_node = spear_audio_np;
 		evb_dai[i].platform_of_node = np;
 		evb_dai[i].codec_name = NULL;
 		evb_dai[i].codec_of_node = codec_np;
 		if (!(strcmp(evb_dai[i].codec_dai_name, "sta529-audio")))
 			evb_dai[i].dai_fmt = SND_SOC_DAIFMT_I2S |
 				SND_SOC_DAIFMT_CBS_CFM;
-		of_node_put(spear_np);
+		of_node_put(spear_audio_np);
 		of_node_put(codec_np);
 	}
 

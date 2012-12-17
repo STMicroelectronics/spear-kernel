@@ -29,6 +29,7 @@
 #include <linux/mmc/sdhci-spear.h>
 #include <linux/io.h>
 #include "sdhci.h"
+#include <linux/pm_runtime.h>
 
 struct spear_sdhci {
 	struct clk *clk;
@@ -163,10 +164,9 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 	}
 
 	ret = clk_set_rate(sdhci->clk, 50000000);
-	if (ret) {
-		dev_dbg(&pdev->dev, "Error rate configuration\n");
-		goto disable_clk;
-	}
+	if (ret)
+		dev_dbg(&pdev->dev, "Error setting desired clk, clk=%lu\n",
+				clk_get_rate(sdhci->clk));
 
 	if (np) {
 		sdhci->data = sdhci_probe_config_dt(pdev);
@@ -210,6 +210,11 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 50);
+	pm_runtime_use_autosuspend(&pdev->dev);
+
 	/*
 	 * It is optional to use GPIOs for sdhci Power control & sdhci card
 	 * interrupt detection. If sdhci->data is NULL, then use original sdhci
@@ -217,7 +222,10 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 	 * If GPIO is selected for power control, then power should be disabled
 	 * after card removal and should be enabled when card insertion
 	 * interrupt occurs
+	 * Additionally in cases where controller performs card
+	 * detection, we must keep it active.
 	 */
+	pm_runtime_get_noresume(&pdev->dev);
 	if (!sdhci->data)
 		return 0;
 
@@ -270,6 +278,10 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 			goto set_drvdata;
 		}
 
+		/* if card detect is not handled through controller we
+		 * can switch to runtime suspend state
+		 */
+		pm_runtime_put_noidle(&pdev->dev);
 	}
 
 	return 0;
@@ -277,6 +289,7 @@ static int __devinit sdhci_probe(struct platform_device *pdev)
 set_drvdata:
 	platform_set_drvdata(pdev, NULL);
 	sdhci_remove_host(host, 1);
+	pm_runtime_disable(&pdev->dev);
 free_host:
 	sdhci_free_host(host);
 disable_clk:
@@ -300,6 +313,7 @@ static int __devexit sdhci_remove(struct platform_device *pdev)
 	if (scratch == (u32)-1)
 		dead = 1;
 
+	pm_runtime_disable(&pdev->dev);
 	sdhci_remove_host(host, dead);
 	sdhci_free_host(host);
 	clk_disable_unprepare(sdhci->clk);
@@ -308,13 +322,44 @@ static int __devexit sdhci_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_RUNTIME
+static int sdhci_runtime_suspend(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct spear_sdhci *sdhci = dev_get_platdata(dev);
+	int ret;
+
+	ret = sdhci_runtime_suspend_host(host);
+	if (!ret)
+		clk_disable_unprepare(sdhci->clk);
+
+	return ret;
+}
+
+static int sdhci_runtime_resume(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct spear_sdhci *sdhci = dev_get_platdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(sdhci->clk);
+	if (ret) {
+		dev_dbg(dev, "RT Resume: Error Enabling Clock\n");
+		return ret;
+	}
+
+	return sdhci_runtime_resume_host(host);
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
 static int sdhci_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct spear_sdhci *sdhci = dev_get_platdata(dev);
 	int ret;
 
+	pm_runtime_get_sync(host->mmc->parent);
 	ret = sdhci_suspend_host(host);
 	if (!ret)
 		clk_disable_unprepare(sdhci->clk);
@@ -334,11 +379,18 @@ static int sdhci_resume(struct device *dev)
 		return ret;
 	}
 
-	return sdhci_resume_host(host);
+	ret = sdhci_resume_host(host);
+	if (!ret)
+		pm_runtime_put_sync(host->mmc->parent);
+
+	return ret;
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(sdhci_pm_ops, sdhci_suspend, sdhci_resume);
+static const struct dev_pm_ops sdhci_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(sdhci_suspend, sdhci_resume)
+	SET_RUNTIME_PM_OPS(sdhci_runtime_suspend, sdhci_runtime_resume, NULL)
+};
 
 #ifdef CONFIG_OF
 static const struct of_device_id sdhci_spear_id_table[] = {

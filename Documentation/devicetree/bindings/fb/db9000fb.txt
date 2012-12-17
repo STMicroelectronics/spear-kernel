@@ -10,8 +10,8 @@ Required properties:
 Optional properties:
 - mode : select a video mode:
     <xres>x<yres>[-<bpp>][@<refresh>]
--ignore_cpufreq_notification: if cpu and db9000fb share the same pll
-then mark it 0 other wise mark it 1.
+-ignore_cpufreq_notification: if cpu and db9000fb clcd controller share
+same pll then no need to pass this flag otherwise pass it through DT. 
 
 Example for digital blocks (db9000fb):
 	clcd@e1000000 {

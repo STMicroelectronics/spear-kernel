@@ -270,7 +270,7 @@ static struct spear_pingroup rs485_0_pingroup = {
 	.nmodemuxs = ARRAY_SIZE(rs485_0_modemux),
 };
 
-static const char *const rs485_0_grps[] = { "rs485_0" };
+static const char *const rs485_0_grps[] = { "rs485_0_grp" };
 static struct spear_function rs485_0_function = {
 	.name = "rs485_0",
 	.groups = rs485_0_grps,
@@ -302,7 +302,7 @@ static struct spear_pingroup rs485_1_pingroup = {
 	.nmodemuxs = ARRAY_SIZE(rs485_1_modemux),
 };
 
-static const char *const rs485_1_grps[] = { "rs485_1" };
+static const char *const rs485_1_grps[] = { "rs485_1_grp" };
 static struct spear_function rs485_1_function = {
 	.name = "rs485_1",
 	.groups = rs485_1_grps,

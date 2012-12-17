@@ -162,6 +162,8 @@ static int ehci_spear_drv_resume(struct device *dev)
 
 	/* here we "know" root ports should always stay powered */
 	ehci_port_power(ehci, 1);
+
+	msleep(100);
 	return 0;
 }
 #endif /* CONFIG_PM */

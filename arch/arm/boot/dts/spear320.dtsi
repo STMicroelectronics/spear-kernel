@@ -25,6 +25,13 @@
 			compatible = "st,spear320-pinmux";
 			reg = <0xb3000000 0x1000>;
 			#gpio-range-cells = <2>;
+
+			i2c_default: i2c-default {
+				i2c-default {
+					st,pins = "i2c0_grp";
+					st,function = "i2c0";
+				};
+			};
 		};
 
 		shirq: interrupt-controller@0xb3000000 {
@@ -44,7 +51,13 @@
 			status = "disabled";
 		};
 
-		fsmc: flash@4c000000 {
+		flash@44000000 {
+			compatible = "cfi-flash";
+			reg = <0x44000000 0x01000000>;
+			status = "disabled";
+		};
+
+		nand@4c000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -61,6 +74,7 @@
 			compatible = "st,sdhci-spear";
 			reg = <0x70000000 0x100>;
 			interrupts = <10>;
+			interrupt-parent = <&shirq>;
 			status = "disabled";
 		};
 
@@ -84,32 +98,75 @@
 			status = "disabled";
 		};
 
+		i2s@a9400000 {
+			compatible = "snps,designware-i2s";
+			reg = <0xa9400000 0x1000>;
+			play;
+			record;
+			channel = <2>;
+			status = "disabled";
+		};
+
 		macb1: eth@aa000000 {
 			compatible = "st,spear320-macb";
 			reg = <0xaa000000 0x2000>;
 			interrupt-parent = <&shirq>;
-			interrupts = <17>;
+			interrupts = <17 19>;
+			interrupt-names = "macb1_irq", "macb1_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
-			local-mac-address = [f2 f2 f2 45 67 89];
 		};
 
 		macb2: eth@ab000000 {
 			compatible = "st,spear320-macb";
 			reg = <0xab000000 0x2000>;
 			interrupt-parent = <&shirq>;
-			interrupts = <18>;
+			interrupts = <18 20>;
+			interrupt-names = "macb2_irq", "macb2_wakeirq";
 			status = "disabled";
 			phy-mode = "rmii";
-			local-mac-address = [f2 f2 f2 45 67 8a];
 		};
+
+		pwm: pwm@a8000000 {
+			compatible ="st,spear-pwm";
+			reg = <0xa8000000 0x1000>;
+			#pwm-cells = <2>;
+			status = "disabled";
+                };
 
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "simple-bus";
-			ranges = <0xa0000000 0xa0000000 0x10000000
+			ranges = <0x40000000 0x40000000 0x80000000
 				  0xd0000000 0xd0000000 0x30000000>;
+
+			can0@a1000000 {
+				compatible = "bosch,c_can";
+				reg = <0xa1000000 0x1000>;
+				interrupts = <11>;
+				interrupt-parent = <&shirq>;
+				reg_alignment = <0x18>;
+				status = "disabled";
+			};
+
+			can1@a2000000 {
+				compatible = "bosch,c_can";
+				reg = <0xa2000000 0x1000>;
+				interrupts = <12>;
+				interrupt-parent = <&shirq>;
+				reg_alignment = <0x18>;
+				status = "disabled";
+			};
+
+			i2c0: i2c@d0180000 {
+				pinctrl-names = "default", "sleep";
+				pinctrl-0 = <&i2c_default>;
+				pinctrl-1 = <>;
+				recovery,gpio;
+				recovery,scl-gpio = <&gpiopinctrl 4 0>;
+				recovery,sda-gpio = <&gpiopinctrl 5 1>;
+			};
 
 			i2c1: i2c@a7000000 {
 				#address-cells = <1>;
@@ -140,8 +197,6 @@
 			gpiopinctrl: gpio@b3000000 {
 				compatible = "st,spear-plgpio";
 				reg = <0xb3000000 0x1000>;
-				#interrupt-cells = <1>;
-				interrupt-controller;
 				gpio-controller;
 				#gpio-cells = <2>;
 				gpio-ranges = <&pinmux 0 102>;

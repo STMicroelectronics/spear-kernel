@@ -15,6 +15,8 @@
 
 #include <linux/amba/pl08x.h>
 #include <linux/of_platform.h>
+#include <linux/phy.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <mach/generic.h>
@@ -235,14 +237,47 @@ static struct clcd_panel sharp_LQ043T1DG01 = {
 	.bpp = 32,
 };
 
+/* Ethernet platform data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = -1,
+	.interface = PHY_INTERFACE_MODE_MII,
+	.has_gmac = 1,
+	.enh_desc = 1,
+	.tx_coe = 1,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe = STMMAC_RX_COE_TYPE2,
+	.bugged_jumbo = 1,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
 /* Add SPEAr300 auxdata to pass platform data */
 static struct of_dev_auxdata spear300_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("st,spear-adc", SPEAR3XX_ICM1_ADC_BASE, NULL,
+			&adc_pdata),
 	OF_DEV_AUXDATA("arm,pl022", SPEAR3XX_ICM1_SSP_BASE, NULL,
 			&pl022_plat_data),
 	OF_DEV_AUXDATA("arm,pl080", SPEAR3XX_ICM3_DMA_BASE, NULL,
 			&pl080_plat_data),
 	OF_DEV_AUXDATA("arm,pl110", SPEAR300_CLCD_BASE, NULL,
 			&pl110_plat_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR3XX_GETH_BASE, NULL,
+			&eth_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR3XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 

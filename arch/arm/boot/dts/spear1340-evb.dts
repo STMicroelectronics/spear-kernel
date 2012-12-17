@@ -57,10 +57,6 @@
 					st,pins = "uart0_grp";
 					st,function = "uart0";
 				};
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
-				};
 				i2c1 {
 					st,pins = "i2c1_grp";
 					st,function = "i2c1";
@@ -74,12 +70,8 @@
 					st,function = "spdif_out";
 				};
 				ssp0 {
-					st,pins = "ssp0_grp";
+					st,pins = "ssp0_grp", "ssp0_cs1_grp", "ssp0_cs2_grp", "ssp0_cs3_grp";
 					st,function = "ssp0";
-				};
-				pwm {
-					st,pins = "pwm2_grp", "pwm3_grp";
-					st,function = "pwm";
 				};
 				smi-pmx {
 					st,pins = "smi_grp";
@@ -145,6 +137,10 @@
 			};
 		};
 
+		ahci@b1000000 {
+			status = "okay";
+		};
+
 		dma@ea800000 {
 			status = "okay";
 		};
@@ -153,7 +149,12 @@
 			status = "okay";
 		};
 
-		fsmc: flash@b0000000 {
+		flash@a0000000 {
+			bank-width = <4>;
+			status = "disabled";
+		};
+
+		nand@b0000000 {
 			status = "okay";
 
 			partition@0 {
@@ -228,6 +229,9 @@
 			};
 		};
 
+		pcie0@b1000000 {
+		};
+
 		ehci@e4800000 {
 			status = "okay";
 		};
@@ -262,15 +266,15 @@
 			compatible = "spear,spear-evb";
 			audio-controllers = <&spdif1 &spdif0 &i2s0 &i2s1>;
 			audio-codecs = <&outcodec &incodec &sta529 &sta529>;
-			codec_dai_name = "dit-hifi", "dir-hifi", "sta529-audio", "sta529-audio";
-			stream_name = "spdif-play", "spdif-cap", "i2s-play", "i2s-cap";
-			dai_name = "spdifout-pcm", "spdifin-pcm", "i2s0-pcm", "i2s1-pcm";
+			codec_dai_names = "dit-hifi", "dir-hifi", "sta529-audio", "sta529-audio";
+			stream_names = "spdif-play", "spdif-cap", "i2s-play", "i2s-cap";
+			dai_names = "spdifout-pcm", "spdifin-pcm", "i2s0-pcm", "i2s1-pcm";
 			nr_controllers = <4>;
 		        status = "okay";
 		};
 
 		mali {
-			status = "okay";
+			status = "disabled";
 		};
 
 		soc-camera {
@@ -292,20 +296,16 @@
 			};
 		};
 
-		cam3@d05000000 {
+		cam3@d0500000 {
 			status = "okay";
 		};
 
-		video-dec@ebc000000 {
-			status = "okay";
+		video-dec@ebc00000 {
+			status = "disabled";
 		};
 
-		video-enc@ebd000000 {
-			status = "okay";
-		};
-
-		pwm@e0180000 {
-			status = "okay";
+		video-enc@ebd00000 {
+			status = "disabled";
 		};
 
 		ehci@e5800000 {
@@ -340,10 +340,6 @@
 		};
 
 		pci0@b1000000 {
-			status = "okay";
-		};
-
-		c3@e1800000 {
 			status = "okay";
 		};
 
@@ -648,6 +644,11 @@
 
 			wdt@ec800620 {
 			       status = "okay";
+			};
+
+			thermal@e07008c4 {
+				st,thermal-flags = <0x2a00>;
+				status = "okay";
 			};
 		};
 	};

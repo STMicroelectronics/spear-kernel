@@ -21,7 +21,7 @@ static void (*spear_sram_sleep)(unsigned long *resum_addr);
 
 static int spear_sys_suspend(unsigned long arg)
 {
-	spear_sram_sleep((unsigned long *)cpu_resume);
+	spear_sram_sleep((unsigned long *)(virt_to_phys(cpu_resume)));
 
 	return 0;
 }

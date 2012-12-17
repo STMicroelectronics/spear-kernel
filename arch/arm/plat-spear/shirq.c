@@ -13,6 +13,7 @@
 
 #include <linux/err.h>
 #include <linux/export.h>
+#include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
@@ -123,6 +124,7 @@ static struct spear_shirq spear320_shirq_ras2 = {
 static struct spear_shirq spear320_shirq_ras3 = {
 	.irq_nr = 7,
 	.irq_bit_off = 0,
+	.invalid_irq = 1,
 	.regs = {
 		.enb_reg = SPEAR320_INT_ENB_MASK_REG,
 		.reset_to_enb = 1,
@@ -150,10 +152,10 @@ static struct spear_shirq *spear320_shirq_blocks[] = {
 	&spear320_shirq_intrcomm_ras,
 };
 
-static void shirq_irq_mask_unmask(struct irq_data *d, bool mask)
+static void shirq_irq_mask_unmask(struct irq_data *data, bool mask)
 {
-	struct spear_shirq *shirq = irq_data_get_irq_chip_data(d);
-	u32 val, offset = d->irq - shirq->irq_base;
+	struct spear_shirq *shirq = irq_data_get_irq_chip_data(data);
+	u32 val, offset = data->irq - shirq->irq_base;
 	unsigned long flags;
 
 	if (shirq->regs.enb_reg == -1)
@@ -172,14 +174,26 @@ static void shirq_irq_mask_unmask(struct irq_data *d, bool mask)
 
 }
 
-static void shirq_irq_mask(struct irq_data *d)
+static void shirq_irq_mask(struct irq_data *data)
 {
-	shirq_irq_mask_unmask(d, 1);
+	shirq_irq_mask_unmask(data, 1);
 }
 
-static void shirq_irq_unmask(struct irq_data *d)
+static void shirq_irq_unmask(struct irq_data *data)
 {
-	shirq_irq_mask_unmask(d, 0);
+	shirq_irq_mask_unmask(data, 0);
+}
+
+static int shirq_set_wake(struct irq_data *data, unsigned int enable)
+{
+	struct spear_shirq *shirq = irq_data_get_irq_chip_data(data);
+
+	if (enable)
+		enable_irq_wake(shirq->irq);
+	else
+		disable_irq_wake(shirq->irq);
+
+	return 0;
 }
 
 static struct irq_chip shirq_chip = {
@@ -187,6 +201,7 @@ static struct irq_chip shirq_chip = {
 	.irq_ack	= shirq_irq_mask,
 	.irq_mask	= shirq_irq_mask,
 	.irq_unmask	= shirq_irq_unmask,
+	.irq_set_wake	= shirq_set_wake,
 };
 
 static void shirq_handler(unsigned irq, struct irq_desc *desc)
@@ -228,6 +243,9 @@ static void shirq_handler(unsigned irq, struct irq_desc *desc)
 static void __init spear_shirq_register(struct spear_shirq *shirq)
 {
 	int i;
+
+	if (shirq->invalid_irq)
+		return;
 
 	irq_set_chained_handler(shirq->irq, shirq_handler);
 	for (i = 0; i < shirq->irq_nr; i++) {
@@ -275,6 +293,7 @@ static int __init shirq_init(struct spear_shirq **shirq_blocks,
 		spear_shirq_register(shirq_blocks[i]);
 		hwirq += shirq_blocks[i]->irq_nr;
 	}
+
 	return 0;
 }
 

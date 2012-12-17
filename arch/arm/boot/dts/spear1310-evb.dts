@@ -44,9 +44,9 @@
 			pinctrl-0 = <&state_default>;
 
 			state_default: pinmux {
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
+				i2s0 {
+					st,pins = "i2s0_grp";
+					st,function = "i2s0";
 				};
 				i2s1 {
 					st,pins = "i2s1_grp";
@@ -56,8 +56,12 @@
 					st,pins = "arm_gpio_grp";
 					st,function = "arm_gpio";
 				};
+				ddr_rst_clken_gpio_pins {
+					st,pins = "pads_as_gpio_grp";
+					st,function = "pads_as_gpio";
+				};
 				clcd {
-					st,pins = "clcd_grp" , "clcd_high_res_grp";
+					st,pins = "clcd_grp";
 					st,function = "clcd";
 				};
 				eth {
@@ -84,28 +88,28 @@
 					st,pins = "uart0_grp";
 					st,function = "uart0";
 				};
-				rs485 {
-					st,pins = "rs485_0_1_tdm_0_1_grp";
-					st,function = "rs485_0_1_tdm_0_1";
-				};
-				i2c1_2 {
-					st,pins = "i2c_1_2_grp";
-					st,function = "i2c_1_2";
-				};
-				smii {
-					st,pins = "smii_0_1_2_grp";
-					st,function = "smii_0_1_2";
-				};
 				nand {
 					st,pins = "nand_8bit_grp",
 						"nand_16bit_grp";
 					st,function = "nand";
 				};
+				sata {
+					st,pins = "sata0_grp";
+					st,function = "sata";
+				};
+				pcie {
+					st,pins = "pcie1_grp", "pcie2_grp";
+					st,function = "pci_express";
+				};
 			};
 		};
 
-		cf@b2800000 {
+		ahci@b1000000 {
 			status = "okay";
+		};
+
+		cf@b2800000 {
+			status = "disabled";
 		};
 
 		dma@ea800000 {
@@ -116,7 +120,12 @@
 			status = "okay";
 		};
 
-		fsmc: flash@b0000000 {
+		flash@a0000000 {
+			bank-width = <4>;
+			status = "disabled";
+		};
+
+		nand@b0000000 {
 			status = "okay";
 
 			partition@0 {
@@ -127,22 +136,41 @@
 				label = "u-boot";
 				reg = <0x80000 0x140000>;
 			};
-			partition@140000 {
+			partition@1C0000 {
 				label = "environment";
-				reg = <0x140000 0x40000>;
+				reg = <0x1C0000 0x40000>;
 			};
-			partition@180000 {
+			partition@200000 {
 				label = "dtb";
-				reg = <0x180000 0x40000>;
+				reg = <0x200000 0x40000>;
 			};
-			partition@1c0000 {
+			partition@240000 {
 				label = "linux";
-				reg = <0x1c0000 0xC00000>;
+				reg = <0x240000 0xC00000>;
 			};
-			partition@dc0000 {
+			partition@E40000 {
 				label = "rootfs";
-				reg = <0xdc0000 0x0>;
+				reg = <0xE40000 0x0>;
 			};
+		};
+
+		i2s0:i2s@e0180000 {
+			status = "okay";
+		};
+
+		i2s1:i2s@e0200000 {
+			status = "okay";
+		};
+
+		sound {
+			compatible = "spear,spear-evb";
+			audio-controllers = <&i2s0>;
+			audio-codecs = <&sta529>;
+			codec_dai_names = "sta529-audio";
+			stream_names = "pcm";
+			dai_names = "i2s0-pcm";
+			nr_controllers = <1>;
+		        status = "okay";
 		};
 
 		gpio_keys {
@@ -234,23 +262,28 @@
 		clcd@e1000000 {
 			status = "okay";
 			st,mode = "480x272-32@0";
-			ignore_cpufreq_notification = <0>;
-		};
-
-		pcie1@b1800000 {
-			status = "okay";
 		};
 
 		pcie2@b4000000 {
 			status = "okay";
 		};
 
-		can0@5d5000000 {
+		jpeg@b2000000 {
 			status = "okay";
 		};
 
-		can1@5d6000000 {
-			status = "okay";
+		tdm_hdlc@D8200000 {
+			ip_type = <0>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
+		};
+
+		tdm_hdlc@D8300000 {
+			ip_type = <1>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
 		};
 
 		apb {
@@ -258,11 +291,19 @@
 				status = "okay";
 			};
 
+			can0@5d600000 {
+				status = "okay";
+			};
+
+			can1@5d700000 {
+				status = "okay";
+			};
+
 			spi0: spi@e0100000 {
 				status = "okay";
 				num-cs = <3>;
-				cs-gpios = <&gpiopinctrl 112 0>, <&gpiopinctrl 96 0>,
-					   <&gpiopinctrl 95 0>;
+				cs-gpios = <&gpio1 7 0>, <&spics 0 0>,
+					   <&spics 1 0>;
 				stmpe610@0 {
 					status = "okay";
 					compatible = "st,stmpe610";
@@ -350,6 +391,28 @@
 			i2c0: i2c@e0280000 {
 			       stop-control;
 			       status = "okay";
+
+				sta529: sta529@1a {
+				       compatible = "st,sta529";
+				       reg = <0x1a>;
+			      };
+
+			};
+
+			rs485_hdlc@D8000000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <50>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@D8100000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <50>;
+				status = "disabled";
 			};
 
 			kbd@e0300000 {
@@ -455,6 +518,11 @@
 			};
 
 			timer@e0380000 {
+				status = "okay";
+			};
+
+			thermal@e07008c4 {
+				st,thermal-flags = <0x7000>;
 				status = "okay";
 			};
 

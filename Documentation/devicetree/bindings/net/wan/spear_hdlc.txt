@@ -1,0 +1,32 @@
+== ST SPEAr SoC HDLC controller ==
+
+SPEAr family SoC provides two kinds of HDLC controller:
+1. TDM/E1 HDLC controller 
+2. RS485 HDLC controllers.
+
+Both of them use similar DMA descriptor structure, similar interrupt
+queue and so on. So both share the same driver code in Linux.
+
+Required properties:
+- compatible: should be one of:
+  - "st,tdm_hdlc"
+  - "st,rs485_hdlc"
+- reg: physical base address and length of the controller's registers
+- interrupt-parent : the phandle for the interrupt controller that
+  services interrupts for this device.
+- interrupt: Should contain the tdm or rs485 interrupt number
+
+TDM optional properties:
+-ip_type: SPEAr310 and SPEAr1310 have different configuration of HDLC
+-nr_channel: number of logical channels on this port.
+-nr_timeslot: number of timeslot actually using.
+-tx_falling_edge: tx edge option
+-rx_rising_edge: rx edge option
+-ts0_delay: delay between SYNC and beginning of TS0
+
+RS485 optional properties:
+-tx_falling_edge: tx edge option
+-rx_rising_edge: rx edge option
+-cts_enable: CSMA enable or not
+-cts_delay: CTS delay
+

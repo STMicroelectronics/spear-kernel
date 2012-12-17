@@ -42,7 +42,7 @@
 			status = "disabled";
 		};
 
-		fsmc: flash@94000000 {
+		nand@94000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -66,7 +66,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "simple-bus";
-			ranges = <0xa0000000 0xa0000000 0x10000000
+			ranges = <0x60000000 0x60000000 0x50000000
 				  0xd0000000 0xd0000000 0x30000000>;
 
 			gpio1: gpio@a9000000 {

@@ -118,6 +118,8 @@ static inline int sysctl_change_mode(void __iomem *base, int mode)
 			return 0;
 		udelay(1000);
 	} while (!time_after_eq(jiffies, finish));
+
+	return -ETIMEDOUT;
 }
 
 #endif	/* __ASM_ARM_SP810_H */

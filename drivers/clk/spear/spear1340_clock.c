@@ -17,9 +17,45 @@
 #include <linux/io.h>
 #include <linux/of_platform.h>
 #include <linux/spinlock_types.h>
+#include <linux/syscore_ops.h>
+#include <plat/pm.h>
 #include <mach/spear.h>
 #include <mach/system.h>
 #include "clk.h"
+
+#ifdef CONFIG_PM_SLEEP
+static struct sleep_save spear1340_clock_save[] = {
+	SAVE_ITEM(VA_MISC_BASE + 0x208),
+	SAVE_ITEM(VA_MISC_BASE + 0x20C),
+	SAVE_ITEM(VA_MISC_BASE + 0x244),
+	SAVE_ITEM(VA_MISC_BASE + 0x248),
+	SAVE_ITEM(VA_MISC_BASE + 0x24C),
+	SAVE_ITEM(VA_MISC_BASE + 0x250),
+	SAVE_ITEM(VA_MISC_BASE + 0x254),
+	SAVE_ITEM(VA_MISC_BASE + 0x258),
+	SAVE_ITEM(VA_MISC_BASE + 0x25C),
+	SAVE_ITEM(VA_MISC_BASE + 0x260),
+	SAVE_ITEM(VA_MISC_BASE + 0x264),
+	SAVE_ITEM(VA_MISC_BASE + 0x270),
+	SAVE_ITEM(VA_MISC_BASE + 0x274),
+	SAVE_ITEM(VA_MISC_BASE + 0x278),
+	SAVE_ITEM(VA_MISC_BASE + 0x27C),
+	SAVE_ITEM(VA_MISC_BASE + 0x280),
+	SAVE_ITEM(VA_MISC_BASE + 0x284),
+	SAVE_ITEM(VA_MISC_BASE + 0x288),
+	SAVE_ITEM(VA_MISC_BASE + 0x28C),
+	SAVE_ITEM(VA_MISC_BASE + 0x290),
+	SAVE_ITEM(VA_MISC_BASE + 0x294),
+	SAVE_ITEM(VA_MISC_BASE + 0x298),
+	SAVE_ITEM(VA_MISC_BASE + 0x29C),
+	SAVE_ITEM(VA_MISC_BASE + 0x300),
+	SAVE_ITEM(VA_MISC_BASE + 0x304),
+	SAVE_ITEM(VA_MISC_BASE + 0x308),
+	SAVE_ITEM(VA_MISC_BASE + 0x30C),
+	SAVE_ITEM(VA_MISC_BASE + 0x310),
+	SAVE_ITEM(VA_MISC_BASE + 0x314),
+};
+#endif
 
 /* Clock Configuration Registers */
 #define SPEAR1340_SYS_CLK_CTRL			(VA_MISC_BASE + 0x200)
@@ -445,6 +481,30 @@ static const char *gen_synth0_1_parents[] = { "vco1div4_clk", "vco3div2_clk",
 static const char *gen_synth2_3_parents[] = { "vco1div4_clk", "vco2div2_clk",
 	"pll2_clk", };
 
+#ifdef CONFIG_PM
+static int spear1340_clock_suspend(void)
+{
+	spear_pm_do_save(spear1340_clock_save,
+			ARRAY_SIZE(spear1340_clock_save));
+
+	return 0;
+}
+
+static void spear1340_clock_resume(void)
+{
+	spear_pm_do_restore_core(spear1340_clock_save,
+			ARRAY_SIZE(spear1340_clock_save));
+}
+#else
+#define spear1340_clock_suspend NULL
+#define spear1340_clock_resume NULL
+#endif
+
+struct syscore_ops spear1340_clock_syscore_ops = {
+	.suspend	= spear1340_clock_suspend,
+	.resume		= spear1340_clock_resume,
+};
+
 void __init spear1340_clk_init(void)
 {
 	struct clk *clk, *clk1;
@@ -650,14 +710,15 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk1, "uart0_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "uart0_mclk", uart0_parents,
-			ARRAY_SIZE(uart0_parents), 0, SPEAR1340_PERIP_CLK_CFG,
-			SPEAR1340_UART0_CLK_SHIFT, SPEAR1340_UART_CLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uart0_parents), CLK_SET_RATE_PARENT,
+			SPEAR1340_PERIP_CLK_CFG,
+			SPEAR1340_UART0_CLK_SHIFT,
+			SPEAR1340_UART_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "uart0_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "uart0_clk", "uart0_mclk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_UART0_CLK_ENB, 0,
-			&_lock);
+	clk = clk_register_gate(NULL, "uart0_clk", "uart0_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1340_PERIP1_CLK_ENB,
+			SPEAR1340_UART0_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "e0000000.serial");
 
 	clk = clk_register_aux("uart1_syn_clk", "uart1_syn_gclk",
@@ -709,15 +770,15 @@ void __init spear1340_clk_init(void)
 	clk_register_clkdev(clk1, "c3_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "c3_mclk", c3_parents,
-			ARRAY_SIZE(c3_parents), 0, SPEAR1340_PERIP_CLK_CFG,
-			SPEAR1340_C3_CLK_SHIFT, SPEAR1340_C3_CLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(c3_parents), CLK_SET_RATE_PARENT,
+			SPEAR1340_PERIP_CLK_CFG, SPEAR1340_C3_CLK_SHIFT,
+			SPEAR1340_C3_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "c3_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk", 0,
-			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_C3_CLK_ENB, 0,
-			&_lock);
-	clk_register_clkdev(clk, NULL, "e1800000.c3");
+	clk = clk_register_gate(NULL, "c3_clk", "c3_mclk",
+			CLK_SET_RATE_PARENT, SPEAR1340_PERIP1_CLK_ENB,
+			SPEAR1340_C3_CLK_ENB, 0, &_lock);
+	clk_register_clkdev(clk, NULL, "c3");
 
 	/* gmac */
 	clk = clk_register_mux(NULL, "phy_input_mclk", gmac_phy_input_parents,
@@ -817,7 +878,8 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "fsmc_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_FSMC_CLK_ENB, 0,
 			&_lock);
-	clk_register_clkdev(clk, NULL, "b0000000.flash");
+	clk_register_clkdev(clk, NULL, "b0000000.nand");
+	clk_register_clkdev(clk, NULL, "a0000000.flash");
 
 	clk = clk_register_gate(NULL, "smi_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_SMI_CLK_ENB, 0,
@@ -844,8 +906,8 @@ void __init spear1340_clk_init(void)
 	clk = clk_register_gate(NULL, "pcie_sata_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_PCIE_SATA_CLK_ENB,
 			0, &_lock);
-	clk_register_clkdev(clk, NULL, "dw_pcie");
-	clk_register_clkdev(clk, NULL, "ahci");
+	clk_register_clkdev(clk, NULL, "b1000000.pcie0");
+	clk_register_clkdev(clk, NULL, "b1000000.ahci");
 
 	clk = clk_register_gate(NULL, "sysram0_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP1_CLK_ENB, SPEAR1340_SYSRAM0_CLK_ENB, 0,
@@ -973,47 +1035,47 @@ void __init spear1340_clk_init(void)
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d0100000.spdif-in");
 
-	clk = clk_register_gate(NULL, "acp_clk", "acp_mclk", 0,
+	clk = clk_register_gate(NULL, "acp_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP2_CLK_ENB, SPEAR1340_ACP_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "acp_clk");
 
-	clk = clk_register_gate(NULL, "plgpio_clk", "plgpio_mclk", 0,
+	clk = clk_register_gate(NULL, "plgpio_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_PLGPIO_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "e2800000.gpio");
 
-	clk = clk_register_gate(NULL, "video_dec_clk", "video_dec_mclk", 0,
+	clk = clk_register_gate(NULL, "video_dec_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_VIDEO_DEC_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "video_dec");
 
-	clk = clk_register_gate(NULL, "video_enc_clk", "video_enc_mclk", 0,
+	clk = clk_register_gate(NULL, "video_enc_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_VIDEO_ENC_CLK_ENB,
 			0, &_lock);
 	clk_register_clkdev(clk, NULL, "video_enc");
 
-	clk = clk_register_gate(NULL, "video_in_clk", "video_in_mclk", 0,
+	clk = clk_register_gate(NULL, "video_in_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_VIDEO_IN_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "spear_vip");
 
-	clk = clk_register_gate(NULL, "cam0_clk", "cam0_mclk", 0,
+	clk = clk_register_gate(NULL, "cam0_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_CAM0_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d0200000.cam0");
 
-	clk = clk_register_gate(NULL, "cam1_clk", "cam1_mclk", 0,
+	clk = clk_register_gate(NULL, "cam1_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_CAM1_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d0300000.cam1");
 
-	clk = clk_register_gate(NULL, "cam2_clk", "cam2_mclk", 0,
+	clk = clk_register_gate(NULL, "cam2_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_CAM2_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d0400000.cam2");
 
-	clk = clk_register_gate(NULL, "cam3_clk", "cam3_mclk", 0,
+	clk = clk_register_gate(NULL, "cam3_clk", "ahb_clk", 0,
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_CAM3_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "d0500000.cam3");
@@ -1022,6 +1084,8 @@ void __init spear1340_clk_init(void)
 			SPEAR1340_PERIP3_CLK_ENB, SPEAR1340_PWM_CLK_ENB, 0,
 			&_lock);
 	clk_register_clkdev(clk, NULL, "e0180000.pwm");
+
+	register_syscore_ops(&spear1340_clock_syscore_ops);
 }
 
 int __init spear1340_sys_clk_init(void)

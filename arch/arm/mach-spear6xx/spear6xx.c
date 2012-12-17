@@ -20,14 +20,20 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/phy.h>
+#include <linux/stmmac.h>
 #include <asm/hardware/pl080.h>
 #include <asm/hardware/vic.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
 #include <plat/pl080.h>
+#include <plat/jpeg.h>
 #include <mach/generic.h>
 #include <mach/spear.h>
+
+#define VA_SPEAR6XX_PERIP1_SW_RST	(VA_SPEAR6XX_ICM3_MISC_REG_BASE + 0x038)
+	#define SPEAR6XX_JPEG_SOF_RST	(1 << 8)
 
 /* dmac device registration */
 static struct pl08x_channel_data spear600_dma_info[] = {
@@ -402,7 +408,7 @@ struct map_desc spear6xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR6XX_ML_CPU_BASE),
 		.length		= 2 * SZ_16M,
 		.type		= MT_DEVICE
-	},	{
+	}, {
 		.virtual	= VA_SPEAR6XX_ICM1_BASE,
 		.pfn		= __phys_to_pfn(SPEAR6XX_ICM1_BASE),
 		.length		= SZ_16M,
@@ -412,6 +418,11 @@ struct map_desc spear6xx_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(SPEAR6XX_ICM3_SMI_CTRL_BASE),
 		.length		= SZ_16M,
 		.type		= MT_DEVICE
+	}, {
+		.virtual	= VA_SPEAR6XX_ICM1_SRAM_BASE,
+		.pfn		= __phys_to_pfn(SPEAR6XX_ICM1_SRAM_BASE),
+		.length		= SZ_4K,
+		.type		= MT_MEMORY_NONCACHED
 	},
 };
 
@@ -438,6 +449,46 @@ static struct clcd_panel samsung_LMS700 = {
 	.cntl = CNTL_LCDTFT | CNTL_BGR,
 	.caps= CLCD_CAP_5551 | CLCD_CAP_565 | CLCD_CAP_888,
 	.bpp = 32,
+};
+
+/* Ethernet platform data */
+static struct stmmac_mdio_bus_data mdio0_private_data = {
+	.bus_id = 0,
+	.phy_mask = 0,
+};
+
+static struct stmmac_dma_cfg dma0_private_data = {
+	.pbl = 8,
+	.fixed_burst = 1,
+	.burst_len = DMA_AXI_BLEN_ALL,
+};
+
+static struct plat_stmmacenet_data eth_data = {
+	.bus_id = 0,
+	.phy_addr = 1,
+	.interface = PHY_INTERFACE_MODE_GMII,
+	.has_gmac = 1,
+	.enh_desc = 0,
+	.tx_coe = 0,
+	.dma_cfg = &dma0_private_data,
+	.rx_coe = STMMAC_RX_COE_TYPE1,
+	.bugged_jumbo = 0,
+	.pmt = 1,
+	.mdio_bus_data = &mdio0_private_data,
+	.clk_csr = STMMAC_CSR_150_250M,
+};
+
+/* jpeg dma platform data */
+static void jpeg_plat_reset(void)
+{
+	jpeg_ip_reset(VA_SPEAR6XX_PERIP1_SW_RST, SPEAR6XX_JPEG_SOF_RST);
+}
+
+static struct jpeg_plat_data jpeg_pdata = {
+	.dma_filter = pl08x_filter_id,
+	.mem2jpeg_slave = "to_jpeg",
+	.jpeg2mem_slave = "from_jpeg",
+	.plat_reset = jpeg_plat_reset,
 };
 
 /* This will create static memory mapping for selected devices */
@@ -485,6 +536,10 @@ struct of_dev_auxdata spear6xx_auxdata_lookup[] __initdata = {
 			&pl080_plat_data),
 	OF_DEV_AUXDATA("arm,pl110", SPEAR6XX_ICM3_CLCD_BASE, NULL,
 			&pl110_plat_data),
+	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR6XX_GETH_BASE, NULL,
+			&eth_data),
+	OF_DEV_AUXDATA("st,designware-jpeg", SPEAR6XX_ICM1_JPEG_BASE, NULL,
+			&jpeg_pdata),
 	{}
 };
 

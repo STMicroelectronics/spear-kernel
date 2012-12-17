@@ -29,6 +29,7 @@
 #include <asm/mach/arch.h>
 #include <mach/dma.h>
 #include <mach/generic.h>
+#include <mach/pcie.h>
 #include <mach/spdif.h>
 #include <mach/spear.h>
 #include <sound/designware_i2s.h>
@@ -42,6 +43,7 @@
 #define SPEAR1340_CAM2_BASE			UL(0xD0400000)
 #define SPEAR1340_CAM3_BASE			UL(0xD0500000)
 #define SPEAR1340_SATA_BASE			UL(0xB1000000)
+#define SPEAR1340_PCIE_BASE			UL(0xB1000000)
 #define SPEAR1340_UART1_BASE			UL(0xB4100000)
 #define SPEAR1340_I2S_PLAY_BASE			UL(0xB2400000)
 #define SPEAR1340_I2S_REC_BASE			UL(0xB2000000)
@@ -333,29 +335,33 @@ void sata_miphy_exit(struct device *dev)
 	msleep(20);
 }
 
-int sata_suspend(struct device *dev)
-{
-	if (dev->power.power_state.event == PM_EVENT_FREEZE)
-		return 0;
-
-	sata_miphy_exit(dev);
-
-	return 0;
-}
-
-int sata_resume(struct device *dev)
-{
-	if (dev->power.power_state.event == PM_EVENT_THAW)
-		return 0;
-
-	return sata_miphy_init(dev, NULL);
-}
-
 static struct ahci_platform_data sata_pdata = {
 	.init = sata_miphy_init,
 	.exit = sata_miphy_exit,
 	.suspend = sata_suspend,
 	.resume = sata_resume,
+};
+
+static int spear1340_pcie_clk_init(struct pcie_port *pp)
+{
+	writel(SPEAR1340_PCIE_SATA_MIPHY_CFG_PCIE,
+			SPEAR1340_PCIE_MIPHY_CFG);
+	writel(SPEAR1340_PCIE_CFG_VAL, SPEAR1340_PCIE_SATA_CFG);
+
+	return 0;
+}
+
+static int spear1340_pcie_clk_exit(struct pcie_port *pp)
+{
+	writel(0, SPEAR1340_PCIE_SATA_CFG);
+	writel(0, SPEAR1340_PCIE_MIPHY_CFG);
+
+	return 0;
+}
+
+static struct pcie_port_info pcie_pdata = {
+	.clk_init = spear1340_pcie_clk_init,
+	.clk_exit = spear1340_pcie_clk_exit,
 };
 
 /* camera sensor registeration */
@@ -609,6 +615,8 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 
 	OF_DEV_AUXDATA("snps,spear-ahci", SPEAR1340_SATA_BASE, NULL,
 			&sata_pdata),
+	OF_DEV_AUXDATA("st,pcie-host", SPEAR1340_PCIE_BASE, NULL,
+			&pcie_pdata),
 	OF_DEV_AUXDATA("arm,pl011", SPEAR1340_UART1_BASE, NULL, &uart1_data),
 	OF_DEV_AUXDATA("st,spear600-gmac", SPEAR13XX_GETH_BASE, NULL,
 			&eth_data),
@@ -630,6 +638,8 @@ static struct of_dev_auxdata spear1340_auxdata_lookup[] __initdata = {
 static void __init spear1340_dt_init(void)
 {
 	spear13xx_l2x0_init();
+	spear13xx_fsmcnor_init(2);
+
 	of_platform_populate(NULL, of_default_bus_match_table,
 			spear1340_auxdata_lookup, NULL);
 }

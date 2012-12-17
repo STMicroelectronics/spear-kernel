@@ -1521,10 +1521,44 @@ static void macb_get_drvinfo(struct net_device *dev,
 	strcpy(info->bus_info, dev_name(&bp->pdev->dev));
 }
 
+void macb_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
+{
+	struct macb *bp = netdev_priv(dev);
+
+	if (device_can_wakeup(&bp->pdev->dev)) {
+		wol->supported = WAKE_MAGIC;
+		wol->wolopts = bp->wolopts;
+	}
+}
+
+int macb_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
+{
+	struct macb *bp = netdev_priv(dev);
+	u32 support = WAKE_MAGIC;
+
+	if (!device_can_wakeup(&bp->pdev->dev))
+		return -EINVAL;
+
+	if (wol->wolopts & ~support)
+		return -EINVAL;
+
+	if (wol->wolopts) {
+		device_set_wakeup_enable(&bp->pdev->dev, 1);
+		enable_irq_wake(bp->wol_irq);
+	} else {
+		device_set_wakeup_enable(&bp->pdev->dev, 0);
+		disable_irq_wake(bp->wol_irq);
+	}
+
+	return 0;
+}
+
 static const struct ethtool_ops macb_ethtool_ops = {
 	.get_settings		= macb_get_settings,
 	.set_settings		= macb_set_settings,
 	.get_drvinfo		= macb_get_drvinfo,
+	.get_wol		= macb_get_wol,
+	.set_wol		= macb_set_wol,
 	.get_link		= ethtool_op_get_link,
 	.get_ts_info		= ethtool_op_get_ts_info,
 };
@@ -1653,12 +1687,31 @@ static int __init macb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no irq resource defined.\n");
 		goto err_out_iounmap;
 	}
+
 	err = request_irq(dev->irq, macb_interrupt, IRQF_SHARED,
 			dev->name, dev);
 	if (err) {
 		dev_err(&pdev->dev, "Unable to request IRQ %d (error %d)\n",
 				dev->irq, err);
 		goto err_out_iounmap;
+	}
+
+	bp->wol_irq = platform_get_irq(pdev, 1);
+
+	if (bp->wol_irq < 0)
+		dev_info(&pdev->dev, "no wake up support\n");
+	else {
+		err = request_irq(bp->wol_irq, macb_interrupt, IRQF_SHARED,
+				dev->name, dev);
+		if (err)
+			dev_info(&pdev->dev,
+				"Unable to request WOL IRQ %d (error %d)\n",
+				bp->wol_irq, err);
+		else {
+			device_set_wakeup_capable(&bp->pdev->dev, 1);
+			bp->wolopts = (WAKE_MCAST | WAKE_ARP | WAKE_MAGIC
+					| WAKE_UCAST);
+		}
 	}
 
 	dev->netdev_ops = &macb_netdev_ops;
@@ -1733,16 +1786,18 @@ err_out_unregister_timer:
 err_out_unregister_netdev:
 	unregister_netdev(dev);
 err_out_free_irq:
+	if (bp->wol_irq)
+		free_irq(bp->wol_irq, dev);
 	free_irq(dev->irq, dev);
 err_out_iounmap:
 	iounmap(bp->regs);
 err_out_disable_clocks:
 	if (bp->hclk) {
-		clk_disable(bp->hclk);
+		clk_disable_unprepare(bp->hclk);
 		clk_put(bp->hclk);
 	}
 	if (bp->pclk) {
-		clk_disable(bp->pclk);
+		clk_disable_unprepare(bp->pclk);
 		clk_put(bp->pclk);
 	}
 	free_netdev(dev);
@@ -1769,16 +1824,18 @@ static int __exit macb_remove(struct platform_device *pdev)
 		kfree(bp->mii_bus->irq);
 		mdiobus_free(bp->mii_bus);
 		unregister_netdev(dev);
+		if (bp->wol_irq)
+			free_irq(bp->wol_irq, dev);
 		free_irq(dev->irq, dev);
 		iounmap(bp->regs);
 
 		if (bp->hclk) {
-			clk_disable(bp->hclk);
+			clk_disable_unprepare(bp->hclk);
 			clk_put(bp->hclk);
 		}
 
 		if (bp->pclk) {
-			clk_disable(bp->pclk);
+			clk_disable_unprepare(bp->pclk);
 			clk_put(bp->pclk);
 		}
 		free_netdev(dev);
@@ -1793,13 +1850,38 @@ static int macb_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct macb *bp = netdev_priv(netdev);
+	u32 wol_opts;
+	unsigned long flags;
 
+	if (!netdev || !netif_running(netdev))
+		return 0;
+
+	spin_lock_irqsave(&bp->lock, flags);
 	netif_device_detach(netdev);
+	netif_stop_queue(netdev);
+	napi_disable(&bp->napi);
+	/* Stop the timer */
+	bp->timer_ops->timer_stop(bp->hw_tx_timeout);
+	bp->time_active = 0;
+	/* Disable the transmission */
+	macb_writel(bp, NCR, macb_readl(bp, NCR) & (~MACB_BIT(TE)));
 
-	if (bp->hclk)
-		clk_disable(bp->hclk);
-	if (bp->pclk)
-		clk_disable(bp->pclk);
+	if (device_may_wakeup(&bp->pdev->dev)) {
+		wol_opts = macb_readl(bp, WOL);
+		wol_opts |= MACB_BIT(MAG);
+		macb_writel(bp, WOL, wol_opts);
+	} else {
+		if (bp->hclk)
+			clk_disable_unprepare(bp->hclk);
+		if (bp->pclk)
+			clk_disable_unprepare(bp->pclk);
+	}
+	/*
+	 * Disable all interrupts. This is required because the wake up
+	 * irq and mac irq are on same shared irq handler.
+	 */
+	macb_writel(bp, IDR, ~0UL);
+	spin_unlock_irqrestore(&bp->lock, flags);
 
 	return 0;
 }
@@ -1808,15 +1890,43 @@ static int macb_resume(struct platform_device *pdev)
 {
 	struct net_device *netdev = platform_get_drvdata(pdev);
 	struct macb *bp = netdev_priv(netdev);
+	u32 wol_opts;
+	unsigned long flags;
 
+	if (!netdev || !netif_running(netdev))
+		return 0;
+
+	spin_lock_irqsave(&bp->lock, flags);
+
+	if (device_may_wakeup(&bp->pdev->dev)) {
+		wol_opts = macb_readl(bp, WOL);
+		wol_opts &= (~MACB_BIT(MAG));
+		macb_writel(bp, WOL, wol_opts);
+	} else {
 #ifdef MACB_PCLK
-	if (bp->pclk)
-		clk_prepare_enable(bp->pclk);
+		if (bp->pclk)
+			clk_prepare_enable(bp->pclk);
 #endif
-	if (bp->hclk)
-		clk_prepare_enable(bp->hclk);
+		if (bp->hclk)
+			clk_prepare_enable(bp->hclk);
+	}
 
 	netif_device_attach(netdev);
+	/* Enable the transmission */
+	macb_writel(bp, NCR, macb_readl(bp, NCR) | MACB_BIT(TE));
+	/* Enable interrupts */
+	macb_writel(bp, IER, (MACB_BIT(RCOMP)
+			      | MACB_BIT(RXUBR)
+			      | MACB_BIT(ISR_TUND)
+			      | MACB_BIT(ISR_RLE)
+			      | MACB_BIT(TXERR)
+			      | MACB_BIT(TCOMP)
+			      | MACB_BIT(ISR_ROVR)
+			      | MACB_BIT(HRESP)));
+
+	netif_start_queue(netdev);
+	napi_enable(&bp->napi);
+	spin_unlock_irqrestore(&bp->lock, flags);
 
 	return 0;
 }

@@ -18,8 +18,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "simple-bus";
-		ranges = <0x40000000 0x40000000 0x10000000
-			  0xb0000000 0xb0000000 0x10000000
+		ranges = <0x40000000 0x40000000 0x80000000
 			  0xd0000000 0xd0000000 0x30000000>;
 
 		pinmux: pinmux@b4000000 {
@@ -37,7 +36,7 @@
 			interrupt-controller;
 		};
 
-		fsmc: flash@44000000 {
+		nand@44000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -50,12 +49,66 @@
 			status = "disabled";
 		};
 
+		flash@50000000 {
+			compatible = "cfi-flash";
+			reg = <0x50000000 0x10000000>;
+			status = "disabled";
+		};
+
+		tdm_hdlc@b2800000 {
+			compatible = "st,tdm_hdlc";
+			reg = <0xb2800000 0x1000>;
+			interrupts = <14>;
+			interrupt-parent = <&shirq>;
+			status = "disabled";
+		};
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "simple-bus";
-			ranges = <0xb0000000 0xb0000000 0x10000000
+			ranges = <0x40000000 0x40000000 0x80000000
 				  0xd0000000 0xd0000000 0x30000000>;
+
+			macb0: eth@b0000000 {
+				compatible = "st,spear320-macb";
+				reg = <0xb0000000 0x2000>;
+				interrupt-parent = <&shirq>;
+				interrupts = <0 4>;
+				interrupt-names = "macb1_irq", "macb1_wakeirq";
+				phy-mode = "smii";
+				status = "disabled";
+			};
+
+			macb1: eth@b0800000 {
+				compatible = "st,spear320-macb";
+				reg = <0xb0800000 0x2000>;
+				interrupt-parent = <&shirq>;
+				interrupts = <1 5>;
+				interrupt-names = "macb2_irq", "macb2_wakeirq";
+				phy-mode = "smii";
+				status = "disabled";
+			};
+
+			macb2: eth@b1000000 {
+				compatible = "st,spear320-macb";
+				reg = <0xb1000000 0x2000>;
+				interrupt-parent = <&shirq>;
+				interrupts = <2 6>;
+				interrupt-names = "macb3_irq", "macb3_wakeirq";
+				phy-mode = "smii";
+				status = "disabled";
+			};
+
+			macb3: eth@b1800000 {
+				compatible = "st,spear320-macb";
+				reg = <0xb1800000 0x2000>;
+				interrupt-parent = <&shirq>;
+				interrupts = <3 7>;
+				interrupt-names = "macb4_irq", "macb4_wakeirq";
+				phy-mode = "smii";
+				status = "disabled";
+			};
 
 			serial@b2000000 {
 				compatible = "arm,pl011", "arm,primecell";
@@ -93,6 +146,22 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0xb2200000 0x1000>;
 				interrupts = <12>;
+				interrupt-parent = <&shirq>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3000000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xb3000000 0x1000>;
+				interrupts = <15>;
+				interrupt-parent = <&shirq>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3800000 {
+				compatible = "st,rs485_hdlc";
+				reg = <0xb3800000 0x1000>;
+				interrupts = <16>;
 				interrupt-parent = <&shirq>;
 				status = "disabled";
 			};

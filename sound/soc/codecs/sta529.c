@@ -15,6 +15,7 @@
 #include <linux/init.h>
 #include <linux/i2c.h>
 #include <linux/io.h>
+#include <linux/workqueue.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/pm.h>
@@ -110,7 +111,17 @@ static const struct reg_default sta529_reg_defaults[] = {
 };
 
 struct sta529 {
+	struct snd_soc_codec *codec;
 	struct regmap *regmap;
+	struct work_struct work;
+	bool stream_active;
+	/* context save */
+	int ffxcg0;
+	int s2pcfg0;
+	int s2pcfg1;
+	int p2scfg0;
+	int p2scfg1;
+	int misc;
 };
 
 static bool sta529_writeable(struct device *dev, unsigned int reg)
@@ -135,21 +146,15 @@ static bool sta529_writeable(struct device *dev, unsigned int reg)
 	}
 }
 
-
-static const char *pwm_mode_text[] = {"Phase-shift", "Ternary", "Binary",
-	"Headphone"};
-
 static const DECLARE_TLV_DB_SCALE(out_gain_tlv, -9150, 50, 0);
 static const DECLARE_TLV_DB_SCALE(master_vol_tlv, -12750, 50, 0);
-static const SOC_ENUM_SINGLE_DECL(pwm_src, STA529_FFXCFG1, 4, pwm_mode_text);
 
 static const struct snd_kcontrol_new sta529_snd_controls[] = {
 	SOC_DOUBLE_R_TLV("Digital Playback Volume", STA529_LVOL, STA529_RVOL, 0,
 			127, 1, out_gain_tlv),
 	SOC_SINGLE_TLV("Master Playback Volume", STA529_MVOL, 0, 127, 1,
 			master_vol_tlv),
-	SOC_ENUM("PWM Select", pwm_src),
-	SOC_SINGLE("master mute", STA529_MVOL, 7, 1, 0),
+	SOC_SINGLE("master mute", STA529_FFXCFG0, 6, 1, 0),
 	SOC_SINGLE("Adc Capture Gain", STA529_ADCCFG, 5, 7, 0),
 };
 
@@ -161,14 +166,23 @@ static int sta529_set_bias_level(struct snd_soc_codec *codec, enum
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
-		snd_soc_update_bits(codec, STA529_FFXCFG0, POWER_CNTLMSAK,
-				POWER_UP);
+		regmap_write(sta529->regmap, STA529_FFXCFG0, sta529->ffxcg0);
+		regmap_write(sta529->regmap, STA529_S2PCFG0, sta529->s2pcfg0);
+		regmap_write(sta529->regmap, STA529_S2PCFG1, sta529->s2pcfg1);
+		regmap_write(sta529->regmap, STA529_P2SCFG0, sta529->p2scfg0);
+		regmap_write(sta529->regmap, STA529_P2SCFG1, sta529->p2scfg1);
+		regmap_write(sta529->regmap, STA529_MISC, sta529->misc);
+
+		snd_soc_update_bits(codec, STA529_FFXCFG0,
+				(AUDIO_MUTE_MSK | POWER_CNTLMSAK), 0);
 		snd_soc_update_bits(codec, STA529_MISC,	FFX_CLK_MSK,
 				FFX_CLK_ENB);
+
 		break;
 	case SND_SOC_BIAS_STANDBY:
 		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF)
 			regcache_sync(sta529->regmap);
+
 		snd_soc_update_bits(codec, STA529_FFXCFG0,
 					POWER_CNTLMSAK, POWER_STDBY);
 		/* Making FFX output to zero */
@@ -213,7 +227,7 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 			* SoCs, bit clock would not be shared for play
 			* and record lines of sta529.
 			*/
-			regmap_write(sta529->regmap, STA529_S2PCFG0, 0x12);
+			regmap_write(sta529->regmap, STA529_S2PCFG0, 0x92);
 			regmap_write(sta529->regmap, STA529_P2SCFG0, 0x93);
 		}
 	}
@@ -221,15 +235,15 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		pdata = 1;
-		bclk_to_fs_ratio = 0;
+		bclk_to_fs_ratio = 0; /* for 32fs */
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		pdata = 2;
-		bclk_to_fs_ratio = 1;
+		bclk_to_fs_ratio = 1; /* for 64fs */
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		pdata = 3;
-		bclk_to_fs_ratio = 2;
+		bclk_to_fs_ratio = 1; /* for 64fs */
 		break;
 	default:
 		dev_err(codec->dev, "Unsupported format\n");
@@ -275,6 +289,13 @@ static int sta529_hw_params(struct snd_pcm_substream *substream,
 				(record_freq_val << 2 | audio_freq_val << 4));
 	}
 
+	regmap_read(sta529->regmap, STA529_FFXCFG0, &sta529->ffxcg0);
+	regmap_read(sta529->regmap, STA529_S2PCFG0, &sta529->s2pcfg0);
+	regmap_read(sta529->regmap, STA529_S2PCFG1, &sta529->s2pcfg1);
+	regmap_read(sta529->regmap, STA529_P2SCFG0, &sta529->p2scfg0);
+	regmap_read(sta529->regmap, STA529_P2SCFG1, &sta529->p2scfg1);
+	regmap_read(sta529->regmap, STA529_MISC, &sta529->misc);
+
 	return 0;
 }
 
@@ -316,7 +337,45 @@ static int sta529_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 	return 0;
 }
 
+static void sta529_sched_work(struct work_struct *work)
+{
+	struct sta529 *sta529 = container_of(work, struct sta529, work);
+	struct snd_soc_codec *codec = sta529->codec;
+
+	if (sta529->stream_active)
+		sta529_set_bias_level(codec, SND_SOC_BIAS_ON);
+	else
+		sta529_set_bias_level(codec, SND_SOC_BIAS_OFF);
+}
+
+static int sta529_trigger(struct snd_pcm_substream *substream, int cmd,
+		struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
+	int ret;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+		sta529->stream_active = true;
+		schedule_work(&sta529->work);
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+		sta529->stream_active = false;
+		schedule_work(&sta529->work);
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	return 0;
+
+}
+
 static const struct snd_soc_dai_ops sta529_dai_ops = {
+	.trigger	=	sta529_trigger,
 	.hw_params	=	sta529_hw_params,
 	.set_fmt	=	sta529_set_dai_fmt,
 	.digital_mute	=	sta529_mute,
@@ -346,6 +405,7 @@ static int sta529_probe(struct snd_soc_codec *codec)
 	struct sta529 *sta529 = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
+	sta529->codec = codec;
 	codec->control_data = sta529->regmap;
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
 
@@ -366,6 +426,7 @@ static int sta529_probe(struct snd_soc_codec *codec)
 	regmap_write(sta529->regmap, STA529_CKOCFG, 0x40);
 	regmap_write(sta529->regmap, STA529_MISC, 0x21);
 
+	INIT_WORK(&sta529->work, sta529_sched_work);
 	sta529_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
 	return 0;

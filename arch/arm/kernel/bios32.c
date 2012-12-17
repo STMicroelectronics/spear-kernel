@@ -490,6 +490,18 @@ void __init pci_common_init(struct hw_pci *hw)
 		struct pci_bus *bus = sys->bus;
 
 		if (!pci_has_flag(PCI_PROBE_ONLY)) {
+			struct pci_bus *child;
+
+			/*
+			 * Set MPS and readrq size
+			 */
+			list_for_each_entry(child, &bus->children, node) {
+				struct pci_dev *self = child->self;
+				if (!self)
+					continue;
+				pcie_bus_configure_settings(child,
+						self->pcie_mpss);
+			}
 			/*
 			 * Size the bridge windows.
 			 */

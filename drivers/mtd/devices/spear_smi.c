@@ -36,6 +36,7 @@
 #include <linux/wait.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/pm_runtime.h>
 
 /* SMI clock rate */
 #define SMI_MAX_CLOCK_FREQ	50000000 /* 50 MHz */
@@ -264,9 +265,10 @@ static int spear_smi_read_sr(struct spear_smi *dev, u32 bank)
 static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 		unsigned long timeout)
 {
-	unsigned long finish;
+	unsigned long now, finish;
 	int status;
 
+	now = jiffies;
 	finish = jiffies + timeout;
 	do {
 		status = spear_smi_read_sr(dev, bank);
@@ -277,9 +279,9 @@ static int spear_smi_wait_till_ready(struct spear_smi *dev, u32 bank,
 		} else if (!(status & SR_WIP)) {
 			return 0;
 		}
-
+		now = jiffies;
 		cond_resched();
-	} while (!time_after_eq(jiffies, finish));
+	} while (!time_after_eq(now, finish));
 
 	dev_err(&dev->pdev->dev, "smi controller is busy, timeout\n");
 	return -EBUSY;
@@ -510,6 +512,10 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 	addr = e_info->addr;
 	len = e_info->len;
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
+	pm_runtime_get_sync(&dev->pdev->dev);
 	mutex_lock(&flash->lock);
 
 	/* now erase sectors in loop */
@@ -520,6 +526,8 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 		if (ret) {
 			e_info->state = MTD_ERASE_FAILED;
 			mutex_unlock(&flash->lock);
+			clk_disable_unprepare(dev->clk);
+			pm_runtime_put_sync(&dev->pdev->dev);
 			return ret;
 		}
 		addr += mtd->erasesize;
@@ -529,6 +537,8 @@ static int spear_mtd_erase(struct mtd_info *mtd, struct erase_info *e_info)
 	mutex_unlock(&flash->lock);
 	e_info->state = MTD_ERASE_DONE;
 	mtd_erase_callback(e_info);
+	clk_disable_unprepare(dev->clk);
+	pm_runtime_put_sync(&dev->pdev->dev);
 
 	return 0;
 }
@@ -565,12 +575,18 @@ static int spear_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 	/* select address as per bank number */
 	src = flash->base_addr + from;
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
+	pm_runtime_get_sync(&dev->pdev->dev);
 	mutex_lock(&flash->lock);
 
 	/* wait till previous write/erase is done. */
 	ret = spear_smi_wait_till_ready(dev, flash->bank, SMI_MAX_TIME_OUT);
 	if (ret) {
 		mutex_unlock(&flash->lock);
+		clk_disable_unprepare(dev->clk);
+		pm_runtime_put_sync(&dev->pdev->dev);
 		return ret;
 	}
 
@@ -591,6 +607,8 @@ static int spear_mtd_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 	*retlen = len;
 	mutex_unlock(&flash->lock);
+	clk_disable_unprepare(dev->clk);
+	pm_runtime_put_sync(&dev->pdev->dev);
 
 	return 0;
 }
@@ -655,6 +673,11 @@ static int spear_mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 		return -EINVAL;
 	}
 
+	ret = clk_prepare_enable(dev->clk);
+	if (ret)
+		return ret;
+	pm_runtime_get_sync(&dev->pdev->dev);
+
 	/* select address as per bank number */
 	dest = flash->base_addr + to;
 	mutex_lock(&flash->lock);
@@ -696,6 +719,8 @@ static int spear_mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 err_write:
 	mutex_unlock(&flash->lock);
+	clk_disable_unprepare(dev->clk);
+	pm_runtime_put_sync(&dev->pdev->dev);
 
 	return ret;
 }
@@ -1021,6 +1046,8 @@ static int __devinit spear_smi_probe(struct platform_device *pdev)
 		}
 	}
 
+	clk_disable_unprepare(dev->clk);
+	pm_runtime_enable(&pdev->dev);
 	return 0;
 
 err_bank_setup:
@@ -1081,7 +1108,6 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	free_irq(irq, dev);
 
-	clk_disable_unprepare(dev->clk);
 	clk_put(dev->clk);
 	iounmap(dev->io_base);
 	kfree(dev);
@@ -1090,17 +1116,13 @@ static int __devexit spear_smi_remove(struct platform_device *pdev)
 	release_mem_region(smi_base->start, resource_size(smi_base));
 	platform_set_drvdata(pdev, NULL);
 
+	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
 
 #ifdef CONFIG_PM
-static int spear_smi_suspend(struct device *dev)
+static int spear_smi_pm_empty(struct device *dev)
 {
-	struct spear_smi *sdev = dev_get_drvdata(dev);
-
-	if (sdev && sdev->clk)
-		clk_disable_unprepare(sdev->clk);
-
 	return 0;
 }
 
@@ -1109,15 +1131,19 @@ static int spear_smi_resume(struct device *dev)
 	struct spear_smi *sdev = dev_get_drvdata(dev);
 	int ret = -EPERM;
 
-	if (sdev && sdev->clk)
-		ret = clk_prepare_enable(sdev->clk);
-
-	if (!ret)
+	ret = clk_prepare_enable(sdev->clk);
+	if (!ret) {
 		spear_smi_hw_init(sdev);
+		clk_disable_unprepare(sdev->clk);
+	}
+
 	return ret;
 }
 
-static SIMPLE_DEV_PM_OPS(spear_smi_pm_ops, spear_smi_suspend, spear_smi_resume);
+const struct dev_pm_ops spear_smi_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(spear_smi_pm_empty, spear_smi_resume)
+	SET_RUNTIME_PM_OPS(spear_smi_pm_empty, spear_smi_pm_empty, NULL)
+};
 #endif
 
 #ifdef CONFIG_OF

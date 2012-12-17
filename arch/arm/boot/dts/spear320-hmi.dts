@@ -31,10 +31,6 @@
 			pinctrl-0 = <&state_default>;
 
 			state_default: pinmux {
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
-				};
 				ssp0 {
 					st,pins = "ssp0_grp";
 					st,function = "ssp0";
@@ -87,6 +83,10 @@
 					st,pins = "pwm2_pin_34_grp";
 					st,function = "pwm2";
 				};
+				gpio0 {
+					st,pins = "gpio0_pin1_grp";
+					st,function = "gpio0";
+				};
 			};
 		};
 
@@ -98,8 +98,33 @@
 			status = "okay";
 		};
 
-		fsmc: flash@4c000000 {
+		nand@4c000000 {
 			status = "okay";
+
+			partition@0 {
+				label = "xloader";
+				reg = <0x0 0x80000>;
+			};
+			partition@80000 {
+				label = "u-boot";
+				reg = <0x80000 0x140000>;
+			};
+			partition@1C0000 {
+				label = "environment";
+				reg = <0x1C0000 0x40000>;
+			};
+			partition@200000 {
+				label = "dtb";
+				reg = <0x200000 0x40000>;
+			};
+			partition@240000 {
+				label = "linux";
+				reg = <0x240000 0xC00000>;
+			};
+			partition@E40000 {
+				label = "rootfs";
+				reg = <0xE40000 0x0>;
+			};
 		};
 
 		macb1: eth@aa000000 {
@@ -110,8 +135,23 @@
 			status = "okay";
 		};
 
+		i2s:i2s@a9400000 {
+			status = "okay";
+		};
+
+		sound {
+			compatible = "spear,spear-evb";
+			audio-controllers = <&i2s>;
+			audio-codecs = <&sta529>;
+			codec_dai_names = "sta529-audio";
+			stream_names = "pcm";
+			dai_names = "sta529-pcm";
+			nr_controllers = <1>;
+		        status = "okay";
+		};
+
 		sdhci@70000000 {
-			power-gpio = <&gpio0 2 1>;
+			power-gpio = <&gpiopinctrl 50 1>;
 			power_always_enb;
 			status = "okay";
 		};
@@ -177,13 +217,103 @@
 			status = "okay";
 		};
 
+		usbd@e1100000 {
+			status = "okay";
+		};
+
+		gpio_keys {
+			compatible = "gpio-keys";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			button@1 {
+				label = "user button 1";
+				linux,code = <0x100>;
+				gpios = <&stmpegpio 3 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
+			};
+
+			button@2 {
+				label = "user button 2";
+				linux,code = <0x200>;
+				gpios = <&stmpegpio 2 0x4>;
+				debounce-interval = <20>;
+				gpio-key,wakeup = <1>;
+			};
+		};
+
+		pwm: pwm@a8000000 {
+			status = "okay";
+		};
+
+		jpeg@d0800000 {
+			status = "okay";
+		};
+
 		apb {
+			adc@d0080000 {
+				status = "okay";
+			};
+
+			can0@a1000000 {
+				status = "okay";
+			};
+
+			can1@a2000000 {
+				status = "okay";
+			};
+
 			gpio0: gpio@fc980000 {
 			       status = "okay";
 			};
 
 			i2c0: i2c@d0180000 {
-			       status = "okay";
+				status = "okay";
+
+				eeprom0@50 {
+					compatible = "m24lr64";
+					reg = <0x50>;
+				};
+
+				stmpe811@41 {
+					compatible = "st,stmpe811";
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0x41>;
+					irq_over_gpio;
+					irq-gpios = <&gpio0 1 0x4>;
+					id = <0>;
+					blocks = <0x5>;
+					irq_trigger = <0x1>;
+
+					stmpegpio: stmpe-gpio {
+						compatible = "stmpe,gpio";
+						reg = <0>;
+						gpio-controller;
+						#gpio-cells = <2>;
+						gpio,norequest_mask = <0xF3>;
+					};
+
+					stmpe610-ts {
+						compatible = "stmpe,ts";
+						reg = <0>;
+						ts,sample_time = <4>;
+						ts,mod_12b = <1>;
+						ts,ref_sel = <0>;
+						ts,adc_freq = <1>;
+						ts,ave_ctrl = <1>;
+						ts,touch_det_delay = <2>;
+						ts,settling = <2>;
+						ts,fraction_z = <7>;
+						ts,i_drive = <1>;
+					};
+				};
+
+					sta529:	sta529@1a {
+						compatible = "st,sta529";
+						reg = <0x1a>;
+					};
 			};
 
 			i2c1: i2c@a7000000 {
@@ -218,6 +348,10 @@
 
 			wdt@fc880000 {
 			       status = "okay";
+			};
+
+			gpio@b3000000 {
+				status = "okay";
 			};
 		};
 	};

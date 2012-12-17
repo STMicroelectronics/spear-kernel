@@ -12,6 +12,7 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <asm/smp_plat.h>
 #include <linux/clk.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
@@ -152,7 +153,7 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 	unsigned long newfreq, srcfreq;
 	struct clk *srcclk;
 
-	if (policy->cpu != 0)
+	if (policy->cpu >= nr_cpu_ids)
 		return -EINVAL;
 
 	if (cpufreq_frequency_table_target(policy, spear_cpufreq.freq_tbl,
@@ -244,7 +245,7 @@ static int spear_cpufreq_target(struct cpufreq_policy *policy,
 
 static int spear_cpufreq_init(struct cpufreq_policy *policy)
 {
-	if (policy->cpu != 0)
+	if (policy->cpu >= nr_cpu_ids)
 		return -EINVAL;
 
 	policy->cpuinfo.min_freq = spear_cpufreq.min_freq;
@@ -252,10 +253,14 @@ static int spear_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cur = policy->min = policy->max = spear_cpufreq_get(0);
 
+	if (is_smp()) {
+		policy->shared_type = CPUFREQ_SHARED_TYPE_ANY;
+		cpumask_setall(policy->cpus);
+	}
+
 	if (!cpufreq_frequency_table_cpuinfo(policy, spear_cpufreq.freq_tbl))
 		cpufreq_frequency_table_get_attr(spear_cpufreq.freq_tbl,
 				policy->cpu);
-
 	policy->cpuinfo.transition_latency = spear_cpufreq.transition_latency;
 
 	return 0;

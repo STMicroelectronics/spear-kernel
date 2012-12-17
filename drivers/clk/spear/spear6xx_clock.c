@@ -91,15 +91,32 @@ static struct vco_rate_tbl vco_rtbl[] = {
 	{.mode = 0, .m = 0x85, .n = 0x0F}, /* vco 532 */
 	{.mode = 0, .m = 0xA6, .n = 0x0F}, /* vco 664 */
 };
+
+/*
+ * Since the DDR shares the same pll as the total system (pll-1), the
+ * changes in system frequency requires the DDR to be moved into self
+ * refresh mode.
+ *
+ * The Clock framework implemetations changes VCO and PLL separately to the
+ * m/n & p values maintained in the VCO and PLL rate tables respectively.
+ *
+ * A quick fix by limiting the p-value to 1 helps to overcome the above
+ * limitations and handle the DDR specific changes at VCO level only.
+ *
+ * The PLL table value below is restricted to a single entry i.e. p value
+ * of 1. This value is sufficient to generate the requisite fequencies of
+ * 166/266/332 Mhz.
+ */
+
 static struct pll_rate_tbl pll_rtbl[] = {
 	/* o/p clk = parent clk (vco) / 2^p */
 	{.p = 0x1},
-	{.p = 0x0},
 };
 
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
+	{.xscale = 2, .yscale = 27, .eq = 0}, /* 12.296 MHz */
 	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
 	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
 	{.xscale = 1, .yscale = 2, .eq = 1}, /* 166 MHz */
@@ -161,7 +178,8 @@ void __init spear6xx_clk_init(void)
 	clk_register_clkdev(clk, NULL, "wdt");
 
 	/* clock derived from pll1 clk */
-	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk", 0, 1, 1);
+	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk",
+			CLK_SET_RATE_PARENT, 1, 1);
 	clk_register_clkdev(clk, "cpu_clk", NULL);
 
 	clk = clk_register_divider(NULL, "ahb_clk", "pll1_clk",
@@ -299,7 +317,7 @@ void __init spear6xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "fsmc_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			FSMC_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "d1800000.flash");
+	clk_register_clkdev(clk, NULL, "d1800000.nand");
 
 	clk = clk_register_gate(NULL, "gmac_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			GMAC_CLK_ENB, 0, &_lock);
@@ -311,7 +329,7 @@ void __init spear6xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "jpeg_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			JPEG_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "jpeg");
+	clk_register_clkdev(clk, NULL, "d0800000.jpeg");
 
 	clk = clk_register_gate(NULL, "smi_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			SMI_CLK_ENB, 0, &_lock);

@@ -19,13 +19,13 @@
 	cpus {
 		cpu@0 {
 			compatible = "arm,arm926ejs";
-            operating-freqs = <
-                /* kHz */
-                166000
-                266000
-                332000
-            >;
-           clock-latency = <250000>;
+			operating-freqs = <
+				/* kHz */
+				166000
+				266000
+				332000
+			>;
+			clock-latency = <250000>;
 		};
 	};
 
@@ -111,11 +111,25 @@
 			status = "disabled";
 		};
 
+		jpeg@d0800000 {
+			compatible = "st,designware-jpeg";
+			reg = <0xd0800000 0x2000>;
+			interrupts = <16>;
+			status = "disabled";
+		};
+
 		apb {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "simple-bus";
 			ranges = <0xd0000000 0xd0000000 0x30000000>;
+
+			adc@d0080000 {
+				compatible = "st,spear-adc";
+				reg = <0xd0080000 0x1000>;
+				interrupts = <18>;
+				status = "disabled";
+			};
 
 			gpio0: gpio@fc980000 {
 				compatible = "arm,pl061", "arm,primecell";

@@ -11,7 +11,9 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/async.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -48,6 +50,9 @@ static int spear_pm_on(void)
 static int spear_sys_suspend(unsigned long arg)
 {
 	suspend_state_t state = (suspend_state_t)(arg);
+#ifdef CONFIG_PCI
+	spear_pcie_suspend();
+#endif
 	/* Flush the cache */
 	flush_cache_all();
 	outer_disable();
@@ -65,6 +70,9 @@ static int spear_pm_sleep(suspend_state_t state)
 
 	/* Resume operations */
 	outer_resume();
+#ifdef CONFIG_PCI
+	spear_pcie_resume();
+#endif
 	/* Explicit set all the power domain to on */
 	writel((readl(VA_PCM_CFG) | pcm_set_cfg),
 		VA_PCM_CFG);
@@ -172,8 +180,10 @@ static const struct platform_suspend_ops spear_pm_ops = {
 #ifdef CONFIG_HIBERNATION
 static void spear_power_off(void)
 {
-	while (1)
-		;
+	while (1) {
+		msleep(20);
+		async_synchronize_full();
+	}
 }
 
 static int empty_enter(void)
@@ -217,7 +227,7 @@ static int __init spear_pm_init(void)
 		spear_sleep_fn_addr = (void *)spear1310_sleep_mode;
 		spear_sleep_mode_sz = spear1310_sleep_mode_sz;
 		pcm_set_cfg &= ~(PWR_DOM_ON | USB_WKUP);
-		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP);
+		pcm_set_cfg |= (PWR_DOM_ON_1310 | RAS_WKUP | PCIE_WKUP);
 	} else
 		return -ENODEV;
 

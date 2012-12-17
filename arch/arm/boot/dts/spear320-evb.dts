@@ -31,10 +31,6 @@
 			pinctrl-0 = <&state_default>;
 
 			state_default: pinmux {
-				i2c0 {
-					st,pins = "i2c0_grp";
-					st,function = "i2c0";
-				};
 				mii0 {
 					st,pins = "mii0_grp";
 					st,function = "mii0";
@@ -76,12 +72,8 @@
 					st,function = "mii2";
 				};
 				pwm0_1 {
-					st,pins = "pwm0_1_pin_14_15_grp";
+					st,pins = "pwm0_1_pin_37_38_grp";
 					st,function = "pwm0_1";
-				};
-				pwm2 {
-					st,pins = "pwm2_pin_13_grp";
-					st,function = "pwm2";
 				};
 			};
 		};
@@ -90,7 +82,7 @@
 			status = "okay";
 		};
 
-		fsmc: flash@4c000000 {
+		nand@4c000000 {
 			status = "okay";
 		};
 
@@ -103,7 +95,7 @@
 		};
 
 		sdhci@70000000 {
-			power-gpio = <&gpio0 2 1>;
+			power-gpio = <&gpiopinctrl 61 1>;
 			power_always_enb;
 			status = "okay";
 		};
@@ -147,6 +139,25 @@
 
 		spi0: spi@d0100000 {
 			status = "okay";
+			num-cs = <1>;
+
+			spidev@0 {
+					status = "okay";
+					compatible = "spidev";
+					reg = <0>;
+					spi-max-frequency = <25000000>;
+					spi-cpha;
+					pl022,hierarchy = <0>;
+					pl022,interface = <0>;
+					pl022,slave-tx-disable;
+					pl022,com-mode = <0x2>;
+					pl022,rx-level-trig = <0>;
+					pl022,tx-level-trig = <0>;
+					pl022,ctrl-len = <0x11>;
+					pl022,wait-state = <0>;
+					pl022,duplex = <0>;
+				};
+
 		};
 
 		spi1: spi@a5000000 {
@@ -173,7 +184,23 @@
 			status = "okay";
 		};
 
+		jpeg@d0800000 {
+			status = "okay";
+		};
+
 		apb {
+			adc@d0080000 {
+				status = "okay";
+			};
+
+			can0@a1000000 {
+				status = "okay";
+			};
+
+			can1@a2000000 {
+				status = "okay";
+			};
+
 			gpio0: gpio@fc980000 {
 			       status = "okay";
 			};

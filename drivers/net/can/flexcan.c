@@ -182,7 +182,7 @@ struct flexcan_priv {
 	struct flexcan_platform_data *pdata;
 };
 
-static struct can_bittiming_const flexcan_bittiming_const = {
+static const struct can_bittiming_const flexcan_bittiming_const = {
 	.name = DRV_NAME,
 	.tseg1_min = 4,
 	.tseg1_max = 16,

@@ -90,7 +90,12 @@
 			status = "okay";
 		};
 
-		fsmc: flash@44000000 {
+		flash@50000000 {
+			bank-width = <4>;
+			status = "okay";
+		};
+
+		nand@44000000 {
 			status = "okay";
 		};
 
@@ -151,7 +156,26 @@
 			status = "okay";
 		};
 
+		jpeg@d0800000 {
+			status = "okay";
+		};
+
+		tdm_hdlc@b2800000 {
+			ip_type = <1>;
+			nr_channel = <2>;
+			nr_timeslot = <128>;
+			status = "disabled";
+		};
+
+		usbd@e1100000 {
+			status = "disabled";
+		};
+
 		apb {
+			adc@d0080000 {
+				status = "okay";
+			};
+
 			gpio0: gpio@fc980000 {
 			       status = "okay";
 			};
@@ -162,6 +186,22 @@
 
 			rtc@fc900000 {
 			       status = "okay";
+			};
+
+			macb0: eth@b0000000 {
+				status = "okay";
+			};
+
+			macb1: eth@b0800000 {
+				status = "okay";
+			};
+
+			macb2: eth@b1000000 {
+				status = "okay";
+			};
+
+			macb3: eth@b1800000 {
+				status = "okay";
 			};
 
 			serial@d0000000 {
@@ -198,6 +238,22 @@
 			       status = "okay";
 				pinctrl-names = "default";
 				pinctrl-0 = <>;
+			};
+
+			rs485_hdlc@b3000000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <24>;
+				status = "disabled";
+			};
+
+			rs485_hdlc@b3800000 {
+				tx_falling_edge = <1>;
+				rx_rising_edge = <1>;
+				cts_enable = <1>;
+				cts_delay = <24>;
+				status = "disabled";
 			};
 
 			timer@f0000000 {

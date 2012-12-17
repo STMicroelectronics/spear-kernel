@@ -18,10 +18,12 @@
 #include <linux/dw_dmac.h>
 #include <linux/err.h>
 #include <linux/irq.h>
+#include <linux/mtd/fsmc.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
+#include <linux/ahci_platform.h>
 #include <linux/stmmac.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/hardware/gic.h>
@@ -45,6 +47,33 @@ bool dw_dma_filter(struct dma_chan *chan, void *slave)
 	} else {
 		return false;
 	}
+}
+
+/* sata suspend/resume function */
+int sata_suspend(struct device *dev)
+{
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+
+	if (dev->power.power_state.event == PM_EVENT_FREEZE)
+		return 0;
+
+	if (pdata && pdata->exit)
+		pdata->exit(dev);
+
+	return 0;
+}
+
+int sata_resume(struct device *dev)
+{
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+
+	if (dev->power.power_state.event == PM_EVENT_THAW)
+		return 0;
+
+	if (pdata && pdata->init)
+		return pdata->init(dev, NULL);
+
+	return 0;
 }
 
 /* ssp device registration */
@@ -214,6 +243,79 @@ fail_get_input_pclk:
 	return ret;
 }
 
+ /* Initialize fsmc controller for NOR */
+int __init spear13xx_fsmcnor_init(int numbanks)
+{
+	struct device_node *fsmc_flash_node;
+	void __iomem *regs;
+	struct clk *clk;
+	const char *status;
+	int ret;
+	u32 ctrl, bank, width;
+
+	fsmc_flash_node = of_find_compatible_node(NULL, NULL, "cfi-flash");
+
+	if (!fsmc_flash_node)
+		/* cfi-flash node not found */
+		return -ENOENT;
+
+	if (!of_property_read_string(fsmc_flash_node, "status", &status) &&
+			!strcmp(status, "disabled"))
+		return -ENOENT;
+
+	clk = clk_get_sys("a0000000.flash", NULL);
+	if (IS_ERR(clk)) {
+		ret = PTR_ERR(clk);
+		pr_err("fsmc-nor: clock get failed\n");
+		goto eclkgetsys;
+	}
+
+	ret = clk_prepare_enable(clk);
+	if (ret) {
+		pr_err("fsmc-nor: clock enable failed\n");
+		goto eclkenable;
+	}
+
+	if (of_property_read_u32(fsmc_flash_node, "bank-width", &width)) {
+		pr_err("fsmc-nor: Initialization failed\n");
+		goto epropread;
+	}
+
+	regs = ioremap(FSMC_REGS_BASE, 0x100);
+	if (!regs) {
+		pr_err("fsmc-nor: ioremap failed\n");
+		goto eioremap;
+	}
+
+	ctrl = WAIT_ENB | WRT_ENABLE | WPROT | NOR_DEV | BANK_ENABLE;
+
+	if (width == 1)
+		ctrl |= WIDTH_8;
+	else if (width == 2)
+		ctrl |= WIDTH_16;
+	else if (width == 4)
+		ctrl |= WIDTH_32;
+
+	for (bank = 0; bank < numbanks; bank++) {
+		writel(ctrl, FSMC_NOR_REG(regs, bank, CTRL));
+		writel(0x0FFFFFFF, FSMC_NOR_REG(regs, bank, CTRL_TIM));
+		writel(ctrl | RSTPWRDWN, FSMC_NOR_REG(regs, bank, CTRL));
+	}
+	iounmap(regs);
+
+	of_node_put(fsmc_flash_node);
+	return 0;
+
+eioremap:
+epropread:
+	clk_disable_unprepare(clk);
+eclkenable:
+	clk_put(clk);
+eclkgetsys:
+	of_node_put(fsmc_flash_node);
+	return ret;
+}
+
 /*
  * configure i2s ref clk and sclk
  *
@@ -240,14 +342,14 @@ int audio_clk_config(struct i2s_hw_config_data *config)
 
 	i2s_ref_clk = clk_get_sys(NULL, "i2s_ref_mclk");
 	if (IS_ERR(i2s_ref_clk)) {
-		pr_err("%s:couldn't get i2s_ref_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_ref_mclk\n", __func__);
 		ret = PTR_ERR(i2s_ref_clk);
 		goto put_i2s_sclk_gclk;
 	}
 
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_mclk\n", __func__);
 		ret = PTR_ERR(i2s_src_clk);
 		goto put_i2s_ref_clk;
 	}
@@ -316,7 +418,7 @@ put_i2s_sclk_gclk:
 void i2s_clk_init(void)
 {
 	int ret;
-	struct clk *i2s_ref_pad_clk, *i2s_sclk_clk, *i2s_src_clk, *i2s_ref_clk;
+	struct clk *i2s_ref_pad_clk, *i2s_sclk_gclk, *i2s_src_clk, *i2s_ref_clk;
 	struct clk *src_pclk, *ref_pclk;
 	char *src_pclk_name, *ref_pclk_name;
 
@@ -353,7 +455,7 @@ void i2s_clk_init(void)
 	i2s_src_clk = clk_get_sys(NULL, "i2s_src_mclk");
 
 	if (IS_ERR(i2s_src_clk)) {
-		pr_err("%s:couldn't get i2s_src_clk\n", __func__);
+		pr_err("%s:couldn't get i2s_src_mclk\n", __func__);
 		goto put_src_pclk;
 	}
 
@@ -401,9 +503,9 @@ void i2s_clk_init(void)
 		goto put_i2s_ref_clk;
 	}
 
-	i2s_sclk_clk = clk_get_sys(NULL, "i2s_sclk_clk");
-	if (IS_ERR(i2s_sclk_clk)) {
-		pr_err("%s:couldn't get i2s_sclk_clk\n", __func__);
+	i2s_sclk_gclk = clk_get_sys(NULL, "i2s_sclk_gclk");
+	if (IS_ERR(i2s_sclk_gclk)) {
+		pr_err("%s:couldn't get i2s_sclk_gclk\n", __func__);
 		goto put_i2s_ref_clk;
 	}
 
@@ -418,14 +520,14 @@ void i2s_clk_init(void)
 		goto put_ref_pad_clk;
 	}
 
-	if (clk_prepare_enable(i2s_sclk_clk)) {
-		pr_err("%s:enabling i2s_sclk_clk\n", __func__);
+	if (clk_prepare_enable(i2s_sclk_gclk)) {
+		pr_err("%s:error enabling i2s_sclk_gclk\n", __func__);
 		goto put_ref_pad_clk;
 	}
 put_ref_pad_clk:
 	clk_put(i2s_ref_pad_clk);
 put_sclk_clk:
-	clk_put(i2s_sclk_clk);
+	clk_put(i2s_sclk_gclk);
 put_i2s_ref_clk:
 	clk_put(i2s_ref_clk);
 put_ref_pclk:

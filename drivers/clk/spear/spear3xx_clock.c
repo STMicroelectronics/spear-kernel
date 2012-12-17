@@ -106,15 +106,37 @@ static struct vco_rate_tbl vco_rtbl[] = {
 	{.mode = 0, .m = 0x85, .n = 0x0C}, /* vco 532 */
 	{.mode = 0, .m = 0xA6, .n = 0x0C}, /* vco 664 */
 };
+
+/*
+ * Since the DDR shares the same pll as the total system (pll-1), the
+ * changes in system frequency requires the DDR to be moved into self
+ * refresh mode.
+ *
+ * The Clock framework implemetations changes VCO and PLL separately to the
+ * m/n & p values maintained in the VCO and PLL rate tables respectively.
+ *
+ * A quick fix by limiting the p-value to 1 helps to overcome the above
+ * limitations and handle the DDR specific changes at VCO level only.
+ *
+ * The PLL table value below is restricted to a single entry i.e. p value
+ * of 1. This value is sufficient to generate the requisite fequencies of
+ * 166/266/332 Mhz.
+ */
+
 static struct pll_rate_tbl pll_rtbl[] = {
 	/* o/p clk = parent clk (vco) / 2^p */
 	{.p = 0x1},
-	{.p = 0x0},
 };
 
 /* aux rate configuration table, in ascending order of rates */
 static struct aux_rate_tbl aux_rtbl[] = {
 	/* For PLL1 = 332 MHz */
+	{.xscale = 1, .yscale = 81, .eq = 0}, /* 2.049 MHz */
+	{.xscale = 1, .yscale = 59, .eq = 0}, /* 2.822 MHz */
+	{.xscale = 2, .yscale = 81, .eq = 0}, /* 4.098 MHz */
+	{.xscale = 3, .yscale = 89, .eq = 0}, /* 5.644 MHz */
+	{.xscale = 4, .yscale = 81, .eq = 0}, /* 8.197 MHz */
+	{.xscale = 4, .yscale = 59, .eq = 0}, /* 11.254 MHz */
 	{.xscale = 2, .yscale = 27, .eq = 0}, /* 12.296 MHz */
 	{.xscale = 2, .yscale = 8, .eq = 0}, /* 41.5 MHz */
 	{.xscale = 2, .yscale = 4, .eq = 0}, /* 83 MHz */
@@ -151,7 +173,7 @@ static void __init spear300_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "94000000.flash");
+	clk_register_clkdev(clk, NULL, "94000000.nand");
 
 	clk = clk_register_fixed_factor(NULL, "sdhci_clk", "ras_ahb_clk", 0, 1,
 			1);
@@ -175,15 +197,39 @@ static void __init spear310_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "emi_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, "emi", NULL);
+	clk_register_clkdev(clk, "50000000.flash", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "44000000.flash");
+	clk_register_clkdev(clk, NULL, "44000000.nand");
+
+	clk = clk_register_fixed_factor(NULL, "macb0_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b0000000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb1_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b0800000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb2_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b1000000.eth");
+
+	clk = clk_register_fixed_factor(NULL, "macb3_clk", "ras_apb_clk", 0, 1,
+			1);
+	clk_register_clkdev(clk, "hclk", "b1800000.eth");
 
 	clk = clk_register_fixed_factor(NULL, "tdm_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "tdm");
+	clk_register_clkdev(clk, NULL, "b2800000.tdm_hdlc");
+
+	clk = clk_register_fixed_factor(NULL, "rs485_0_clk", "ras_apb_clk",
+			0, 1, 1);
+	clk_register_clkdev(clk, NULL, "b3000000.rs485_hdlc");
+
+	clk = clk_register_fixed_factor(NULL, "rs485_1_clk", "ras_apb_clk",
+			0, 1, 1);
+	clk_register_clkdev(clk, NULL, "b3800000.rs485_hdlc");
 
 	clk = clk_register_fixed_factor(NULL, "uart1_clk", "ras_apb_clk", 0, 1,
 			1);
@@ -247,11 +293,11 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "emi_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, "emi", NULL);
+	clk_register_clkdev(clk, "44000000.flash", NULL);
 
 	clk = clk_register_fixed_factor(NULL, "fsmc_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "4c000000.flash");
+	clk_register_clkdev(clk, NULL, "4c000000.nand");
 
 	clk = clk_register_fixed_factor(NULL, "i2c1_clk", "ras_ahb_clk", 0, 1,
 			1);
@@ -259,7 +305,7 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "pwm_clk", "ras_ahb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, "pwm", NULL);
+	clk_register_clkdev(clk, NULL, "a8000000.pwm");
 
 	clk = clk_register_fixed_factor(NULL, "ssp1_clk", "ras_ahb_clk", 0, 1,
 			1);
@@ -271,22 +317,22 @@ static void __init spear320_clk_init(void)
 
 	clk = clk_register_fixed_factor(NULL, "can0_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "c_can_platform.0");
+	clk_register_clkdev(clk, NULL, "a1000000.can0");
 
 	clk = clk_register_fixed_factor(NULL, "can1_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "c_can_platform.1");
+	clk_register_clkdev(clk, NULL, "a2000000.can1");
 
 	clk = clk_register_fixed_factor(NULL, "i2s_clk", "ras_apb_clk", 0, 1,
 			1);
-	clk_register_clkdev(clk, NULL, "i2s");
+	clk_register_clkdev(clk, NULL, "a9400000.i2s");
 
 	clk = clk_register_mux(NULL, "i2s_ref_clk", i2s_ref_parents,
-			ARRAY_SIZE(i2s_ref_parents), 0, SPEAR320_CONTROL_REG,
+			ARRAY_SIZE(i2s_ref_parents), CLK_SET_RATE_PARENT, SPEAR320_CONTROL_REG,
 			I2S_REF_PCLK_SHIFT, I2S_REF_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "i2s_ref_clk", NULL);
 
-	clk = clk_register_fixed_factor(NULL, "i2s_sclk", "i2s_ref_clk", 0, 1,
+	clk = clk_register_fixed_factor(NULL, "i2s_sclk", "i2s_ref_clk", CLK_SET_RATE_PARENT, 1,
 			4);
 	clk_register_clkdev(clk, "i2s_sclk", NULL);
 
@@ -299,14 +345,15 @@ static void __init spear320_clk_init(void)
 	clk_register_clkdev(clk, "hclk", "ab000000.eth");
 
 	clk = clk_register_mux(NULL, "rs485_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_RS485_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_RS485_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "a9300000.serial");
 
 	clk = clk_register_mux(NULL, "sdhci_clk", sdhci_parents,
-			ARRAY_SIZE(sdhci_parents), 0, SPEAR320_CONTROL_REG,
-			SDHCI_PCLK_SHIFT, SDHCI_PCLK_MASK, 0, &_lock);
+			ARRAY_SIZE(sdhci_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_CONTROL_REG, SDHCI_PCLK_SHIFT, SDHCI_PCLK_MASK,
+			0, &_lock);
 	clk_register_clkdev(clk, NULL, "70000000.sdhci");
 
 	clk = clk_register_mux(NULL, "smii_pclk", smii0_parents,
@@ -318,38 +365,39 @@ static void __init spear320_clk_init(void)
 	clk_register_clkdev(clk, NULL, "smii");
 
 	clk = clk_register_mux(NULL, "uart1_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_CONTROL_REG,
-			UART1_PCLK_SHIFT, UART1_PCLK_MASK, 0, &_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_CONTROL_REG, UART1_PCLK_SHIFT, UART1_PCLK_MASK,
+			0, &_lock);
 	clk_register_clkdev(clk, NULL, "a3000000.serial");
 
 	clk = clk_register_mux(NULL, "uart2_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_UART2_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_UART2_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "a4000000.serial");
 
 	clk = clk_register_mux(NULL, "uart3_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_UART3_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_UART3_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "a9100000.serial");
 
 	clk = clk_register_mux(NULL, "uart4_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_UART4_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_UART4_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "a9200000.serial");
 
 	clk = clk_register_mux(NULL, "uart5_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_UART5_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_UART5_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "60000000.serial");
 
 	clk = clk_register_mux(NULL, "uart6_clk", uartx_parents,
-			ARRAY_SIZE(uartx_parents), 0, SPEAR320_EXT_CTRL_REG,
-			SPEAR320_UART6_PCLK_SHIFT, SPEAR320_UARTX_PCLK_MASK, 0,
-			&_lock);
+			ARRAY_SIZE(uartx_parents), CLK_SET_RATE_PARENT,
+			SPEAR320_EXT_CTRL_REG, SPEAR320_UART6_PCLK_SHIFT,
+			SPEAR320_UARTX_PCLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "60100000.serial");
 }
 #endif
@@ -395,7 +443,8 @@ void __init spear3xx_clk_init(void)
 	clk_register_clkdev(clk1, "pll2_clk", NULL);
 
 	/* clock derived from pll1 clk */
-	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk", 0, 1, 1);
+	clk = clk_register_fixed_factor(NULL, "cpu_clk", "pll1_clk",
+			CLK_SET_RATE_PARENT, 1, 1);
 	clk_register_clkdev(clk, "cpu_clk", NULL);
 
 	clk = clk_register_divider(NULL, "ahb_clk", "pll1_clk",
@@ -410,12 +459,14 @@ void __init spear3xx_clk_init(void)
 	clk_register_clkdev(clk1, "uart_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "uart0_mclk", uart0_parents,
-			ARRAY_SIZE(uart0_parents), 0, PERIP_CLK_CFG,
-			UART_CLK_SHIFT, UART_CLK_MASK, 0, &_lock);
+			ARRAY_SIZE(uart0_parents), CLK_SET_RATE_PARENT,
+			PERIP_CLK_CFG, UART_CLK_SHIFT, UART_CLK_MASK, 0,
+			&_lock);
 	clk_register_clkdev(clk, "uart0_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "uart0", "uart0_mclk", 0, PERIP1_CLK_ENB,
-			UART_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "uart0", "uart0_mclk",
+			CLK_SET_RATE_PARENT, PERIP1_CLK_ENB, UART_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, NULL, "d0000000.serial");
 
 	clk = clk_register_aux("firda_syn_clk", "firda_syn_gclk", "pll1_clk", 0,
@@ -425,40 +476,44 @@ void __init spear3xx_clk_init(void)
 	clk_register_clkdev(clk1, "firda_syn_gclk", NULL);
 
 	clk = clk_register_mux(NULL, "firda_mclk", firda_parents,
-			ARRAY_SIZE(firda_parents), 0, PERIP_CLK_CFG,
-			FIRDA_CLK_SHIFT, FIRDA_CLK_MASK, 0, &_lock);
+			ARRAY_SIZE(firda_parents), CLK_SET_RATE_PARENT,
+			PERIP_CLK_CFG, FIRDA_CLK_SHIFT, FIRDA_CLK_MASK, 0,
+			&_lock);
 	clk_register_clkdev(clk, "firda_mclk", NULL);
 
-	clk = clk_register_gate(NULL, "firda_clk", "firda_mclk", 0,
-			PERIP1_CLK_ENB, FIRDA_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "firda_clk", "firda_mclk",
+			CLK_SET_RATE_PARENT, PERIP1_CLK_ENB, FIRDA_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, NULL, "firda");
 
 	/* gpt clocks */
 	clk_register_gpt("gpt0_syn_clk", "pll1_clk", 0, PRSC0_CLK_CFG, gpt_rtbl,
 			ARRAY_SIZE(gpt_rtbl), &_lock);
 	clk = clk_register_mux(NULL, "gpt0_clk", gpt0_parents,
-			ARRAY_SIZE(gpt0_parents), 0, PERIP_CLK_CFG,
-			GPT0_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
+			ARRAY_SIZE(gpt0_parents), CLK_SET_RATE_PARENT,
+			PERIP_CLK_CFG, GPT0_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, NULL, "gpt0");
 
 	clk_register_gpt("gpt1_syn_clk", "pll1_clk", 0, PRSC1_CLK_CFG, gpt_rtbl,
 			ARRAY_SIZE(gpt_rtbl), &_lock);
 	clk = clk_register_mux(NULL, "gpt1_mclk", gpt1_parents,
-			ARRAY_SIZE(gpt1_parents), 0, PERIP_CLK_CFG,
-			GPT1_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
+			ARRAY_SIZE(gpt1_parents), CLK_SET_RATE_PARENT,
+			PERIP_CLK_CFG, GPT1_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "gpt1_mclk", NULL);
-	clk = clk_register_gate(NULL, "gpt1_clk", "gpt1_mclk", 0,
-			PERIP1_CLK_ENB, GPT1_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "gpt1_clk", "gpt1_mclk",
+			CLK_SET_RATE_PARENT, PERIP1_CLK_ENB, GPT1_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, NULL, "gpt1");
 
 	clk_register_gpt("gpt2_syn_clk", "pll1_clk", 0, PRSC2_CLK_CFG, gpt_rtbl,
 			ARRAY_SIZE(gpt_rtbl), &_lock);
 	clk = clk_register_mux(NULL, "gpt2_mclk", gpt2_parents,
-			ARRAY_SIZE(gpt2_parents), 0, PERIP_CLK_CFG,
-			GPT2_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
+			ARRAY_SIZE(gpt2_parents), CLK_SET_RATE_PARENT,
+			PERIP_CLK_CFG, GPT2_CLK_SHIFT, GPT_CLK_MASK, 0, &_lock);
 	clk_register_clkdev(clk, "gpt2_mclk", NULL);
-	clk = clk_register_gate(NULL, "gpt2_clk", "gpt2_mclk", 0,
-			PERIP1_CLK_ENB, GPT2_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "gpt2_clk", "gpt2_mclk",
+			CLK_SET_RATE_PARENT, PERIP1_CLK_ENB, GPT2_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, NULL, "gpt2");
 
 	/* general synths clocks */
@@ -548,7 +603,7 @@ void __init spear3xx_clk_init(void)
 
 	clk = clk_register_gate(NULL, "jpeg_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			JPEG_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "jpeg");
+	clk_register_clkdev(clk, NULL, "d0800000.jpeg");
 
 	clk = clk_register_gate(NULL, "smi_clk", "ahb_clk", 0, PERIP1_CLK_ENB,
 			SMI_CLK_ENB, 0, &_lock);
@@ -557,7 +612,7 @@ void __init spear3xx_clk_init(void)
 	/* clock derived from apb clk */
 	clk = clk_register_gate(NULL, "adc_clk", "apb_clk", 0, PERIP1_CLK_ENB,
 			ADC_CLK_ENB, 0, &_lock);
-	clk_register_clkdev(clk, NULL, "adc");
+	clk_register_clkdev(clk, NULL, "d0080000.adc");
 
 	clk = clk_register_gate(NULL, "gpio0_clk", "apb_clk", 0, PERIP1_CLK_ENB,
 			GPIO_CLK_ENB, 0, &_lock);
@@ -596,20 +651,24 @@ void __init spear3xx_clk_init(void)
 			RAS_CLK_ENB, RAS_48M_CLK_ENB, 0, &_lock);
 	clk_register_clkdev(clk, "ras_pll3_clk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_syn0_gclk", "gen0_syn_gclk", 0,
-			RAS_CLK_ENB, RAS_SYNT0_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "ras_syn0_gclk", "gen0_syn_gclk",
+			CLK_SET_RATE_PARENT, RAS_CLK_ENB, RAS_SYNT0_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, "ras_syn0_gclk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_syn1_gclk", "gen1_syn_gclk", 0,
-			RAS_CLK_ENB, RAS_SYNT1_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "ras_syn1_gclk", "gen1_syn_gclk",
+			CLK_SET_RATE_PARENT, RAS_CLK_ENB, RAS_SYNT1_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, "ras_syn1_gclk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_syn2_gclk", "gen2_syn_gclk", 0,
-			RAS_CLK_ENB, RAS_SYNT2_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "ras_syn2_gclk", "gen2_syn_gclk",
+			CLK_SET_RATE_PARENT, RAS_CLK_ENB, RAS_SYNT2_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, "ras_syn2_gclk", NULL);
 
-	clk = clk_register_gate(NULL, "ras_syn3_gclk", "gen3_syn_gclk", 0,
-			RAS_CLK_ENB, RAS_SYNT3_CLK_ENB, 0, &_lock);
+	clk = clk_register_gate(NULL, "ras_syn3_gclk", "gen3_syn_gclk",
+			CLK_SET_RATE_PARENT, RAS_CLK_ENB, RAS_SYNT3_CLK_ENB, 0,
+			&_lock);
 	clk_register_clkdev(clk, "ras_syn3_gclk", NULL);
 
 	if (of_machine_is_compatible("st,spear300"))

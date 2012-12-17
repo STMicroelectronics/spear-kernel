@@ -50,6 +50,7 @@ struct spear_shirq {
 	u32 irq_base;
 	u32 irq_nr;
 	u32 irq_bit_off;
+	int invalid_irq;
 	void __iomem *base;
 	struct shirq_regs regs;
 };

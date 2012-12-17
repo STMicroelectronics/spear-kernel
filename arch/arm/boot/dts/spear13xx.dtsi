@@ -76,7 +76,8 @@
 		#size-cells = <1>;
 		compatible = "simple-bus";
 		ranges = <0x50000000 0x50000000 0x10000000
-			  0xb0000000 0xb0000000 0x10000000
+			  0x80000000 0x80000000 0x20000000
+			  0xb0000000 0xb0000000 0x20000000
 			  0xd0000000 0xd0000000 0x02000000
 			  0xd8000000 0xd8000000 0x01000000
 			  0xe0000000 0xe0000000 0x10000000>;
@@ -90,7 +91,7 @@
 
 		cf@b2800000 {
 			compatible = "arasan,cf-spear1340";
-			reg = <0xb2800000 0x100>;
+			reg = <0xb2800000 0x1000>;
 			interrupts = <0 29 0x4>;
 			status = "disabled";
 		};
@@ -109,7 +110,13 @@
 			status = "disabled";
 		};
 
-		fsmc: flash@b0000000 {
+		flash@a0000000 {
+			compatible = "cfi-flash";
+			reg = <0xa0000000 0x10000000>;
+			status = "disabled";
+		};
+
+		nand@b0000000 {
 			compatible = "st,spear600-fsmc-nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -192,37 +199,57 @@
 		};
 
 		pcie0@b1000000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb1000000 0x4000
-				0x80000000 0x2000
+				0x80000000 0x10000000
 				0xeb800000 0x1000 >;
 			interrupts = <0 68 0x4>;
 			status = "disabled";
+			pcie-host,pcie_id = <0>;
+			pcie-host,is_host = <1>;
+			pcie-host,is_gen1 = <0>;
+			pcie-host,cfg0_size = <0x100000>;
+			pcie-host,cfg1_size = <0x100000>;
+			pcie-host,mem_size = <0xFC00000>;
+			pcie-host,msg_size = <0x100000>;
+			/* Entire DDR Area */
+			pcie-host,in_mem_size = <0x80000000>;
 		};
 
 		pcie1@b1800000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb1800000 0x4000
-				0x90000000 0x2000
+				0x90000000 0x10000000
 				0xeb804000 0x1000 >;
 			interrupts = <0 69 0x4>;
 			status = "disabled";
+			pcie-host,pcie_id = <1>;
+			pcie-host,is_host = <1>;
+			pcie-host,is_gen1 = <0>;
+			pcie-host,cfg0_size = <0x100000>;
+			pcie-host,cfg1_size = <0x100000>;
+			pcie-host,mem_size = <0xFC00000>;
+			pcie-host,msg_size = <0x100000>;
+			/* Entire DDR Area */
+			pcie-host,in_mem_size = <0x80000000>;
 		};
 
 		pcie2@b4000000 {
-			compatible = "st,pcie-gadget", "st,pcie-host" ;
+			compatible = "st,pcie-host";
 			reg = < 0xb4000000 0x4000
-				0xc0000000 0x2000
+				0xc0000000 0x10000000
 				0xeb808000 0x1000 >;
 			interrupts = <0 70 0x4>;
 			status = "disabled";
-		};
-
-		c3@e1800000 {
-			compatible = "st,c3";
-			reg = <0xe1800000 0x1000>;
-			interrupts = <0 32 0x4>;
-			status = "disabled";
+			pcie-host,pcie_id = <2>;
+			pcie-host,is_host = <1>;
+			pcie-host,is_gen1 = <0>;
+			pcie-host,cfg0_size = <0x100000>;
+			pcie-host,cfg1_size = <0x100000>;
+			pcie-host,mem_size = <0xFC00000>;
+			pcie-host,msg_size = <0x100000>;
+			/* Entire DDR Area */
+			pcie-host,in_mem_size = <0x80000000>;
 		};
 
 		jpeg@b2000000 {
@@ -303,24 +330,6 @@
 				status = "disabled";
 			};
 
-			i2s@e0180000 {
-				compatible = "st,designware-i2s";
-				reg = <0xe0180000 0x1000>;
-				interrupt-names = "play_irq", "record_irq";
-				interrupts = <0 10 0x4
-					      0 11 0x4 >;
-				status = "disabled";
-			};
-
-			i2s@e0200000 {
-				compatible = "st,designware-i2s";
-				reg = <0xe0200000 0x1000>;
-				interrupt-names = "play_irq", "record_irq";
-				interrupts = <0 26 0x4
-					      0 53 0x4>;
-				status = "disabled";
-			};
-
 			adc@e0080000 {
 				compatible = "st,spear-adc";
 				reg = <0xe0080000 0x1000>;
@@ -348,9 +357,9 @@
 			};
 
 			thermal@e07008c4 {
-				compatible = "st,thermal-spear1340";
-				reg = <0xe07008c4 0x4>;
-				thermal_flags = <0x7000>;
+				compatible = "st,thermal";
+				reg = <0xe07008c4 0x1000>;
+				status = "disabled";
 			};
 		};
 	};

@@ -275,8 +275,8 @@ enum camif_burst_size {
  * some other format (for e.g. say the planar V4L2_PIX_FMT_YUV422P format)
  */
 static const struct soc_mbus_pixelfmt camif_formats[] = {
-	/* added */
-	[V4L2_MBUS_FMT_UYVY8_2X8] = {
+	/* added V4L2_MBUS_FMT_UYVY8_2X8 */
+	{
 		.fourcc			= V4L2_PIX_FMT_YUYV,
 		.name			= "YUYV",
 		.bits_per_sample	= 8,
@@ -284,16 +284,22 @@ static const struct soc_mbus_pixelfmt camif_formats[] = {
 		.order			= SOC_MBUS_ORDER_BE,
 	},
 
-	/* 3-byte RGB-888 received -> 4-byte RGBa stored */
-	[V4L2_MBUS_FMT_RGB24_2X8_LE] = {
+	/*
+	 * 3-byte RGB-888 received -> 4-byte RGBa stored
+	 * V4L2_MBUS_FMT_RGB24_2X8_LE
+	 */
+	{
 		.fourcc			= V4L2_PIX_FMT_RGB32,
 		.name			= "RGBa 32 bit",
 		.bits_per_sample	= 8,
 		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
 		.order			= SOC_MBUS_ORDER_LE,
 	},
-	/* 3-byte BGR-888 received -> 4-byte BGRa stored */
-	[V4L2_MBUS_FMT_BGR24_2X8_LE] = {
+	/*
+	 * 3-byte BGR-888 received -> 4-byte BGRa stored
+	 * V4L2_MBUS_FMT_BGR24_2X8_LE
+	 */
+	{
 		.fourcc			= V4L2_PIX_FMT_BGR32,
 		.name			= "BGRa 32 bit",
 		.bits_per_sample	= 8,
@@ -797,31 +803,23 @@ static void camif_rx_dma_complete(void *arg)
 
 	spin_lock_irqsave(&camif->lock, flags);
 
-	/* cur_frm should not be NULL in DMA handler */
-	if (!camif->cur_frm) {
-		spin_unlock_irqrestore(&camif->lock, flags);
-		goto out;
-	}
-
 	/* mark current frame as done */
 	vb = &camif->cur_frm->vb;
 	buf = container_of(vb, struct camif_buffer, vb);
-	WARN_ON(buf->inwork || list_empty(&vb->queue));
 	camif_process_buffer_complete(camif, vb, buf);
 
 	/* schedule timer again */
 	mod_timer(&camif->idle_timer, jiffies + 3 * HZ);
 
 	spin_unlock_irqrestore(&camif->lock, flags);
-
-out:
-	return;
 }
 
-static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
+static int camif_submit_dma(struct camif *camif, struct camif_buffer *buf)
 {
 	int direction = DMA_FROM_DEVICE;
 	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
+	dma_cookie_t cookie;
+	int ret;
 
 	buf->desc =
 		camif->chan->device->device_prep_slave_sg(
@@ -836,6 +834,16 @@ static int camif_init_dma_channel(struct camif *camif, struct camif_buffer *buf)
 
 	buf->desc->callback = camif_rx_dma_complete;
 	buf->desc->callback_param = camif;
+
+	/* submit the DMA descriptor */
+	cookie = buf->desc->tx_submit(buf->desc);
+	ret = dma_submit_error(cookie);
+	if (ret) {
+		dev_err(camif->ici.v4l2_dev.dev,
+				"dma submit error %d\n", cookie);
+		return ret;
+	}
+
 
 	return 0;
 }
@@ -897,6 +905,13 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 			goto out;
 		}
 
+		if (list_empty(&camif->dma_queue)) {
+			/* put camif in a SW recovery state */
+			camif_set_sw_recovery_state(camif);
+			spin_unlock_irqrestore(&camif->lock, flags);
+			goto out;
+		}
+
 		/* from 2nd frame onwards, enable DMA engine */
 		camif->cur_frm =
 			list_first_entry(&camif->dma_queue,
@@ -928,30 +943,6 @@ static irqreturn_t camif_frame_start_end_int(int irq, void *dev_id)
 
 out:
 	return IRQ_HANDLED;
-}
-
-static void free_buffer(struct videobuf_queue *vq, struct camif_buffer *buf)
-{
-	struct soc_camera_device *icd = vq->priv_data;
-	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
-	struct videobuf_buffer *vb = &buf->vb;
-
-	BUG_ON(in_interrupt());
-
-	dev_dbg(icd->parent, "(vb=0x%p) 0x%08lx %d\n",
-			&buf->vb, buf->vb.baddr, buf->vb.bsize);
-
-	vb->state = VIDEOBUF_DONE;
-
-	/*
-	 * This waits until this buffer is out of danger, i.e., until it is no
-	 * longer in STATE_QUEUED or STATE_ACTIVE
-	 */
-	videobuf_waiton(vq, &buf->vb, 0, 0);
-	videobuf_dma_unmap(vq->dev, dma);
-	videobuf_dma_free(dma);
-
-	buf->vb.state = VIDEOBUF_NEEDS_INIT;
 }
 
 static int camif_videobuf_setup(struct videobuf_queue *vq,
@@ -1033,15 +1024,13 @@ static int camif_videobuf_prepare(struct videobuf_queue *vq,
 	if (vb->state == VIDEOBUF_NEEDS_INIT) {
 		ret = videobuf_iolock(vq, vb, NULL);
 		if (ret)
-			goto fail;
+			goto out;
 
 		vb->state = VIDEOBUF_PREPARED;
 	}
 	buf->inwork = 0;
 
 	return 0;
-fail:
-	free_buffer(vq, buf);
 out:
 	buf->inwork = 0;
 
@@ -1053,7 +1042,6 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 		struct videobuf_buffer *vb)
 {
 	int ret;
-	dma_cookie_t cookie;
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
@@ -1072,19 +1060,10 @@ static void camif_videobuf_queue(struct videobuf_queue *vq,
 	 * prepare DMA SG requests for the buffer just
 	 * requested by user-land
 	 */
-	ret = camif_init_dma_channel(camif, buf);
+	ret = camif_submit_dma(camif, buf);
 	if (ret) {
 		dev_err(icd->parent,
 				"DMA initialization failed\n");
-		return;
-	}
-
-	/* submit the DMA descriptor */
-	cookie = buf->desc->tx_submit(buf->desc);
-	ret = dma_submit_error(cookie);
-	if (ret) {
-		dev_err(icd->parent,
-				"dma submit error %d\n", cookie);
 		return;
 	}
 
@@ -1120,30 +1099,32 @@ static void camif_videobuf_release(struct videobuf_queue *vq,
 {
 	struct soc_camera_device *icd = vq->priv_data;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
-	struct camif_buffer *buf = container_of(vb, struct camif_buffer, vb);
+	struct videobuf_dmabuf *dma = videobuf_to_dma(vb);
 	struct camif *camif = ici->priv;
 	unsigned long flags;
 
 	spin_lock_irqsave(&camif->lock, flags);
+	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED)) {
+		struct camif_buffer *buf;
 
-	if (camif->cur_frm == buf) {
-		/* stop DMA transfers */
-		camif_configure_interrupts(camif, DISABLE_EVEN_FIELD_DMA);
-		if (camif->chan)
-			dmaengine_terminate_all(camif->chan);
+		dmaengine_terminate_all(camif->chan);
 
-		camif->cur_frm = NULL;
+		/* Empty the dma_queue and enable sw_workaround */
+		list_for_each_entry(buf, &camif->dma_queue, vb.queue)
+			vb->state = VIDEOBUF_ERROR;
+		camif_set_sw_recovery_state(camif);
 	}
-
-	if ((vb->state == VIDEOBUF_ACTIVE || vb->state == VIDEOBUF_QUEUED) &&
-			!list_empty(&vb->queue)) {
-		vb->state = VIDEOBUF_ERROR;
-		list_del_init(&vb->queue);
-	}
-
 	spin_unlock_irqrestore(&camif->lock, flags);
 
-	free_buffer(vq, buf);
+	/*
+	 * This waits until this buffer is out of danger, i.e., until it is no
+	 * longer in STATE_QUEUED or STATE_ACTIVE
+	 */
+	videobuf_waiton(vq, vb, 0, 0);
+	videobuf_dma_unmap(vq->dev, dma);
+	videobuf_dma_free(dma);
+
+	vb->state = VIDEOBUF_NEEDS_INIT;
 }
 
 static struct videobuf_queue_ops camif_videobuf_ops = {
@@ -1162,8 +1143,18 @@ static struct videobuf_queue_ops camif_videobuf_ops = {
  */
 static int camif_add_device(struct soc_camera_device *icd)
 {
+	dma_cap_mask_t mask;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
+
+	/* dma related settings */
+	struct dma_slave_config dma_conf = {
+		.src_addr = camif->phys_base_addr,
+		.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
+		.src_maxburst = 64,
+		.direction = DMA_FROM_DEVICE,
+		.device_fc = false,
+	};
 
 	/* camif can manage a single camera at one time */
 	if (camif->icd)
@@ -1175,6 +1166,39 @@ static int camif_add_device(struct soc_camera_device *icd)
 	INIT_LIST_HEAD(&camif->dma_queue);
 
 	camif_start_capture(camif, CAMIF_BRINGUP);
+
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+
+	switch (camif->pdata->config->channel) {
+	case EVEN_CHANNEL:
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->parent,
+				"unable to get DMA channel for even lines\n");
+			return -EIO;
+		}
+		break;
+
+	case BOTH_ODD_EVEN_CHANNELS:
+		/*
+		 * not supported as of now, warn and return to default
+		 * 'even line' _only_ settings
+		 */
+		dev_warn(icd->parent, "Interlaced fields are not supported"
+				"defaulting to even line settings\n");
+		camif->chan = dma_request_channel(mask,
+			camif->pdata->dma_filter, camif->pdata->dma_even_param);
+		if (!camif->chan) {
+			dev_err(icd->parent,
+				"unable to get DMA channel for even lines\n");
+			return -EIO;
+		}
+		break;
+	}
+
+	dmaengine_slave_config(camif->chan, (void *) &dma_conf);
 
 	dev_info(icd->parent, "SPEAr Camera driver attached to camera %d\n",
 		 icd->devnum);
@@ -1271,14 +1295,23 @@ static int camif_get_formats(struct soc_camera_device *icd, unsigned int idx,
 
 	switch (code) {
 	case V4L2_MBUS_FMT_RGB24_2X8_LE:
-	case V4L2_MBUS_FMT_BGR24_2X8_LE:
 		formats++;
 		if (xlate) {
-			xlate->host_fmt	= &camif_formats[code];
+			xlate->host_fmt	= &camif_formats[1];
 			xlate->code = code;
 			xlate++;
 			dev_dbg(dev, "providing format %s using code %d\n",
-					camif_formats[code].name, code);
+					camif_formats[1].name, code);
+		}
+
+	case V4L2_MBUS_FMT_BGR24_2X8_LE:
+		formats++;
+		if (xlate) {
+			xlate->host_fmt	= &camif_formats[2];
+			xlate->code = code;
+			xlate++;
+			dev_dbg(dev, "providing format %s using code %d\n",
+					camif_formats[2].name, code);
 		}
 	default:
 		if (xlate)
@@ -1768,51 +1801,8 @@ out:
 static void camif_init_videobuf(struct videobuf_queue *q,
 		struct soc_camera_device *icd)
 {
-	dma_cap_mask_t mask;
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct camif *camif = ici->priv;
-
-	/* dma related settings */
-	struct dma_slave_config dma_conf = {
-		.src_addr = camif->phys_base_addr,
-		.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
-		.src_maxburst = 64,
-		.direction = DMA_FROM_DEVICE,
-		.device_fc = false,
-	};
-
-	dma_cap_zero(mask);
-	dma_cap_set(DMA_SLAVE, mask);
-
-	switch (camif->pdata->config->channel) {
-	case EVEN_CHANNEL:
-		camif->chan = dma_request_channel(mask,
-			camif->pdata->dma_filter, camif->pdata->dma_even_param);
-		if (!camif->chan) {
-			dev_err(icd->parent,
-				"unable to get DMA channel for even lines\n");
-			return;
-		}
-		break;
-
-	case BOTH_ODD_EVEN_CHANNELS:
-		/*
-		 * not supported as of now, warn and return to default
-		 * 'even line' _only_ settings
-		 */
-		dev_warn(icd->parent, "Interlaced fields are not supported"
-				"defaulting to even line settings\n");
-		camif->chan = dma_request_channel(mask,
-			camif->pdata->dma_filter, camif->pdata->dma_even_param);
-		if (!camif->chan) {
-			dev_err(icd->parent,
-				"unable to get DMA channel for even lines\n");
-			return;
-		}
-		break;
-	}
-
-	dmaengine_slave_config(camif->chan, (void *) &dma_conf);
 
 	videobuf_queue_sg_init(q, &camif_videobuf_ops, icd->parent,
 			&camif->lock, V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -1999,7 +1989,6 @@ static int camif_resume(struct device *dev)
 	struct camif *camif = ici->priv;
 	struct videobuf_buffer *vb;
 	struct camif_buffer *buf;
-	dma_cookie_t cookie;
 	int ret = 0;
 
 	/* check if CAMIF is in power-save state */
@@ -2012,20 +2001,10 @@ static int camif_resume(struct device *dev)
 		if (!ret && !list_empty(&camif->dma_queue)) {
 			list_for_each_entry(vb, &camif->dma_queue, queue) {
 				buf = container_of(vb, struct camif_buffer, vb);
-				ret = camif_init_dma_channel(camif, buf);
+				ret = camif_submit_dma(camif, buf);
 				if (ret) {
 					dev_err(camif->icd->parent,
 						"DMA initialization failed\n");
-					goto out;
-				}
-
-				/* submit the DMA descriptor */
-				cookie = buf->desc->tx_submit(buf->desc);
-				ret = dma_submit_error(cookie);
-				if (ret) {
-					dev_err(camif->icd->parent,
-						"dma submit error %d\n",
-						cookie);
 					goto out;
 				}
 			}
@@ -2208,6 +2187,21 @@ static int __devexit camif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void camif_shutdown(struct platform_device *pdev)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(&pdev->dev);
+	struct camif *camif = container_of(ici, struct camif, ici);
+
+	if (camif->is_running) {
+		camif_stop_capture(camif, CAMIF_SHUTDOWN);
+
+		if(camif->icd) {
+			struct v4l2_subdev *sd = soc_camera_to_subdev(camif->icd);
+			v4l2_subdev_call(sd, core, s_power, 0);
+		}
+	}
+}
+
 #ifdef CONFIG_OF
 static struct of_device_id camif_id_match[] = {
 	{ .compatible = "st,camif", },
@@ -2219,6 +2213,7 @@ MODULE_DEVICE_TABLE(of, camif_id_match);
 static struct platform_driver camif_driver = {
 	.probe = camif_probe,
 	.remove = __devexit_p(camif_remove),
+	.shutdown = camif_shutdown,
 	.driver = {
 		.name = "spear_camif",
 		.owner = THIS_MODULE,
