@@ -783,19 +783,27 @@ static void setup_parallel_timing(struct db9000fb_info *fbi,
 
 	fbi->reg_pctr &= ~0x7FF;
 
-	pcd = get_pcd(fbi, var->pixclock);
-	if (pcd >= 0) {
-		/* first try bus clk src */
-		fbi->reg_pctr |= DB9000_PCTR_PCD(pcd);
-		set_hsync_time(fbi, pcd);
-		clk_set_parent(fbi->clk, fbi->bus_clk);
-
-	} else {
-		fbi->reg_pctr |= DB9000_PCTR_PCI;
-		/* else try pixel clk src */
-		clk_set_rate(fbi->pixel_clk, clk_rate);
+	clk_set_rate(fbi->pixel_clk, clk_rate);
+	/* VESA standard has 0.5% tolerance on pixel clock */
+	if (abs(clk_get_rate(fbi->pixel_clk) - clk_rate) <= clk_rate/200) {
 		clk_set_parent(fbi->clk, fbi->pixel_clk);
+		fbi->reg_pctr |= DB9000_PCTR_PCI;
+	} else {
+		pcd = get_pcd(fbi, var->pixclock);
+		if (pcd >= 0) {
+			/* first try bus clk src */
+			fbi->reg_pctr |= DB9000_PCTR_PCD(pcd);
+			set_hsync_time(fbi, pcd);
+			clk_set_parent(fbi->clk, fbi->bus_clk);
+
+		} else {
+			fbi->reg_pctr |= DB9000_PCTR_PCI;
+			/* else try pixel clk src */
+			clk_set_rate(fbi->pixel_clk, clk_rate);
+			clk_set_parent(fbi->clk, fbi->pixel_clk);
+		}
 	}
+
 
 	fbi->reg_htr =
 	/* horizontal sync width */
