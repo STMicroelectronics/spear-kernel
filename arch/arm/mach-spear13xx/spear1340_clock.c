@@ -914,14 +914,16 @@ static struct pclk_sel clcd_synth_pclk_sel = {
 static struct frac_synth_rate_tbl clcd_rtbl[] = {
 	{.div = 0x18000}, /* 25 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x1638E}, /* 27 Mhz , for vc01div4 = 300 MHz*/
-	{.div = 0x14000}, /* 25 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x14000}, /* 30 Mhz , for vc01div4 = 300 MHz*/
+	{.div = 0x12C00}, /* 32 MHz , for vc01div4 = 300 MHz*/
 	{.div = 0x1284B}, /* 27 Mhz , for vc01div4 = 250 MHz*/
+	{.div = 0x12000}, /* 33.3 MHz , for vc01div4 = 300 MHz*/
 	{.div = 0x0D8D3}, /* 58 Mhz , for vco1div4 = 393 MHz */
 	{.div = 0x0B72C}, /* 58 Mhz , for vco1div4 = 332 MHz */
 	{.div = 0x0A584}, /* 58 Mhz , for vco1div4 = 300 MHz */
 	{.div = 0x093B1}, /* 65 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x089EE}, /* 58 Mhz , for vc01div4 = 250 MHz*/
-	{.div = 0x081BA}, /* 74 Mhz , for vc01div4 = 300 MHz*/
+	{.div = 0x0814B}, /* 74 Mhz , for vc01div4 = 300 MHz*/
 	{.div = 0x07BA0}, /* 65 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06f1C}, /* 72 Mhz , for vc01div4 = 250 MHz*/
 	{.div = 0x06E58}, /* 58 Mhz , for vco1div4 = 200 MHz */
