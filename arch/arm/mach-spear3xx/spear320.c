@@ -1008,7 +1008,7 @@ static struct pmx_dev_mode pmx_uart4_modes[][1] = {
 			.mux_reg_cnt = ARRAY_SIZE(pmx_uart4_ext_92_93_mux),
 		},
 	}, {
-		/* Select signals on pins 100_101_ */
+		/* Select signals on pins 100_101 */
 		{
 			.ids = SPEAR320S_EXTENDED_MODE,
 			.mux_regs = pmx_uart4_ext_100_101_mux,
@@ -1032,16 +1032,16 @@ struct pmx_dev spear320s_pmx_uart4[] = {
 		.mode_count = ARRAY_SIZE(pmx_uart4_modes[2]),
 	}, {
 		.name = "uart4-71_72",
-		.modes = pmx_uart4_modes[4],
-		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
+		.modes = pmx_uart4_modes[3],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[3]),
 	}, {
 		.name = "uart4-92_93",
 		.modes = pmx_uart4_modes[4],
 		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
 	}, {
-		.name = "uart4-100_101_",
-		.modes = pmx_uart4_modes[4],
-		.mode_count = ARRAY_SIZE(pmx_uart4_modes[4]),
+		.name = "uart4-100_101",
+		.modes = pmx_uart4_modes[5],
+		.mode_count = ARRAY_SIZE(pmx_uart4_modes[5]),
 	},
 };
 
