@@ -693,7 +693,7 @@ static struct clk uart0_clk = {
 
 /* uart1 clock */
 static struct clk uart1_clk = {
-	.en_reg = VA_SPEAR1340_PERIP1_CLK_ENB,
+	.en_reg = VA_SPEAR1340_PERIP3_CLK_ENB,
 	.en_reg_bit = SPEAR1340_UART1_CLK_ENB,
 	.pclk_sel = &uart1_pclk_sel,
 	.pclk_sel_shift = SPEAR1340_UART1_CLK_SHIFT,
