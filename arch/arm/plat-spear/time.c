@@ -72,7 +72,22 @@ static int clockevent_next_event(unsigned long evt,
 
 static cycle_t clocksource_read_cycles(struct clocksource *cs)
 {
-	return (cycle_t) readw(gpt_base + COUNT(CLKSRC));
+#define MAX	1000
+	int t1, t2, count = 0;
+
+	t1 = readw_relaxed(gpt_base + COUNT(CLKSRC));
+	do {
+		t2 = readw_relaxed(gpt_base + COUNT(CLKSRC));
+		if (t1 == t2)
+			break;
+
+		if (count++ >= MAX)
+			BUG();
+
+		t1 = t2;
+	} while (1);
+
+	return t1;
 }
 
 #ifdef CONFIG_PM
