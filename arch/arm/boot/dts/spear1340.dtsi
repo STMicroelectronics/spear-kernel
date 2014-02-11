@@ -55,6 +55,8 @@
 			interrupt-map-mask = <0 0 0 0>;
 			interrupt-map = <0x0 0 &gic 0 68 0x4>;
 			num-lanes = <1>;
+			phys = <&miphy0 1>;
+			phy-names = "pcie-phy";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
